@@ -1,4 +1,5 @@
-package it.pagopa.pn.template.rest;
+package it.pagopa.pn.ms.be.rest;
+
 
 import it.pagopa.pn.template.rest.v1.api.HealthCheckApi;
 import org.springframework.http.ResponseEntity;

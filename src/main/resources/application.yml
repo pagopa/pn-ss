@@ -1,0 +1,31 @@
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      file-size-threshold: 2KB
+      max-file-size: 200MB
+      max-request-size: 215MB
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    loadbalancer:
+      ribbon:
+        enable: false
+  mvc:
+    pathmatch:
+      matching-strategy: ANT_PATH_MATCHER
+
+server:
+  port: ${SPRING_PORT:8090}
+  servlet:
+    context-path: /pa
+  tomcat:
+    accept-count: 0
+    max-connections: 200
+    max-threads: 200
+    min-spare-threads: 50
+    
+
+
+
+

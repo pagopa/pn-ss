@@ -17,7 +17,7 @@ import java.io.File;
 import java.io.InputStream;
 
 @Service
-public class SignService extends CommonArubaService {
+public class SignServiceStub extends CommonArubaService {
 
        public SignReturnV2 singnPdfDocument(byte[] pdfFile, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException {
            SignRequestV2 signRequestV2 = new SignRequestV2();

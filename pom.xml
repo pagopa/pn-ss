@@ -7,9 +7,9 @@
 		<version>1.0.0</version>
 		<relativePath />
 	</parent>
-	<artifactId>pn-template-ms-be</artifactId>
+	<artifactId>pn-ss</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
-	<name>pn-template-ms-be</name>
+	<name>pn-ss</name>
 	<description>A template for a PN Backend Microservice</description>
 	<scm>
 		<connection>${git.conn}</connection>

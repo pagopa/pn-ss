@@ -2,6 +2,10 @@ package it.pagopa.pn.ms.be.service.sign;
 
 import com.sun.xml.ws.encoding.xml.XMLMessage;
 import com.sun.xml.ws.util.ByteArrayDataSource;
+import it.pagopa.pn.ms.be.service.sign.dto.GenericFileSignRequestV2;
+import it.pagopa.pn.ms.be.service.sign.dto.GenericFileSignReturnV2;
+import it.pagopa.pn.ms.be.service.sign.dto.InputPdfFileSignRequestV2;
+import it.pagopa.pn.ms.be.service.sign.dto.PdfFileSignReturnV2;
 import it.pagopa.pn.ms.be.service.sign.wsdl.*;
 
 import org.springframework.stereotype.Service;
@@ -17,7 +21,7 @@ import java.io.File;
 import java.io.InputStream;
 
 @Service
-public class SignServiceStub extends CommonArubaService {
+public class SignServiceSoap extends CommonArubaService {
 
        public SignReturnV2 singnPdfDocument(byte[] pdfFile, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException {
            SignRequestV2 signRequestV2 = new SignRequestV2();
@@ -96,4 +100,12 @@ public class SignServiceStub extends CommonArubaService {
         SignReturnV2 signReturnV2 = service.pkcs7SignV2(signRequestV2,false,true);
         return  signReturnV2;
     }
+
+    public PdfFileSignReturnV2 callArubaSignPdfFile(InputPdfFileSignRequestV2 input) {
+        return new PdfFileSignReturnV2();
+    }
+    public GenericFileSignReturnV2 callGenericFile(GenericFileSignRequestV2 input) {
+        return new GenericFileSignReturnV2();
+    }
+
 }

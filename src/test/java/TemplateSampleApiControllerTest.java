@@ -4,11 +4,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
-//@SpringBootTest
+@SpringBootTest
 public class TemplateSampleApiControllerTest {
 
 
-    //@Test
+    @Test
     void contextLoads() {
     }
 

@@ -31,6 +31,8 @@ public class ArubaController {
     ) throws TypeOfTransportNotImplemented_Exception, JAXBException {
 
         byte[] pdfDocument = readPdfDocoument();
+
+
         SignReturnV2 response = signServiceSoap.singnPdfDocument(pdfDocument,marcatura);
 
         return ResponseEntity.ok()

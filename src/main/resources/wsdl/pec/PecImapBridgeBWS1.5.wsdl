@@ -1,0 +1,1514 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="https://bridgews.pec.it/PecImapBridge/"
+             xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata"
+             xmlns:wsp="http://www.w3.org/ns/ws-policy"
+             xmlns:wsp1_2="http://schemas.xmlsoap.org/ws/2004/09/policy"
+             xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             name="PecImapBridge"
+             targetNamespace="https://bridgews.pec.it/PecImapBridge/">
+    <types>
+        <xsd:schema targetNamespace="https://bridgews.pec.it/PecImapBridge/">
+            <xsd:element name="sendMail">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" minOccurs="1" maxOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="data" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Messaggio completo in mime format.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="sendMailResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="deleteMail">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="isuid" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - se 1 mailid e' uid, message sequence number altrimenti.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="mailid" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Id mail da cancellare.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="deleteMailResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getAttach">
+                <xsd:annotation>
+                    <xsd:documentation/>
+                </xsd:annotation>
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="isuid" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - se 1 mailid e' uid, message sequence number altrimenti.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="mailid" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Id mail interessata.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="nameattach" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Nome del file che rappresenta l'attach case sensitive.
+                                    Se non fornito prende il primo attach se esiste.
+                                    Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getAttachResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="attach" type="xsd:hexBinary" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>File che rappresenta l'attach richiesto in formato mime.
+                                    Assente in caso di errore o attach non trovato</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getObject">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="isuid" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - se 1 mailid e' uid, message sequence number altrimenti.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="mailid" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Id mail interessata.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getObjectResponse">
+                <xsd:annotation>
+                    <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                </xsd:annotation>
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="object" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Rappresenta l'oggetto della mail indicata in formato mime.
+                                    Assente in caso di errore</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getNameAttach">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="isuid" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - se 1 mailid e' uid, message sequence number altrimenti.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="mailid" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Id mail interessata.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getNameAttachResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element ref="tns:ArrayOfString">
+                            <xsd:annotation>
+                                <xsd:documentation>Array contenente i nomi dei file in attach.Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <!--xsd:element name="names" type="tns:ArrayOfString">
+                            <xsd:annotation>
+                                <xsd:documentation>Array contenente i nomi dei file in attach.Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element-->
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:simpleType name="NewType">
+                <xsd:restriction base="xsd:string"/>
+            </xsd:simpleType>
+            <xsd:element name="getRcpt">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="isuid" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - se 1 mailid e' uid, message sequence number altrimenti.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="mailid" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Id mail interessata.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getRcptResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="rcpt" type="xsd:string">
+                            <xsd:annotation>
+                                <xsd:documentation>Lista dei destinatari dell'envelop della mail indicata separati da ';'.
+                                    Assente in caso di errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getSender">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="isuid" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - se 1 mailid e' uid, message sequence number altrimenti.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="mailid" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Id mail interessata.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getSenderResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="sender" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Rappresenta il sender dell'envelop della mail indicata.
+                                    Assente in caso di errore</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessageID">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="isuid" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - se 1 mailid e' uid, message sequence number altrimenti.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="mailid" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Id mail interessata.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se mancante marca la mail come letta, se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessageIDResponse">
+                <xsd:annotation>
+                    <xsd:documentation/>
+                </xsd:annotation>
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="message" type="xsd:hexBinary" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Messaggio richiesto completo in formato MIME.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessagesFrom">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="from" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Stringa da ricercare all'interno del campo from dell'header della mail.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="limit" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Se fornito indica il numero di messaggi da restituire a partire da OFFSET oppuer da 0.
+                                    Se NON fornito vengono restituiti tutti i messaggi a partire da OFFSET oppuer da 0.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="offset" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Se presente indica da quale mess recuperare i messaggi.
+                                    Se non presente parte da 0.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="unseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - 0 per messaggi letti, 1 non letti. 0 default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="outtype" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - 1 restituisce solo l'header, 2 tutto il messaggio, 3 solo UID Default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="msgtype" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Filtro sul tipo di messaggio:
+                                    M - messaggio certificato
+                                    R - ricevuta o avviso
+                                    A - nessun filtro
+                                    Nessun filtro se l'attributo non Ã¨ fornito.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessagesFromResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element ref="tns:ArrayOfMessages" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Array di messaggi che soddisfano il vincolo imposto.Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <!--xsd:element name="messages" type="tns:ArrayOfMessages" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Array di messaggi che soddisfano il vincolo imposto.
+Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element-->
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessagesTo">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="to" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Stringa da ricercare all'interno del campo to dell'header della mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="limit" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Se fornito indica il numero di messaggi da restituire a partire da OFFSET oppuer da 0.
+                                    Se NON fornito vengono restituiti tutti i messaggi a partire da OFFSET oppuer da 0.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="offset" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Se presente indica da quale mess recuperare i messaggi.
+                                    Se non presente parte da 0.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="unseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - 0 per messaggi letti, 1 non letti. 0 default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="outtype" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - 1 restituisce solo l'header, 2 tutto il messaggio, 3 solo UID Default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="msgtype" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Filtro sul tipo di messaggio:
+                                    M - messaggio certificato
+                                    R - ricevuta o avviso
+                                    A - nessun filtro
+                                    Nessun filtro se l'attributo non Ã¨ fornito.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessagesToResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element ref="tns:ArrayOfMessages" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Array di messaggi che soddisfano il vincolo imposto.Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <!--xsd:element name="messages" type="tns:ArrayOfMessages" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Array di messaggi che soddisfano il vincolo imposto.
+Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element-->
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessagesRange">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ts_from" type="xsd:dateTime" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Formato DD/MM/YYYY [hh:mm:ss]
+                                    Se non presente viene preso tutto:
+                                    viene utilizzata una data fittizia (01/01/1970 00:00:00)</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ts_to" type="xsd:dateTime" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Formato DD/MM/YYYY [hh:mm:ss]
+                                    Se non presente viene preso tutto:
+                                    viene utilizzata una data fittizia (01/01/2100 00:00:00)</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="limit" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Se fornito indica il numero di messaggi da restituire a partire da OFFSET oppuer da 0.
+                                    Se NON fornito vengono restituiti tutti i messaggi a partire da OFFSET oppuer da 0.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="offset" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Se presente indica da quale mess recuperare i messaggi.
+                                    Se non presente parte da 0.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="unseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - 0 per messaggi letti, 1 non letti. 0 default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="outtype" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - 1 restituisce solo l'header, 2 tutto il messaggio, 3 solo UID Default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="msgtype" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Filtro sul tipo di messaggio:
+                                    m - messaggio certificato
+                                    a - ricevuta di accettazione
+                                    c - ricevuta di consegna
+                                    all - nessun filtro
+                                    Nessun filtro se l'attributo non Ã¨ fornito.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessagesRangeResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element ref="tns:ArrayOfMessages" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Array di messaggi che soddisfano il vincolo imposto.Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <!--xsd:element name="messages" type="tns:ArrayOfMessages" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Array di messaggi che soddisfano il vincolo imposto.
+Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element-->
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessages">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="outtype" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - 1 restituisce solo l'header, 2 tutto il messaggio, 3 solo UID Default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="unseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - 0 per messaggi letti, 1 non letti. 0 default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="limit" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Se fornito indica il numero di messaggi da restituire a partire da OFFSET oppuer da 0.
+                                    Se NON fornito vengono restituiti tutti i messaggi a partire da OFFSET oppuer da 0.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="offset" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Se presente indica da quale mess recuperare i messaggi.
+                                    Se non presente parte da 0.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="msgtype" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Filtro sul tipo di messaggio:
+                                    M - messaggio certificato
+                                    A - ricevuta di accettazione
+                                    C - ricevuta di consegna
+                                    ALL - nessun filtro
+                                    Nessun filtro se l'attributo non Ã¨ fornito.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessagesResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element ref="tns:ArrayOfMessages" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Array di messaggi che soddisfano il vincolo imposto.Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <!--xsd:element name="messages" type="tns:ArrayOfMessages" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Array di messaggi che soddisfano il vincolo imposto.
+Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element-->
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessageCount">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="unseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - 0 per messaggi letti, 1 non letti. 0 default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="msgtype" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Filtro sul tipo di messaggio:
+                                    M - messaggio certificato
+                                    A - ricevuta di accettazione
+                                    C - ricevuta di consegna
+                                    ALL - nessun filtro
+                                    Nessun filtro se l'attributo non Ã¨ fornito.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessageCountResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.
+                                </xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante:
+                                    0 per nessun errore, errore non bloccante o temporaneo;
+                                    1 bloccante.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="count" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Numero totale di messaggi.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <!--xsd:complexType name="ArrayOfString">
+                <xsd:sequence>
+                    <xsd:element name="item" type="xsd:string" maxOccurs="unbounded"/>
+                </xsd:sequence>
+            </xsd:complexType-->
+
+            <xsd:element name="ArrayOfString" type="tns:mesArrayOfString"/>
+            <xsd:complexType name="mesArrayOfString">
+                <xsd:sequence>
+                    <xsd:element name="item" type="xsd:string" maxOccurs="unbounded"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+            <!-- Non Utilizzato xsd:complexType name="ArrayOfInteger">
+                <xsd:sequence>
+                    <xsd:element name="item" type="xsd:int" maxOccurs="unbounded"/>
+                </xsd:sequence>
+            </xsd:complexType-->
+
+            <!--xsd:complexType name="ArrayOfMessages">
+                <xsd:sequence>
+                    <xsd:element name="item" type="xsd:base64Binary" maxOccurs="unbounded"/>
+                </xsd:sequence>
+            </xsd:complexType-->
+
+            <xsd:element name="ArrayOfMessages" type="tns:mesArrayOfMessages"/>
+            <xsd:complexType name="mesArrayOfMessages">
+                <xsd:sequence>
+                    <xsd:element name="item" type="xsd:base64Binary" maxOccurs="unbounded"/>
+                </xsd:sequence>
+            </xsd:complexType>
+
+
+
+
+            <xsd:element name="getQuota">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getQuotaResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante: 0 per nessun errore, errore non bloccante o temporaneo;  1 bloccante.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="quotaUsed" type="xsd:string" maxOccurs="1" minOccurs="0">
+                        </xsd:element>
+                        <xsd:element name="quotaLimit" type="xsd:string" maxOccurs="1" minOccurs="0">
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessagesAndReceipts">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="user" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="pass" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Credenziali per l'accesso alla mailbox - password.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="isuid" type="xsd:int" maxOccurs="1" minOccurs="0">
+                        </xsd:element>
+                        <xsd:element name="folder" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - Nome della cartella. INBOX di default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="outtype" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - 1 restituisce solo l'header, 2 tutto il messaggio, 3 solo UID Default.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="mailid" type="xsd:string" maxOccurs="1" minOccurs="0">
+                        </xsd:element>
+                        <xsd:element name="markseen" type="xsd:int" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>opzionale - se 1 marca la mail come letta altrimenti lascia il flag inalterato.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="ip" type="xsd:string" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Opzionale - IP di tracciamento per il solo scopo di logging.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="getMessagesAndReceiptsResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="errcode" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Codice d'errore - 0 in caso di successo.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errstr" type="xsd:string" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Descrizione dell'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element name="errblock" type="xsd:int" maxOccurs="1" minOccurs="1">
+                            <xsd:annotation>
+                                <xsd:documentation>Errore bloccante: 0 per nessun errore, errore non bloccante o temporaneo;  1 bloccante.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                        <xsd:element ref="tns:ArrayOfMessages" maxOccurs="1" minOccurs="0">
+                            <xsd:annotation>
+                                <xsd:documentation>Array di messaggi che soddisfano il vincolo imposto. Assente in caso d'errore.</xsd:documentation>
+                            </xsd:annotation>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:schema>
+    </types>
+    <message name="sendMailRequest">
+        <part name="parameters" element="tns:sendMail">
+            <documentation>Credenziali per l'accesso alla mailbox - indirizzo mail.</documentation>
+        </part>
+    </message>
+    <message name="sendMailResponse">
+        <part name="parameters" element="tns:sendMailResponse"/>
+    </message>
+    <message name="deleteMailRequest">
+        <part name="parameters" element="tns:deleteMail"/>
+    </message>
+    <message name="deleteMailResponse">
+        <part name="parameters" element="tns:deleteMailResponse"/>
+    </message>
+    <message name="getAttachRequest">
+        <part name="parameters" element="tns:getAttach"/>
+    </message>
+    <message name="getAttachResponse">
+        <part name="parameters" element="tns:getAttachResponse"/>
+    </message>
+    <message name="getObjectRequest">
+        <part name="parameters" element="tns:getObject"/>
+    </message>
+    <message name="getObjectResponse">
+        <part name="parameters" element="tns:getObjectResponse"/>
+    </message>
+    <message name="getNameAttachRequest">
+        <part name="parameters" element="tns:getNameAttach"/>
+    </message>
+    <message name="getNameAttachResponse">
+        <part name="parameters" element="tns:getNameAttachResponse"/>
+    </message>
+    <message name="getRcptRequest">
+        <part name="parameters" element="tns:getRcpt"/>
+    </message>
+    <message name="getRcptResponse">
+        <part name="parameters" element="tns:getRcptResponse"/>
+    </message>
+    <message name="getSenderRequest">
+        <part name="parameters" element="tns:getSender"/>
+    </message>
+    <message name="getSenderResponse">
+        <part name="parameters" element="tns:getSenderResponse"/>
+    </message>
+    <message name="getMessageIDRequest">
+        <part name="parameters" element="tns:getMessageID"/>
+    </message>
+    <message name="getMessageIDResponse">
+        <part name="parameters" element="tns:getMessageIDResponse"/>
+    </message>
+    <message name="getMessagesFromRequest">
+        <part name="parameters" element="tns:getMessagesFrom"/>
+    </message>
+    <message name="getMessagesFromResponse">
+        <part name="parameters" element="tns:getMessagesFromResponse"/>
+    </message>
+    <message name="getMessagesToRequest">
+        <part name="parameters" element="tns:getMessagesTo"/>
+    </message>
+    <message name="getMessagesToResponse">
+        <part name="parameters" element="tns:getMessagesToResponse"/>
+    </message>
+    <message name="getMessagesRangeRequest">
+        <part name="parameters" element="tns:getMessagesRange"/>
+    </message>
+    <message name="getMessagesRangeResponse">
+        <part name="parameters" element="tns:getMessagesRangeResponse"/>
+    </message>
+    <message name="getMessagesRequest">
+        <part name="parameters" element="tns:getMessages"/>
+    </message>
+    <message name="getMessagesResponse">
+        <part name="parameters" element="tns:getMessagesResponse"/>
+    </message>
+    <message name="getMessageCountRequest">
+        <part name="parameters" element="tns:getMessageCount"/>
+    </message>
+    <message name="getMessageCountResponse">
+        <part name="parameters" element="tns:getMessageCountResponse"/>
+    </message>
+    <message name="getQuotaRequest">
+        <part name="parameters" element="tns:getQuota"></part>
+    </message>
+    <message name="getQuotaResponse">
+        <part name="parameters" element="tns:getQuotaResponse"></part>
+    </message>
+    <message name="getMessagesAndReceiptsRequest">
+        <part name="parameters" element="tns:getMessagesAndReceipts"></part>
+    </message>
+    <message name="getMessagesAndReceiptsResponse">
+        <part name="parameters" element="tns:getMessagesAndReceiptsResponse"></part>
+    </message>
+    <portType name="PecImapBridge">
+        <operation name="sendMail">
+            <input wsam:Action="https://bridgews.pec.it/PecImapBridge/PecImapBridge/sendMailRequest" message="tns:sendMailRequest"/>
+            <output wsam:Action="https://bridgews.pec.it/PecImapBridge/PecImapBridge/sendMailResponse" message="tns:sendMailResponse"/>
+        </operation>
+        <operation name="deleteMail">
+            <input message="tns:deleteMailRequest"/>
+            <output message="tns:deleteMailResponse"/>
+        </operation>
+        <operation name="getAttach">
+            <documentation>Restituisce l'attach richiesto.</documentation>
+            <input message="tns:getAttachRequest"/>
+            <output message="tns:getAttachResponse"/>
+        </operation>
+        <operation name="getObject">
+            <documentation>Restituisce l'oggetto di una mail.</documentation>
+            <input message="tns:getObjectRequest"/>
+            <output message="tns:getObjectResponse"/>
+        </operation>
+        <operation name="getNameAttach">
+            <documentation>Restituisce un array con i nomi dei file allegati alla mail indicata</documentation>
+            <input message="tns:getNameAttachRequest"/>
+            <output message="tns:getNameAttachResponse"/>
+        </operation>
+        <operation name="getRcpt">
+            <documentation>Restituisce la lista dei destinatari (To e cc)della mail indicata</documentation>
+            <input message="tns:getRcptRequest"/>
+            <output message="tns:getRcptResponse"/>
+        </operation>
+        <operation name="getSender">
+            <documentation>Restituisce il mittente della mail indicata</documentation>
+            <input message="tns:getSenderRequest"/>
+            <output message="tns:getSenderResponse"/>
+        </operation>
+        <operation name="getMessageID">
+            <documentation>Restituisce un messaggio specifico</documentation>
+            <input message="tns:getMessageIDRequest"/>
+            <output message="tns:getMessageIDResponse"/>
+        </operation>
+        <operation name="getMessagesFrom">
+            <documentation>Restituisce un array di messaggi inviati dal mittente specificato</documentation>
+            <input message="tns:getMessagesFromRequest"/>
+            <output message="tns:getMessagesFromResponse"/>
+        </operation>
+        <operation name="getMessagesTo">
+            <documentation>Restituisce un array di messaggi inviati al destinatario indicato</documentation>
+            <input message="tns:getMessagesToRequest"/>
+            <output message="tns:getMessagesToResponse"/>
+        </operation>
+        <operation name="getMessagesRange">
+            <documentation>Restituisce i messaggi che soddisfano il criterio temporale specificato</documentation>
+            <input message="tns:getMessagesRangeRequest"/>
+            <output message="tns:getMessagesRangeResponse"/>
+        </operation>
+        <operation name="getMessages">
+            <documentation>Restituisce i messaggi - paginazione</documentation>
+            <input message="tns:getMessagesRequest"/>
+            <output message="tns:getMessagesResponse"/>
+        </operation>
+        <operation name="getMessageCount">
+            <documentation>Restituisce il numero totale di messaggi.</documentation>
+            <input message="tns:getMessageCountRequest"/>
+            <output message="tns:getMessageCountResponse"/>
+        </operation>
+        <operation name="getQuota">
+            <input message="tns:getQuotaRequest"></input>
+            <output message="tns:getQuotaResponse"></output>
+        </operation>
+        <operation name="getMessagesAndReceipts">
+            <input message="tns:getMessagesAndReceiptsRequest"></input>
+            <output message="tns:getMessagesAndReceiptsResponse"></output>
+        </operation>
+    </portType>
+    <binding name="PecImapBridge_SOAP" type="tns:PecImapBridge">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="sendMail">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/sendMail"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="deleteMail">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/deleteMail"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getAttach">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getAttach"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getObject">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getObject"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getNameAttach">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getNameAttach"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getRcpt">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getRcpt"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getSender">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getSender"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getMessageID">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getMessageID"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getMessagesFrom">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getMessagesFrom"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getMessagesTo">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getMessagesTo"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getMessagesRange">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getMessagesRange"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getMessages">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getMessages"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getMessageCount">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getMessageCount"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getQuota">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getQuota"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="getMessagesAndReceipts">
+            <soap:operation soapAction="https://bridgews.pec.it/PecImapBridge/getMessagesAndReceipts"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+    </binding>
+    <service name="PecImapBridge">
+        <port name="PecImapBridgeSOAP" binding="tns:PecImapBridge_SOAP">
+            <soap:address location="https://bridgews.pec.it/"/>
+        </port>
+    </service>
+</definitions>

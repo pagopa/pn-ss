@@ -1,18 +1,15 @@
 package it.pagopa.pn;
 
-//import org.springframework.boot.SpringApplication;
-//import org.springframework.boot.autoconfigure.SpringBootApplication;
-//import springfox.documentation.swagger2.annotations.EnableSwagger2;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-//@SpringBootApplication
-//@EnableSwagger2
-
+@SpringBootApplication
 public class TemplateApplication {
 
 
-    //public static void main(String[] args) {
-      //  SpringApplication.run(TemplateApplication.class, args);
-    //}
+    public static void main(String[] args) {
+        SpringApplication.run(TemplateApplication.class, args);
+    }
 
 
 }

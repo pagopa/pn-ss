@@ -75,8 +75,8 @@ public class GenericFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
         GenericFileSignReturnV2 response = service.callGenericFile(input);
         Assertions.assertNotNull(response.getPdfInfoResultSign());
-        Assertions.assertEquals(response.getPdfInfoResultSign().getReturnCode(),"0002");
-        Assertions.assertEquals(response.getPdfInfoResultSign().getDescription(),"STREAM EMPTY" );
+        Assertions.assertEquals(response.getCode(),"0002");
+        Assertions.assertEquals(response.getDescription(),"STREAM EMPTY" );
 
     }
     @Test
@@ -95,8 +95,8 @@ public class GenericFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
         GenericFileSignReturnV2 response = service.callGenericFile(input);
         Assertions.assertNotNull(response.getPdfInfoResultSign());
-        Assertions.assertEquals(response.getPdfInfoResultSign().getReturnCode(),"0005");
-        Assertions.assertEquals(response.getPdfInfoResultSign().getDescription(),"Trasport Method not Valid");
+        Assertions.assertEquals(response.getCode(),"0005");
+        Assertions.assertEquals(response.getDescription(),"Trasport Method not Valid");
 
     }
     @Test
@@ -117,8 +117,8 @@ public class GenericFileServiceSignTest {
         GenericFileSignReturnV2 response = service.callGenericFile(input);
         Assertions.assertNotNull(response);
 
-        Assertions.assertEquals(response.getPdfInfoResultSign().getReturnCode(),"0003");
-        Assertions.assertEquals(response.getPdfInfoResultSign().getDescription(),"Invalid User Credentials" );
+        Assertions.assertEquals(response.getCode(),"0003");
+        Assertions.assertEquals(response.getDescription(),"Invalid User Credentials" );
     }
     @Test
     public void testGenericFileTranspotTypeEmpty() throws JAXBException, TypeOfTransportNotImplemented_Exception {
@@ -136,8 +136,8 @@ public class GenericFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
         GenericFileSignReturnV2 response = service.callGenericFile(input);
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(response.getPdfInfoResultSign().getReturnCode(),"0002");
-        Assertions.assertEquals(response.getPdfInfoResultSign().getDescription(),"BYNARY INPUT EMPTY" );
+        Assertions.assertEquals(response.getCode(),"0002");
+        Assertions.assertEquals(response.getDescription(),"BYNARY INPUT EMPTY" );
     }
     @Test
     public void testGenericFileUrlIncorrect() throws JAXBException, TypeOfTransportNotImplemented_Exception, MalformedURLException {
@@ -176,8 +176,8 @@ public class GenericFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
         GenericFileSignReturnV2 response = service.callGenericFile(input);
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(response.getPdfInfoResultSign().getReturnCode(),"0001");
-        Assertions.assertEquals(response.getPdfInfoResultSign().getDescription(),"Generic error" );
+        Assertions.assertEquals(response.getCode(),"0001");
+        Assertions.assertEquals(response.getDescription(),"Generic error" );
     }
     @Test
     public void testGenericFileSignedNotMarked() throws JAXBException, TypeOfTransportNotImplemented_Exception {

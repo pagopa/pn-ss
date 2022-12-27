@@ -84,10 +84,31 @@ public class SignServiceSoap extends CommonArubaService {
     public PdfFileSignReturnV2 callArubaSignPdfFile(InputPdfFileSignRequestV2 input) throws JAXBException, TypeOfTransportNotImplemented_Exception {
         logCallAruba(input.getInfoTosigned());
 
-        ArubaSignService service = arubaSignService.getArubaSignServicePort();
-        SignReturnV2 signReturnV2 = service.pdfsignatureV2(input.getInfoTosigned(),null ,null,null ,null,null);
         PdfFileSignReturnV2 response = new PdfFileSignReturnV2();
-        response.setPdfInfoResultSign(signReturnV2);
+
+        try {
+            arubaSignService = createArubaService(input.getUrl());
+            ArubaSignService service = arubaSignService.getArubaSignServicePort();
+            SignReturnV2 signReturnV2 = service.pdfsignatureV2(input.getInfoTosigned(),null ,null,null ,null,null);
+            response.setPdfInfoResultSign(signReturnV2);
+            if (!signReturnV2.getStatus().equals(ARUBA_RESP_OK)){
+                response.setCode(signReturnV2.getReturnCode());
+                response.setDescription(signReturnV2.getDescription());
+            }
+        } catch (MalformedURLException e) {
+            response.setCode(e.getCause().getMessage());
+            response.setDescription(e.getMessage());
+        }catch (InaccessibleWSDLException iwe){
+            iwe.getMessage();
+            response.setCode("500");
+            response.setDescription(iwe.getErrors().get(0).getMessage());
+        }
+        catch (Exception ex){
+            response.setCode(ex.getCause().getMessage());
+            response.setDescription(ex.getMessage());
+        }
+
+
         return  response;
     }
     public GenericFileSignReturnV2 callGenericFile(GenericFileSignRequestV2 input) throws JAXBException, TypeOfTransportNotImplemented_Exception {
@@ -99,8 +120,13 @@ public class SignServiceSoap extends CommonArubaService {
             ArubaSignService service = arubaSignService.getArubaSignServicePort();
             SignReturnV2 signReturnV2 = service.pkcs7SignV2(input.getInfoTosigned(),false,true);
             response.setPdfInfoResultSign(signReturnV2);
+            if (!signReturnV2.getStatus().equals(ARUBA_RESP_OK)){
+                response.setCode(signReturnV2.getReturnCode());
+                response.setDescription(signReturnV2.getDescription());
+            }
         } catch (MalformedURLException e) {
-            e.printStackTrace();
+            response.setCode(e.getCause().getMessage());
+            response.setDescription(e.getMessage());
         }catch (InaccessibleWSDLException iwe){
             iwe.getMessage();
             response.setCode("500");

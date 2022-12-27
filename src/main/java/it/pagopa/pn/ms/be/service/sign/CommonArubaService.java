@@ -16,6 +16,7 @@ import java.net.URL;
 
 public abstract class CommonArubaService {
 
+    public static String ARUBA_RESP_OK = "OK";
 
     ArubaSignServiceService arubaSignService = createArubaService(null);
 

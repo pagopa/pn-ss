@@ -1,14 +1,18 @@
 
 package it.pagopa.pn.ms.be.service.sign.wsdl;
 
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlSeeAlso;
+import javax.xml.bind.annotation.XmlType;
 
 
 /**
  * <p>Classe Java per gwReturn complex type.
- *
+ * 
  * <p>Il seguente frammento di schema specifica il contenuto previsto contenuto in questa classe.
- *
+ * 
  * <pre>
  * &lt;complexType name="gwReturn"&gt;
  *   &lt;complexContent&gt;
@@ -22,17 +26,17 @@ import javax.xml.bind.annotation.*;
  *   &lt;/complexContent&gt;
  * &lt;/complexType&gt;
  * </pre>
- *
- *
+ * 
+ * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "gwReturn", propOrder = {
-        "description",
-        "returnCode",
-        "status"
+    "description",
+    "returnCode",
+    "status"
 })
 @XmlSeeAlso({
-        CredentialListReturn.class
+    CredentialListReturn.class
 })
 public class GwReturn {
 
@@ -43,11 +47,11 @@ public class GwReturn {
 
     /**
      * Recupera il valore della proprietà description.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getDescription() {
         return description;
@@ -55,11 +59,11 @@ public class GwReturn {
 
     /**
      * Imposta il valore della proprietà description.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setDescription(String value) {
         this.description = value;
@@ -67,11 +71,11 @@ public class GwReturn {
 
     /**
      * Recupera il valore della proprietà returnCode.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getReturnCode() {
         return returnCode;
@@ -79,11 +83,11 @@ public class GwReturn {
 
     /**
      * Imposta il valore della proprietà returnCode.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setReturnCode(String value) {
         this.returnCode = value;
@@ -91,11 +95,11 @@ public class GwReturn {
 
     /**
      * Recupera il valore della proprietà status.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getStatus() {
         return status;
@@ -103,11 +107,11 @@ public class GwReturn {
 
     /**
      * Imposta il valore della proprietà status.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setStatus(String value) {
         this.status = value;

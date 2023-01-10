@@ -1,6 +1,6 @@
 package it.pagopa.pn.ms.be.rest;
 
-import it.pagopa.pn.ms.be.service.sign.SignServiceStub;
+import it.pagopa.pn.ms.be.service.sign.SignServiceSoap;
 import it.pagopa.pn.ms.be.service.sign.wsdl.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -18,7 +18,7 @@ public class ArubaController {
 
 
     @Autowired
-    SignServiceStub signServiceStub;
+    SignServiceSoap signServiceSoap;
 
 
 
@@ -31,7 +31,9 @@ public class ArubaController {
     ) throws TypeOfTransportNotImplemented_Exception, JAXBException {
 
         byte[] pdfDocument = readPdfDocoument();
-        SignReturnV2 response = signServiceStub.singnPdfDocument(pdfDocument,marcatura);
+
+
+        SignReturnV2 response = signServiceSoap.singnPdfDocument(pdfDocument,marcatura);
 
         return ResponseEntity.ok()
                 .body(response);
@@ -45,7 +47,7 @@ public class ArubaController {
 
         InputStream targetStream = new ByteArrayInputStream(byteArray);
 
-        SignReturnV2 response = signServiceStub.xmlsignature(    "application/xml",targetStream,marcatura);
+        SignReturnV2 response = signServiceSoap.xmlsignature(    "application/xml",targetStream,marcatura);
 
         return ResponseEntity.ok()
                 .body(response.getStream().getDataSource().getInputStream().readAllBytes());
@@ -56,7 +58,7 @@ public class ArubaController {
                 ) throws TypeOfTransportNotImplemented_Exception, IOException, JAXBException {
 
         byte[] pdfDocument = readPdfDocoument();
-        SignReturnV2 response = signServiceStub.pkcs7signV2(pdfDocument,marcatura);
+        SignReturnV2 response = signServiceSoap.pkcs7signV2(pdfDocument,marcatura);
         response.getStream().getDataSource().getOutputStream();
         return ResponseEntity.ok()
                 .body(response.getStream().getDataSource().getInputStream().readAllBytes());

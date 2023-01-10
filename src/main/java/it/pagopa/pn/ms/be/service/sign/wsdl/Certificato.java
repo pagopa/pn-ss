@@ -8,9 +8,9 @@ import javax.xml.bind.annotation.XmlType;
 
 /**
  * <p>Classe Java per certificato complex type.
- *
+ * 
  * <p>Il seguente frammento di schema specifica il contenuto previsto contenuto in questa classe.
- *
+ * 
  * <pre>
  * &lt;complexType name="certificato"&gt;
  *   &lt;complexContent&gt;
@@ -23,13 +23,13 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;/complexContent&gt;
  * &lt;/complexType&gt;
  * </pre>
- *
- *
+ * 
+ * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "certificato", propOrder = {
-        "content",
-        "id"
+    "content",
+    "id"
 })
 public class Certificato {
 
@@ -38,7 +38,7 @@ public class Certificato {
 
     /**
      * Recupera il valore della proprietà content.
-     *
+     * 
      * @return
      *     possible object is
      *     byte[]
@@ -49,7 +49,7 @@ public class Certificato {
 
     /**
      * Imposta il valore della proprietà content.
-     *
+     * 
      * @param value
      *     allowed object is
      *     byte[]
@@ -60,11 +60,11 @@ public class Certificato {
 
     /**
      * Recupera il valore della proprietà id.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getId() {
         return id;
@@ -72,11 +72,11 @@ public class Certificato {
 
     /**
      * Imposta il valore della proprietà id.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setId(String value) {
         this.id = value;

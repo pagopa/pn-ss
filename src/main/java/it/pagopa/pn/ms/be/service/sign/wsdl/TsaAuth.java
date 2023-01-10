@@ -9,9 +9,9 @@ import javax.xml.bind.annotation.XmlType;
 
 /**
  * <p>Classe Java per tsaAuth complex type.
- *
+ * 
  * <p>Il seguente frammento di schema specifica il contenuto previsto contenuto in questa classe.
- *
+ * 
  * <pre>
  * &lt;complexType name="tsaAuth"&gt;
  *   &lt;complexContent&gt;
@@ -25,14 +25,14 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;/complexContent&gt;
  * &lt;/complexType&gt;
  * </pre>
- *
- *
+ * 
+ * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "tsaAuth", propOrder = {
-        "password",
-        "user",
-        "tsaurl"
+    "password",
+    "user",
+    "tsaurl"
 })
 public class TsaAuth {
 
@@ -44,11 +44,11 @@ public class TsaAuth {
 
     /**
      * Recupera il valore della proprietà password.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getPassword() {
         return password;
@@ -56,11 +56,11 @@ public class TsaAuth {
 
     /**
      * Imposta il valore della proprietà password.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setPassword(String value) {
         this.password = value;
@@ -68,11 +68,11 @@ public class TsaAuth {
 
     /**
      * Recupera il valore della proprietà user.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getUser() {
         return user;
@@ -80,11 +80,11 @@ public class TsaAuth {
 
     /**
      * Imposta il valore della proprietà user.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setUser(String value) {
         this.user = value;
@@ -92,11 +92,11 @@ public class TsaAuth {
 
     /**
      * Recupera il valore della proprietà tsaurl.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getTsaurl() {
         return tsaurl;
@@ -104,11 +104,11 @@ public class TsaAuth {
 
     /**
      * Imposta il valore della proprietà tsaurl.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setTsaurl(String value) {
         this.tsaurl = value;

@@ -45,7 +45,7 @@ public class TypeOfTransportNotImplemented_Exception
     /**
      * 
      * @return
-     *     returns fault bean: it.pagopa.pn.template.sign.wsdl.TypeOfTransportNotImplemented
+     *     returns fault bean: it.pagopa.pn.ms.be.service.sign.wsdl.TypeOfTransportNotImplemented
      */
     public TypeOfTransportNotImplemented getFaultInfo() {
         return faultInfo;

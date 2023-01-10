@@ -9,9 +9,9 @@ import javax.xml.bind.annotation.XmlType;
 
 /**
  * <p>Classe Java per addpkcs7sign complex type.
- *
+ * 
  * <p>Il seguente frammento di schema specifica il contenuto previsto contenuto in questa classe.
- *
+ * 
  * <pre>
  * &lt;complexType name="addpkcs7sign"&gt;
  *   &lt;complexContent&gt;
@@ -24,13 +24,13 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;/complexContent&gt;
  * &lt;/complexType&gt;
  * </pre>
- *
- *
+ * 
+ * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "addpkcs7sign", propOrder = {
-        "signRequestV2",
-        "detached"
+    "signRequestV2",
+    "detached"
 })
 public class Addpkcs7Sign {
 
@@ -40,11 +40,11 @@ public class Addpkcs7Sign {
 
     /**
      * Recupera il valore della proprietà signRequestV2.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link SignRequestV2 }
-     *
+     *     
      */
     public SignRequestV2 getSignRequestV2() {
         return signRequestV2;
@@ -52,11 +52,11 @@ public class Addpkcs7Sign {
 
     /**
      * Imposta il valore della proprietà signRequestV2.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link SignRequestV2 }
-     *
+     *     
      */
     public void setSignRequestV2(SignRequestV2 value) {
         this.signRequestV2 = value;
@@ -64,7 +64,7 @@ public class Addpkcs7Sign {
 
     /**
      * Recupera il valore della proprietà detached.
-     *
+     * 
      */
     public boolean isDetached() {
         return detached;
@@ -72,7 +72,7 @@ public class Addpkcs7Sign {
 
     /**
      * Imposta il valore della proprietà detached.
-     *
+     * 
      */
     public void setDetached(boolean value) {
         this.detached = value;

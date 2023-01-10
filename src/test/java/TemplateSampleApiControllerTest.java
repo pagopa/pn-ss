@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class TemplateSampleApiControllerTest {
 
 
-    //@Test
+    @Test
     void contextLoads() {
     }
 

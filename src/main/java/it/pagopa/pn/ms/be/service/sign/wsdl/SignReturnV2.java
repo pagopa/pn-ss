@@ -2,14 +2,18 @@
 package it.pagopa.pn.ms.be.service.sign.wsdl;
 
 import javax.activation.DataHandler;
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlMimeType;
+import javax.xml.bind.annotation.XmlType;
 
 
 /**
  * <p>Classe Java per signReturnV2 complex type.
- *
+ * 
  * <p>Il seguente frammento di schema specifica il contenuto previsto contenuto in questa classe.
- *
+ * 
  * <pre>
  * &lt;complexType name="signReturnV2"&gt;
  *   &lt;complexContent&gt;
@@ -26,17 +30,17 @@ import javax.xml.bind.annotation.*;
  *   &lt;/complexContent&gt;
  * &lt;/complexType&gt;
  * </pre>
- *
- *
+ * 
+ * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "signReturnV2", propOrder = {
-        "binaryoutput",
-        "description",
-        "dstPath",
-        "returnCode",
-        "status",
-        "stream"
+    "binaryoutput",
+    "description",
+    "dstPath",
+    "returnCode",
+    "status",
+    "stream"
 })
 public class SignReturnV2 {
 
@@ -51,7 +55,7 @@ public class SignReturnV2 {
 
     /**
      * Recupera il valore della proprietà binaryoutput.
-     *
+     * 
      * @return
      *     possible object is
      *     byte[]
@@ -62,7 +66,7 @@ public class SignReturnV2 {
 
     /**
      * Imposta il valore della proprietà binaryoutput.
-     *
+     * 
      * @param value
      *     allowed object is
      *     byte[]
@@ -73,11 +77,11 @@ public class SignReturnV2 {
 
     /**
      * Recupera il valore della proprietà description.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getDescription() {
         return description;
@@ -85,11 +89,11 @@ public class SignReturnV2 {
 
     /**
      * Imposta il valore della proprietà description.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setDescription(String value) {
         this.description = value;
@@ -97,11 +101,11 @@ public class SignReturnV2 {
 
     /**
      * Recupera il valore della proprietà dstPath.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getDstPath() {
         return dstPath;
@@ -109,11 +113,11 @@ public class SignReturnV2 {
 
     /**
      * Imposta il valore della proprietà dstPath.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setDstPath(String value) {
         this.dstPath = value;
@@ -121,11 +125,11 @@ public class SignReturnV2 {
 
     /**
      * Recupera il valore della proprietà returnCode.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getReturnCode() {
         return returnCode;
@@ -133,11 +137,11 @@ public class SignReturnV2 {
 
     /**
      * Imposta il valore della proprietà returnCode.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setReturnCode(String value) {
         this.returnCode = value;
@@ -145,11 +149,11 @@ public class SignReturnV2 {
 
     /**
      * Recupera il valore della proprietà status.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link String }
-     *
+     *     
      */
     public String getStatus() {
         return status;
@@ -157,11 +161,11 @@ public class SignReturnV2 {
 
     /**
      * Imposta il valore della proprietà status.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link String }
-     *
+     *     
      */
     public void setStatus(String value) {
         this.status = value;
@@ -169,11 +173,11 @@ public class SignReturnV2 {
 
     /**
      * Recupera il valore della proprietà stream.
-     *
+     * 
      * @return
      *     possible object is
      *     {@link DataHandler }
-     *
+     *     
      */
     public DataHandler getStream() {
         return stream;
@@ -181,11 +185,11 @@ public class SignReturnV2 {
 
     /**
      * Imposta il valore della proprietà stream.
-     *
+     * 
      * @param value
      *     allowed object is
      *     {@link DataHandler }
-     *
+     *     
      */
     public void setStream(DataHandler value) {
         this.stream = value;

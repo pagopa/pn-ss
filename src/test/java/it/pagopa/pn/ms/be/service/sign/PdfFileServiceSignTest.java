@@ -1,7 +1,12 @@
 package it.pagopa.pn.ms.be.service.sign;
 
+import com.sun.xml.ws.util.ByteArrayDataSource;
+import it.pagopa.pn.ms.be.service.sign.dto.GenericFileSignRequestV2;
 import it.pagopa.pn.ms.be.service.sign.dto.InputPdfFileSignRequestV2;
 import it.pagopa.pn.ms.be.service.sign.dto.PdfFileSignReturnV2;
+import it.pagopa.pn.ms.be.service.sign.wsdl.SignRequestV2;
+import it.pagopa.pn.ms.be.service.sign.wsdl.TypeOfTransportNotImplemented_Exception;
+import it.pagopa.pn.ms.be.service.sign.wsdl.TypeTransport;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +14,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.xml.bind.JAXBException;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -16,9 +33,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ExtendWith(MockitoExtension.class)
 public class PdfFileServiceSignTest {
 
-
     @InjectMocks
-    ServiceSignImpl service;
+    SignServiceSoap service;
+
+
 
     @BeforeEach
     public void setUp() {
@@ -26,64 +44,186 @@ public class PdfFileServiceSignTest {
     }
 
     @Test
-    public void testPDFFileSignedAndMarked(){
+    public void testPDFFileSignedAndMarked() throws JAXBException, TypeOfTransportNotImplemented_Exception {
         InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
-        PdfFileSignReturnV2 reponse = service.singnPdfDocument(input);
-        Assertions.assertNull(reponse);
+        byte[] buf = readPdfDocoument();
+        SignRequestV2 signRequestV2 = new SignRequestV2();
+        signRequestV2.setCertID("AS0");
+        signRequestV2.setIdentity(service.createIdentity(null));
+        DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
+        signRequestV2.setStream(new DataHandler(source));
+        signRequestV2.setTransport(TypeTransport.STREAM);
+        signRequestV2.setRequiredmark(false);
+
+        input.setInfoTosigned(signRequestV2);
+
+
+        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        Assertions.assertNotNull(response);
     }
     @Test
-    public void testPDFFileCorrupted(){
+    public void testPDFFileCorrupted() throws JAXBException, TypeOfTransportNotImplemented_Exception {
         InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
-        PdfFileSignReturnV2 reponse = service.singnPdfDocument(input);
-        Assertions.assertEquals(reponse.getCode(),"0002");
-        Assertions.assertEquals(reponse.getDescription(),"STREAM EMPTY" );
+        byte[] buf = readPdfDocoument();
+        SignRequestV2 signRequestV2 = new SignRequestV2();
+        signRequestV2.setCertID("AS0");
+        signRequestV2.setIdentity(service.createIdentity(null));
+        DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
+        signRequestV2.setStream(null);
+        signRequestV2.setTransport(TypeTransport.STREAM);
+        signRequestV2.setRequiredmark(false);
+
+        input.setInfoTosigned(signRequestV2);
+
+
+        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(response.getCode(),"0002");
+        Assertions.assertEquals(response.getDescription(),"STREAM EMPTY" );
 
     }
     @Test
-    public void testPDFFileTranspotType(){
+    public void testPDFFileTranspotType() throws JAXBException, TypeOfTransportNotImplemented_Exception {
         InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
-        PdfFileSignReturnV2 reponse = service.singnPdfDocument(input);
-        Assertions.assertEquals(reponse.getCode(),"0002");
-        Assertions.assertEquals(reponse.getDescription(),"Incorrect parameters for the type of transport indicated" );
-    }
-    @Test
-    public void testPDFFileLoginKO(){
-        InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
-        PdfFileSignReturnV2 reponse = service.singnPdfDocument(input);
+        byte[] buf = readPdfDocoument();
+        SignRequestV2 signRequestV2 = new SignRequestV2();
+        signRequestV2.setCertID("AS0");
+        signRequestV2.setIdentity(service.createIdentity(null));
+        DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
+        signRequestV2.setStream(new DataHandler(source));
+        signRequestV2.setTransport(null);
+        signRequestV2.setRequiredmark(false);
 
-        Assertions.assertEquals(reponse.getCode(),"0003");
-        Assertions.assertEquals(reponse.getDescription(),"Error during the credential verification phase" );
-    }
-    @Test
-    public void testPDFFileTranspotTypeEmpty(){
-        InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
-        PdfFileSignReturnV2 reponse = service.singnPdfDocument(input);
-        Assertions.assertEquals(reponse.getCode(),"0005");
-        Assertions.assertEquals(reponse.getDescription(),"Invalid type of transport" );
-    }
-    @Test
-    public void testPDFFileUrlIncorrect(){
-        InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
-        PdfFileSignReturnV2 reponse = service.singnPdfDocument(input);
-        Assertions.assertEquals(reponse.getCode(),"500");
-        Assertions.assertEquals(reponse.getDescription(),"Connection refused" );
-    }
-    @Test
-    public void testPDFFileCertIdNotcorrect(){
-        InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
-        PdfFileSignReturnV2 reponse = service.singnPdfDocument(input);
-        Assertions.assertEquals(reponse.getCode(),"0001");
-        Assertions.assertEquals(reponse.getDescription(),"PDF error in the signature process" );
-    }
-    @Test
-    public void testPDFFileSignedNotMarked(){
-        InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
-        PdfFileSignReturnV2 reponse = service.singnPdfDocument(input);
-        Assertions.assertNull(reponse);
-    }
+        input.setInfoTosigned(signRequestV2);
 
 
+        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(response.getCode(),"0005");
+        Assertions.assertEquals(response.getDescription(),"Trasport Method not Valid");;
+    }
+    @Test
+    public void testPDFFileLoginKO() throws JAXBException, TypeOfTransportNotImplemented_Exception {
+        InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
+        byte[] buf = readPdfDocoument();
+        SignRequestV2 signRequestV2 = new SignRequestV2();
+        signRequestV2.setCertID("AS0");
+        signRequestV2.setIdentity(service.createIdentity(null));
+        signRequestV2.getIdentity().setUser("");
+        DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
+        signRequestV2.setStream(new DataHandler(source));
+        signRequestV2.setTransport(TypeTransport.STREAM);
+        signRequestV2.setRequiredmark(false);
 
+        input.setInfoTosigned(signRequestV2);
+
+
+        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        Assertions.assertNotNull(response);
+
+        Assertions.assertEquals(response.getCode(),"0003");
+        Assertions.assertEquals(response.getDescription(),"Invalid User Credentials" );
+    }
+    @Test
+    public void testPDFFielTranspotTypeEmpty() throws JAXBException, TypeOfTransportNotImplemented_Exception {
+        InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
+        byte[] buf = readPdfDocoument();
+        SignRequestV2 signRequestV2 = new SignRequestV2();
+        signRequestV2.setCertID("AS0");
+        signRequestV2.setIdentity(service.createIdentity(null));
+        DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
+        signRequestV2.setStream(new DataHandler(source));
+        signRequestV2.setTransport(TypeTransport.BYNARYNET);
+        signRequestV2.setRequiredmark(false);
+
+        input.setInfoTosigned(signRequestV2);
+
+
+        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(response.getCode(),"0002");
+        Assertions.assertEquals(response.getDescription(),"BYNARY INPUT EMPTY" );
+    }
+    @Test
+    public void testPDFFileUrlIncorrect() throws JAXBException, TypeOfTransportNotImplemented_Exception {
+        InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
+        byte[] buf = readPdfDocoument();
+        SignRequestV2 signRequestV2 = new SignRequestV2();
+        signRequestV2.setCertID("AS0");
+        signRequestV2.setIdentity(service.createIdentity(null));
+        DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
+        signRequestV2.setStream(new DataHandler(source));
+        signRequestV2.setTransport(TypeTransport.STREAM);
+        signRequestV2.setRequiredmark(false);
+
+        input.setInfoTosigned(signRequestV2);
+        input.setUrl("http://localhost:8080");
+
+        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(response.getCode(),"500");
+        Assertions.assertEquals(response.getDescription(),"Connection refused: connect" );
+    }
+    @Test
+    public void testPDFFileCertIdNotcorrect() throws JAXBException, TypeOfTransportNotImplemented_Exception {
+        InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
+        byte[] buf = readPdfDocoument();
+        SignRequestV2 signRequestV2 = new SignRequestV2();
+        signRequestV2.setCertID("");
+        signRequestV2.setIdentity(service.createIdentity(null));
+        DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
+        signRequestV2.setStream(new DataHandler(source));
+        signRequestV2.setTransport(TypeTransport.STREAM);
+        signRequestV2.setRequiredmark(false);
+
+        input.setInfoTosigned(signRequestV2);
+
+
+        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(response.getCode(),"0001");
+        Assertions.assertEquals(response.getDescription(),"Generic error" );
+    }
+
+
+
+    @Test
+    public void testPDFFileSignedNotMarked() throws JAXBException, TypeOfTransportNotImplemented_Exception {
+        InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
+        byte[] buf = readPdfDocoument();
+        SignRequestV2 signRequestV2 = new SignRequestV2();
+        signRequestV2.setCertID("AS0");
+        signRequestV2.setIdentity(service.createIdentity(null));
+        DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
+        signRequestV2.setStream(new DataHandler(source));
+        signRequestV2.setTransport(TypeTransport.STREAM);
+        signRequestV2.setRequiredmark(false);
+
+        input.setInfoTosigned(signRequestV2);
+
+
+        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        Assertions.assertNotNull(response);
+    }
+
+
+
+    private byte[] readPdfDocoument() {
+        byte[] byteArray=null;
+        try {
+
+            String filePath = "C:///PROGETTI//DGSPA//materiale start//FirmaAutomatica.pdf";
+
+            byteArray = Files.readAllBytes(Paths.get(filePath));
+
+        } catch (FileNotFoundException e) {
+            System.out.println("File Not found"+e);
+        } catch (IOException e) {
+            System.out.println("IO Ex"+e);
+        }
+        return byteArray;
+
+    }
 
 
 }

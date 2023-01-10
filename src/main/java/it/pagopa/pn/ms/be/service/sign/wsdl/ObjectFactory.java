@@ -10,7 +10,7 @@ import javax.xml.namespace.QName;
 /**
  * This object contains factory methods for each 
  * Java content interface and Java element interface 
- * generated in the it.pagopa.pn.template.sign.wsdl package. 
+ * generated in the it.pagopa.pn.ms.be.service.sign.wsdl package. 
  * <p>An ObjectFactory allows you to programatically 
  * construct new instances of the Java representation 
  * for XML content. The Java representation of XML 
@@ -105,7 +105,7 @@ public class ObjectFactory {
     private final static QName _XmlsignatureMultipleResponse_QNAME = new QName("http://arubasignservice.arubapec.it/", "xmlsignature_multipleResponse");
 
     /**
-     * Create a new ObjectFactory that can be used to create new instances of schema derived classes for package: it.pagopa.pn.template.sign.wsdl
+     * Create a new ObjectFactory that can be used to create new instances of schema derived classes for package: it.pagopa.pn.ms.be.service.sign.wsdl
      * 
      */
     public ObjectFactory() {

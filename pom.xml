@@ -88,6 +88,11 @@
             <version>2.3.1</version>
             <type>pom</type>
         </dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>aws-sdk-java</artifactId>
+			<version>2.19.13</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -100,19 +105,19 @@
 				<groupId>com.sun.xml.ws</groupId>
 				<artifactId>jaxws-maven-plugin</artifactId>
 				<version>2.3.2</version>
-				<!--executions>
+				<executions>
 					<execution>
 						<goals>
 							<goal>wsimport</goal>
 						</goals>
 					</execution>
-				<executions-->
+				</executions>
 				<configuration>
 					<wsdlLocation>/ArubaSignService.wsdl</wsdlLocation>
 					<wsdlDirectory>${project.basedir}/src/main/resources/wsdl</wsdlDirectory>
 					<extension>true</extension>
 					<keep>true</keep>
-					<packageName>it.pagopa.pn.ms.be.service.sign.wsdl</packageName>
+					<packageName>it.pagopa.pnss.transformation.wsdl</packageName>
 					<sourceDestDir>src/main/java</sourceDestDir>
 				</configuration>
 			</plugin>
@@ -165,6 +170,37 @@
 							</configOptions>				
 						</configuration>
 					</execution>
+					<execution>
+						<id>generate-gestore-file</id>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+						<phase>process-resources</phase>
+						<configuration>
+							<inputSpec>${project.basedir}/docs/openapi/pn-safestorage-v1-api.yaml</inputSpec>
+							<generatorName>spring</generatorName>
+							<library>spring-boot</library>
+							<generateApiDocumentation>false</generateApiDocumentation>
+							<generateApiTests>false</generateApiTests>
+							<generateModelTests>false</generateModelTests>
+							<configOptions>
+								<dateLibrary>java11</dateLibrary>
+								<delegatePattern>true</delegatePattern>
+								<interfaceOnly>true</interfaceOnly>
+								<annotationLibrary>none</annotationLibrary>
+								<documentationProvider>source</documentationProvider>
+								<openApiNullable>false</openApiNullable>
+								<reactive>true</reactive>
+								<skipDefaultInterface>false</skipDefaultInterface>
+								<useTags>true</useTags>
+								<basePackage>${project.groupId}.template.rest.v1</basePackage>
+								<modelPackage>${project.groupId}.template.rest.v1.dto</modelPackage>
+								<apiPackage>${project.groupId}.template.rest.v1.api</apiPackage>
+								<configPackage>${project.groupId}.template.rest.v1.config</configPackage>
+							</configOptions>
+						</configuration>
+					</execution>
+
 				</executions>
 			</plugin>			 		 
 		</plugins>

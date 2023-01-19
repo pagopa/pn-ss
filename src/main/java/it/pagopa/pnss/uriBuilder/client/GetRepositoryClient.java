@@ -9,14 +9,12 @@ import org.springframework.web.bind.annotation.*;
 @FeignClient (decode404 = true, name = "GetRepositoryClient", url = "http://localhost:8078/")
 public interface GetRepositoryClient {
 
-    @RequestMapping(value = "/repository-manager/retrieveDocument", method = RequestMethod.GET)
-    @ResponseBody
+    @GetMapping(value = "/repository-manager/retrieveDocument")
     ResponseEntity <DocumentRepositoryDto> retrieveDocument(
             @RequestParam(name = "idDcoument", required = true) String filekey);
 
 
-    @RequestMapping(value = "/repository-manager/uploadDocument", method = RequestMethod.POST)
-    @ResponseBody
+    @GetMapping(value = "/repository-manager/uploadDocument")
     ResponseEntity <Boolean> upLoadDocument(
             @RequestBody( required= true) DocumentRepositoryDto documentRepositoryDto);
 

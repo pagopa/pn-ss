@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication
-@EnableFeignClients({"it.pagopa.pnss.uriBuilder.client.*"})
+@EnableFeignClients
 public class TemplateApplication {
 
 

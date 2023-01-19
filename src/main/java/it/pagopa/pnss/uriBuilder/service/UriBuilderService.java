@@ -5,6 +5,7 @@ import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.uriBuilder.client.GetRepositoryClient;
 import it.pagopa.pnss.uriBuilder.model.DocumentRepositoryDto;
+import org.aspectj.lang.annotation.After;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import javax.annotation.PostConstruct;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -42,8 +44,9 @@ public class UriBuilderService {
     List <String> coldStatus;
     Map<String,String> mapDocumentTypeToBucket ;
 
-    public UriBuilderService() {
-
+    @PostConstruct
+    public void createMap() {
+        mapDocumentTypeToBucket= new HashMap<>();
         mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS,BUCKET_HOT);
         mapDocumentTypeToBucket.put(PN_AAR,BUCKET_HOT);
         mapDocumentTypeToBucket.put(PN_LEGAL_FACTS,BUCKET_STAGING);

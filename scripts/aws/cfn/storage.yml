@@ -36,6 +36,22 @@ Parameters:
     Type: String
     Description: Description
 
+  PnSsQueueNameNotificaDisponibilita:
+    Type: String
+    Description: Description
+
+  PnSsQueueNameStagingBucket:
+    Type: String
+    Description: Description
+
+  PnSsEventRuleNameNotificaDisponibilita:
+    Type: String
+    Description: Description
+
+  PnSsEventRuleNameStagingBucket:
+    Type: String
+    Description: Description
+
 Resources:
   NullResource:
       Type: AWS::CloudFormation::WaitConditionHandle

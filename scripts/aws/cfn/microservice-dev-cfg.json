@@ -2,16 +2,17 @@
   "Parameters": {
     "PnSs": "",
 
+    "PnSsBucket": "pn-ss-bucket",
+    "PnSsBucketStaging": "pn-ss-staging-bucket",
+
     "PnSsTableNameAnagrafica": "pn-ss-anagrafica-client",
     "PnSsTableNameTipologie": "pn-ss-tipologie-documenti",
     "PnSsTableNameDocumenti": "pn-ss-documenti",
 
-    "PnSsQueueName": "pn-ss-SAMPLE-queue",
-    "PnSsQueueNameTrackerStatoSMS": "pn-ss-notification-tracker-stato-sms-queue",
-    "PnSsQueueNameTrackerErroriSMS": "pn-ss-notification-tracker-stato-sms-errato-queue",
-    "PnSsQueueNameNotificheExt1": "pn-ss-notifiche-external-platform-name-queue",
+    "PnSsQueueNameNotificaDisponibilita": "pn-ss-notifica-disponibilita-queue",
+    "PnSsQueueNameStagingBucket": "pn-ss-staging-bucket-queue",
 
-    "PnSsEventRuleName": "pn-ss-SAMPLE-event-rule",
-    "PnSsEventRuleNameNotificheExt1": "pn-ss-notifiche-external-platform-event-rule"
+    "PnSsEventRuleNameNotificaDisponibilita": "pn-ss-notifica-disponibilita-event-rule",
+    "PnSsEventRuleNameStagingBucket": "pn-ss-staging-bucket-event-rule"
   }
 }

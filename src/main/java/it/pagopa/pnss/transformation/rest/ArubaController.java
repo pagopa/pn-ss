@@ -42,10 +42,9 @@ public class ArubaController {
     @GetMapping(path = "/xmlsignature", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity <byte[]> xmlsignature(
             @RequestParam(name ="marcatura") Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, IOException, JAXBException {
-        String filePath = "C:///PROGETTI//DGSPA//materiale start//prova.xml";
-        byte[] byteArray = Files.readAllBytes(Paths.get(filePath));
 
-        InputStream targetStream = new ByteArrayInputStream(byteArray);
+
+        InputStream targetStream =  getClass().getResourceAsStream("/prova.xml");
 
         SignReturnV2 response = signServiceSoap.xmlsignature(    "application/xml",targetStream,marcatura);
 
@@ -69,9 +68,18 @@ public class ArubaController {
         byte[] byteArray=null;
         try {
 
-            String filePath = "C:///PROGETTI//DGSPA//materiale start//FirmaAutomatica.pdf";
 
-            byteArray = Files.readAllBytes(Paths.get(filePath));
+            InputStream is =  getClass().getResourceAsStream("/PDF_PROVA.pdf");
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+            int nRead;
+            byte[] data = new byte[16384];
+
+            while ((nRead = is.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, nRead);
+            }
+
+            byteArray = buffer.toByteArray();
 
         } catch (FileNotFoundException e) {
             System.out.println("File Not found"+e);

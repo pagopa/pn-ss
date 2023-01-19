@@ -18,8 +18,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.xml.bind.JAXBException;
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -199,10 +201,17 @@ public class GenericFileServiceSignTest {
     private byte[] readPdfDocoument() {
         byte[] byteArray=null;
         try {
+            InputStream is =  getClass().getResourceAsStream("/PDF_PROVA.pdf");
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
-            String filePath = "C:///PROGETTI//DGSPA//materiale start//FirmaAutomatica.pdf";
+            int nRead;
+            byte[] data = new byte[16384];
 
-            byteArray = Files.readAllBytes(Paths.get(filePath));
+            while ((nRead = is.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, nRead);
+            }
+
+            byteArray = buffer.toByteArray();
 
         } catch (FileNotFoundException e) {
             System.out.println("File Not found"+e);

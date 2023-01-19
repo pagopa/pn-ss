@@ -19,8 +19,10 @@ import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.xml.bind.JAXBException;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -209,9 +211,17 @@ public class PdfFileServiceSignTest {
         byte[] byteArray=null;
         try {
 
-            String filePath = "C:///PROGETTI//DGSPA//materiale start//FirmaAutomatica.pdf";
+            InputStream is =  getClass().getResourceAsStream("/PDF_PROVA.pdf");
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
-            byteArray = Files.readAllBytes(Paths.get(filePath));
+            int nRead;
+            byte[] data = new byte[16384];
+
+            while ((nRead = is.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, nRead);
+            }
+
+            byteArray = buffer.toByteArray();
 
         } catch (FileNotFoundException e) {
             System.out.println("File Not found"+e);

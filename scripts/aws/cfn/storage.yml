@@ -24,9 +24,97 @@ Parameters:
     Type: String
     Description: 'Where to send CDC'
 
+  PnSsTableNameAnagrafica:
+    Type: String
+    Description: Description
+  
+  PnSsTableNameTipologie:
+    Type: String
+    Description: Description
+
+  PnSsTableNameDocumenti:
+    Type: String
+    Description: Description
+
 Resources:
-    NullResource:
-        Type: AWS::CloudFormation::WaitConditionHandle
+  NullResource:
+      Type: AWS::CloudFormation::WaitConditionHandle
+
+  PnSsTableAnagrafica:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -   
+          AttributeName: "name"
+          AttributeType: "S"
+        -   
+          AttributeName: "APIKey"
+          AttributeType: "S"
+      KeySchema: 
+        -   
+          AttributeName: "name"
+          KeyType: "HASH"
+        -
+          AttributeName: "APIKey"
+          KeyType: "RANGE"
+      #KinesisStreamSpecification:
+      #  StreamArn: "String"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: false
+        SSEType: "KMS"
+      TableClass: "STANDARD"
+      TableName: !Ref PnSsTableNameAnagrafica
+    DeletionPolicy: Retain
+
+  PnSsTableTipologie:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -   
+          AttributeName: "tipoDocumento"
+          AttributeType: "S"
+      KeySchema: 
+        -   
+          AttributeName: "tipoDocumento"
+          KeyType: "HASH"
+      #KinesisStreamSpecification:
+      #  StreamArn: "String"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: false
+        SSEType: "KMS"
+      TableClass: "STANDARD"
+      TableName: !Ref PnSsTableNameTipologie
+    DeletionPolicy: Retain
+
+  PnSsTableDocumenti:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -   
+          AttributeName: "checksum"
+          AttributeType: "S"
+      KeySchema: 
+        -   
+          AttributeName: "checksum"
+          KeyType: "HASH"
+      #KinesisStreamSpecification:
+      #  StreamArn: "String"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: false
+        SSEType: "KMS"
+      TableClass: "STANDARD"
+      TableName: !Ref PnSsTableNameDocumenti
+    DeletionPolicy: Retain
+
 
 Outputs:
     SampleOutput:

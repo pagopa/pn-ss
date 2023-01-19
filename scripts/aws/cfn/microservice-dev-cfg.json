@@ -1,3 +1,17 @@
 {
-  "Parameters" : {}
+  "Parameters": {
+    "PnSs": "",
+
+    "PnSsTableNameAnagrafica": "pn-ss-anagrafica-client",
+    "PnSsTableNameTipologie": "pn-ss-tipologie-documenti",
+    "PnSsTableNameDocumenti": "pn-ss-documenti",
+
+    "PnSsQueueName": "pn-ss-SAMPLE-queue",
+    "PnSsQueueNameTrackerStatoSMS": "pn-ss-notification-tracker-stato-sms-queue",
+    "PnSsQueueNameTrackerErroriSMS": "pn-ss-notification-tracker-stato-sms-errato-queue",
+    "PnSsQueueNameNotificheExt1": "pn-ss-notifiche-external-platform-name-queue",
+
+    "PnSsEventRuleName": "pn-ss-SAMPLE-event-rule",
+    "PnSsEventRuleNameNotificheExt1": "pn-ss-notifiche-external-platform-event-rule"
+  }
 }

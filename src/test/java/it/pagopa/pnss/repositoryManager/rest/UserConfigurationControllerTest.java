@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.handler;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
@@ -18,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.UserConfigurationDestination;
+import it.pagopa.pnss.repositoryManager.dto.UserConfigurationDestinationDTO;
 import it.pagopa.pnss.repositoryManager.dto.UserConfigurationInput;
 import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
 import it.pagopa.pnss.repositoryManager.model.UserConfigurationEntity;
@@ -59,11 +61,11 @@ class UserConfigurationControllerTest {
 	
     private static String tableName = "UserConfiguration";
     private static String name = "userkey1";
-//    private static List<String> canCreate = new ArrayList<String>();
-//    private static List<String> canRead = new ArrayList<String>();;
+    private static List<String> canCreate = new ArrayList<String>();
+    private static List<String> canRead = new ArrayList<String>();;
     private static Object signatureInfo = new Object();
-    private static UserConfigurationDestination destination = new UserConfigurationDestination();
-//    private static String apiKey = "";
+    private static UserConfigurationDestinationDTO destination = new UserConfigurationDestinationDTO();
+    private static String apiKey = "";
     
     @BeforeAll
     public static void setUp() {
@@ -111,7 +113,7 @@ class UserConfigurationControllerTest {
     @Order(4)
     public void PostItem() {
     	userInput.setName(name);
-    	userInput.getUserInput().getCanCreate().add("data1");
+    	userInput.setCanCreate();
     	userInput.getUserInput().getCanRead().add("data2");
     	userInput.getUserInput().getDestination().setSqsUrl("urltest");
     	userInput.getUserInput().getSignatureInfo();

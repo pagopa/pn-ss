@@ -13,10 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import it.pagopa.pn.ec.repositorymanager.service.RepositoryManagerService;
 import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
 import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
-import it.pagopa.pnss.repositoryManager.model.DocumentEntity;
 import it.pagopa.pnss.repositoryManager.service.DocumentService;
 import reactor.core.publisher.Mono;
 
@@ -38,9 +36,9 @@ import reactor.core.publisher.Mono;
 		@GetMapping(value="/document/{name}")
 		public Mono <ResponseEntity <DocumentOutput>> getdocument(@RequestParam("name") String name){
 			
-			DocumentOutput documentResp = documentService.getDocument(name);
+			documentOut = documentService.getDocument(name);
 			
-			Mono<ResponseEntity<DocumentOutput>> result = Mono.just(ResponseEntity.ok().body(documentResp));
+			Mono<ResponseEntity<DocumentOutput>> result = Mono.just(ResponseEntity.ok().body(documentOut));
 			return result;
 		}
 	
@@ -57,18 +55,18 @@ import reactor.core.publisher.Mono;
 		@PutMapping(path = "/document/{name}")
 		public Mono<ResponseEntity<DocumentOutput>> updatedocument(@RequestBody DocumentInput document){
 			
-			DocumentOutput documentResp = documentService.updatedocument(document);
+			documentOut = documentService.updatedocument(document);
 			
-			Mono<ResponseEntity<DocumentOutput>> result = Mono.just(ResponseEntity.ok().body(documentResp));
+			Mono<ResponseEntity<DocumentOutput>> result = Mono.just(ResponseEntity.ok().body(documentOut));
 			return result;
 		}
 		
 		@DeleteMapping(path = "/document/{name}")
 		public Mono<ResponseEntity<DocumentOutput>> deletedocument(@RequestParam("name") String name){
 			
-			DocumentOutput documentResp = documentService.deletedocument(name);
+			documentOut = documentService.deletedocument(name);
 			
-			Mono<ResponseEntity<DocumentOutput>> result = Mono.just(ResponseEntity.ok().body(documentResp));
+			Mono<ResponseEntity<DocumentOutput>> result = Mono.just(ResponseEntity.ok().body(documentOut));
 			return result;
 		}
 		

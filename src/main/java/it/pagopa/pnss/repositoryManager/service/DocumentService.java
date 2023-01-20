@@ -25,21 +25,20 @@ public class DocumentService {
         this.objectMapper = objectMapper;
     }
 
-	public DocumentOutput getDocument(String partition_id) {
-		DocumentOutput documentOutput = new DocumentOutput();
+	public DocumentOutput getDocument(String name) {
 		try {
             DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table("Document", TableSchema.fromBean(DocumentEntity.class));
             QueryConditional queryConditional = QueryConditional
                     .keyEqualTo(Key.builder()
-                            .partitionValue(partition_id)
+                            .partitionValue(name)
                             .build());
             
             Iterator<DocumentEntity> result = documentTable.query(queryConditional).items().iterator();
 		
             DocumentEntity docType = result.next();
-            documentOutput = objectMapper.convertValue(docType, DocumentOutput.class);
+            return objectMapper.convertValue(docType, DocumentOutput.class);
             
-            return documentOutput;
+            
 		} catch (DynamoDbException e) {
             System.err.println(e.getMessage());
             throw new RepositoryManagerException.DynamoDbException();  
@@ -47,15 +46,13 @@ public class DocumentService {
 	}
 	
 	public DocumentOutput postdocument(DocumentInput documentInput) {
-        
-        DocumentOutput documentResponse = new DocumentOutput();
+   
         try {
             DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table("Document",
             		                                                           TableSchema.fromBean(
             		                                                        		   DocumentEntity.class));
             DocumentEntity documentEntity = objectMapper.convertValue(documentInput, DocumentEntity.class);
-            
-            
+                       
             if(documentTable.getItem(documentEntity) == null) {
             	documentTable.putItem(documentEntity);
 				System.out.println("User data added to the table");
@@ -73,14 +70,13 @@ public class DocumentService {
 	
 	public DocumentOutput updatedocument(DocumentInput documentInput) {
     	
-    	DocumentOutput documentOutput = new DocumentOutput();
     	try {
             DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table("Document", TableSchema.fromBean(DocumentEntity.class));
             DocumentEntity documentEntity = objectMapper.convertValue(documentInput, DocumentEntity.class);
 
             if(documentTable.getItem(documentEntity) != null) { 
             documentTable.putItem(documentEntity);
-            documentOutput = objectMapper.convertValue(documentEntity, DocumentOutput.class);
+            return objectMapper.convertValue(documentEntity, DocumentOutput.class);
                       
     	} else {
     		throw new RepositoryManagerException.DynamoDbException();
@@ -90,12 +86,11 @@ public class DocumentService {
             System.err.println(e.getMessage());
             throw new RepositoryManagerException.DynamoDbException();
         }    	
-    	return documentOutput;
+    	
     }
 
 	public DocumentOutput deletedocument(String name) {
-    
-    	DocumentOutput documentOutput = new DocumentOutput();
+
     	try {
             DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table("Document", TableSchema.fromBean(DocumentEntity.class));
             QueryConditional queryConditional = QueryConditional
@@ -105,12 +100,9 @@ public class DocumentService {
             Iterator<DocumentEntity> result = documentTable.query(queryConditional).items().iterator();
             
             DocumentEntity documentEntity = result.next();                        
-            documentTable.deleteItem(documentEntity);            
-            documentOutput = objectMapper.convertValue(documentEntity, DocumentOutput.class); 
-            
+            documentTable.deleteItem(documentEntity);    
             System.out.println("Cancellazione avvenuta con successo");
-            
-            return documentOutput;
+            return objectMapper.convertValue(documentEntity, DocumentOutput.class);              
             
     	}catch (DynamoDbException  e){
             System.err.println(e.getMessage());

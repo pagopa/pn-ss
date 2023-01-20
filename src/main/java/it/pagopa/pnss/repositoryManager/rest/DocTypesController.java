@@ -7,25 +7,33 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import it.pagopa.pn.template.rest.v1.api.CfgApi;
 import it.pagopa.pnss.repositoryManager.dto.DocTypesInput;
 import it.pagopa.pnss.repositoryManager.dto.DocTypesOutput;
 import it.pagopa.pnss.repositoryManager.service.DocTypesService;
 import reactor.core.publisher.Mono;
 
+@RestController
+@RequestMapping("/doc-type")
+	public class DocTypesController {
 
-	public class DocTypesController implements CfgApi {
+	private final DocTypesService docTypesService;
 
-		@Autowired
-		DocTypesService docTypeService;
+	public DocTypesController(DocTypesService docTypesService) {
+		this.docTypesService = docTypesService;
+	}
 
+	@Autowired
+	DocTypesOutput documentOut = new DocTypesOutput();
+	
 			
 			@GetMapping(value="/getdoctypes/{name}")
 			public Mono <ResponseEntity <DocTypesOutput>> getdocTypes(@RequestParam("name") String name){
 				
-				DocTypesOutput docTypeOut = docTypeService.getDocType(name);
+				DocTypesOutput docTypeOut = docTypesService.getDocType(name);
 				
 				Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
 				return result;
@@ -35,7 +43,7 @@ import reactor.core.publisher.Mono;
 			@PostMapping(path = "/postdoctypes")
 			public Mono<ResponseEntity<DocTypesOutput>> postdocTypes(@RequestBody DocTypesInput docTypes) {
 
-				DocTypesOutput docTypeOut = docTypeService.postDocTypes(docTypes);
+				DocTypesOutput docTypeOut = docTypesService.postDocTypes(docTypes);
 
 				Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
 				return result;
@@ -44,16 +52,16 @@ import reactor.core.publisher.Mono;
 			@PutMapping(path = "/updatedoctypes/{name}")
 			public Mono<ResponseEntity<DocTypesOutput>> updatedocTypes(@RequestParam("name") DocTypesInput docTypes){
 				
-				DocTypesOutput docTypeOut = docTypeService.updateDocTypes(docTypes);
+				DocTypesOutput docTypeOut = docTypesService.updateDocTypes(docTypes);
 				
 				Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
 				return result;
 			}
 			
 			@DeleteMapping(path = "/deletedoctypes/{name}")
-			public Mono<ResponseEntity<DocTypesOutput>> deletedocTypes(@RequestParam("name") DocTypesInput docTypes){
+			public Mono<ResponseEntity<DocTypesOutput>> deletedocTypes(@RequestParam("name") String name){
 				
-				DocTypesOutput docTypeOut = docTypeService.deleteDocTypes(docTypes);
+				DocTypesOutput docTypeOut = docTypesService.deleteDocTypes(name);
 				
 				Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
 				return result;

@@ -1,15 +1,13 @@
 package it.pagopa.pnss.repositoryManager.service;
 
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
-import org.springframework.beans.BeanUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import it.pagopa.pnss.repositoryManager.DependencyFactory;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
 import it.pagopa.pnss.repositoryManager.dto.UserConfigurationInput;
+import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
+import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.model.UserConfigurationEntity;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -22,101 +20,104 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 
 public class UserConfigurationService {
+	
+	private final DynamoDbEnhancedClient enhancedClient;
+    private final ObjectMapper objectMapper;
+    
+    public UserConfigurationService(DynamoDbEnhancedClient enhancedClient, ObjectMapper objectMapper) {
+        this.enhancedClient = enhancedClient;
+        this.objectMapper = objectMapper;
+    }
 
 
     public UserConfigurationOutput getUser(String name) {
     	UserConfigurationOutput userResponse = new UserConfigurationOutput();
         try {
-            DynamoDbEnhancedClient enhancedClient = DependencyFactory.dynamoDbEnhancedClient();
-
-            DynamoDbTable<UserConfigurationEntity> UserConfigurationTable = enhancedClient.table("UserConfiguration", TableSchema.fromBean(UserConfigurationEntity.class));
+            DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table("UserConfiguration", TableSchema.fromBean(UserConfigurationEntity.class));
             QueryConditional queryConditional = QueryConditional
                     .keyEqualTo(Key.builder()
                             .partitionValue(name)
                             .build());
 
-            Iterator<UserConfigurationEntity> result = UserConfigurationTable.query(queryConditional).items().iterator();
+            Iterator<UserConfigurationEntity> result = userConfigurationTable.query(queryConditional).items().iterator();
 
              UserConfigurationEntity user = result.next();
-             BeanUtils.copyProperties(user, userResponse);
              
-            return userResponse;
+             return objectMapper.convertValue(user, UserConfigurationOutput.class);
 
         } catch (DynamoDbException e) {
             System.err.println(e.getMessage());
-            System.exit(1);
-            return null;
+            throw new RepositoryManagerException.DynamoDbException();  
         }
     }
     
     public UserConfigurationOutput postUser(UserConfigurationInput userInput){
-        DynamoDbEnhancedClient enhancedClient = DependencyFactory.dynamoDbEnhancedClient();
-        UserConfigurationOutput userResponse = new UserConfigurationOutput();
-        try {
-            DynamoDbTable<UserConfigurationEntity> UserConfigurationTable = enhancedClient.table("UserConfiguration", TableSchema.fromBean(UserConfigurationEntity.class));
 
-            UserConfigurationEntity userEntity = new UserConfigurationEntity();
-            
-            BeanUtils.copyProperties(userInput, userEntity);
-            
-			if (UserConfigurationTable.getItem(userEntity) == null) {
+    	try {
+            DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table("UserConfiguration", TableSchema.fromBean(UserConfigurationEntity.class));
 
-				UserConfigurationTable.putItem(userEntity);
+            UserConfigurationEntity userEntity = objectMapper.convertValue(userInput, UserConfigurationEntity.class);
+            
+			if (userConfigurationTable.getItem(userEntity) == null) {
+
+				userConfigurationTable.putItem(userEntity);
 				System.out.println("User inserito nel db ");
 
-				BeanUtils.copyProperties(userEntity, userResponse);
+				return objectMapper.convertValue(userEntity, UserConfigurationOutput.class); 
 				
 			} else {
 				System.out.println("L'utente non può essere aggiunto, id già esistente");
+            	throw new RepositoryManagerException.IdClientAlreadyPresent(userInput.getName());
+
 			}
         }catch (DynamoDbException  e){
             System.err.println(e.getMessage());
-            //System.exit(1);
+			throw new RepositoryManagerException.DynamoDbException();
+
         }
         
-        return userResponse;
+        
     }
     
     public UserConfigurationOutput updateUser(UserConfigurationInput user) {
-    	DynamoDbEnhancedClient enhancedClient = DependencyFactory.dynamoDbEnhancedClient();
-    	UserConfigurationOutput userResponse = new UserConfigurationOutput();
+    	
     	try {
-            DynamoDbTable<UserConfigurationEntity> UserConfigurationTable = enhancedClient.table("UserConfiguration", TableSchema.fromBean(UserConfigurationEntity.class));
+            DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table("UserConfiguration", TableSchema.fromBean(UserConfigurationEntity.class));
             UserConfigurationEntity userEntity = new UserConfigurationEntity();
             
-            BeanUtils.copyProperties(user, userEntity);
-            UserConfigurationTable.putItem(userEntity);
-            BeanUtils.copyProperties(user, userResponse);
-            
+            if (userConfigurationTable.getItem(userEntity) != null) {
+            userConfigurationTable.putItem(userEntity);
             System.out.println("Modifica avvenuta con successo");
+            return objectMapper.convertValue(userEntity, UserConfigurationOutput.class);
+            } else {
+        		throw new RepositoryManagerException.DynamoDbException();
+            }            
     	}catch (DynamoDbException  e){
             System.err.println(e.getMessage());
-            //System.exit(1);
+    		throw new RepositoryManagerException.DynamoDbException();
         }
-    	
-    	return userResponse;
     }
     
-    public UserConfigurationOutput deleteUser(UserConfigurationInput user) {
-    	DynamoDbEnhancedClient enhancedClient = DependencyFactory.dynamoDbEnhancedClient();
-    	UserConfigurationOutput userResponse = new UserConfigurationOutput();
+    public UserConfigurationOutput deleteUser(String name) {
+    	
     	try {
-            DynamoDbTable<UserConfigurationEntity> UserConfigurationTable = enhancedClient.table("UserConfiguration", TableSchema.fromBean(UserConfigurationEntity.class));
-            UserConfigurationEntity userEntity = new UserConfigurationEntity();
-            
-            BeanUtils.copyProperties(user, userEntity);
-            UserConfigurationTable.deleteItem(userEntity);
-            BeanUtils.copyProperties(user, userResponse);
-          
-            
+            DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table("UserConfiguration", TableSchema.fromBean(UserConfigurationEntity.class));
+            QueryConditional queryConditional = QueryConditional
+                    .keyEqualTo(Key.builder()
+                            .partitionValue(name)
+                            .build());
+            Iterator<UserConfigurationEntity> result = userConfigurationTable.query(queryConditional).items().iterator();
+            UserConfigurationEntity userEntity = result.next();
+            userConfigurationTable.deleteItem(userEntity);
             System.out.println("Cancellazione avvenuta con successo");
+            return objectMapper.convertValue(userEntity, UserConfigurationOutput.class);              
+
             
     	}catch (DynamoDbException  e){
             System.err.println(e.getMessage());
-            //System.exit(1);
+            throw new RepositoryManagerException.DynamoDbException();
+
         }
-    	
-    	return userResponse;
     }
     
     

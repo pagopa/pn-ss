@@ -2,13 +2,9 @@ package it.pagopa.pnss.repositoryManager.rest;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.handler;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
-
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -18,9 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.UserConfigurationDestination;
@@ -51,19 +45,20 @@ import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 class UserConfigurationControllerTest {
 	
 	 private static DynamoDbClient ddb;
+	 private static ObjectMapper mapper = new ObjectMapper();
+	 private static DynamoDbEnhancedClient enhancedClient;
 	
 	UserConfigurationEntity userEntity = new UserConfigurationEntity();
-	UserConfigurationService handler = new UserConfigurationService();
-	UserConfigurationController userController = new UserConfigurationController();
+	UserConfigurationService userService = new UserConfigurationService(enhancedClient, mapper);
+	UserConfigurationController userController = new UserConfigurationController(userService);
 	UserConfigurationInput userInput = new UserConfigurationInput();
     UserConfiguration user = new UserConfiguration();
     UserConfigurationDestination userDestination = new UserConfigurationDestination();
-    private static DynamoDbEnhancedClient enhancedClient;
 	
 	// Define the data members required for the test
 	
     private static String tableName = "UserConfiguration";
-    private static String name = "name";
+    private static String name = "userkey1";
 //    private static List<String> canCreate = new ArrayList<String>();
 //    private static List<String> canRead = new ArrayList<String>();;
     private static Object signatureInfo = new Object();
@@ -87,21 +82,21 @@ class UserConfigurationControllerTest {
     }
 
     
-//    @Test
-//    @Order(1)
-//    public void whenInitializingAWSS3Service_thenNotNull() {
-//        assertNotNull(ddb);
-//        System.out.println("Test 1 passed");
-//    }
-//
-//    @Test
-//    @Order(2)
-//    public void CreateTable() {
-//
-//       String result = createTable(ddb, tableName, name);
-//       assertFalse(result.isEmpty());
-//       System.out.println("\n Test 2 passed");
-//    }
+    @Test
+    @Order(1)
+    public void whenInitializingAWSS3Service_thenNotNull() {
+        assertNotNull(ddb);
+        System.out.println("Test 1 passed");
+    }
+
+    @Test
+    @Order(2)
+    public void CreateTable() {
+
+       String result = createTable(ddb, tableName, name);
+       assertFalse(result.isEmpty());
+       System.out.println("\n Test 2 passed");
+    }
     
     @Test
     @Order(3)
@@ -115,16 +110,13 @@ class UserConfigurationControllerTest {
     @Test
     @Order(4)
     public void PostItem() {
-    	userInput.setUserInput(user);
-    	user.setDestination(destination);
-    	user.setSignatureInfo(signatureInfo);
-    	userInput.getUserInput().setName("testnome");
+    	userInput.setName(name);
     	userInput.getUserInput().getCanCreate().add("data1");
     	userInput.getUserInput().getCanRead().add("data2");
     	userInput.getUserInput().getDestination().setSqsUrl("urltest");
     	userInput.getUserInput().getSignatureInfo();
         //Mono<ResponseEntity<UserConfigurationOutput>> response = userController.postUser(userInput);
-    	UserConfigurationOutput userOut = handler.postUser(userInput);
+    	UserConfigurationOutput userOut = userService.postUser(userInput);
         Assertions.assertNotNull(userOut);
     }
 	

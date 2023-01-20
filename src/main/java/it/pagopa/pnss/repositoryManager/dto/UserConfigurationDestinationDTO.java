@@ -1,7 +1,5 @@
 package it.pagopa.pnss.repositoryManager.dto;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDocument;
-
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 
 @DynamoDbBean

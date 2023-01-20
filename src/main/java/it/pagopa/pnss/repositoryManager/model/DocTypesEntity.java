@@ -1,12 +1,9 @@
 package it.pagopa.pnss.repositoryManager.model;
 
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDocument;
-
-
-import it.pagopa.pn.template.rest.v1.dto.ConfidentialityLevel;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration.ChecksumEnum;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration.TimestampedEnum;
+import it.pagopa.pnss.repositoryManager.dto.ChecksumEnumDTO;
+import it.pagopa.pnss.repositoryManager.dto.ConfidentialityLevelEnum;
+import it.pagopa.pnss.repositoryManager.dto.TimestampedEnumDTO;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
@@ -15,10 +12,10 @@ public class DocTypesEntity {
 	
 	private String name;
 	private String lifeCycleTag;
-	private ConfidentialityLevel informationClassification;
+	private ConfidentialityLevelEnum informationClassification;
 	private Boolean digitalSignature;
-	private TimestampedEnum timeStamped;
-	private ChecksumEnum checkSum;
+	private TimestampedEnumDTO timeStamped;
+	private ChecksumEnumDTO checkSum;
 
 	
 	@DynamoDbPartitionKey
@@ -37,12 +34,12 @@ public class DocTypesEntity {
 	}
 
 
-	public ConfidentialityLevel getInformationClassification() {
+	public ConfidentialityLevelEnum getInformationClassification() {
 		return informationClassification;
 	}
 
 
-	public void setInformationClassification(ConfidentialityLevel informationClassification) {
+	public void setInformationClassification(ConfidentialityLevelEnum informationClassification) {
 		this.informationClassification = informationClassification;
 	}
 
@@ -57,22 +54,22 @@ public class DocTypesEntity {
 	}
 
 
-	public TimestampedEnum getTimeStamped() {
+	public TimestampedEnumDTO getTimeStamped() {
 		return timeStamped;
 	}
 
 
-	public void setTimeStamped(TimestampedEnum timeStamped) {
+	public void setTimeStamped(TimestampedEnumDTO timeStamped) {
 		this.timeStamped = timeStamped;
 	}
 
 
-	public ChecksumEnum getCheckSum() {
+	public ChecksumEnumDTO getCheckSum() {
 		return checkSum;
 	}
 
 
-	public void setCheckSum(ChecksumEnum checkSum) {
+	public void setCheckSum(ChecksumEnumDTO checkSum) {
 		this.checkSum = checkSum;
 	}
 
@@ -80,6 +77,7 @@ public class DocTypesEntity {
 	public void setName(String name) {
 		this.name = name;
 	}
-	
+
+
 	
 }

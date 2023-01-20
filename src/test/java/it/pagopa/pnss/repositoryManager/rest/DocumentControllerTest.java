@@ -98,9 +98,7 @@ class DocumentControllerTest {
        describeDymamoDBTable(ddb,tableName);
        System.out.println("\n Test 3 passed");
     }
-    
-    
-	
+    	
     @Test
     @Order(4)
     public void PostItem() {
@@ -112,9 +110,7 @@ class DocumentControllerTest {
     	documentInput.setDocumentState("stato prova");
     	documentInput.setDocumentType("tipo prova");
     	documentInput.setRetentionPeriod("retention prova");
-        Mono<ResponseEntity<DocumentOutput>> response = documentController.postdocument(documentInput);
-    	
-        //DocumentOutput documentOut = documentService.postdocument(documentInput);
+        Mono<ResponseEntity<DocumentOutput>> response = documentController.postdocument(documentInput);    	
         Assertions.assertNotNull(response.block().getStatusCode());
     }
     

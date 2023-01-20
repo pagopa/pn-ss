@@ -1,17 +1,13 @@
 package it.pagopa.pnss.repositoryManager.dto;
 
-import it.pagopa.pn.template.rest.v1.dto.ConfidentialityLevel;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration.ChecksumEnum;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration.TimestampedEnum;
-
 public class DocTypesInput {
 
 	private String name;
 	private String lifeCycleTag;
-	private ConfidentialityLevel informationClassification;
+	private ConfidentialityLevelEnum informationClassification;
 	private Boolean digitalSignature;
-	private TimestampedEnum timeStamped;
-	private ChecksumEnum checkSum;
+	private TimestampedEnumDTO timeStamped;
+	private ChecksumEnumDTO checkSum;
 	public String getName() {
 		return name;
 	}
@@ -24,10 +20,10 @@ public class DocTypesInput {
 	public void setLifeCycleTag(String lifeCycleTag) {
 		this.lifeCycleTag = lifeCycleTag;
 	}
-	public ConfidentialityLevel getInformationClassification() {
+	public ConfidentialityLevelEnum getInformationClassification() {
 		return informationClassification;
 	}
-	public void setInformationClassification(ConfidentialityLevel informationClassification) {
+	public void setInformationClassification(ConfidentialityLevelEnum informationClassification) {
 		this.informationClassification = informationClassification;
 	}
 	public Boolean getDigitalSignature() {
@@ -36,18 +32,25 @@ public class DocTypesInput {
 	public void setDigitalSignature(Boolean digitalSignature) {
 		this.digitalSignature = digitalSignature;
 	}
-	public TimestampedEnum getTimeStamped() {
+	public TimestampedEnumDTO getTimeStamped() {
 		return timeStamped;
 	}
-	public void setTimeStamped(TimestampedEnum timeStamped) {
+	public void setTimeStamped(TimestampedEnumDTO timeStamped) {
 		this.timeStamped = timeStamped;
 	}
-	public ChecksumEnum getCheckSum() {
+	public ChecksumEnumDTO getCheckSum() {
 		return checkSum;
 	}
-	public void setCheckSum(ChecksumEnum checkSum) {
+	public void setCheckSum(ChecksumEnumDTO checkSum) {
 		this.checkSum = checkSum;
 	}
+	@Override
+	public String toString() {
+		return "DocTypesInput [name=" + name + ", lifeCycleTag=" + lifeCycleTag + ", informationClassification="
+				+ informationClassification + ", digitalSignature=" + digitalSignature + ", timeStamped=" + timeStamped
+				+ ", checkSum=" + checkSum + "]";
+	}
+	
 	
 	
 }

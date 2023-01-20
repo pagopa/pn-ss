@@ -26,21 +26,21 @@ public class DocTypesService {
         this.objectMapper = objectMapper;
     }
 	
-	public DocTypesOutput getDocType(String partition_id) {
-		DocTypesOutput docTypesOutput = new DocTypesOutput();
+	public DocTypesOutput getDocType(String name) {
+	
 		try {
             DynamoDbTable<DocTypesEntity> DocTypesTable = enhancedClient.table("DocTpesEntity", TableSchema.fromBean(DocTypesEntity.class));
             QueryConditional queryConditional = QueryConditional
                     .keyEqualTo(Key.builder()
-                            .partitionValue(partition_id)
+                            .partitionValue(name)
                             .build());
             
             Iterator<DocTypesEntity> result = DocTypesTable.query(queryConditional).items().iterator();
 		
             DocTypesEntity docType = result.next();
-            docTypesOutput = objectMapper.convertValue(docType, DocTypesOutput.class);
             
-            return docTypesOutput;
+            return objectMapper.convertValue(docType, DocTypesOutput.class);
+            
 		} catch (DynamoDbException e) {
             System.err.println(e.getMessage());
             throw new RepositoryManagerException.DynamoDbException();  
@@ -50,12 +50,14 @@ public class DocTypesService {
 	public DocTypesOutput postDocTypes(DocTypesInput docTypesInput) {
         
         try {
-            DynamoDbTable<DocTypesEntity> DocTypesTable = enhancedClient.table("DocTypes", TableSchema.fromBean(DocTypesEntity.class));
+            DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table("DocTypes", TableSchema.fromBean(DocTypesEntity.class));
+            
             DocTypesEntity docTypesEntity = objectMapper.convertValue(docTypesInput, DocTypesEntity.class);
             
             
-            if(DocTypesTable.getItem(docTypesEntity) == null) {
-            	DocTypesTable.putItem(docTypesEntity);
+            if(docTypesTable.getItem(docTypesEntity) == null) {
+            	
+            	docTypesTable.putItem(docTypesEntity);
 				System.out.println("DocType data added to the table");
 	            
 				return objectMapper.convertValue(docTypesEntity, DocTypesOutput.class);
@@ -74,7 +76,7 @@ public class DocTypesService {
 	}
 	
 	public DocTypesOutput updateDocTypes(DocTypesInput docTypesInput) {
-		DocTypesOutput docTypesOutput = new DocTypesOutput();
+		
 		try {
 			DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table("DocTypes",
 					TableSchema.fromBean(DocTypesEntity.class));
@@ -82,7 +84,7 @@ public class DocTypesService {
 
 			if (docTypesTable.getItem(docTypesEntity) != null) {
 				docTypesTable.putItem(docTypesEntity);
-				docTypesOutput = objectMapper.convertValue(docTypesEntity, DocTypesOutput.class);
+				return objectMapper.convertValue(docTypesEntity, DocTypesOutput.class);
 
 			} else {
 				throw new RepositoryManagerException.DynamoDbException();
@@ -91,13 +93,10 @@ public class DocTypesService {
 			System.err.println(e.getMessage());
             throw new RepositoryManagerException.DynamoDbException();
 		}
-
-		return docTypesOutput;
 	}
 	
 	public DocTypesOutput deleteDocTypes(String name) {
-    	DynamoDbEnhancedClient enhancedClient = DependencyFactory.dynamoDbEnhancedClient();
-        DocTypesOutput docTypesResponse = new DocTypesOutput();
+		
     	try {
             DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table("DocTypes", TableSchema.fromBean(DocTypesEntity.class));
             QueryConditional queryConditional = QueryConditional

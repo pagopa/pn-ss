@@ -2,8 +2,8 @@
   "Parameters": {
     "PnSs": "",
 
-    "PnSsBucket": "pn-ss-bucket",
-    "PnSsBucketStaging": "pn-ss-staging-bucket",
+    "PnSsBucketName": "pn-ss-bucket",
+    "PnSsBucketStagingName": "pn-ss-staging-bucket",
 
     "PnSsTableNameAnagrafica": "pn-ss-anagrafica-client",
     "PnSsTableNameTipologie": "pn-ss-tipologie-documenti",
@@ -13,6 +13,8 @@
     "PnSsQueueNameStagingBucket": "pn-ss-staging-bucket-queue",
 
     "PnSsEventRuleNameNotificaDisponibilita": "pn-ss-notifica-disponibilita-event-rule",
-    "PnSsEventRuleNameStagingBucket": "pn-ss-staging-bucket-event-rule"
+    "PnSsEventRuleNameStagingBucket": "pn-ss-staging-bucket-event-rule",
+
+    "PnSsSNSNameStagingBucket": "pn-ss-staging-bucket-topic"
   }
 }

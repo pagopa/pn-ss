@@ -4,16 +4,16 @@ import java.util.List;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
+
 public class UserConfigurationOutput {
 	
 	private String name;
 	private List<String> canCreate;
 	private List<String> canRead;
-	private Object signatureInfo;
+	private String signatureInfo;
 	private UserConfigurationDestinationDTO destination; 
 	private String ApiKey;
 	
-	@DynamoDbPartitionKey
 	public String getName() {
 		return name;
 	}
@@ -34,11 +34,11 @@ public class UserConfigurationOutput {
 		this.canRead = canRead;
 	}
 
-	public Object getSignatureInfo() {
+	public String getSignatureInfo() {
 		return signatureInfo;
 	}
 
-	public void setSignatureInfo(Object signatureInfo) {
+	public void setSignatureInfo(String signatureInfo) {
 		this.signatureInfo = signatureInfo;
 	}
 

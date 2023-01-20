@@ -31,7 +31,6 @@ public class UserConfigurationService {
 
 
     public UserConfigurationOutput getUser(String name) {
-    	UserConfigurationOutput userResponse = new UserConfigurationOutput();
         try {
             DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table("UserConfiguration", TableSchema.fromBean(UserConfigurationEntity.class));
             QueryConditional queryConditional = QueryConditional
@@ -83,7 +82,7 @@ public class UserConfigurationService {
     	
     	try {
             DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table("UserConfiguration", TableSchema.fromBean(UserConfigurationEntity.class));
-            UserConfigurationEntity userEntity = new UserConfigurationEntity();
+            UserConfigurationEntity userEntity = objectMapper.convertValue(user, UserConfigurationEntity.class);
             
             if (userConfigurationTable.getItem(userEntity) != null) {
             userConfigurationTable.putItem(userEntity);

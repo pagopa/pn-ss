@@ -9,11 +9,11 @@ public class UserConfigurationInput {
 	private String name;
 	private List<String> canCreate;
 	private List<String> canRead;
-	private Object signatureInfo;
+	private String signatureInfo;
 	private UserConfigurationDestinationDTO destination; 
 	private String ApiKey;
 	
-	@DynamoDbPartitionKey
+	
 	public String getName() {
 		return name;
 	}
@@ -34,11 +34,12 @@ public class UserConfigurationInput {
 		this.canRead = canRead;
 	}
 
-	public Object getSignatureInfo() {
+
+	public String getSignatureInfo() {
 		return signatureInfo;
 	}
 
-	public void setSignatureInfo(Object signatureInfo) {
+	public void setSignatureInfo(String signatureInfo) {
 		this.signatureInfo = signatureInfo;
 	}
 

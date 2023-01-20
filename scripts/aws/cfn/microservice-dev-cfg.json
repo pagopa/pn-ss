@@ -3,14 +3,14 @@
     "PnSs": "",
 
     "PnSsBucketName": "pn-ss-bucket",
-    "PnSsBucketStagingName": "pn-ss-staging-bucket",
+    "PnSsStagingBucketName": "pn-ss-staging-bucket",
 
     "PnSsTableNameAnagrafica": "pn-ss-anagrafica-client",
     "PnSsTableNameTipologie": "pn-ss-tipologie-documenti",
     "PnSsTableNameDocumenti": "pn-ss-documenti",
 
     "PnSsQueueNameNotificaDisponibilita": "pn-ss-notifica-disponibilita-queue",
-    "PnSsQueueNameStagingBucket": "pn-ss-staging-bucket-queue",
+    "PnSsSNSNameStagingBucket": "pn-ss-staging-bucket-queue",
 
     "PnSsEventRuleNameNotificaDisponibilita": "pn-ss-notifica-disponibilita-event-rule",
     "PnSsEventRuleNameStagingBucket": "pn-ss-staging-bucket-event-rule",

@@ -40,7 +40,7 @@ Parameters:
     Type: String
     Description: Description
 
-  PnSsBucketStagingName:
+  PnSsStagingBucketName:
     Type: String
     Description: Description
 
@@ -195,7 +195,7 @@ Resources:
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               #  KMSMasterKeyID: KMS-KEY-AR
-      BucketName: !Ref PnSsBucketName
+      BucketName: !Ref PnSsStagingBucketName
       #LoggingConfiguration:
       #  DestinationBucketName: "String"
       #  LogFilePrefix: "String"

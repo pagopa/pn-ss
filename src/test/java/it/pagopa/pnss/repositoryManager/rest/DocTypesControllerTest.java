@@ -57,7 +57,7 @@ class DocTypesControllerTest {
 	
 	// Define the data members required for the test
 	
-    private static String tableName = "UserConfiguration";
+    private static String tableName = "DocTypes";
     private static String name = "name";
     
     
@@ -133,12 +133,12 @@ class DocTypesControllerTest {
     @Order(6)
     public void putItem() {
   
-    	docTypesInput.setName("provachiave2");
-		docTypesInput.setCheckSum(null);
-		docTypesInput.setDigitalSignature(null);
-		docTypesInput.setInformationClassification(null);
-		docTypesInput.setLifeCycleTag(name);
-		docTypesInput.setTimeStamped(null);
+    	docTypesInput.setName("provachiave1");
+		docTypesInput.setCheckSum(ChecksumEnumDTO.MD5);
+		docTypesInput.setDigitalSignature(true);
+		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
+		docTypesInput.setLifeCycleTag("lifeCicle2");
+		docTypesInput.setTimeStamped(TimestampedEnumDTO.NONE);
         Mono<ResponseEntity<DocTypesOutput>> response = docTypesController.updatedocTypes(docTypesInput);
     	
         //DocumentOutput documentOut = documentService.postdocument(documentInput);
@@ -150,7 +150,7 @@ class DocTypesControllerTest {
     @Order(7)
     public void deleteItem() {
   
-    	String partitionId = "provachiave2";
+    	String partitionId = "provachiave1";
         Mono<ResponseEntity<DocTypesOutput>> response = docTypesController.deletedocTypes(partitionId);
     	
         //DocumentOutput documentOut = documentService.postdocument(documentInput);

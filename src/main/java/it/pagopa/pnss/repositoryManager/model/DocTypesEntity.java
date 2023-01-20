@@ -1,6 +1,8 @@
 package it.pagopa.pnss.repositoryManager.model;
 
 
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConvertedEnum;
+
 import it.pagopa.pnss.repositoryManager.dto.ChecksumEnumDTO;
 import it.pagopa.pnss.repositoryManager.dto.ConfidentialityLevelEnum;
 import it.pagopa.pnss.repositoryManager.dto.TimestampedEnumDTO;
@@ -33,7 +35,7 @@ public class DocTypesEntity {
 		this.lifeCycleTag = lifeCycleTag;
 	}
 
-
+	@DynamoDBTypeConvertedEnum
 	public ConfidentialityLevelEnum getInformationClassification() {
 		return informationClassification;
 	}
@@ -53,7 +55,7 @@ public class DocTypesEntity {
 		this.digitalSignature = digitalSignature;
 	}
 
-
+	@DynamoDBTypeConvertedEnum
 	public TimestampedEnumDTO getTimeStamped() {
 		return timeStamped;
 	}
@@ -63,7 +65,7 @@ public class DocTypesEntity {
 		this.timeStamped = timeStamped;
 	}
 
-
+	@DynamoDBTypeConvertedEnum
 	public ChecksumEnumDTO getCheckSum() {
 		return checkSum;
 	}

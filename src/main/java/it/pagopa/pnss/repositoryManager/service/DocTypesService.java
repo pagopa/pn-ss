@@ -29,7 +29,7 @@ public class DocTypesService {
 	public DocTypesOutput getDocType(String name) {
 	
 		try {
-            DynamoDbTable<DocTypesEntity> DocTypesTable = enhancedClient.table("DocTpesEntity", TableSchema.fromBean(DocTypesEntity.class));
+            DynamoDbTable<DocTypesEntity> DocTypesTable = enhancedClient.table("DocTypes", TableSchema.fromBean(DocTypesEntity.class));
             QueryConditional queryConditional = QueryConditional
                     .keyEqualTo(Key.builder()
                             .partitionValue(name)

@@ -3,6 +3,11 @@ package it.pagopa.pnss.uriBuilder.service;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
+import it.pagopa.pnss.uriBuilder.client.GetRepositoryClient;
+import it.pagopa.pnss.uriBuilder.model.DocumentRepositoryDto;
+import org.aspectj.lang.annotation.After;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.http.SdkHttpMethod;
@@ -15,6 +20,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import javax.annotation.PostConstruct;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -22,6 +28,9 @@ import java.util.*;
 
 @Service
 public class UriBuilderService {
+
+    @Autowired
+    GetRepositoryClient gGetRepositoryClient;
 
     public static final String PN_NOTIFICATION_ATTACHMENTS ="PN_NOTIFICATION_ATTACHMENTS";
     public static final String PN_AAR="PN_AAR";
@@ -35,8 +44,9 @@ public class UriBuilderService {
     List <String> coldStatus;
     Map<String,String> mapDocumentTypeToBucket ;
 
-    public UriBuilderService() {
-
+    @PostConstruct
+    public void createMap() {
+        mapDocumentTypeToBucket= new HashMap<>();
         mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS,BUCKET_HOT);
         mapDocumentTypeToBucket.put(PN_AAR,BUCKET_HOT);
         mapDocumentTypeToBucket.put(PN_LEGAL_FACTS,BUCKET_STAGING);
@@ -64,6 +74,9 @@ public class UriBuilderService {
 
         response.setUploadUrl(myURL);
         response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
+
+        DocumentRepositoryDto documentRepositoryDto = new DocumentRepositoryDto();
+        gGetRepositoryClient.upLoadDocument(documentRepositoryDto);
 
         return response;
 
@@ -122,6 +135,11 @@ public class UriBuilderService {
     public FileDownloadResponse createUriForDownloadFile(String fileKey) {
         // chiamare l'api di  GestoreRepositori per recupero dati
         //todo
+
+
+        ResponseEntity <DocumentRepositoryDto> d = gGetRepositoryClient.retrieveDocument(fileKey);
+        DocumentRepositoryDto doc = d!=null ? d.getBody(): null;
+
         FileDownloadResponse downloadResponse = new FileDownloadResponse();
         downloadResponse.setChecksum("");
         downloadResponse.setContentLength(BigDecimal.TEN);
@@ -132,9 +150,8 @@ public class UriBuilderService {
         downloadResponse.setKey(fileKey);
         downloadResponse.setRetentionUntil(new Date());
         downloadResponse.setVersionId("");
-        // status valore di ritorno dalla chiamata verso gestore repository
-        String status = "";
-        downloadResponse.setDownload(createFileDownloadInfo(fileKey,downloadResponse.getDocumentStatus(), downloadResponse.getDocumentType()));
+
+         downloadResponse.setDownload(createFileDownloadInfo(fileKey,downloadResponse.getDocumentStatus(), downloadResponse.getDocumentType()));
 
         return downloadResponse;
 

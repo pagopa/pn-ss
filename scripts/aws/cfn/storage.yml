@@ -27,63 +27,69 @@ Parameters:
   PnSsTableNameAnagrafica:
     Type: String
     Description: Description
+    Default: pn-ss-anagrafica-client
   
   PnSsTableNameTipologie:
     Type: String
     Description: Description
+    Default: pn-ss-tipologie-documenti
 
   PnSsTableNameDocumenti:
     Type: String
     Description: Description
+    Default: pn-ss-documenti
 
   PnSsBucketName:
     Type: String
     Description: Description
+    Default: pn-ss-bucket
 
   PnSsStagingBucketName:
     Type: String
     Description: Description
+    Default: pn-ss-staging-bucket
 
   PnSsQueueNameNotificaDisponibilita:
     Type: String
     Description: Description
+    Default: pn-ss-notifica-disponibilita-queue
 
   PnSsQueueNameStagingBucket:
     Type: String
     Description: Description
+    Default: pn-ss-staging-bucket-queue
 
   PnSsEventRuleNameNotificaDisponibilita:
     Type: String
     Description: Description
+    Default: pn-ss-notifica-disponibilita-event-rule
 
   PnSsEventRuleNameStagingBucket:
     Type: String
     Description: Description
-
+    Default: pn-ss-staging-bucket-event-rule
+  
   PnSsSNSNameStagingBucket:
     Type: String
     Description: Description
+    Default: pn-ss-staging-bucket-topic
 
 Resources:
-  NullResource:
-      Type: AWS::CloudFormation::WaitConditionHandle
+  # NullResource:
+  #     Type: AWS::CloudFormation::WaitConditionHandle
 
   PnSsTableAnagrafica:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        -   
-          AttributeName: "name"
+        - AttributeName: "name"
           AttributeType: "S"
-        -   
-          AttributeName: "APIKey"
+        - AttributeName: "APIKey"
           AttributeType: "S"
       KeySchema: 
-        -   
-          AttributeName: "name"
+        - AttributeName: "name"
           KeyType: "HASH"
-        -
-          AttributeName: "APIKey"
+        - AttributeName: "APIKey"
           KeyType: "RANGE"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
@@ -101,12 +107,14 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        -   
-          AttributeName: "tipoDocumento"
+        - AttributeName: "tipoDocumento"
+          AttributeType: "S"
+        - AttributeName: "checksum"
           AttributeType: "S"
       KeySchema: 
-        -   
-          AttributeName: "tipoDocumento"
+        - AttributeName: "tipoDocumento"
+          KeyType: "RANGE"
+        - AttributeName: "checksum"
           KeyType: "HASH"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
@@ -124,12 +132,10 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        -   
-          AttributeName: "checksum"
+        - AttributeName: "checksum"
           AttributeType: "S"
       KeySchema: 
-        -   
-          AttributeName: "checksum"
+        - AttributeName: "checksum"
           KeyType: "HASH"
       #KinesisStreamSpecification:
       #  StreamArn: "String"

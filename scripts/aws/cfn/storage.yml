@@ -20,9 +20,9 @@ Parameters:
     Type: String
     Description: 'keep track of used projects commitIds'
   
-  CdcKinesisSourceStreamArn:
-    Type: String
-    Description: 'Where to send CDC'
+  # CdcKinesisSourceStreamArn:
+  #   Type: String
+  #   Description: 'Where to send CDC'
 
   PnSsTableNameAnagrafica:
     Type: String
@@ -159,7 +159,7 @@ Resources:
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               #  KMSMasterKeyID: KMS-KEY-AR
-      BucketName: !Ref PnSsBucketName
+      # BucketName: !Ref PnSsBucketName
       # IntelligentTieringConfigurations:
       #   IntelligentTieringConfigurations
       # InventoryConfigurations:
@@ -201,7 +201,7 @@ Resources:
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               #  KMSMasterKeyID: KMS-KEY-AR
-      BucketName: !Ref PnSsStagingBucketName
+      # BucketName: !Ref PnSsStagingBucketName
       #LoggingConfiguration:
       #  DestinationBucketName: "String"
       #  LogFilePrefix: "String"

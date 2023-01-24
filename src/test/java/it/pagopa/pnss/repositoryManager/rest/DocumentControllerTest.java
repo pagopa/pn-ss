@@ -50,8 +50,8 @@ class DocumentControllerTest {
 	 private static DynamoDbEnhancedClient enhancedClient;
 	
 	DocumentEntity documentEntity = new DocumentEntity();
-	DocumentService documentService = new DocumentService(enhancedClient, mapper);
-	DocumentController documentController = new DocumentController(documentService);
+	DocumentService documentService = null; //new DocumentService(enhancedClient, mapper);
+	DocumentController documentController = null; //new DocumentController(documentService);
 	DocumentInput documentInput = new DocumentInput();
 	
 	// Define the data members required for the test

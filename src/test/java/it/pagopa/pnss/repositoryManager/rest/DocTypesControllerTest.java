@@ -51,8 +51,8 @@ class DocTypesControllerTest {
 	 private static DynamoDbEnhancedClient enhancedClient;
 	
 	DocTypesEntity docTypeEntity = new DocTypesEntity();
-	DocTypesService docTypeService = new DocTypesService(enhancedClient, mapper);
-	DocTypesController docTypesController = new DocTypesController(docTypeService);
+	DocTypesService docTypeService = null; //new DocTypesService(enhancedClient, mapper);
+	DocTypesController docTypesController = null;//new DocTypesController(docTypeService);
 	DocTypesInput docTypesInput = new DocTypesInput();
 	
 	// Define the data members required for the test

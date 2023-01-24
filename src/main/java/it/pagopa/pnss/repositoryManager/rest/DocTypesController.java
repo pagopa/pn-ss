@@ -18,56 +18,54 @@ import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/doc-type")
-	public class DocTypesController {
+public class DocTypesController {
+	
+	@Autowired
+	private DocTypesService docTypesService;
 
-	private final DocTypesService docTypesService;
+//	private final DocTypesService docTypesService;
+//
+//	public DocTypesController(DocTypesService docTypesService) {
+//		this.docTypesService = docTypesService;
+//	}
 
-	public DocTypesController(DocTypesService docTypesService) {
-		this.docTypesService = docTypesService;
+//	@Autowired
+//	DocTypesOutput documentOut = new DocTypesOutput();
+
+	@GetMapping(value = "/getdoctypes/{name}")
+	public Mono<ResponseEntity<DocTypesOutput>> getdocTypes(@RequestParam("name") String name) {
+
+		DocTypesOutput docTypeOut = docTypesService.getDocType(name);
+
+		Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
+		return result;
 	}
 
-	@Autowired
-	DocTypesOutput documentOut = new DocTypesOutput();
-	
-			
-			@GetMapping(value="/getdoctypes/{name}")
-			public Mono <ResponseEntity <DocTypesOutput>> getdocTypes(@RequestParam("name") String name){
-				
-				DocTypesOutput docTypeOut = docTypesService.getDocType(name);
-				
-				Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
-				return result;
-			}
-		
+	@PostMapping(path = "/postdoctypes")
+	public Mono<ResponseEntity<DocTypesOutput>> postdocTypes(@RequestBody DocTypesInput docTypes) {
 
-			@PostMapping(path = "/postdoctypes")
-			public Mono<ResponseEntity<DocTypesOutput>> postdocTypes(@RequestBody DocTypesInput docTypes) {
+		DocTypesOutput docTypeOut = docTypesService.postDocTypes(docTypes);
 
-				DocTypesOutput docTypeOut = docTypesService.postDocTypes(docTypes);
+		Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
+		return result;
+	}
 
-				Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
-				return result;
-			}
-			
-			@PutMapping(path = "/updatedoctypes/{name}")
-			public Mono<ResponseEntity<DocTypesOutput>> updatedocTypes(@RequestParam("name") DocTypesInput docTypes){
-				
-				DocTypesOutput docTypeOut = docTypesService.updateDocTypes(docTypes);
-				
-				Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
-				return result;
-			}
-			
-			@DeleteMapping(path = "/deletedoctypes/{name}")
-			public Mono<ResponseEntity<DocTypesOutput>> deletedocTypes(@RequestParam("name") String name){
-				
-				DocTypesOutput docTypeOut = docTypesService.deleteDocTypes(name);
-				
-				Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
-				return result;
-			}
-		
+	@PutMapping(path = "/updatedoctypes/{name}")
+	public Mono<ResponseEntity<DocTypesOutput>> updatedocTypes(@RequestParam("name") DocTypesInput docTypes) {
 
-	
+		DocTypesOutput docTypeOut = docTypesService.updateDocTypes(docTypes);
+
+		Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
+		return result;
+	}
+
+	@DeleteMapping(path = "/deletedoctypes/{name}")
+	public Mono<ResponseEntity<DocTypesOutput>> deletedocTypes(@RequestParam("name") String name) {
+
+		DocTypesOutput docTypeOut = docTypesService.deleteDocTypes(name);
+
+		Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
+		return result;
+	}
 
 }

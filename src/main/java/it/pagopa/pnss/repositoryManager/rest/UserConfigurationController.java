@@ -1,6 +1,5 @@
 package it.pagopa.pnss.repositoryManager.rest;
 
-
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,52 +20,58 @@ import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/user-configuration")
-	public class UserConfigurationController {
-	
-	private final UserConfigurationService userService;
+public class UserConfigurationController {
 
-	public UserConfigurationController(UserConfigurationService userService) {
-		this.userService = userService;
-	}
+//	private final UserConfigurationService userService;
+//
+//	public UserConfigurationController(UserConfigurationService userService) {
+//		this.userService = userService;
+//	}
+//
+//	@Autowired
+//	UserConfigurationOutput userConfigurationOutput;
 	
 	@Autowired
-	UserConfigurationOutput userConfigurationOutput;
-	
-		// @GetMapping(value="/validate/{name}")
-		@GetMapping(path="/getuser/{name}")
-		public Mono <ResponseEntity <UserConfigurationOutput>> getUser(@RequestParam("name") String name){
-			
-			userConfigurationOutput = userService.getUser(name);
-			
-			Mono<ResponseEntity<UserConfigurationOutput>> result = Mono.just(ResponseEntity.ok().body(userConfigurationOutput));
-			return result;
-		}
-	
-		@PostMapping(path = "/postuser")
-		public Mono<ResponseEntity<UserConfigurationOutput>> postUser(@Valid @RequestBody UserConfigurationInput user) {
+	private UserConfigurationService userService;
 
-			userConfigurationOutput = userService.postUser(user);
+	// @GetMapping(value="/validate/{name}")
+	@GetMapping(path = "/getuser/{name}")
+	public Mono<ResponseEntity<UserConfigurationOutput>> getUser(@RequestParam("name") String name) {
 
-			Mono<ResponseEntity<UserConfigurationOutput>> result = Mono.just(ResponseEntity.ok().body(userConfigurationOutput));
-			return result;
-		}
-		
-		@PutMapping(path = "/updateuser")
-		public Mono<ResponseEntity<UserConfigurationOutput>> updateUser(@Valid @RequestBody UserConfigurationInput user){
-			
-			userConfigurationOutput = userService.updateUser(user);
-			
-			Mono<ResponseEntity<UserConfigurationOutput>> result = Mono.just(ResponseEntity.ok().body(userConfigurationOutput));
-			return result;
-		}
-		
-		@DeleteMapping(path = "/deleteuser/{name}")
-		public Mono<ResponseEntity<UserConfigurationOutput>> deleteUser(@RequestParam String name) {
-			userConfigurationOutput = userService.deleteUser(name);
+		UserConfigurationOutput userConfigurationOutput = userService.getUser(name);
 
-			Mono<ResponseEntity<UserConfigurationOutput>> result = Mono.just(ResponseEntity.ok().body(userConfigurationOutput));
-			return result;
-		}
-		
-		
+		Mono<ResponseEntity<UserConfigurationOutput>> result = Mono
+				.just(ResponseEntity.ok().body(userConfigurationOutput));
+		return result;
+	}
+
+	@PostMapping(path = "/postuser")
+	public Mono<ResponseEntity<UserConfigurationOutput>> postUser(@Valid @RequestBody UserConfigurationInput user) {
+
+		UserConfigurationOutput userConfigurationOutput = userService.postUser(user);
+
+		Mono<ResponseEntity<UserConfigurationOutput>> result = Mono
+				.just(ResponseEntity.ok().body(userConfigurationOutput));
+		return result;
+	}
+
+	@PutMapping(path = "/updateuser")
+	public Mono<ResponseEntity<UserConfigurationOutput>> updateUser(@Valid @RequestBody UserConfigurationInput user) {
+
+		UserConfigurationOutput userConfigurationOutput = userService.updateUser(user);
+
+		Mono<ResponseEntity<UserConfigurationOutput>> result = Mono
+				.just(ResponseEntity.ok().body(userConfigurationOutput));
+		return result;
+	}
+
+	@DeleteMapping(path = "/deleteuser/{name}")
+	public Mono<ResponseEntity<UserConfigurationOutput>> deleteUser(@RequestParam String name) {
+		UserConfigurationOutput userConfigurationOutput = userService.deleteUser(name);
+
+		Mono<ResponseEntity<UserConfigurationOutput>> result = Mono
+				.just(ResponseEntity.ok().body(userConfigurationOutput));
+		return result;
+	}
+
 }

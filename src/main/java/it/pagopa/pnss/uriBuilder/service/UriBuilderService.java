@@ -36,7 +36,8 @@ public class UriBuilderService {
     Map<String,String> mapDocumentTypeToBucket ;
 
     public UriBuilderService() {
-
+    	
+    	mapDocumentTypeToBucket = new HashMap<>();
         mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS,BUCKET_HOT);
         mapDocumentTypeToBucket.put(PN_AAR,BUCKET_HOT);
         mapDocumentTypeToBucket.put(PN_LEGAL_FACTS,BUCKET_STAGING);

@@ -2,6 +2,9 @@ package it.pagopa.pnss.repositoryManager.service;
 
 import java.util.Iterator;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pnss.repositoryManager.DependencyFactory;
@@ -16,15 +19,21 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
+@Service
 public class DocTypesService {
 	
-	private final DynamoDbEnhancedClient enhancedClient;
-    private final ObjectMapper objectMapper;
-    
-    public DocTypesService(DynamoDbEnhancedClient enhancedClient, ObjectMapper objectMapper) {
-        this.enhancedClient = enhancedClient;
-        this.objectMapper = objectMapper;
-    }
+//	private final DynamoDbEnhancedClient enhancedClient;
+//    private final ObjectMapper objectMapper;
+//    
+//    public DocTypesService(DynamoDbEnhancedClient enhancedClient, ObjectMapper objectMapper) {
+//        this.enhancedClient = enhancedClient;
+//        this.objectMapper = objectMapper;
+//    }
+	
+	@Autowired
+	private DynamoDbEnhancedClient enhancedClient;
+	@Autowired
+	private ObjectMapper objectMapper;
 	
 	public DocTypesOutput getDocType(String name) {
 	

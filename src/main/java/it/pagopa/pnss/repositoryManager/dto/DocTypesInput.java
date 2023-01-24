@@ -2,18 +2,25 @@ package it.pagopa.pnss.repositoryManager.dto;
 
 public class DocTypesInput {
 
-	private String name;
+//	private String name;
 	private String lifeCycleTag;
+	private String tipoTrasformazione;
 	private ConfidentialityLevelEnum informationClassification;
 	private Boolean digitalSignature;
 	private TimestampedEnumDTO timeStamped;
+	
+	// partition key
 	private ChecksumEnumDTO checkSum;
-	public String getName() {
-		return name;
-	}
-	public void setName(String name) {
-		this.name = name;
-	}
+	// sort key
+	private TipoDocumentoEnum tipoDocumento;
+	
+//	public String getName() {
+//		return name;
+//	}
+//	public void setName(String name) {
+//		this.name = name;
+//	}
+	
 	public String getLifeCycleTag() {
 		return lifeCycleTag;
 	}
@@ -44,13 +51,24 @@ public class DocTypesInput {
 	public void setCheckSum(ChecksumEnumDTO checkSum) {
 		this.checkSum = checkSum;
 	}
-	@Override
-	public String toString() {
-		return "DocTypesInput [name=" + name + ", lifeCycleTag=" + lifeCycleTag + ", informationClassification="
-				+ informationClassification + ", digitalSignature=" + digitalSignature + ", timeStamped=" + timeStamped
-				+ ", checkSum=" + checkSum + "]";
+	public String getTipoTrasformazione() {
+		return tipoTrasformazione;
+	}
+	public void setTipoTrasformazione(String tipoTrasformazione) {
+		this.tipoTrasformazione = tipoTrasformazione;
+	}
+	public TipoDocumentoEnum getTipoDocumento() {
+		return tipoDocumento;
+	}
+	public void setTipoDocumento(TipoDocumentoEnum tipoDocumento) {
+		this.tipoDocumento = tipoDocumento;
 	}
 	
-	
-	
+	@Override
+	public String toString() {
+		return "DocTypesInput [lifeCycleTag=" + lifeCycleTag + ", tipoTrasformazione=" + tipoTrasformazione
+				+ ", informationClassification=" + informationClassification + ", digitalSignature=" + digitalSignature
+				+ ", timeStamped=" + timeStamped + ", checkSum=" + checkSum + ", tipoDocumento=" + tipoDocumento + "]";
+	}
+
 }

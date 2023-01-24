@@ -136,11 +136,11 @@
 				<artifactId>jaxws-maven-plugin</artifactId>
 				<version>2.3.2</version>
 				<executions>
-					<!--execution>
+					<execution>
 						<goals>
 							<goal>wsimport</goal>
 						</goals>
-					</execution-->
+					</execution>
 				</executions>
 				<configuration>
 					<wsdlLocation>/ArubaSignService.wsdl</wsdlLocation>

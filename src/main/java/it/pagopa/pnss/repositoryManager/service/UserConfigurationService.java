@@ -2,11 +2,11 @@ package it.pagopa.pnss.repositoryManager.service;
 
 import java.util.Iterator;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.dto.UserConfigurationInput;
 import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
@@ -21,23 +21,17 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 @Service
 public class UserConfigurationService {
 
-//	private final DynamoDbEnhancedClient enhancedClient;
-//	private final ObjectMapper objectMapper;
-//
-//	public UserConfigurationService(DynamoDbEnhancedClient enhancedClient, ObjectMapper objectMapper) {
-//		this.enhancedClient = enhancedClient;
-//		this.objectMapper = objectMapper;
-//	}
-	
-	@Autowired
-	private DynamoDbEnhancedClient enhancedClient;
-	
-	@Autowired
-	private ObjectMapper objectMapper;
+	private final DynamoDbEnhancedClient enhancedClient;
+	private final ObjectMapper objectMapper;
+
+	public UserConfigurationService(DynamoDbEnhancedClient enhancedClient, ObjectMapper objectMapper) {
+		this.enhancedClient = enhancedClient;
+		this.objectMapper = objectMapper;
+	}
 
 	public UserConfigurationOutput getUser(String name) {
 		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table("UserConfiguration",
+			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,
 					TableSchema.fromBean(UserConfigurationEntity.class));
 			QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(name).build());
 
@@ -57,7 +51,7 @@ public class UserConfigurationService {
 	public UserConfigurationOutput postUser(UserConfigurationInput userInput) {
 
 		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table("UserConfiguration",
+			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,
 					TableSchema.fromBean(UserConfigurationEntity.class));
 
 			UserConfigurationEntity userEntity = objectMapper.convertValue(userInput, UserConfigurationEntity.class);
@@ -85,7 +79,7 @@ public class UserConfigurationService {
 	public UserConfigurationOutput updateUser(UserConfigurationInput user) {
 
 		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table("UserConfiguration",
+			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,
 					TableSchema.fromBean(UserConfigurationEntity.class));
 			UserConfigurationEntity userEntity = objectMapper.convertValue(user, UserConfigurationEntity.class);
 
@@ -105,7 +99,7 @@ public class UserConfigurationService {
 	public UserConfigurationOutput deleteUser(String name) {
 
 		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table("UserConfiguration",
+			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,
 					TableSchema.fromBean(UserConfigurationEntity.class));
 			QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(name).build());
 			Iterator<UserConfigurationEntity> result = userConfigurationTable.query(queryConditional).items()

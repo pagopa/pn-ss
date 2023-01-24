@@ -6,7 +6,6 @@ import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.DOCUMENT_TABLE_NAME;
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.DOC_TYPES_TABLE_NAME;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.DYNAMODB;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SQS;
 
 import javax.annotation.PostConstruct;
 
@@ -15,28 +14,15 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import it.pagopa.pnss.repositoryManager.dto.DocTypesOutput;
-import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
+import it.pagopa.pnss.repositoryManager.model.DocTypesEntity;
+import it.pagopa.pnss.repositoryManager.model.DocumentEntity;
+import it.pagopa.pnss.repositoryManager.model.UserConfigurationEntity;
 import software.amazon.awssdk.core.internal.waiters.ResponseOrException;
-import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
-
-import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableResponse;
-import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
-import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
-import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
-import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
-import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughputDescription;
 
 @TestConfiguration
 public class LocalStackTestConfig {
@@ -54,10 +40,10 @@ public class LocalStackTestConfig {
     static {
         localStackContainer.start();
 
-////      Override aws config
-//        System.setProperty("aws.config.access.key", localStackContainer.getAccessKey());
-//        System.setProperty("aws.config.secret.key", localStackContainer.getSecretKey());
-//        System.setProperty("aws.config.default.region", localStackContainer.getRegion());
+//      Override aws config
+        System.setProperty("aws.config.access.key", localStackContainer.getAccessKey());
+        System.setProperty("aws.config.secret.key", localStackContainer.getSecretKey());
+        System.setProperty("aws.config.default.region", localStackContainer.getRegion());
 
 ////      SQS Override Endpoint
 //        System.setProperty("aws.sqs.test.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SQS)));
@@ -81,68 +67,37 @@ public class LocalStackTestConfig {
     
     @PostConstruct
     public void createTableAnagraficaClient() {
-        DynamoDbTable<UserConfigurationOutput> userConfigurationTable = enhancedClient.table(ANAGRAFICA_CLIENT_TABLE_NAME,
-                                                                                             TableSchema.fromBean(UserConfigurationOutput.class));
+        DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(ANAGRAFICA_CLIENT_TABLE_NAME,
+                                                                                             TableSchema.fromBean(UserConfigurationEntity.class));
         userConfigurationTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
                                                                                           .writeCapacityUnits(5L)
                                                                                           .build()));
    
-        ResponseOrException<DescribeTableResponse> response = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(ANAGRAFICA_CLIENT_TABLE_NAME).build())
-        																	.matched();
-        DescribeTableResponse tableDescription = response.response()
+        ResponseOrException<DescribeTableResponse> responseUserConfiguration = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(ANAGRAFICA_CLIENT_TABLE_NAME).build()).matched();
+        DescribeTableResponse tableDescriptionUserConfiguration = responseUserConfiguration.response()
                                                          .orElseThrow(() -> new RuntimeException("User Configuration table was not created."));
         // The actual error can be inspected in response.exception()
         
-        DynamoDbTable<DocTypesOutput> docTypesTable = enhancedClient.table(DOC_TYPES_TABLE_NAME,
-		                TableSchema.fromBean(DocTypesOutput.class));
+        DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DOC_TYPES_TABLE_NAME,
+		                												   TableSchema.fromBean(DocTypesEntity.class));
 		docTypesTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
-		                      .writeCapacityUnits(5L)
-		                      .build()));
-		ResponseOrException<DescribeTableResponse> response1 = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(DOC_TYPES_TABLE_NAME).build())
-							.matched();
-		DescribeTableResponse tableDescription1 = response1.response()
+															                      .writeCapacityUnits(5L)
+															                      .build()));
+		ResponseOrException<DescribeTableResponse> responseDocTypes = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(DOC_TYPES_TABLE_NAME).build()).matched();
+		DescribeTableResponse tableDescriptionDocTypes= responseDocTypes.response()
 															.orElseThrow(() -> new RuntimeException("Doc Types table was not created."));
 		// The actual error can be inspected in response.exception()
 		
-        DynamoDbTable<DocumentOutput> documentTable = enhancedClient.table(DOCUMENT_TABLE_NAME,
-		                TableSchema.fromBean(DocumentOutput.class));
+        DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DOCUMENT_TABLE_NAME,
+		                													TableSchema.fromBean(DocumentEntity.class));
 		documentTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
-		                      .writeCapacityUnits(5L)
-		                      .build()));
-		ResponseOrException<DescribeTableResponse> response2 = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(DOCUMENT_TABLE_NAME).build())
-							.matched();
-		DescribeTableResponse tableDescription2 = response2.response()
+															                      .writeCapacityUnits(5L)
+															                      .build()));
+		ResponseOrException<DescribeTableResponse> responseDocument = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(DOCUMENT_TABLE_NAME).build()).matched();
+		DescribeTableResponse tableDescriptionDocument = responseDocument.response()
 		.orElseThrow(() -> new RuntimeException("Document table was not created."));
 		// The actual error can be inspected in response.exception()
 
     }
-
-//    @PostConstruct
-//    public void createTableDocTypes() {
-//        DynamoDbTable<DocTypesOutput> docTypesTable = enhancedClient.table(DOC_TYPES_TABLE_NAME,
-//                                                                           TableSchema.fromBean(DocTypesOutput.class));
-//        docTypesTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
-//                                                                                 .writeCapacityUnits(5L)
-//                                                                                 .build()));
-//        ResponseOrException<DescribeTableResponse> response = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(DOC_TYPES_TABLE_NAME).build())
-//        																	.matched();
-//        DescribeTableResponse tableDescription = response.response()
-//                                                         .orElseThrow(() -> new RuntimeException("Doc Types table was not created."));
-//        // The actual error can be inspected in response.exception()
-//    }
-    
-//    @PostConstruct
-//    public void createTableDocument() {
-//        DynamoDbTable<DocumentOutput> documentTable = enhancedClient.table(DOCUMENT_TABLE_NAME,
-//                                                                           TableSchema.fromBean(DocumentOutput.class));
-//        documentTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
-//                                                                                 .writeCapacityUnits(5L)
-//                                                                                 .build()));
-//        ResponseOrException<DescribeTableResponse> response = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(DOCUMENT_TABLE_NAME).build())
-//        																	.matched();
-//        DescribeTableResponse tableDescription = response.response()
-//                                                         .orElseThrow(() -> new RuntimeException("Document table was not created."));
-//        // The actual error can be inspected in response.exception()
-//    }
     
 }

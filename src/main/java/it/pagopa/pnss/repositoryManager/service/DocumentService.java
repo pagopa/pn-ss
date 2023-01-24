@@ -2,11 +2,11 @@ package it.pagopa.pnss.repositoryManager.service;
 
 import java.util.Iterator;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
 import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
@@ -21,32 +21,23 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 @Service
 public class DocumentService {
 	
-//	private final DynamoDbEnhancedClient enhancedClient;
-//    private final ObjectMapper objectMapper;
-//    
-//    public DocumentService(DynamoDbEnhancedClient enhancedClient, ObjectMapper objectMapper) {
-//        this.enhancedClient = enhancedClient;
-//        this.objectMapper = objectMapper;
-//    }
-	
-	@Autowired
-	private DynamoDbEnhancedClient enhancedClient;
-	@Autowired
-	private ObjectMapper objectMapper;
+	private final DynamoDbEnhancedClient enhancedClient;
+    private final ObjectMapper objectMapper;
+    
+    public DocumentService(DynamoDbEnhancedClient enhancedClient, ObjectMapper objectMapper) {
+        this.enhancedClient = enhancedClient;
+        this.objectMapper = objectMapper;
+    }
 
-	public DocumentOutput getDocument(String name) {
+	public DocumentOutput getDocument(String checkSum) {
 		try {
-            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table("Document", TableSchema.fromBean(DocumentEntity.class));
-            QueryConditional queryConditional = QueryConditional
-                    .keyEqualTo(Key.builder()
-                            .partitionValue(name)
-                            .build());
+            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
+            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(checkSum).build());
             
             Iterator<DocumentEntity> result = documentTable.query(queryConditional).items().iterator();
 		
             DocumentEntity docType = result.next();
             return objectMapper.convertValue(docType, DocumentOutput.class);
-            
             
 		} catch (DynamoDbException e) {
             System.err.println(e.getMessage());
@@ -57,9 +48,7 @@ public class DocumentService {
 	public DocumentOutput postdocument(DocumentInput documentInput) {
    
         try {
-            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table("Document",
-            		                                                           TableSchema.fromBean(
-            		                                                        		   DocumentEntity.class));
+            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
             DocumentEntity documentEntity = objectMapper.convertValue(documentInput, DocumentEntity.class);
                        
             if(documentTable.getItem(documentEntity) == null) {
@@ -68,7 +57,7 @@ public class DocumentService {
 				
 				return objectMapper.convertValue(documentEntity, DocumentOutput.class);
             } else {
-            	throw new RepositoryManagerException.IdClientAlreadyPresent(documentInput.getDocumentKey());
+            	throw new RepositoryManagerException.IdClientAlreadyPresent(documentInput.getCheckSum());
             }
 		} catch (DynamoDbException e) {
 			System.err.println(e.getMessage());
@@ -80,15 +69,15 @@ public class DocumentService {
 	public DocumentOutput updatedocument(DocumentInput documentInput) {
     	
     	try {
-            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table("Document", TableSchema.fromBean(DocumentEntity.class));
+            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
             DocumentEntity documentEntity = objectMapper.convertValue(documentInput, DocumentEntity.class);
 
             if(documentTable.getItem(documentEntity) != null) { 
-            documentTable.putItem(documentEntity);
-            return objectMapper.convertValue(documentEntity, DocumentOutput.class);
-                      
-    	} else {
-    		throw new RepositoryManagerException.DynamoDbException();
+	            documentTable.putItem(documentEntity);
+	            System.out.println("Modifica avvenuta con successo");
+	            return objectMapper.convertValue(documentEntity, DocumentOutput.class);
+	    	} else {
+	    		throw new RepositoryManagerException.DynamoDbException();
     	    }
     		
     	} catch (DynamoDbException  e){
@@ -98,14 +87,11 @@ public class DocumentService {
     	
     }
 
-	public DocumentOutput deletedocument(String name) {
+	public DocumentOutput deletedocument(String checkSum) {
 
     	try {
-            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table("Document", TableSchema.fromBean(DocumentEntity.class));
-            QueryConditional queryConditional = QueryConditional
-                    .keyEqualTo(Key.builder()
-                            .partitionValue(name)
-                            .build());
+            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
+            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(checkSum).build());
             Iterator<DocumentEntity> result = documentTable.query(queryConditional).items().iterator();
             
             DocumentEntity documentEntity = result.next();                        

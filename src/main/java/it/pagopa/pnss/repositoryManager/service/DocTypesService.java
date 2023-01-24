@@ -2,12 +2,11 @@ package it.pagopa.pnss.repositoryManager.service;
 
 import java.util.Iterator;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import it.pagopa.pnss.repositoryManager.DependencyFactory;
+import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.dto.DocTypesInput;
 import it.pagopa.pnss.repositoryManager.dto.DocTypesOutput;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
@@ -22,29 +21,21 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 @Service
 public class DocTypesService {
 	
-//	private final DynamoDbEnhancedClient enhancedClient;
-//    private final ObjectMapper objectMapper;
-//    
-//    public DocTypesService(DynamoDbEnhancedClient enhancedClient, ObjectMapper objectMapper) {
-//        this.enhancedClient = enhancedClient;
-//        this.objectMapper = objectMapper;
-//    }
+	private final DynamoDbEnhancedClient enhancedClient;
+    private final ObjectMapper objectMapper;
+    
+    public DocTypesService(DynamoDbEnhancedClient enhancedClient, ObjectMapper objectMapper) {
+        this.enhancedClient = enhancedClient;
+        this.objectMapper = objectMapper;
+    }
 	
-	@Autowired
-	private DynamoDbEnhancedClient enhancedClient;
-	@Autowired
-	private ObjectMapper objectMapper;
-	
-	public DocTypesOutput getDocType(String name) {
+	public DocTypesOutput getDocType(String checkSum) {
 	
 		try {
-            DynamoDbTable<DocTypesEntity> DocTypesTable = enhancedClient.table("DocTypes", TableSchema.fromBean(DocTypesEntity.class));
-            QueryConditional queryConditional = QueryConditional
-                    .keyEqualTo(Key.builder()
-                            .partitionValue(name)
-                            .build());
+            DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypesEntity.class));
+            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(checkSum).build());
             
-            Iterator<DocTypesEntity> result = DocTypesTable.query(queryConditional).items().iterator();
+            Iterator<DocTypesEntity> result = docTypesTable.query(queryConditional).items().iterator();
 		
             DocTypesEntity docType = result.next();
             
@@ -59,7 +50,7 @@ public class DocTypesService {
 	public DocTypesOutput postDocTypes(DocTypesInput docTypesInput) {
         
         try {
-            DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table("DocTypes", TableSchema.fromBean(DocTypesEntity.class));
+            DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypesEntity.class));
             
             DocTypesEntity docTypesEntity = objectMapper.convertValue(docTypesInput, DocTypesEntity.class);
             
@@ -73,7 +64,7 @@ public class DocTypesService {
 
             } else {
 				System.out.println("User cannot be added to the table, user id already exists");
-            	throw new RepositoryManagerException.IdClientAlreadyPresent(docTypesInput.getName());
+            	throw new RepositoryManagerException.IdClientAlreadyPresent(docTypesInput.getCheckSum().name());
 
             }
         } catch (DynamoDbException  e){
@@ -87,12 +78,13 @@ public class DocTypesService {
 	public DocTypesOutput updateDocTypes(DocTypesInput docTypesInput) {
 		
 		try {
-			DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table("DocTypes",
+			DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME,
 					TableSchema.fromBean(DocTypesEntity.class));
 			DocTypesEntity docTypesEntity = objectMapper.convertValue(docTypesInput, DocTypesEntity.class);
 
 			if (docTypesTable.getItem(docTypesEntity) != null) {
 				docTypesTable.putItem(docTypesEntity);
+				System.out.println("Modifica avvenuta con successo");
 				return objectMapper.convertValue(docTypesEntity, DocTypesOutput.class);
 
 			} else {
@@ -104,19 +96,16 @@ public class DocTypesService {
 		}
 	}
 	
-	public DocTypesOutput deleteDocTypes(String name) {
+	public DocTypesOutput deleteDocTypes(String checkSum) {
 		
     	try {
-            DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table("DocTypes", TableSchema.fromBean(DocTypesEntity.class));
-            QueryConditional queryConditional = QueryConditional
-                    .keyEqualTo(Key.builder()
-                            .partitionValue(name)
-                            .build());
+            DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypesEntity.class));
+            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(checkSum).build());
             Iterator<DocTypesEntity> result = docTypesTable.query(queryConditional).items().iterator();
-     
             
             DocTypesEntity docTypesEntity = result.next();
             docTypesTable.deleteItem(docTypesEntity);
+            
             System.out.println("Cancellazione avvenuta con successo");
             return objectMapper.convertValue(docTypesEntity, DocTypesOutput.class);               
     	}catch (DynamoDbException  e){

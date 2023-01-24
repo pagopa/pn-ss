@@ -1,0 +1,48 @@
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/ " xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+	<S:Header>
+		<ns2:ISPWebservicesHeader  xmlns:ns2="http://intesasanpaolo.it/ " xmlns:ns3="http://www.intesasanpaolo.com/AESI0/InquiryRapportiEstero/ " xmlns:ns4="http://ws.intesasanpaolo.com/">
+			<RequestInfo>
+				<TransactionId>4d893cf3-a77a-4c80-9ea0-e4f9e9d9fa5e</TransactionId>
+				<Timestamp>0</Timestamp>
+				<ServiceID>WSJGEXIE20</ServiceID>
+				<ServiceVersion>00</ServiceVersion>
+			</RequestInfo>
+			<OperatorInfo  IsVirtualUser="false" UserID="U0J7906"/>
+			<CompanyInfo>
+				<ISPCallerCompanyIDCode>01</ISPCallerCompanyIDCode>
+				<ISPBranchCode>08999</ISPBranchCode>
+				<ISPServiceCompanyIDCode>01</ISPServiceCompanyIDCode>
+			</CompanyInfo>
+			<BusinessInfo>
+				<CustomerID>U0J7906</CustomerID>
+			</BusinessInfo>
+			<TechnicalInfo>
+				<ChannelIDCode>D8</ChannelIDCode>
+				<ApplicationID>11</ApplicationID>
+				<CallerServerName>foreignBalance</CallerServerName>
+				<CallerProgramName>APIMK</CallerProgramName>
+			</TechnicalInfo>
+			<AdditionalBusinessInfo>
+				<Param Name="DataContabile" Value="14052019"/>
+				<Param Name="CodABI" Value="01025"/>
+				<Param Name="CodUnitaOperativa" Value="08999"/>
+			</AdditionalBusinessInfo>
+		</ns2:ISPWebservicesHeader>
+	</S:Header>
+	<S:Body>
+		<ns3:InquiryRapportiEsteroRequest xmlns:ns2="http://intesasanpaolo.it/ " xmlns:ns3="http://www.intesasanpaolo.com/AESI0/InquiryRapportiEstero/ " xmlns:ns4="http://ws.intesasanpaolo.com/">
+			<INPUT_E2JGS00>
+				<INPMPE_TAG_NAME>INPMPE</INPMPE_TAG_NAME>
+				<INPMPE_TAG_LEN>0</INPMPE_TAG_LEN>
+				<I_TIPO_ESTRAZ>S</I_TIPO_ESTRAZ>
+				<I_RAPPORTO>
+					<I_UO_RAPP>04694</I_UO_RAPP>
+					<I_CATEG_RAPP>1610</I_CATEG_RAPP>
+					<I_NUM_RAPP>09363004</I_NUM_RAPP>
+				</I_RAPPORTO>
+				<I_DATA_DA>20190514</I_DATA_DA>
+				<I_DATA_A>20190514</I_DATA_A>
+			</INPUT_E2JGS00>
+		</ns3:InquiryRapportiEsteroRequest>
+	</S:Body>
+</S:Envelope> 

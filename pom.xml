@@ -1,40 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>it.pagopa.pn</groupId>
-		<artifactId>pn-parent</artifactId>
-		<version>2.0.0-SNAPSHOT</version>
-		<relativePath />
-	</parent>
-	<artifactId>pn-ss</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
-	<name>pn-ss</name>
-	<description>A template for a PN Backend Microservice</description>
-	<scm>
-		<connection>${git.conn}</connection>
-		<developerConnection>${git.devConn}</developerConnection>
-		<url>${git.url}</url>
-	  <tag>HEAD</tag>
-  </scm>
-	<properties>
-		<java.version>11</java.version>
-		<awspring.version>2.3.2</awspring.version>
-	</properties>
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>it.pagopa.pn</groupId>
+        <artifactId>pn-parent</artifactId>
+        <version>2.0.0-SNAPSHOT</version>
+        <relativePath />
+    </parent>
+    <artifactId>pn-ss</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <name>pn-ss</name>
+    <description>A template for a PN Backend Microservice</description>
+    <scm>
+        <connection>${git.conn}</connection>
+        <developerConnection>${git.devConn}</developerConnection>
+        <url>${git.url}</url>
+        <tag>HEAD</tag>
+    </scm>
+    <properties>
+        <java.version>11</java.version>
+        <awspring.version>2.3.2</awspring.version>
+        <spring-cloud-starter-openfeign>3.0.0</spring-cloud-starter-openfeign>
+    </properties>
 
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>io.awspring.cloud</groupId>
-				<artifactId>spring-cloud-aws-dependencies</artifactId>
-				<version>${awspring.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.awspring.cloud</groupId>
+                <artifactId>spring-cloud-aws-dependencies</artifactId>
+                <version>${awspring.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
-	<dependencies>
+    <dependencies>
 
 		<dependency>
 			<groupId>it.pagopa.pn</groupId>
@@ -42,42 +43,48 @@
 			<version>2.0.0-SNAPSHOT</version>
 		</dependency>
 
-		<dependency>
-			<groupId>io.swagger</groupId>
-			<artifactId>swagger-annotations</artifactId>
-			<version>1.6.5</version>
-		</dependency>
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <version>1.6.5</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+            <version>${spring-cloud-starter-openfeign}</version>
+            <!-- version>${project.parent.version}</version -->
+        </dependency>
 
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<scope>provided</scope>
-		</dependency>
-		
-		<dependency>
-			<groupId>net.logstash.logback</groupId>
-			<artifactId>logstash-logback-encoder</artifactId>
-		</dependency>
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+        </dependency>
 
-		<dependency>
-			<groupId>io.projectreactor</groupId>
-			<artifactId>reactor-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		
-		<!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-dynamodb -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+       	<!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-dynamodb -->
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-dynamodb</artifactId>
 		</dependency>
 
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        
         <dependency>
             <groupId>jakarta.xml.ws</groupId>
             <artifactId>jakarta.xml.ws-api</artifactId>
@@ -89,24 +96,34 @@
             <artifactId>jaxws-rt</artifactId>
             <version>2.3.3</version>
         </dependency>
+
         <dependency>
             <groupId>com.sun.xml.ws</groupId>
             <artifactId>jaxws-ri</artifactId>
             <version>2.3.1</version>
             <type>pom</type>
         </dependency>
-		<dependency>
-			<groupId>software.amazon.awssdk</groupId>
-			<artifactId>aws-sdk-java</artifactId>
-			<version>2.19.13</version>
-		</dependency>
-		
-		<dependency>
+
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>aws-sdk-java</artifactId>
+            <version>2.19.13</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <version>5.3.23</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>localstack</artifactId>
 			<scope>test</scope>
 		</dependency>
-	</dependencies>
+
+    </dependencies>
 
 	<build>
 		<plugins>
@@ -119,11 +136,11 @@
 				<artifactId>jaxws-maven-plugin</artifactId>
 				<version>2.3.2</version>
 				<executions>
-					<!-- execution>
+					<!--execution>
 						<goals>
 							<goal>wsimport</goal>
 						</goals>
-					</execution -->
+					</execution-->
 				</executions>
 				<configuration>
 					<wsdlLocation>/ArubaSignService.wsdl</wsdlLocation>
@@ -134,88 +151,84 @@
 					<sourceDestDir>src/main/java</sourceDestDir>
 				</configuration>
 			</plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/generated/**</exclude>
+                        <exclude>**it/pagopa/pn/template/rest/v1/**</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>5.4.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-mandate-server</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <inputSpec>${project.basedir}/docs/openapi/pn-template.yaml</inputSpec>
+                            <generatorName>spring</generatorName>
+                            <library>spring-boot</library>
+                            <generateApiDocumentation>false</generateApiDocumentation>
+                            <generateApiTests>false</generateApiTests>
+                            <generateModelTests>false</generateModelTests>
+                            <configOptions>
+                                <dateLibrary>java11</dateLibrary>
+                                <delegatePattern>true</delegatePattern>
+                                <interfaceOnly>true</interfaceOnly>
+                                <annotationLibrary>none</annotationLibrary>
+                                <documentationProvider>source</documentationProvider>
+                                <openApiNullable>false</openApiNullable>
+                                <reactive>true</reactive>
+                                <skipDefaultInterface>false</skipDefaultInterface>
+                                <useTags>true</useTags>
+                                <basePackage>${project.groupId}.template.rest.v1</basePackage>
+                                <modelPackage>${project.groupId}.template.rest.v1.dto</modelPackage>
+                                <apiPackage>${project.groupId}.template.rest.v1.api</apiPackage>
+                                <configPackage>${project.groupId}.template.rest.v1.config</configPackage>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-gestore-file</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <inputSpec>${project.basedir}/docs/openapi/pn-safestorage-v1-api.yaml</inputSpec>
+                            <generatorName>spring</generatorName>
+                            <library>spring-boot</library>
+                            <generateApiDocumentation>false</generateApiDocumentation>
+                            <generateApiTests>false</generateApiTests>
+                            <generateModelTests>false</generateModelTests>
+                            <configOptions>
+                                <dateLibrary>java11</dateLibrary>
+                                <delegatePattern>true</delegatePattern>
+                                <interfaceOnly>true</interfaceOnly>
+                                <annotationLibrary>none</annotationLibrary>
+                                <documentationProvider>source</documentationProvider>
+                                <openApiNullable>false</openApiNullable>
+                                <reactive>true</reactive>
+                                <skipDefaultInterface>false</skipDefaultInterface>
+                                <useTags>true</useTags>
+                                <basePackage>${project.groupId}.template.rest.v1</basePackage>
+                                <modelPackage>${project.groupId}.template.rest.v1.dto</modelPackage>
+                                <apiPackage>${project.groupId}.template.rest.v1.api</apiPackage>
+                                <configPackage>${project.groupId}.template.rest.v1.config</configPackage>
+                            </configOptions>
+                        </configuration>
+                    </execution>
 
-
-
-
-			<plugin>
-				<groupId>org.jacoco</groupId>
-				<artifactId>jacoco-maven-plugin</artifactId>
-				<configuration>
-					<excludes>
-						<exclude>**/generated/**</exclude>
-						<exclude>**it/pagopa/pn/template/rest/v1/**</exclude>
-					</excludes>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.openapitools</groupId>
-				<artifactId>openapi-generator-maven-plugin</artifactId>
-				<version>5.4.0</version>
-				<executions>					
-					<execution>
-						<id>generate-mandate-server</id>
-						<goals>
-							<goal>generate</goal>
-						</goals>
-						<phase>process-resources</phase>
-						<configuration>
-							<inputSpec>${project.basedir}/docs/openapi/pn-template.yaml</inputSpec>
-							<generatorName>spring</generatorName>
-              				<library>spring-boot</library>
-							<generateApiDocumentation>false</generateApiDocumentation>
-							<generateApiTests>false</generateApiTests>
-							<generateModelTests>false</generateModelTests>
-							<configOptions>
-							<dateLibrary>java11</dateLibrary>
-							<delegatePattern>true</delegatePattern>
-							<interfaceOnly>true</interfaceOnly>
-							<annotationLibrary>none</annotationLibrary>
-							<documentationProvider>source</documentationProvider>
-							<openApiNullable>false</openApiNullable>
-							<reactive>true</reactive>
-							<skipDefaultInterface>false</skipDefaultInterface>
-							<useTags>true</useTags>
-							<basePackage>${project.groupId}.template.rest.v1</basePackage>
-							<modelPackage>${project.groupId}.template.rest.v1.dto</modelPackage>
-							<apiPackage>${project.groupId}.template.rest.v1.api</apiPackage>
-							<configPackage>${project.groupId}.template.rest.v1.config</configPackage>
-							</configOptions>				
-						</configuration>
-					</execution>
-					<execution>
-						<id>generate-gestore-file</id>
-						<goals>
-							<goal>generate</goal>
-						</goals>
-						<phase>process-resources</phase>
-						<configuration>
-							<inputSpec>${project.basedir}/docs/openapi/pn-safestorage-v1-api.yaml</inputSpec>
-							<generatorName>spring</generatorName>
-							<library>spring-boot</library>
-							<generateApiDocumentation>false</generateApiDocumentation>
-							<generateApiTests>false</generateApiTests>
-							<generateModelTests>false</generateModelTests>
-							<configOptions>
-								<dateLibrary>java11</dateLibrary>
-								<delegatePattern>true</delegatePattern>
-								<interfaceOnly>true</interfaceOnly>
-								<annotationLibrary>none</annotationLibrary>
-								<documentationProvider>source</documentationProvider>
-								<openApiNullable>false</openApiNullable>
-								<reactive>true</reactive>
-								<skipDefaultInterface>false</skipDefaultInterface>
-								<useTags>true</useTags>
-								<basePackage>${project.groupId}.template.rest.v1</basePackage>
-								<modelPackage>${project.groupId}.template.rest.v1.dto</modelPackage>
-								<apiPackage>${project.groupId}.template.rest.v1.api</apiPackage>
-								<configPackage>${project.groupId}.template.rest.v1.config</configPackage>
-							</configOptions>
-						</configuration>
-					</execution>
-
-				</executions>
-			</plugin>			 		 
-		</plugins>
-	</build>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

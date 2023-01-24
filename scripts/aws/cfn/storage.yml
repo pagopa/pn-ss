@@ -24,10 +24,274 @@ Parameters:
     Type: String
     Description: 'Where to send CDC'
 
-Resources:
-    NullResource:
-        Type: AWS::CloudFormation::WaitConditionHandle
+  PnSsTableNameAnagrafica:
+    Type: String
+    Description: Description
+    Default: pn-ss-anagrafica-client
+  
+  PnSsTableNameTipologie:
+    Type: String
+    Description: Description
+    Default: pn-ss-tipologie-documenti
 
+  PnSsTableNameDocumenti:
+    Type: String
+    Description: Description
+    Default: pn-ss-documenti
+
+  PnSsBucketName:
+    Type: String
+    Description: Description
+    Default: pn-ss-bucket
+
+  PnSsStagingBucketName:
+    Type: String
+    Description: Description
+    Default: pn-ss-staging-bucket
+
+  PnSsQueueNameNotificaDisponibilita:
+    Type: String
+    Description: Description
+    Default: pn-ss-notifica-disponibilita-queue
+
+  PnSsQueueNameStagingBucket:
+    Type: String
+    Description: Description
+    Default: pn-ss-staging-bucket-queue
+
+  PnSsEventRuleNameNotificaDisponibilita:
+    Type: String
+    Description: Description
+    Default: pn-ss-notifica-disponibilita-event-rule
+
+  PnSsEventRuleNameStagingBucket:
+    Type: String
+    Description: Description
+    Default: pn-ss-staging-bucket-event-rule
+  
+  PnSsSNSNameStagingBucket:
+    Type: String
+    Description: Description
+    Default: pn-ss-staging-bucket-topic
+
+Resources:
+  # NullResource:
+  #     Type: AWS::CloudFormation::WaitConditionHandle
+
+  PnSsTableAnagrafica:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "name"
+          AttributeType: "S"
+        - AttributeName: "APIKey"
+          AttributeType: "S"
+      KeySchema: 
+        - AttributeName: "name"
+          KeyType: "HASH"
+        - AttributeName: "APIKey"
+          KeyType: "RANGE"
+      #KinesisStreamSpecification:
+      #  StreamArn: "String"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: "KMS"
+      TableClass: "STANDARD"
+      TableName: !Ref PnSsTableNameAnagrafica
+    DeletionPolicy: Retain
+
+  PnSsTableTipologie:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "tipoDocumento"
+          AttributeType: "S"
+        - AttributeName: "checksum"
+          AttributeType: "S"
+      KeySchema: 
+        - AttributeName: "tipoDocumento"
+          KeyType: "RANGE"
+        - AttributeName: "checksum"
+          KeyType: "HASH"
+      #KinesisStreamSpecification:
+      #  StreamArn: "String"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: "KMS"
+      TableClass: "STANDARD"
+      TableName: !Ref PnSsTableNameTipologie
+    DeletionPolicy: Retain
+
+  PnSsTableDocumenti:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "checksum"
+          AttributeType: "S"
+      KeySchema: 
+        - AttributeName: "checksum"
+          KeyType: "HASH"
+      #KinesisStreamSpecification:
+      #  StreamArn: "String"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: "KMS"
+      TableClass: "STANDARD"
+      TableName: !Ref PnSsTableNameDocumenti
+    DeletionPolicy: Retain
+
+  PnSsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: 'Private'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              #  KMSMasterKeyID: KMS-KEY-AR
+      BucketName: !Ref PnSsBucketName
+      # IntelligentTieringConfigurations:
+      #   IntelligentTieringConfigurations
+      # InventoryConfigurations:
+      #   InventoryConfigurations
+      # LifecycleConfiguration:
+      #   Rules:
+      #     -
+      #LoggingConfiguration:
+      #  DestinationBucketName: "String"
+      #  LogFilePrefix: "String"
+      #MetricsConfigurations:
+      #  MetricsConfigurations
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      #ObjectLockConfiguration:
+      #  ObjectLockEnabled: "String"
+      #ObjectLockEnabled: false
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      #ReplicationConfiguration:
+      #  Role: "false"
+      #  Rules:
+      #    -
+
+  PnSsStagingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: 'Private'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              #  KMSMasterKeyID: KMS-KEY-AR
+      BucketName: !Ref PnSsStagingBucketName
+      #LoggingConfiguration:
+      #  DestinationBucketName: "String"
+      #  LogFilePrefix: "String"
+      #MetricsConfigurations:
+      #  MetricsConfigurations
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  PnSsQueueStagingBucket:
+    Type: AWS::SQS::Queue
+    Properties:
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: "alias/aws/sqs"
+      MessageRetentionPeriod: 1209600
+      QueueName: !Ref PnSsQueueNameStagingBucket
+      ReceiveMessageWaitTimeSeconds: 20      
+      RedrivePolicy:
+        deadLetterTargetArn : !GetAtt PnSsDLQueueStagingBucket.Arn
+        maxReceiveCount : 10
+      VisibilityTimeout: 30
+
+  PnSsDLQueueStagingBucket:
+    Type: AWS::SQS::Queue
+    Properties:
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: "alias/aws/sqs"
+      MessageRetentionPeriod: 1209600
+      QueueName: !Join 
+        - ""
+        - - !Ref PnSsQueueNameStagingBucket
+          - '-dlq' 
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 30 
+
+  PnSsSNSStagingBucket:
+    Type: AWS::SNS::Topic
+    Properties:
+      #DataProtectionPolicy: JSON
+      KmsMasterKeyId: alias/aws/sns
+      Subscription:
+        - Endpoint: !GetAtt PnSsQueueStagingBucket.Arn
+          Protocol: sqs
+      TopicName: !Ref PnSsSNSNameStagingBucket
+  
+  PnSsSNSPolicyStagingBucket:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Statement: 
+          - Action: 
+              - "sns:Publish"
+            Effect: "Allow"
+            Principal:  
+              Service: 
+                - "events.amazonaws.com"
+            Resource: '*'
+      Topics: 
+        - !Ref PnSsSNSStagingBucket
+
+  PnSsEventRuleStagingBucket:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Description
+      EventPattern:   
+        source: 
+          - 'aws.s3' 
+        account: 
+          - !Sub ${AWS::AccountId}
+        detail-type: 
+          - 'Object Created'
+        detail:
+          bucket:
+            name: 
+              - !Ref PnSsEventRuleNameStagingBucket
+      Name: !Ref PnSsEventRuleNameStagingBucket
+      State: 'ENABLED'
+      Targets:
+        - Arn: !Ref PnSsSNSStagingBucket
+          Id: "TopicTargetForStagingBucket"
+
+  
 Outputs:
     SampleOutput:
       Description: A Sample Output

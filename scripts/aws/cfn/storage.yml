@@ -146,7 +146,7 @@ Resources:
         SSEEnabled: true
         SSEType: "KMS"
       TableClass: "STANDARD"
-      TableName: !Ref PnSsTableNameDocumenti
+      # TableName: !Ref PnSsTableNameDocumenti
     DeletionPolicy: Retain
 
   PnSsBucket:
@@ -294,31 +294,47 @@ Outputs:
   PnSsTableAnagraficaClientName:
     Description: Nome tabella SS Anagrafica Client 
     Value: !Ref PnSsTableAnagraficaClient
+    Export:
+      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsTableAnagraficaClientName']]
   
   PnSsTableTipologieDocumentiName:
     Description: Nome tabella SS Tipologie Documenti 
     Value: !Ref PnSsTableTipologieDocumenti
+    Export:
+      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsTableTipologieDocumentiName']]
   
   PnSsTableDocumentiName:
     Description: Nome tabella SS Documenti 
     Value: !Ref PnSsTableDocumenti
+    Export:
+      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsTableDocumentiName']]
 
   PnSsBucketName:
     Description: Nome Bucket SS
     Value: !Ref PnSsBucket
+    Export:
+      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsBucketName']]
   
   PnSsStagingBucketName:
     Description: Nome Bucket SS Staging 
     Value: !Ref PnSsStagingBucket
+    Export:
+      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsStagingBucketName']]
   
   PnSsQueueStagingBucketName:
     Description: Nome coda per notifiche SS Staging Bucket
-    Value: !Ref PnSsQueueStagingBucket.QueueName
+    Value: !GetAtt  PnSsQueueStagingBucket.QueueName
+    Export:
+      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsQueueStagingBucketName']]
 
   PnSsDLQueueStagingBucket:
     Description: Nome coda DLQ per notifiche SS Staging Bucket
-    Value: !Ref PnSsDLQueueStagingBucket.QueueName
+    Value: !GetAtt PnSsDLQueueStagingBucket.QueueName
+    Export:
+      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsDLQueueStagingBucket']]
 
   PnSsSNSStagingBucket:
     Description: Nome SNS Topic per notifiche SS Staging Bucket
-    Value: !Ref PnSsSNSStagingBucket.TopicName
+    Value: !GetAtt PnSsSNSStagingBucket.TopicName
+    Export:
+      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsSNSStagingBucket']]

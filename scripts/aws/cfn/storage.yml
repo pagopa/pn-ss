@@ -78,7 +78,7 @@ Resources:
   # NullResource:
   #     Type: AWS::CloudFormation::WaitConditionHandle
 
-  PnSsTableAnagrafica:
+  PnSsTableAnagraficaClient:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
@@ -100,22 +100,22 @@ Resources:
         SSEEnabled: true
         SSEType: "KMS"
       TableClass: "STANDARD"
-      TableName: !Ref PnSsTableNameAnagrafica
+      # TableName: !Ref PnSsTableNameAnagrafica
     DeletionPolicy: Retain
 
-  PnSsTableTipologie:
+  PnSsTableTipologieDocumenti:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "tipoDocumento"
-          AttributeType: "S"
         - AttributeName: "checksum"
+          AttributeType: "S"
+        - AttributeName: "tipoDocumento"
           AttributeType: "S"
       KeySchema: 
-        - AttributeName: "tipoDocumento"
-          KeyType: "RANGE"
         - AttributeName: "checksum"
           KeyType: "HASH"
+        - AttributeName: "tipoDocumento"
+          KeyType: "RANGE"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
       ProvisionedThroughput:
@@ -125,7 +125,7 @@ Resources:
         SSEEnabled: true
         SSEType: "KMS"
       TableClass: "STANDARD"
-      TableName: !Ref PnSsTableNameTipologie
+      # TableName: !Ref PnSsTableNameTipologie
     DeletionPolicy: Retain
 
   PnSsTableDocumenti:
@@ -238,10 +238,8 @@ Resources:
       KmsDataKeyReusePeriodSeconds: 300
       KmsMasterKeyId: "alias/aws/sqs"
       MessageRetentionPeriod: 1209600
-      QueueName: !Join 
-        - ""
-        - - !Ref PnSsQueueNameStagingBucket
-          - '-dlq' 
+      QueueName: !Join [ '', [ !Ref PnSsQueueNameStagingBucket, '-dlq' ] ]
+
       ReceiveMessageWaitTimeSeconds: 20
       VisibilityTimeout: 30 
 
@@ -293,6 +291,34 @@ Resources:
 
   
 Outputs:
-    SampleOutput:
-      Description: A Sample Output
-      Value: 'na'
+  PnSsTableAnagraficaClientName:
+    Description: Nome tabella SS Anagrafica Client 
+    Value: !Ref PnSsTableAnagraficaClient
+  
+  PnSsTableTipologieDocumentiName:
+    Description: Nome tabella SS Tipologie Documenti 
+    Value: !Ref PnSsTableTipologieDocumenti
+  
+  PnSsTableDocumentiName:
+    Description: Nome tabella SS Documenti 
+    Value: !Ref PnSsTableDocumenti
+
+  PnSsBucketName:
+    Description: Nome Bucket SS
+    Value: !Ref PnSsBucket
+  
+  PnSsStagingBucketName:
+    Description: Nome Bucket SS Staging 
+    Value: !Ref PnSsStagingBucket
+  
+  PnSsQueueStagingBucketName:
+    Description: Nome coda per notifiche SS Staging Bucket
+    Value: !Ref PnSsQueueStagingBucket.QueueName
+
+  PnSsDLQueueStagingBucket:
+    Description: Nome coda DLQ per notifiche SS Staging Bucket
+    Value: !Ref PnSsDLQueueStagingBucket.QueueName
+
+  PnSsSNSStagingBucket:
+    Description: Nome SNS Topic per notifiche SS Staging Bucket
+    Value: !Ref PnSsSNSStagingBucket.TopicName

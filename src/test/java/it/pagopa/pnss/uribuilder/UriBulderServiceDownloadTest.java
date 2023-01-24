@@ -13,14 +13,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ReactiveHttpOutputMessage;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 @ExtendWith(SpringExtension.class)
@@ -103,6 +101,15 @@ public class UriBulderServiceDownloadTest {
                 .isNotFound();
     }
 
+
+    @Test
+    public void testInternalServerError(){
+        Mockito.doThrow(new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR, "ResponseStatusException -> Message  "+" Amazon S3 couldn't be contacted for a response, or the client couldn't parse the response from Amazon S3. ")
+                ).when(service).createUriForDownloadFile(Mockito.any());
+        fileDownloadTestCall( X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
+                .is5xxServerError();
+    }
 
 
 

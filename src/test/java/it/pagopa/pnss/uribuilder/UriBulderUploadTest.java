@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpOutputMessage;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -27,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
@@ -171,5 +173,19 @@ public class UriBulderUploadTest {
                 .isBadRequest();
     }
 
+    @Test
+    public void testInternalServerError(){
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType("TIFF");
+        fcr.setDocumentType("PN_NOTIFICATION_ATTACHMENTS");
+        fcr.setStatus("PRELOADED");
+
+
+        Mockito.doThrow(new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR, "ResponseStatusException -> Message  "+" Amazon S3 couldn't be contacted for a response, or the client couldn't parse the response from Amazon S3. ")
+        ).when(service).createUriForUploadFile(Mockito.any(),Mockito.any(),Mockito.any());
+        fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
+                .is5xxServerError();
+    }
 
 }

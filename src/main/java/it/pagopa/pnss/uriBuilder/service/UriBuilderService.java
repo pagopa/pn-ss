@@ -1,5 +1,9 @@
 package it.pagopa.pnss.uriBuilder.service;
 
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkClientException;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
@@ -7,24 +11,30 @@ import it.pagopa.pnss.uriBuilder.client.GetRepositoryClient;
 import it.pagopa.pnss.uriBuilder.model.DocumentRepositoryDto;
 import org.aspectj.lang.annotation.After;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import java.io.IOException;
 import javax.annotation.PostConstruct;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.*;
+import com.amazonaws.services.s3.AmazonS3;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.RestoreObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 @Service
 public class UriBuilderService {
@@ -43,7 +53,7 @@ public class UriBuilderService {
     List <String> hotStatus;
     List <String> coldStatus;
     Map<String,String> mapDocumentTypeToBucket ;
-
+    Region region = Region.EU_CENTRAL_1;
     @PostConstruct
     public void createMap() {
         mapDocumentTypeToBucket= new HashMap<>();
@@ -92,15 +102,25 @@ public class UriBuilderService {
     private PresignedPutObjectRequest  builsUploadUrl(String documentType, String keyName, String contentType) {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
+        try {
+            S3Presigner presigner = getS3Presigner();
+            return  signBucket(presigner, bucketName, keyName,contentType);
 
-        S3Presigner presigner = getS3Presigner();
-        return  signBucket(presigner, bucketName, keyName,contentType);
+        }catch (S3Exception e) {
+
+            throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR, "S3Exception -> Message  "+ e.getMessage());
+        }catch (Exception e) {
+
+            throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR, "Generic Exception -> Message  "+ e.getMessage());
+        }
 
     }
 
     private S3Presigner getS3Presigner() {
         ProfileCredentialsProvider credentialsProvider = ProfileCredentialsProvider.create();
-        Region region = Region.EU_CENTRAL_1;
+
         return S3Presigner.builder()
                 .region(region)
                 .credentialsProvider(credentialsProvider)
@@ -158,28 +178,60 @@ public class UriBuilderService {
     }
 
     private FileDownloadInfo createFileDownloadInfo(String fileKey, String status,  String documentType) {
-        S3Presigner presigner = getS3Presigner();
+
         String bucketName = mapDocumentTypeToBucket.get(documentType);
         FileDownloadInfo fileDOwnloadInfo = null;
         if (hotStatus.contains(status)){
-            fileDOwnloadInfo =getPresignedUrl(presigner, bucketName,  fileKey );
+            fileDOwnloadInfo =getPresignedUrl(bucketName,  fileKey );
         }else{
-            fileDOwnloadInfo =recoverDocumentFromBucket( presigner,  bucketName,fileKey);
+            fileDOwnloadInfo =recoverDocumentFromBucket(   bucketName,fileKey);
         }
 
          return fileDOwnloadInfo;
 
     }
 
-    private FileDownloadInfo recoverDocumentFromBucket(S3Presigner presigner, String bucketName, String fileKey) {
+    private FileDownloadInfo recoverDocumentFromBucket(String bucketName, String keyName) {
         FileDownloadInfo fdinfo = new FileDownloadInfo();
         // mettere codice per far partire il recupero del file
         //todo
-        fdinfo.setRetryAfter(MAX_RECOVER_COLD );
+
+        try {
+            AmazonS3 s3Client = createS3();
+            fdinfo.setRetryAfter(MAX_RECOVER_COLD );
+            com.amazonaws.services.s3.model.RestoreObjectRequest requestRestore = new com.amazonaws.services.s3.model.RestoreObjectRequest(bucketName, keyName, 2);
+            s3Client.restoreObjectV2(requestRestore);
+            ObjectMetadata response = s3Client.getObjectMetadata(bucketName, keyName);
+            Boolean restoreFlag = response.getOngoingRestore();
+            System.out.format("Restoration status: %s.\n",
+                    restoreFlag ? "in progress" : "not in progress (finished or failed)");
+            fdinfo.setRetryAfter(MAX_RECOVER_COLD);        ;
+        } catch (AmazonServiceException e) {
+            // The call was transmitted successfully, but Amazon S3 couldn't process
+            // it, so it returned an error response.
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "AmazonServiceException -> Message  "+ e.getMessage() + " The call was transmitted successfully, but Amazon S3 couldn't process ");
+
+        } catch (SdkClientException e) {
+            // Amazon S3 couldn't be contacted for a response, or the client
+            // couldn't parse the response from Amazon S3.
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "ResponseStatusException -> Message  "+ e.getMessage() + " Amazon S3 couldn't be contacted for a response, or the client couldn't parse the response from Amazon S3. ");
+
+        }
         return fdinfo;
     }
 
-    private FileDownloadInfo getPresignedUrl(S3Presigner presigner, String bucketName, String keyName) {
+    private AmazonS3 createS3() {
+        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
+                .withCredentials(new com.amazonaws.auth.profile.ProfileCredentialsProvider())
+                .withRegion(region.id())
+                .build();
+        return s3Client;
+    }
+
+    private FileDownloadInfo getPresignedUrl( String bucketName, String keyName) {
+        S3Presigner presigner = getS3Presigner();
         FileDownloadInfo fdinfo = new FileDownloadInfo();
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)

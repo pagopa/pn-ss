@@ -73,7 +73,11 @@ Parameters:
     Type: String
     Description: Description
     Default: pn-ss-staging-bucket-topic
-
+  
+  PnSsECSTaskRoleName:
+    Type: String
+    Description: Description
+    Default: pn-ss-staging-bucket-topic
 Resources:
   # NullResource:
   #     Type: AWS::CloudFormation::WaitConditionHandle
@@ -82,14 +86,18 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "name"
+        - 
+          AttributeName: "name"
           AttributeType: "S"
-        - AttributeName: "APIKey"
+        - 
+          AttributeName: "APIKey"
           AttributeType: "S"
       KeySchema: 
-        - AttributeName: "name"
+        - 
+          AttributeName: "name"
           KeyType: "HASH"
-        - AttributeName: "APIKey"
+        - 
+          AttributeName: "APIKey"
           KeyType: "RANGE"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
@@ -107,14 +115,18 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "checksum"
+        - 
+          AttributeName: "checksum"
           AttributeType: "S"
-        - AttributeName: "tipoDocumento"
+        - 
+          AttributeName: "tipoDocumento"
           AttributeType: "S"
       KeySchema: 
-        - AttributeName: "checksum"
+        - 
+          AttributeName: "checksum"
           KeyType: "HASH"
-        - AttributeName: "tipoDocumento"
+        - 
+          AttributeName: "tipoDocumento"
           KeyType: "RANGE"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
@@ -132,10 +144,12 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "checksum"
+        - 
+          AttributeName: "checksum"
           AttributeType: "S"
       KeySchema: 
-        - AttributeName: "checksum"
+        - 
+          AttributeName: "checksum"
           KeyType: "HASH"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
@@ -289,6 +303,30 @@ Resources:
         - Arn: !Ref PnSsSNSStagingBucket
           Id: "TopicTargetForStagingBucket"
 
+  PnSsECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement: 
+          - Action: 
+              - "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:  
+              Service: 
+                - "ecs-tasks.amazonaws.com"
+      Description: 'Execution Role for pn-ec ECS Task'
+      RoleName: !Ref PnSsECSTaskRoleName
+      MaxSessionDuration: 3600
+      Policies:
+        - 
+          PolicyName: 'PutMetricData'
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Action: 
+                - "cloudwatch:PutMetricData"
+              Resource: "*"
+              Effect: "Allow"
   
 Outputs:
   PnSsTableAnagraficaClientName:

@@ -81,15 +81,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "checksum"
-          AttributeType: "S"
         - AttributeName: "tipoDocumento"
           AttributeType: "S"
       KeySchema: 
-        - AttributeName: "checksum"
-          KeyType: "HASH"
         - AttributeName: "tipoDocumento"
-          KeyType: "RANGE"
+          KeyType: "HASH"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
       ProvisionedThroughput:
@@ -286,9 +282,17 @@ Outputs:
   PnSsBucketName:
     Description: 'Nome Bucket SS'
     Value: !Ref PnSsBucket
+
+  PnSsBucketArn:
+    Description: 'ARN Bucket SS'
+    Value: !Ref PnSsBucket
   
   PnSsStagingBucketName:
     Description: 'Nome Bucket SS Staging'
+    Value: !Ref PnSsStagingBucket
+
+  PnSsStagingBucketArn:
+    Description: 'ARN Bucket SS Staging'
     Value: !Ref PnSsStagingBucket
 
   PnSsQueueNameStagingBucket:

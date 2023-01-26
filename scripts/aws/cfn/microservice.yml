@@ -94,10 +94,18 @@ Parameters:
   PnSsBucketName:
     Type: String
     Description: 'Nome Bucket SS'
+
+  PnSsBucketArn:
+    Type: String
+    Description: 'ARN Bucket SS'
   
   PnSsStagingBucketName:
     Type: String
     Description: 'Nome Bucket SS Staging'
+
+  PnSsStagingBucketArn:
+    Type: String
+    Description: 'ARN Bucket SS Staging'
 
   PnSsQueueNameStagingBucket:
     Type: String
@@ -182,8 +190,9 @@ Resources:
               - 's3:GetObject*'
               - 's3:*MultipartUpload*'
             Resource:
-              - !GetAtt PnSsBucketName
-              - !GetAtt PnSsStagingBucketName
+              - !Sub '${PnSsStagingBucketArn}'
+              - !Sub '${PnSsBucketArn}'
+
           - Effect: Allow
             Action:
               - 'sqs:ReceiveMessage'
@@ -191,5 +200,7 @@ Resources:
               - 'sqs:PurgeQueue'
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
+
+
 
               

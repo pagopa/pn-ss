@@ -1,7 +1,8 @@
-package it.pagopa.pnss.repositoryManager.rest;
+package it.pagopa.pnss.repositoryManager.rest.internal.impl;
 
 import javax.validation.Valid;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,50 +20,38 @@ import it.pagopa.pnss.repositoryManager.service.DocumentService;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/document")
-public class DocumentController {
+@RequestMapping("/documents")
+public class DocumentInternalApiController {
 
-	private final DocumentService documentService;
+	@Autowired
+	private DocumentService documentService;
 
-	public DocumentController(DocumentService documentService) {
-		this.documentService = documentService;
-	}
-
-	// @GetMapping(value="/validate/{name}")
 	@GetMapping(value = "/{checkSum}")
-	public Mono<ResponseEntity<DocumentOutput>> getdocument(@PathVariable("checkSum") String checkSum) {
-
+	public Mono<ResponseEntity<DocumentOutput>> getdocument(@PathVariable("checkSum") String checkSum) 
+	{
 		DocumentOutput documentOut = documentService.getDocument(checkSum);
-
-		Mono<ResponseEntity<DocumentOutput>> result = Mono.just(ResponseEntity.ok().body(documentOut));
-		return result;
+		return Mono.just(ResponseEntity.ok().body(documentOut));
 	}
 
 	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<DocumentOutput>> postdocument(@Valid @RequestBody DocumentInput documentInput) {
-
+	public Mono<ResponseEntity<DocumentOutput>> postdocument(@Valid @RequestBody DocumentInput documentInput) 
+	{
 		DocumentOutput documentOut = documentService.postdocument(documentInput);
-
-		Mono<ResponseEntity<DocumentOutput>> result = Mono.just(ResponseEntity.ok().body(documentOut));
-		return result;
+		return Mono.just(ResponseEntity.ok().body(documentOut));
 	}
 
 	@PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<DocumentOutput>> updatedocument(@Valid @RequestBody DocumentInput document) {
-
+	public Mono<ResponseEntity<DocumentOutput>> updatedocument(@Valid @RequestBody DocumentInput document) 
+	{
 		DocumentOutput documentOut = documentService.updatedocument(document);
-
-		Mono<ResponseEntity<DocumentOutput>> result = Mono.just(ResponseEntity.ok().body(documentOut));
-		return result;
+		return Mono.just(ResponseEntity.ok().body(documentOut));
 	}
 
 	@DeleteMapping(path = "/{checkSum}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<DocumentOutput>> deletedocument(@PathVariable("checkSum") String checkSum) {
-
+	public Mono<ResponseEntity<DocumentOutput>> deletedocument(@PathVariable("checkSum") String checkSum) 
+	{
 		DocumentOutput documentOut = documentService.deletedocument(checkSum);
-
-		Mono<ResponseEntity<DocumentOutput>> result = Mono.just(ResponseEntity.ok().body(documentOut));
-		return result;
+		return Mono.just(ResponseEntity.ok().body(documentOut));
 	}
 
 }

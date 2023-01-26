@@ -14,9 +14,9 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import it.pagopa.pnss.repositoryManager.model.DocTypesEntity;
-import it.pagopa.pnss.repositoryManager.model.DocumentEntity;
-import it.pagopa.pnss.repositoryManager.model.UserConfigurationEntity;
+import it.pagopa.pnss.repositoryManager.entity.DocTypesEntity;
+import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
+import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
 import software.amazon.awssdk.core.internal.waiters.ResponseOrException;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;

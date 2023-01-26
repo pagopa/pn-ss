@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositoryManager.model;
+package it.pagopa.pnss.repositoryManager.entity;
 
 import java.util.List;
 

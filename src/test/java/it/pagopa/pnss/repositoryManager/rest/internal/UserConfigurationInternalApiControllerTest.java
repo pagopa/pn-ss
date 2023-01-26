@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositoryManager.rest;
+package it.pagopa.pnss.repositoryManager.rest.internal;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
@@ -22,7 +22,7 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class UserConfigurationControllerTest {
+public class UserConfigurationInternalApiControllerTest {
 
 	@Autowired
 	private WebTestClient webTestClient;

@@ -1,7 +1,8 @@
-package it.pagopa.pnss.repositoryManager.rest;
+package it.pagopa.pnss.repositoryManager.rest.internal.impl;
 
 import javax.validation.Valid;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,49 +20,39 @@ import it.pagopa.pnss.repositoryManager.service.DocTypesService;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/doc-type")
-public class DocTypesController {
+@RequestMapping("/safe-storage/internal/v1/doctypes")
+public class DocTypesInternalApiController {
+	
+	@Autowired
+	private DocTypesService docTypesService;
 
-	private final DocTypesService docTypesService;
-
-	public DocTypesController(DocTypesService docTypesService) {
-		this.docTypesService = docTypesService;
-	}
-
+	// typeId
 	@GetMapping(value = "/{checksum}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<DocTypesOutput>> getdocTypes(@PathVariable("checksum") String checksum) {
-
+	public Mono<ResponseEntity<DocTypesOutput>> getdocTypes(@PathVariable("checksum") String checksum) 
+	{
 		DocTypesOutput docTypeOut = docTypesService.getDocType(checksum);
-
-		Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
-		return result;
+		return Mono.just(ResponseEntity.ok().body(docTypeOut));
 	}
 
 	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<DocTypesOutput>> postdocTypes(@Valid @RequestBody DocTypesInput docTypes) {
-
+	public Mono<ResponseEntity<DocTypesOutput>> postdocTypes(@Valid @RequestBody DocTypesInput docTypes) 
+	{
 		DocTypesOutput docTypeOut = docTypesService.postDocTypes(docTypes);
-
-		Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
-		return result;
+		return Mono.just(ResponseEntity.ok().body(docTypeOut));
 	}
 
 	@PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<DocTypesOutput>> updatedocTypes(@Valid @RequestBody DocTypesInput docTypes) {
-
+	public Mono<ResponseEntity<DocTypesOutput>> updatedocTypes(@Valid @RequestBody DocTypesInput docTypes) 
+	{
 		DocTypesOutput docTypeOut = docTypesService.updateDocTypes(docTypes);
-
-		Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
-		return result;
+		return Mono.just(ResponseEntity.ok().body(docTypeOut));
 	}
 
 	@DeleteMapping(path = "/{checksum}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<DocTypesOutput>> deletedocTypes(@PathVariable("checksum") String checksum) {
-
+	public Mono<ResponseEntity<DocTypesOutput>> deletedocTypes(@PathVariable("checksum") String checksum) 
+	{
 		DocTypesOutput docTypeOut = docTypesService.deleteDocTypes(checksum);
-
-		Mono<ResponseEntity<DocTypesOutput>> result = Mono.just(ResponseEntity.ok().body(docTypeOut));
-		return result;
+		return Mono.just(ResponseEntity.ok().body(docTypeOut));
 	}
 
 }

@@ -1,0 +1,150 @@
+openapi: 3.0.3
+info:
+  title: >-
+    SafeStorageInternal
+  version: v1.0
+  license:
+    name: PN software license
+    url: 'https://www.pn.pagopa.it/LICENSE'
+  description: >-
+    __SafeStorageInternal__: CRUD interne
+    
+servers:
+  - url: >-
+      https://api.pn.pagopa.it
+    description: Server url
+tags:
+  - name: docTypeInternal
+    description: Configurazioni
+paths:
+
+  ################################################################################################
+  ###                                      CONFIGURAZIONI                                      ###
+  ################################################################################################
+  '/safe-storage/internal/v1/doctypes/{typeId}':
+    get:
+      operationId: getAllDocType
+      summary: Elenca tipologie di documenti.
+      tags:
+        - docTypeInternal
+      parameters:
+        - $ref: '#/components/parameters/typeId'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentType'
+    delete:
+      operationId: deleteDocType
+      summary: Elimina una tipologia di documento.
+      tags:
+        - docTypeInternal
+      parameters:
+        - $ref: '#/components/parameters/typeId'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:        
+                $ref: '#/components/schemas/DocumentType'
+  
+  '/safe-storage/internal/v1/doctypes':           
+    post:
+      operationId: insertDocType
+      summary: Inserisce una nuova tipologia di documento.
+      tags:
+        - docTypeInternal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentType'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentType'
+    put:
+      operationId: updateDocType
+      summary: Aggiorna una tipologia di documento.
+      tags:
+        - docTypeInternal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentType'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentType'                   
+
+components:
+  parameters:
+    typeId: 
+      name: typeId
+      description: Identificativo del tipo di documento
+      in: path
+      required: true
+      schema:
+        type: string
+      example: pn-delivery-push
+      
+  schemas:
+    DocumentType:
+      type: object
+      properties:
+        typeId:
+          type: string
+          description: nome del tipo di documento
+          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR, PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
+        checksum:
+          description: >-
+            codice di verifica del corretto caricamento del file
+            https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
+          type: string
+          enum: [ 'MD5', 'SHA256']  
+        lifeCycleTag:
+          type: string
+        tipoTrasformazione:
+          type: string
+        informationClassification:
+          description: >-
+            * `C` - Confidential
+            * `HC`- Highly Confidential
+            See [information classification](https://pagopa.atlassian.net/wiki/spaces/EN/pages/357204284/Data+Classification+Handling#Classificazione)
+          type: string
+          enum: [ 'C', 'HC' ] 
+        digitalSignature:
+          type: boolean
+        timeStamped:
+          type: string
+          enum: [ 'NONE', 'STANDARD' ]        
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+security:
+  - ApiKeyAuth: [] # use the same name as under securitySchemes
+
+
+

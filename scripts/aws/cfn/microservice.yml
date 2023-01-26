@@ -139,7 +139,7 @@ Resources:
         ContainerEnvEntry5: !Sub 'PnSsTableNameTipologieDocumenti=${PnSsTableNameTipologieDocumenti}'
         ContainerEnvEntry6: !Sub 'PnSsTableNameDocumenti=${PnSsTableNameDocumenti}'
         ContainerEnvEntry7: !Sub 'PnSsQueueURLStagingBucket=${PnSsQueueURLStagingBucket}'
-        # MappedPaths: '/safestorage/*'
+        MappedPaths: '/safestorage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref SubnetsIds
         VpcId: !Ref VpcId

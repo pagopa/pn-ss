@@ -154,6 +154,7 @@ Resources:
         LoadbalancerRulePriority: !Ref MicroserviceNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
+        # HealthCheckPath: 
   
   PnSsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -181,8 +182,8 @@ Resources:
               - 's3:GetObject*'
               - 's3:*MultipartUpload*'
             Resource:
-              - !Sub '${PnSsBucketName}'
-              - !Sub '${PnSsStagingBucketName}'
+              - !GetAtt PnSsBucketName
+              - !GetAtt PnSsStagingBucketName
           - Effect: Allow
             Action:
               - 'sqs:ReceiveMessage'

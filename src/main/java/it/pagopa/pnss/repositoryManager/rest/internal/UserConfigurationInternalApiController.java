@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositoryManager.rest.internal.impl;
+package it.pagopa.pnss.repositoryManager.rest.internal;
 
 import javax.validation.Valid;
 

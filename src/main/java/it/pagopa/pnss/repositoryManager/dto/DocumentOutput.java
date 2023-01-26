@@ -1,5 +1,7 @@
 package it.pagopa.pnss.repositoryManager.dto;
 
+import it.pagopa.pnss.repositoryManager.enumeration.DocumentStateEnum;
+
 public class DocumentOutput {
 	
 	private String documentKey;

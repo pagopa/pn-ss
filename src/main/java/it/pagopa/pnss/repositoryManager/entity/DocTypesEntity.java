@@ -3,75 +3,47 @@ package it.pagopa.pnss.repositoryManager.entity;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConvertedEnum;
 
-import it.pagopa.pnss.repositoryManager.dto.ChecksumEnumDTO;
-import it.pagopa.pnss.repositoryManager.dto.ConfidentialityLevelEnum;
-import it.pagopa.pnss.repositoryManager.dto.TimestampedEnumDTO;
-import it.pagopa.pnss.repositoryManager.dto.TipoDocumentoEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.ChecksumEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.ConfidentialityLevelEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.TimestampedEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.TipoDocumentoEnum;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.Getter;
+import lombok.ToString;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
 @DynamoDbBean
+@Data
+@ToString
 public class DocTypesEntity {
 	
+	@Getter(AccessLevel.NONE)
 	private TipoDocumentoEnum tipoDocumento;
-	private ChecksumEnumDTO checkSum;
+	private ChecksumEnum checkSum;
 	private String lifeCycleTag;
 	private String tipoTrasformazione;
+	@Getter(AccessLevel.NONE)
 	private ConfidentialityLevelEnum informationClassification;
 	private Boolean digitalSignature;
-	private TimestampedEnumDTO timeStamped;
+	@Getter(AccessLevel.NONE)
+	private TimestampedEnum timeStamped;
 	
 	@DynamoDbPartitionKey
 	@DynamoDBTypeConvertedEnum
 	public TipoDocumentoEnum getTipoDocumento() {
 		return tipoDocumento;
 	}
-	public void setTipoDocumento(TipoDocumentoEnum tipoDocumento) {
-		this.tipoDocumento = tipoDocumento;
-	}
-
-	public ChecksumEnumDTO getCheckSum() {
-		return checkSum;
-	}
-	public void setCheckSum(ChecksumEnumDTO checkSum) {
-		this.checkSum = checkSum;
-	}
-	
-	public String getLifeCycleTag() {
-		return lifeCycleTag;
-	}
-	public void setLifeCycleTag(String lifeCycleTag) {
-		this.lifeCycleTag = lifeCycleTag;
-	}
 
 	@DynamoDBTypeConvertedEnum
 	public ConfidentialityLevelEnum getInformationClassification() {
 		return informationClassification;
 	}
-	public void setInformationClassification(ConfidentialityLevelEnum informationClassification) {
-		this.informationClassification = informationClassification;
-	}
-
-	public Boolean getDigitalSignature() {
-		return digitalSignature;
-	}
-	public void setDigitalSignature(Boolean digitalSignature) {
-		this.digitalSignature = digitalSignature;
-	}
 
 	@DynamoDBTypeConvertedEnum
-	public TimestampedEnumDTO getTimeStamped() {
+	public TimestampedEnum getTimeStamped() {
 		return timeStamped;
-	}
-	public void setTimeStamped(TimestampedEnumDTO timeStamped) {
-		this.timeStamped = timeStamped;
-	}
-	
-	public String getTipoTrasformazione() {
-		return tipoTrasformazione;
-	}
-	public void setTipoTrasformazione(String tipoTrasformazione) {
-		this.tipoTrasformazione = tipoTrasformazione;
 	}
 	
 }

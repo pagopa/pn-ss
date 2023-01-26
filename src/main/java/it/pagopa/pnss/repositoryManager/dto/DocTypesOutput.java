@@ -1,5 +1,10 @@
 package it.pagopa.pnss.repositoryManager.dto;
 
+import it.pagopa.pnss.repositoryManager.enumeration.ChecksumEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.ConfidentialityLevelEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.TimestampedEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.TipoDocumentoEnum;
+
 public class DocTypesOutput {
 
 //	private String name;
@@ -7,8 +12,8 @@ public class DocTypesOutput {
 	private String tipoTrasformazione;
 	private ConfidentialityLevelEnum informationClassification;
 	private Boolean digitalSignature;
-	private TimestampedEnumDTO timeStamped;
-	private ChecksumEnumDTO checkSum;
+	private TimestampedEnum timeStamped;
+	private ChecksumEnum checkSum;
 	private TipoDocumentoEnum tipoDocumento;
 	
 //	public String getName() {
@@ -41,16 +46,16 @@ public class DocTypesOutput {
 	public void setDigitalSignature(Boolean digitalSignature) {
 		this.digitalSignature = digitalSignature;
 	}
-	public TimestampedEnumDTO getTimeStamped() {
+	public TimestampedEnum getTimeStamped() {
 		return timeStamped;
 	}
-	public void setTimeStamped(TimestampedEnumDTO timeStamped) {
+	public void setTimeStamped(TimestampedEnum timeStamped) {
 		this.timeStamped = timeStamped;
 	}
-	public ChecksumEnumDTO getCheckSum() {
+	public ChecksumEnum getCheckSum() {
 		return checkSum;
 	}
-	public void setCheckSum(ChecksumEnumDTO checkSum) {
+	public void setCheckSum(ChecksumEnum checkSum) {
 		this.checkSum = checkSum;
 	}
 	public TipoDocumentoEnum getTipoDocumento() {

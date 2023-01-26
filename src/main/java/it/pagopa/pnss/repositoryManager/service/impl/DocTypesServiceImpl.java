@@ -9,8 +9,9 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
-import it.pagopa.pnss.repositoryManager.dto.DocTypesInput;
+import it.pagopa.pnss.repositoryManager.dto.DocTypeDTO;
 import it.pagopa.pnss.repositoryManager.dto.DocTypesOutput;
 import it.pagopa.pnss.repositoryManager.entity.DocTypesEntity;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
@@ -30,17 +31,17 @@ public class DocTypesServiceImpl implements DocTypesService {
 	@Autowired
     private ObjectMapper objectMapper;
 	
-	public DocTypesOutput getDocType(String checkSum) {
+	public DocumentType getDocType(String typeId) {
 	
 		try {
             DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypesEntity.class));
-            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(checkSum).build());
+            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(typeId).build());
             
             Iterator<DocTypesEntity> result = docTypesTable.query(queryConditional).items().iterator();
 		
             DocTypesEntity docType = result.next();
             
-            return objectMapper.convertValue(docType, DocTypesOutput.class);
+            return objectMapper.convertValue(docType, DocumentType.class);
             
 		} catch (DynamoDbException e) {
             System.err.println(e.getMessage());
@@ -65,7 +66,7 @@ public class DocTypesServiceImpl implements DocTypesService {
         }
 	}
 	
-	public DocTypesOutput postDocTypes(DocTypesInput docTypesInput) {
+	public DocumentType insertDocTypes(DocumentType docTypesInput) {
         
         try {
             DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypesEntity.class));
@@ -78,11 +79,11 @@ public class DocTypesServiceImpl implements DocTypesService {
             	docTypesTable.putItem(docTypesEntity);
 				System.out.println("DocType data added to the table");
 	            
-				return objectMapper.convertValue(docTypesEntity, DocTypesOutput.class);
+				return objectMapper.convertValue(docTypesEntity, DocumentType.class);
 
             } else {
 				System.out.println("User cannot be added to the table, user id already exists");
-            	throw new RepositoryManagerException.IdClientAlreadyPresent(docTypesInput.getCheckSum().name());
+            	throw new RepositoryManagerException.IdClientAlreadyPresent(docTypesInput.getChecksum().name());
 
             }
         } catch (DynamoDbException  e){
@@ -93,7 +94,7 @@ public class DocTypesServiceImpl implements DocTypesService {
         
 	}
 	
-	public DocTypesOutput updateDocTypes(DocTypesInput docTypesInput) {
+	public DocumentType updateDocTypes(DocTypeDTO docTypesInput) {
 		
 		try {
 			DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME,
@@ -103,7 +104,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 			if (docTypesTable.getItem(docTypesEntity) != null) {
 				docTypesTable.putItem(docTypesEntity);
 				System.out.println("Modifica avvenuta con successo");
-				return objectMapper.convertValue(docTypesEntity, DocTypesOutput.class);
+				return objectMapper.convertValue(docTypesEntity, DocumentType.class);
 
 			} else {
 				throw new RepositoryManagerException.DynamoDbException();
@@ -114,7 +115,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 		}
 	}
 	
-	public DocTypesOutput deleteDocTypes(String checkSum) {
+	public DocumentType deleteDocTypes(String checkSum) {
 		
     	try {
             DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypesEntity.class));
@@ -125,7 +126,7 @@ public class DocTypesServiceImpl implements DocTypesService {
             docTypesTable.deleteItem(docTypesEntity);
             
             System.out.println("Cancellazione avvenuta con successo");
-            return objectMapper.convertValue(docTypesEntity, DocTypesOutput.class);               
+            return objectMapper.convertValue(docTypesEntity, DocumentType.class);               
     	}catch (DynamoDbException  e){
             System.err.println(e.getMessage());
             throw new RepositoryManagerException.DynamoDbException();

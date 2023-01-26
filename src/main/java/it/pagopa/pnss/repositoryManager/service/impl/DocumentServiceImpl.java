@@ -28,10 +28,10 @@ public class DocumentServiceImpl implements DocumentService {
 	@Autowired
     private ObjectMapper objectMapper;
     
-	public DocumentOutput getDocument(String checkSum) {
+	public DocumentOutput getDocument(String documentKey) {
 		try {
             DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
-            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(checkSum).build());
+            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(documentKey).build());
             
             Iterator<DocumentEntity> result = documentTable.query(queryConditional).items().iterator();
 		
@@ -86,11 +86,11 @@ public class DocumentServiceImpl implements DocumentService {
     	
     }
 
-	public DocumentOutput deletedocument(String checkSum) {
+	public DocumentOutput deletedocument(String documentKey) {
 
     	try {
             DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
-            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(checkSum).build());
+            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(documentKey).build());
             Iterator<DocumentEntity> result = documentTable.query(queryConditional).items().iterator();
             
             DocumentEntity documentEntity = result.next();                        

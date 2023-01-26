@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositoryManager.rest.internal.impl;
+package it.pagopa.pnss.repositoryManager.rest.internal;
 
 import javax.validation.Valid;
 
@@ -26,7 +26,7 @@ public class DocumentInternalApiController {
 	@Autowired
 	private DocumentService documentService;
 
-	@GetMapping(value = "/{checkSum}")
+	@GetMapping(value = "/{documentKey}")
 	public Mono<ResponseEntity<DocumentOutput>> getdocument(@PathVariable("checkSum") String checkSum) 
 	{
 		DocumentOutput documentOut = documentService.getDocument(checkSum);
@@ -47,7 +47,7 @@ public class DocumentInternalApiController {
 		return Mono.just(ResponseEntity.ok().body(documentOut));
 	}
 
-	@DeleteMapping(path = "/{checkSum}", produces = MediaType.APPLICATION_JSON_VALUE)
+	@DeleteMapping(path = "/{documentKey}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public Mono<ResponseEntity<DocumentOutput>> deletedocument(@PathVariable("checkSum") String checkSum) 
 	{
 		DocumentOutput documentOut = documentService.deletedocument(checkSum);

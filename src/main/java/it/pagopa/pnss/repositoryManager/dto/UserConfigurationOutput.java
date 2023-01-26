@@ -2,8 +2,6 @@ package it.pagopa.pnss.repositoryManager.dto;
 
 import java.util.List;
 
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
-
 
 public class UserConfigurationOutput {
 	
@@ -12,10 +10,13 @@ public class UserConfigurationOutput {
 	private List<String> canRead;
 	private String signatureInfo;
 	private UserConfigurationDestinationDTO destination; 
-	private String ApiKey;
+	private String apiKey;
 	
 	public String getName() {
 		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
 	}
 
 	public List<String> getCanCreate() {
@@ -49,19 +50,12 @@ public class UserConfigurationOutput {
 	public void setDestination(UserConfigurationDestinationDTO destination) {
 		this.destination = destination;
 	}
-
+	
 	public String getApiKey() {
-		return ApiKey;
+		return apiKey;
 	}
-
 	public void setApiKey(String apiKey) {
-		ApiKey = apiKey;
+		this.apiKey = apiKey;
 	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-	
-	
 
 }

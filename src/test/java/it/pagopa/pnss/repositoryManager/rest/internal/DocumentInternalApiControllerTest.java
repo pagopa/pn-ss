@@ -14,7 +14,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 
 import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
 import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
-import it.pagopa.pnss.repositoryManager.dto.DocumentStateEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.DocumentStateEnum;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 
 @SpringBootTestWebEnv

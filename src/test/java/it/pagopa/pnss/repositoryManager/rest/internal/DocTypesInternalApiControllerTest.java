@@ -12,12 +12,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import it.pagopa.pnss.repositoryManager.dto.ChecksumEnumDTO;
-import it.pagopa.pnss.repositoryManager.dto.ConfidentialityLevelEnum;
-import it.pagopa.pnss.repositoryManager.dto.DocTypesInput;
+import it.pagopa.pnss.repositoryManager.dto.DocTypeDTO;
 import it.pagopa.pnss.repositoryManager.dto.DocTypesOutput;
-import it.pagopa.pnss.repositoryManager.dto.TimestampedEnumDTO;
-import it.pagopa.pnss.repositoryManager.dto.TipoDocumentoEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.ChecksumEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.ConfidentialityLevelEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.TimestampedEnum;
+import it.pagopa.pnss.repositoryManager.enumeration.TipoDocumentoEnum;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 
 @SpringBootTestWebEnv
@@ -30,8 +30,8 @@ public class DocTypesInternalApiControllerTest {
 
 	private static final String BASE_URL = "http://localhost:8080/doc-type";
 
-	private static final ChecksumEnumDTO PARTITION_ID = ChecksumEnumDTO.MD5;
-	private static final ChecksumEnumDTO NO_EXISTENT_PARTITION_ID = ChecksumEnumDTO.SHA256;
+	private static final ChecksumEnum PARTITION_ID = ChecksumEnum.MD5;
+	private static final ChecksumEnum NO_EXISTENT_PARTITION_ID = ChecksumEnum.SHA256;
 	private static final TipoDocumentoEnum SORT_KEY = TipoDocumentoEnum.PN_LEGAL_FACTS;
 
 	@Test
@@ -39,14 +39,14 @@ public class DocTypesInternalApiControllerTest {
 	// Codice test: DTSS.101.1
 	public void postItem() {
 
-		DocTypesInput docTypesInput = new DocTypesInput();
+		DocTypeDTO docTypesInput = new DocTypeDTO();
 		docTypesInput.setCheckSum(PARTITION_ID);
 		docTypesInput.setTipoDocumento(SORT_KEY);
 		docTypesInput.setLifeCycleTag("lifeCicle1");
 		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
 		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
 		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimestampedEnumDTO.STANDARD);
+		docTypesInput.setTimeStamped(TimestampedEnum.STANDARD);
 		
 		webTestClient.post()
 					 .uri(BASE_URL)
@@ -65,14 +65,14 @@ public class DocTypesInternalApiControllerTest {
 	// Codice test: DTSS.101.2
 	public void postItemIncorrectParameters() {
 
-		DocTypesInput docTypesInput = new DocTypesInput();
+		DocTypeDTO docTypesInput = new DocTypeDTO();
 		//docTypesInput.setCheckSum(PARTITION_ID);
 		docTypesInput.setTipoDocumento(SORT_KEY);
 		docTypesInput.setLifeCycleTag("lifeCicle1");
 		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
 		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
 		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimestampedEnumDTO.STANDARD);
+		docTypesInput.setTimeStamped(TimestampedEnum.STANDARD);
 		
 		webTestClient.post()
 					 .uri(BASE_URL)
@@ -138,14 +138,14 @@ public class DocTypesInternalApiControllerTest {
 	// codice test: DTSS.102.1
 	public void putItem() {
 		
-		DocTypesInput docTypesInput = new DocTypesInput();
+		DocTypeDTO docTypesInput = new DocTypeDTO();
 		docTypesInput.setCheckSum(PARTITION_ID);
 		docTypesInput.setTipoDocumento(SORT_KEY);
 		docTypesInput.setLifeCycleTag("lifeCicle1");
 		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
 		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
 		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimestampedEnumDTO.STANDARD);
+		docTypesInput.setTimeStamped(TimestampedEnum.STANDARD);
 		
 		webTestClient.put()
 			         .uri(BASE_URL)
@@ -164,14 +164,14 @@ public class DocTypesInternalApiControllerTest {
 	// codice test: DTSS.102.2
 	public void putItemNoExistentKey() {
 		
-		DocTypesInput docTypesInput = new DocTypesInput();
+		DocTypeDTO docTypesInput = new DocTypeDTO();
 		docTypesInput.setCheckSum(NO_EXISTENT_PARTITION_ID);
 		docTypesInput.setTipoDocumento(SORT_KEY);
 		docTypesInput.setLifeCycleTag("lifeCicle1");
 		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
 		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
 		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimestampedEnumDTO.STANDARD);
+		docTypesInput.setTimeStamped(TimestampedEnum.STANDARD);
 		
 		webTestClient.put()
 			         .uri(BASE_URL)
@@ -190,14 +190,14 @@ public class DocTypesInternalApiControllerTest {
 	// codice test: DTSS.102.3
 	public void putItemIncorretctParameters() {
 		
-		DocTypesInput docTypesInput = new DocTypesInput();
+		DocTypeDTO docTypesInput = new DocTypeDTO();
 		//docTypesInput.setCheckSum(NO_EXISTENT_PARTITION_ID);
 		docTypesInput.setTipoDocumento(SORT_KEY);
 		docTypesInput.setLifeCycleTag("lifeCicle1");
 		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
 		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
 		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimestampedEnumDTO.STANDARD);
+		docTypesInput.setTimeStamped(TimestampedEnum.STANDARD);
 		
 		webTestClient.put()
 			         .uri(BASE_URL)

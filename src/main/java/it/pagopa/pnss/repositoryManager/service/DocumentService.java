@@ -5,9 +5,9 @@ import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
 
 public interface DocumentService {
 	
-	DocumentOutput getDocument(String checkSum);
+	DocumentOutput getDocument(String documentKey);
 	DocumentOutput postdocument(DocumentInput documentInput);
 	DocumentOutput updatedocument(DocumentInput documentInput);
-	DocumentOutput deletedocument(String checkSum);
+	DocumentOutput deletedocument(String documentKey);
 
 }

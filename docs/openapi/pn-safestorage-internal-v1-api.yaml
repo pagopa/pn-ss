@@ -15,7 +15,11 @@ servers:
     description: Server url
 tags:
   - name: docTypeInternal
-    description: Configurazioni
+    description: Tipo Documento
+  - name: documentInternal
+    description: Documenti
+  - name: userConfigurationInternal
+    description: Anagrafica Client   
 paths:
 
   ################################################################################################
@@ -23,8 +27,8 @@ paths:
   ################################################################################################
   '/safe-storage/internal/v1/doctypes/{typeId}':
     get:
-      operationId: getAllDocType
-      summary: Elenca tipologie di documenti.
+      operationId: getDocType
+      summary: Restituisce una tipologia di documento.
       tags:
         - docTypeInternal
       parameters:
@@ -38,6 +42,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentType'
+    put:
+      operationId: updateDocType
+      summary: Aggiorna una tipologia di documento.
+      tags:
+        - docTypeInternal
+      parameters:
+        - $ref: '#/components/parameters/typeId' 
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentType'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentType'                  
     delete:
       operationId: deleteDocType
       summary: Elimina una tipologia di documento.
@@ -55,7 +80,7 @@ paths:
               schema:        
                 $ref: '#/components/schemas/DocumentType'
   
-  '/safe-storage/internal/v1/doctypes':           
+  '/safe-storage/internal/v1/doctypes': 
     post:
       operationId: insertDocType
       summary: Inserisce una nuova tipologia di documento.
@@ -75,16 +100,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentType'
-    put:
-      operationId: updateDocType
-      summary: Aggiorna una tipologia di documento.
+                
+  '/safe-storage/internal/v1/documents/{documentKey}':
+    get:
+      operationId: getDocument
+      summary: Restituisce un documento.
       tags:
-        - docTypeInternal
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DocumentType'        
+        - documentInternal
+      parameters:
+        - $ref: '#/components/parameters/documentKey'       
       responses:
         '404':
             description: Not configured
@@ -93,7 +117,141 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentType'                   
+                $ref: '#/components/schemas/Document'  
+    patch:
+      operationId: patchDoc
+      summary: Aggiorna un documento.
+      tags:
+        - documentInternal
+      parameters:
+        - $ref: '#/components/parameters/documentKey'          
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'                  
+    delete:
+      operationId: deleteDocument
+      summary: Elimina un documento.
+      tags:
+        - documentInternal
+      parameters:
+        - $ref: '#/components/parameters/documentKey'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:        
+                $ref: '#/components/schemas/Document'  
+                
+  '/safe-storage/internal/v1/documents': 
+    post:
+      operationId: insertDocument
+      summary: Inserisce una nuovo documento.
+      tags:
+        - documentInternal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+                
+  '/safe-storage/internal/v1/userConfigurations/{userName}':
+    get:
+      operationId: getUserConfiguration
+      summary: Restituisce una anagrafica client.
+      tags:
+        - userConfigurationInternal
+      parameters:
+        - $ref: '#/components/parameters/userName'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserConfiguration'
+    patch:
+      operationId: patchUserConfiguration
+      summary: Aggiorna una anagrafica client.
+      tags:
+        - userConfigurationInternal
+      parameters:
+        - $ref: '#/components/parameters/userName'          
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserConfiguration'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserConfiguration'    
+    delete:
+      operationId: deleteUserConfiguration
+      summary: Elimina una anagrafica client.
+      tags:
+        - userConfigurationInternal
+      parameters:
+        - $ref: '#/components/parameters/userName'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:        
+                $ref: '#/components/schemas/UserConfiguration'  
+                
+  '/safe-storage/internal/v1/userConfigurations':
+    post:
+      operationId: insertUserConfiguration
+      summary: Inserisce una nuova anagrafica client.
+      tags:
+        - userConfigurationInternal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserConfiguration'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserConfiguration'    
 
 components:
   parameters:
@@ -104,7 +262,20 @@ components:
       required: true
       schema:
         type: string
-      example: pn-delivery-push
+    documentKey:
+      name: documentKey
+      description: Identificativo del documento
+      in: path
+      required: true
+      schema:
+        type: string
+    userName:
+      name: userName
+      description: username
+      in: path
+      required: true
+      schema:
+        type: string    
       
   schemas:
     DocumentType:
@@ -135,7 +306,55 @@ components:
           type: boolean
         timeStamped:
           type: string
-          enum: [ 'NONE', 'STANDARD' ]        
+          enum: [ 'NONE', 'STANDARD' ]
+    Document:
+      type: object
+      properties:
+        documentKey:
+          type: string
+        documentState:
+          type: string
+          enum: ['BOOKED','STAGED','VALID','AVAILABLE','FREEZED','ATTACHED','TO_DELETE','DELETED']
+        retentionPeriod:
+          type: string
+        checkSum: 
+          type: string
+        contentLenght:
+          type: string
+        contentType:
+          type: string
+        documentType:
+          type: string
+    UserConfiguration:
+      type: object
+      properties:
+        username:
+          type: string
+        apiKey:
+          type: string
+        canCreate:
+          type: array
+          items: 
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+        canRead:
+          type: array
+          items: 
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+        signatureInfo:
+          type: object
+        userConfigurationDestination:
+          $ref: '#/components/schemas/UserConfigurationDestination'
+    UserConfigurationDestination:
+      type: object
+      properties:
+        destinations:
+          type: array
+          items:
+            type: string
+          
+        
 
   securitySchemes:
     ApiKeyAuth:

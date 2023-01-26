@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositoryManager.dto;
+package it.pagopa.pnss.repositoryManager.enumeration;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConvertedEnum;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 
 @DynamoDBTypeConvertedEnum
-public enum ChecksumEnumDTO {
+public enum ChecksumEnum {
 	
     MD5("MD5"),
     
@@ -14,7 +14,7 @@ public enum ChecksumEnumDTO {
 
     private String value;
 
-    ChecksumEnumDTO(String value) {
+    ChecksumEnum(String value) {
       this.value = value;
     }
 

@@ -23,32 +23,7 @@ Parameters:
   # CdcKinesisSourceStreamArn:
   #   Type: String
   #   Description: 'Where to send CDC'
-
-  PnSsTableNameAnagrafica:
-    Type: String
-    Description: Description
-    Default: pn-ss-anagrafica-client
   
-  PnSsTableNameTipologie:
-    Type: String
-    Description: Description
-    Default: pn-ss-tipologie-documenti
-
-  PnSsTableNameDocumenti:
-    Type: String
-    Description: Description
-    Default: pn-ss-documenti
-
-  PnSsBucketName:
-    Type: String
-    Description: Description
-    Default: pn-ss-bucket
-
-  PnSsStagingBucketName:
-    Type: String
-    Description: Description
-    Default: pn-ss-staging-bucket
-
   PnSsQueueNameNotificaDisponibilita:
     Type: String
     Description: Description
@@ -73,11 +48,7 @@ Parameters:
     Type: String
     Description: Description
     Default: pn-ss-staging-bucket-topic
-  
-  PnSsECSTaskRoleName:
-    Type: String
-    Description: Description
-    Default: pn-ss-staging-bucket-topic
+
 Resources:
   # NullResource:
   #     Type: AWS::CloudFormation::WaitConditionHandle
@@ -86,18 +57,14 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - 
-          AttributeName: "name"
+        - AttributeName: "name"
           AttributeType: "S"
-        - 
-          AttributeName: "APIKey"
+        - AttributeName: "APIKey"
           AttributeType: "S"
       KeySchema: 
-        - 
-          AttributeName: "name"
+        - AttributeName: "name"
           KeyType: "HASH"
-        - 
-          AttributeName: "APIKey"
+        - AttributeName: "APIKey"
           KeyType: "RANGE"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
@@ -108,25 +75,20 @@ Resources:
         SSEEnabled: true
         SSEType: "KMS"
       TableClass: "STANDARD"
-      # TableName: !Ref PnSsTableNameAnagrafica
     DeletionPolicy: Retain
 
   PnSsTableTipologieDocumenti:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - 
-          AttributeName: "checksum"
+        - AttributeName: "checksum"
           AttributeType: "S"
-        - 
-          AttributeName: "tipoDocumento"
+        - AttributeName: "tipoDocumento"
           AttributeType: "S"
       KeySchema: 
-        - 
-          AttributeName: "checksum"
+        - AttributeName: "checksum"
           KeyType: "HASH"
-        - 
-          AttributeName: "tipoDocumento"
+        - AttributeName: "tipoDocumento"
           KeyType: "RANGE"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
@@ -137,19 +99,16 @@ Resources:
         SSEEnabled: true
         SSEType: "KMS"
       TableClass: "STANDARD"
-      # TableName: !Ref PnSsTableNameTipologie
     DeletionPolicy: Retain
 
   PnSsTableDocumenti:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - 
-          AttributeName: "checksum"
+        - AttributeName: "checksum"
           AttributeType: "S"
       KeySchema: 
-        - 
-          AttributeName: "checksum"
+        - AttributeName: "checksum"
           KeyType: "HASH"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
@@ -160,7 +119,6 @@ Resources:
         SSEEnabled: true
         SSEType: "KMS"
       TableClass: "STANDARD"
-      # TableName: !Ref PnSsTableNameDocumenti
     DeletionPolicy: Retain
 
   PnSsBucket:
@@ -173,7 +131,6 @@ Resources:
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               #  KMSMasterKeyID: KMS-KEY-AR
-      # BucketName: !Ref PnSsBucketName
       # IntelligentTieringConfigurations:
       #   IntelligentTieringConfigurations
       # InventoryConfigurations:
@@ -215,7 +172,6 @@ Resources:
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               #  KMSMasterKeyID: KMS-KEY-AR
-      # BucketName: !Ref PnSsStagingBucketName
       #LoggingConfiguration:
       #  DestinationBucketName: "String"
       #  LogFilePrefix: "String"
@@ -253,7 +209,6 @@ Resources:
       KmsMasterKeyId: "alias/aws/sqs"
       MessageRetentionPeriod: 1209600
       QueueName: !Join [ '', [ !Ref PnSsQueueNameStagingBucket, '-dlq' ] ]
-
       ReceiveMessageWaitTimeSeconds: 20
       VisibilityTimeout: 30 
 
@@ -302,77 +257,56 @@ Resources:
       Targets:
         - Arn: !Ref PnSsSNSStagingBucket
           Id: "TopicTargetForStagingBucket"
-
-  PnSsECSTaskRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement: 
-          - Action: 
-              - "sts:AssumeRole"
-            Effect: "Allow"
-            Principal:  
-              Service: 
-                - "ecs-tasks.amazonaws.com"
-      Description: 'Execution Role for pn-ec ECS Task'
-      RoleName: !Ref PnSsECSTaskRoleName
-      MaxSessionDuration: 3600
-      Policies:
-        - 
-          PolicyName: 'PutMetricData'
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-            - Action: 
-                - "cloudwatch:PutMetricData"
-              Resource: "*"
-              Effect: "Allow"
   
 Outputs:
-  PnSsTableAnagraficaClientName:
-    Description: Nome tabella SS Anagrafica Client 
+  PnSsTableNameAnagraficaClient:
+    Description: 'Nome della tabella SS Anagrafica Client'
     Value: !Ref PnSsTableAnagraficaClient
-    Export:
-      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsTableAnagraficaClientName']]
   
-  PnSsTableTipologieDocumentiName:
-    Description: Nome tabella SS Tipologie Documenti 
+  PnSsTableArnAnagraficaClient:
+    Description: 'ARN della Tabella DynamoDB relativa alla Macchina a Stati'
+    Value: !GetAtt PnSsTableAnagraficaClient.Arn
+  
+  PnSsTableNameTipologieDocumenti:
+    Description: 'Nome della tabella SS Tipologie Documenti'
     Value: !Ref PnSsTableTipologieDocumenti
-    Export:
-      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsTableTipologieDocumentiName']]
+
+  PnSsTableArnTipologieDocumenti:
+    Description: 'ARN della tabella SS Tipologie Documenti'
+    Value: !GetAtt PnSsTableTipologieDocumenti.Arn
   
-  PnSsTableDocumentiName:
-    Description: Nome tabella SS Documenti 
+  PnSsTableNameDocumenti:
+    Description: 'Nome tabella SS Documenti'
     Value: !Ref PnSsTableDocumenti
-    Export:
-      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsTableDocumentiName']]
+
+  PnSsTableArnDocumenti:
+    Description: 'ARN della tabella SS Documenti'
+    Value: !GetAtt PnSsTableDocumenti.Arn
 
   PnSsBucketName:
-    Description: Nome Bucket SS
+    Description: 'Nome Bucket SS'
     Value: !Ref PnSsBucket
-    Export:
-      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsBucketName']]
   
   PnSsStagingBucketName:
-    Description: Nome Bucket SS Staging 
+    Description: 'Nome Bucket SS Staging'
     Value: !Ref PnSsStagingBucket
-    Export:
-      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsStagingBucketName']]
-  
-  PnSsQueueStagingBucketName:
-    Description: Nome coda per notifiche SS Staging Bucket
+
+  PnSsQueueNameStagingBucket:
+    Description: 'Nome coda per notifiche SS Staging Bucket'
     Value: !GetAtt  PnSsQueueStagingBucket.QueueName
-    Export:
-      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsQueueStagingBucketName']]
 
-  PnSsDLQueueStagingBucket:
-    Description: Nome coda DLQ per notifiche SS Staging Bucket
+  PnSsQueueArnStagingBucket:
+    Description: 'ARN coda per notifiche SS Staging Bucket'
+    Value: !GetAtt  PnSsQueueStagingBucket.Arn
+
+  PnSsQueueURLStagingBucket:
+    Description: 'URL coda per notifiche SS Staging Bucket'
+    Value: !Ref PnSsQueueStagingBucket
+
+  PnSsDLQueueNameStagingBucket:
+    Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
     Value: !GetAtt PnSsDLQueueStagingBucket.QueueName
-    Export:
-      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsDLQueueStagingBucket']]
 
-  PnSsSNSStagingBucket:
-    Description: Nome SNS Topic per notifiche SS Staging Bucket
+  PnSsSNSNameStagingBucket:
+    Description: 'Nome SNS Topic per notifiche SS Staging Bucket'
     Value: !GetAtt PnSsSNSStagingBucket.TopicName
-    Export:
-      Name: !Join [ '', [!Sub '${AWS::StackName}-PnSsSNSStagingBucket']]

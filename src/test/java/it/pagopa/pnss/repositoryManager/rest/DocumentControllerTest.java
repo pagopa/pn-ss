@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
@@ -18,7 +19,6 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-//@TestInstance(TestInstance.Lifecycle.PER_METHOD)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class DocumentControllerTest {
 	
@@ -28,63 +28,11 @@ public class DocumentControllerTest {
 	private static final String BASE_URL = "http://localhost:8080//document";
 
 	private static final String PARTITION_ID = "checksum1";
-	
-//	 private static DynamoDbClient ddb;
-//	 private static ObjectMapper mapper = new ObjectMapper();
-//	 private static DynamoDbEnhancedClient enhancedClient;
-//	
-//	DocumentEntity documentEntity = new DocumentEntity();
-//	DocumentService documentService = null; //new DocumentService(enhancedClient, mapper);
-//	DocumentController documentController = null; //new DocumentController(documentService);
-//	DocumentInput documentInput = new DocumentInput();
-//	
-//	// Define the data members required for the test
-//	
-//	private static String tableName = "Document";
-//	
-//	private static String documentkey = "documentKey";
-    
-//	@BeforeAll
-//    public static void setUp() {
-//
-//        //Create a DynamoDbClient object
-//        Region region = Region.EU_CENTRAL_1;
-//        ddb = DynamoDbClient.builder()
-//                .region(region)
-//                .build();
-//
-//        // Create a DynamoDbEnhancedClient object
-//        enhancedClient = DynamoDbEnhancedClient.builder()
-//                .dynamoDbClient(ddb)
-//                .build();
-//
-//    }
-    
-//    @Test
-//    @Order(1)
-//    public void whenInitializingAWSS3Service_thenNotNull() {
-//        assertNotNull(ddb);
-//        System.out.println("Test 1 passed");
-//    }
-
-//    @Test
-//    @Order(2)
-//    public void CreateTable() {
-//
-//       String result = createTable(ddb, tableName, documentkey);
-//       assertFalse(result.isEmpty());
-//       System.out.println("\n Test 2 passed");
-//    }
-    
-//    @Test
-//    @Order(3)
-//    public void DescribeTable() {
-//       describeDymamoDBTable(ddb,tableName);
-//       System.out.println("\n Test 3 passed");
-//    }
+	private static final String NO_EXISTENT_PARTITION_ID = "checksum_bad";
     	
     @Test
     @Order(1)
+    // codice test: DCSS.101.1
     public void postItem() {
   
     	DocumentInput documentInput = new DocumentInput();
@@ -107,12 +55,35 @@ public class DocumentControllerTest {
 		
 		System.out.println("\n Test 1 (postItem) passed \n");
     	
-//        Mono<ResponseEntity<DocumentOutput>> response = documentController.postdocument(documentInput);    	
-//        Assertions.assertNotNull(response.block().getStatusCode());
     }
     
     @Test
     @Order(2)
+    // codice test: DCSS.101.2
+    public void postItemPartitionKeyDuplicated() {
+  
+    	DocumentInput documentInput = new DocumentInput();
+    	documentInput.setCheckSum(PARTITION_ID);
+    	documentInput.setDocumentState(DocumentStateEnum.AVAILABLE);
+    	documentInput.setRetentionPeriod("retention prova");
+
+		webTestClient.post()
+	        .uri(BASE_URL)
+	        .accept(APPLICATION_JSON)
+	        .contentType(APPLICATION_JSON)
+	        .body(BodyInserters.fromValue(documentInput))
+	        .exchange()
+	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+			
+		System.out.println("\n Test 2 (postItemPartitionKeyDuplicated) insert 2");
+		
+		System.out.println("\n Test 2 (postItemPartitionKeyDuplicated) passed \n");
+    	
+    }
+    
+    @Test
+    @Order(3)
+    // codice test: DCSS.100.1
     public void getItem() {
     	
 		webTestClient.get()
@@ -122,18 +93,43 @@ public class DocumentControllerTest {
 	        .expectStatus().isOk()
 	        .expectBody(DocumentOutput.class);
 	    
-	    System.out.println("\n Test 2 (getItem) passed \n");
+	    System.out.println("\n Test 3 (getItem) passed \n");
   
-//    	String partitionId = "chiavedocumento2";
-//        Mono<ResponseEntity<DocumentOutput>> response = documentController.getdocument(partitionId);
-//    	
-//        //DocumentOutput documentOut = documentService.postdocument(documentInput);
-//        System.out.println(response.block().getBody().getCheckSum());
-//        Assertions.assertNotNull(response.block().getStatusCode());
+    }
+    
+    @Test
+    @Order(4)
+    // codice test: DCSS.100.2
+    public void getItemNoExistentPartitionKey() {
+    	
+		webTestClient.get()
+			.uri(BASE_URL+"/"+NO_EXISTENT_PARTITION_ID)
+	        .accept(APPLICATION_JSON)
+	        .exchange()
+	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+	    
+	    System.out.println("\n Test 4 (getItemNoExistentPartitionKey) passed \n");
+  
+    }
+    
+    @Test
+    @Order(5)
+    // codice test: DCSS.100.3
+    public void getItemIncorrectParameters() {
+    	
+		webTestClient.get()
+			.uri(BASE_URL/*+"/"+NO_EXISTENT_PARTITION_ID*/)
+	        .accept(APPLICATION_JSON)
+	        .exchange()
+	        .expectStatus().isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+	    
+	    System.out.println("\n Test 5 (getItemIncorrectParameters) passed \n");
+  
     }
 	
     @Test
-    @Order(3)
+    @Order(6)
+    // codice test: DCSS.102.1
     public void putItem() {
   
     	DocumentInput documentInput = new DocumentInput();
@@ -154,17 +150,57 @@ public class DocumentControllerTest {
 	        .exchange()
 	        .expectStatus().isOk();
 	
-		System.out.println("\n Test 3 (putItem) passed \n");
+		System.out.println("\n Test 6 (putItem) passed \n");
     	
-//        Mono<ResponseEntity<DocumentOutput>> response = documentController.updatedocument(documentInput);
-//    	
-//        //DocumentOutput documentOut = documentService.postdocument(documentInput);
-//        System.out.println(response.block().getBody().getCheckSum());
-//        Assertions.assertNotNull(response.block().getStatusCode());
     }
     
     @Test
-    @Order(4)
+    @Order(7)
+    // codice test: DCSS.102.2
+    public void putItemNoExistentKey() {
+  
+    	DocumentInput documentInput = new DocumentInput();
+    	documentInput.setCheckSum(NO_EXISTENT_PARTITION_ID);
+    	documentInput.setDocumentState(DocumentStateEnum.AVAILABLE);
+    	documentInput.setRetentionPeriod("retention prova 3");
+    	
+		webTestClient.put()
+	        .uri(BASE_URL)
+	        .accept(APPLICATION_JSON)
+	        .contentType(APPLICATION_JSON)
+	        .body(BodyInserters.fromValue(documentInput))
+	        .exchange()
+	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+	
+		System.out.println("\n Test 7 (putItemNoExistentKey) passed \n");
+    	
+    }
+    
+    @Test
+    @Order(8)
+    // codice test: DCSS.102.3
+    public void putItemIncorretcParameters() {
+  
+    	DocumentInput documentInput = new DocumentInput();
+//    	documentInput.setCheckSum(NO_EXISTENT_PARTITION_ID);
+    	documentInput.setDocumentState(DocumentStateEnum.AVAILABLE);
+    	documentInput.setRetentionPeriod("retention prova 3");
+    	
+		webTestClient.put()
+	        .uri(BASE_URL)
+	        .accept(APPLICATION_JSON)
+	        .contentType(APPLICATION_JSON)
+	        .body(BodyInserters.fromValue(documentInput))
+	        .exchange()
+	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+	
+		System.out.println("\n Test 8 (putItemIncorretcParameters) passed \n");
+    	
+    }
+    
+    @Test
+    @Order(9)
+    // codice test: DCSS.103.1
     public void deleteItem() {
     	
 		webTestClient.delete()
@@ -174,87 +210,38 @@ public class DocumentControllerTest {
 	        .expectStatus().isOk()
 	        .expectBody(DocumentOutput.class);
 	    
-	    System.out.println("\n Test 4 (deleteItem) passed \n");
+	    System.out.println("\n Test 9 (deleteItem) passed \n");
   
-//    	String partitionId = "chiavedocumento2";
-//        Mono<ResponseEntity<DocumentOutput>> response = documentController.deletedocument(partitionId);
-//    	
-//        //DocumentOutput documentOut = documentService.postdocument(documentInput);
-//        System.out.println(response.block().getBody().getCheckSum());
-//        Assertions.assertNotNull(response.block().getStatusCode());
     }
     
-//    public static void describeDymamoDBTable(DynamoDbClient ddb,String tableName ) {
-//
-//        DescribeTableRequest request = DescribeTableRequest.builder()
-//            .tableName(tableName)
-//            .build();
-//
-//        try {
-//            TableDescription tableInfo = ddb.describeTable(request).table();
-//            if (tableInfo != null) {
-//                System.out.format("Table name  : %s\n", tableInfo.tableName());
-//                System.out.format("Table ARN   : %s\n", tableInfo.tableArn());
-//                System.out.format("Status      : %s\n", tableInfo.tableStatus());
-//                System.out.format("Item count  : %d\n", tableInfo.itemCount().longValue());
-//                System.out.format("Size (bytes): %d\n", tableInfo.tableSizeBytes().longValue());
-//
-//                ProvisionedThroughputDescription throughputInfo = tableInfo.provisionedThroughput();
-//                System.out.println("Throughput");
-//                System.out.format("  Read Capacity : %d\n", throughputInfo.readCapacityUnits().longValue());
-//                System.out.format("  Write Capacity: %d\n", throughputInfo.writeCapacityUnits().longValue());
-//
-//                List<AttributeDefinition> attributes = tableInfo.attributeDefinitions();
-//                System.out.println("Attributes");
-//
-//                for (AttributeDefinition a : attributes) {
-//                    System.out.format("  %s (%s)\n", a.attributeName(), a.attributeType());
-//                }
-//            }
-//
-//        } catch (DynamoDbException e) {
-//            System.err.println(e.getMessage());
-//            System.exit(1);
-//        }
-//        System.out.println("\nDone!");
-//    }
+    @Test
+    @Order(10)
+    // codice test: DCSS.103.2
+    public void deleteItemNoExistentKey() {
+    	
+		webTestClient.delete()
+			.uri(BASE_URL+"/"+NO_EXISTENT_PARTITION_ID)
+	        .accept(APPLICATION_JSON)
+	        .exchange()
+	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+	    
+	    System.out.println("\n Test 10 (deleteItemNoExistentKey) passed \n");
+  
+    }
     
-//    public static String createTable(DynamoDbClient ddb, String tableName, String key) {
-//        DynamoDbWaiter dbWaiter = ddb.waiter();
-//        CreateTableRequest request = CreateTableRequest.builder()
-//            .attributeDefinitions(AttributeDefinition.builder()
-//                .attributeName(key)
-//                .attributeType(ScalarAttributeType.S)
-//                .build())
-//            .keySchema(KeySchemaElement.builder()
-//                .attributeName(key)
-//                .keyType(KeyType.HASH)
-//                .build())
-//            .provisionedThroughput(ProvisionedThroughput.builder()
-//                .readCapacityUnits(new Long(5))
-//                .writeCapacityUnits(new Long(5))
-//                .build())
-//            .tableName(tableName)
-//            .build();
-//
-//        String newTable ="";
-//        try {
-//            CreateTableResponse response = ddb.createTable(request);
-//            DescribeTableRequest tableRequest = DescribeTableRequest.builder()
-//                .tableName(tableName)
-//                .build();
-//
-//            // Wait until the Amazon DynamoDB table is created.
-//            WaiterResponse<DescribeTableResponse> waiterResponse = dbWaiter.waitUntilTableExists(tableRequest);
-//            waiterResponse.matched().response().ifPresent(System.out::println);
-//            newTable = response.tableDescription().tableName();
-//            return newTable;
-//
-//        } catch (DynamoDbException e) {
-//            System.err.println(e.getMessage());
-//            System.exit(1);
-//        }
-//       return "";
-//    }
-
+    @Test
+    @Order(11)
+    // codice test: DCSS.103.3
+    public void deleteItemIncorrectParameter() {
+    	
+		webTestClient.delete()
+			.uri(BASE_URL/*+"/"+NO_EXISTENT_PARTITION_ID*/)
+	        .accept(APPLICATION_JSON)
+	        .exchange()
+	        .expectStatus().isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+	    
+	    System.out.println("\n Test 10 (deleteItemIncorrectParameter) passed \n");
+  
+    }
+    
 }

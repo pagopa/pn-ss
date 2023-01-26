@@ -9,7 +9,6 @@ import static org.testcontainers.containers.localstack.LocalStackContainer.Servi
 
 import javax.annotation.PostConstruct;
 
-import com.amazonaws.SDKGlobalConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -45,11 +44,8 @@ public class LocalStackTestConfig {
         System.setProperty("aws.config.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.config.secret.key", localStackContainer.getSecretKey());
         System.setProperty("aws.config.default.region", localStackContainer.getRegion());
-        System.setProperty("aws.region",  localStackContainer.getRegion());
-        System.setProperty("aws.access.key", localStackContainer.getAccessKey());
-        System.setProperty("aws.secret.key", localStackContainer.getSecretKey());
 
-        ////      SQS Override Endpoint
+////      SQS Override Endpoint
 //        System.setProperty("aws.sqs.test.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SQS)));
 
 //      DynamoDb Override Endpoint

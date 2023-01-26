@@ -12,21 +12,19 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.services.mq.model.BadRequestException;
 
-import javax.validation.constraints.NotNull;
-import java.util.Arrays;
-import java.util.List;
+import static it.pagopa.pnss.common.Constant.*;
 
 @RestController
 @RequiredArgsConstructor
 public class FileUploadApiController implements FileUploadApi {
 
+
+
     @Autowired
     UriBuilderService uriBuilderService;
-    List<String> listaTipologieDoc = Arrays.asList("PN_NOTIFICATION_ATTACHMENTS","PN_AAR","PN_LEGAL_FACTS","PN_EXTERNAL_LEGAL_FACTS","PN_DOWNTIME_LEGAL_FACTS");
-    List<String> listaTipoDocumenti =  Arrays.asList("PDF","ZIP","TIFF");
-    List<String> listaStatus =  Arrays.asList("PRELOADED","ATTACHED");
+
+
     @Override
     public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId, Mono<FileCreationRequest> fileCreationRequest,  final ServerWebExchange exchange){
 
@@ -35,7 +33,12 @@ public class FileUploadApiController implements FileUploadApi {
             String documentType = request.getDocumentType();
             String status = request.getStatus();
             validationField(contentType,documentType,status);
-            FileCreationResponse creationResp = uriBuilderService.createUriForUploadFile(contentType, documentType, status);
+            FileCreationResponse creationResp = null;
+            try {
+                creationResp = uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,contentType, documentType, status);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             return ResponseEntity.ok().body(creationResp);
         });
 

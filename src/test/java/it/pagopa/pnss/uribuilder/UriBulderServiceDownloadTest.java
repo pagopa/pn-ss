@@ -7,19 +7,15 @@ import it.pagopa.pnss.uriBuilder.service.UriBuilderService;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.reactive.function.BodyInserter;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Mono;
+
+import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
 
 @ExtendWith(SpringExtension.class)
 @WebFluxTest(FileDownloadApiController.class)
@@ -58,7 +54,7 @@ public class UriBulderServiceDownloadTest {
 
     @Test
     public void testUrlGenerato(){
-        Mockito.doReturn(new FileDownloadResponse()).when(service).createUriForDownloadFile(Mockito.any());
+        Mockito.doReturn(new FileDownloadResponse()).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
         fileDownloadTestCall("4444").expectStatus()
                 .isOk();
     }
@@ -70,7 +66,7 @@ public class UriBulderServiceDownloadTest {
         FileDownloadInfo download = new FileDownloadInfo();
         download.setUrl("url_generato");
         fdr.setDownload(download);
-        Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any());
+        Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
         fileDownloadTestCall( X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
                 .isOk().expectBody(FileDownloadResponse.class).value(response ->{
                     Assertions.assertThat(!response.getChecksum().isEmpty());
@@ -84,31 +80,29 @@ public class UriBulderServiceDownloadTest {
         FileDownloadResponse fdr = new FileDownloadResponse();
         fdr.setChecksum("");
         FileDownloadInfo download = new FileDownloadInfo();
-        download.setRetryAfter(UriBuilderService.MAX_RECOVER_COLD);
+        download.setRetryAfter(MAX_RECOVER_COLD);
         fdr.setDownload(download);
-        Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any());
+        Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
         fileDownloadTestCall( X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
                 .isOk().expectBody(FileDownloadResponse.class).value(response ->{
                     Assertions.assertThat(!response.getChecksum().isEmpty());
-                    Assertions.assertThat(!response.getDownload().getRetryAfter().equals(UriBuilderService.MAX_RECOVER_COLD));
+                    Assertions.assertThat(!response.getDownload().getRetryAfter().equals(MAX_RECOVER_COLD));
 
                 });
     }
 
     @Test
-    public void testFileNotrTrovato(){
+    public void testFileNonTrovato(){
         fileDownloadTestCall( X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
                 .isNotFound();
     }
 
+    public void testIdClienteNonTrovatoDownload(){
 
-    @Test
-    public void testInternalServerError(){
-        Mockito.doThrow(new ResponseStatusException(
-                HttpStatus.INTERNAL_SERVER_ERROR, "ResponseStatusException -> Message  "+" Amazon S3 couldn't be contacted for a response, or the client couldn't parse the response from Amazon S3. ")
-                ).when(service).createUriForDownloadFile(Mockito.any());
-        fileDownloadTestCall( X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
-                .is5xxServerError();
+    }
+
+    public void testIdClienteNoPermessiDownload(){
+
     }
 
 

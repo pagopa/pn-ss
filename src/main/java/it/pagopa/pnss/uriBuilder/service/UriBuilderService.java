@@ -1,16 +1,13 @@
 package it.pagopa.pnss.uriBuilder.service;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
-import it.pagopa.pnss.uriBuilder.client.GetRepositoryClient;
-import it.pagopa.pnss.uriBuilder.model.DocumentRepositoryDto;
-import org.aspectj.lang.annotation.After;
-import org.springframework.beans.factory.annotation.Autowired;
+import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
+import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
+import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -18,42 +15,36 @@ import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.regions.Region;
-
-import java.io.IOException;
-import javax.annotation.PostConstruct;
-import javax.validation.constraints.NotNull;
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.util.*;
-import com.amazonaws.services.s3.AmazonS3;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.RestoreObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import javax.annotation.PostConstruct;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.*;
+
+import static it.pagopa.pnss.common.Constant.*;
+
 @Service
 public class UriBuilderService {
 
-    @Autowired
-    GetRepositoryClient gGetRepositoryClient;
+    UserConfigurationClientCall userConfigurationClientCall;
+    DocumentClientCall documentClientCall;
 
-    public static final String PN_NOTIFICATION_ATTACHMENTS ="PN_NOTIFICATION_ATTACHMENTS";
-    public static final String PN_AAR="PN_AAR";
-    public static final String PN_LEGAL_FACTS="PN_LEGAL_FACTS";
-    public static final String PN_EXTERNAL_LEGAL_FACTS="PN_EXTERNAL_LEGAL_FACTS";
-    public static final String PN_DOWNTIME_LEGAL_FACTS="PN_DOWNTIME_LEGAL_FACTS";
-    public static final BigDecimal MAX_RECOVER_COLD = new BigDecimal(259200);
-    public static final String BUCKET_STAGING="Staging";
-    public static final String BUCKET_HOT ="Hot";
+    public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall) {
+        this.userConfigurationClientCall = userConfigurationClientCall;
+        this.documentClientCall = documentClientCall;
+    }
+
     List <String> hotStatus;
     List <String> coldStatus;
     Map<String,String> mapDocumentTypeToBucket ;
-    Region region = Region.EU_CENTRAL_1;
+
     @PostConstruct
     public void createMap() {
         mapDocumentTypeToBucket= new HashMap<>();
@@ -66,9 +57,35 @@ public class UriBuilderService {
         coldStatus = Arrays.asList("hot");
     }
 
-    public FileCreationResponse createUriForUploadFile(String contentType, String documentType, String status) {
+    public FileCreationResponse createUriForUploadFile(String xPagopaSafestorageCxId, String contentType, String documentType, String status) throws InterruptedException {
+
+        ResponseEntity<UserConfigurationOutput> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfigurationOutput user = null;
+        if (userResponse!=null ){
+            user = userResponse.getBody();
+        }
+
+        if (user == null ){
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
+        }
+
+        List<String> canRead = user.getCanRead();
+        if (!canRead.contains(documentType)){
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Client : "+ xPagopaSafestorageCxId+  " not has privilege for download document type " +documentType);
+        }
+
         FileCreationResponse response = new FileCreationResponse();
-        String keyName = createKeyName(documentType);
+        GenerateRandoKeyFile g = GenerateRandoKeyFile.getInstance();
+        String keyName = g.createKeyName(documentType);
+        int riprova = 0;
+        while (keyPresent(keyName) && riprova <10){
+            Thread.sleep(1000);
+            keyName = g.createKeyName(documentType);
+            riprova++;
+        }
+
         response.setKey(keyName);
         String secret=null;
         response.setSecret(secret);
@@ -85,11 +102,18 @@ public class UriBuilderService {
         response.setUploadUrl(myURL);
         response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
 
-        DocumentRepositoryDto documentRepositoryDto = new DocumentRepositoryDto();
-        gGetRepositoryClient.upLoadDocument(documentRepositoryDto);
+        DocumentInput documentRepositoryDto = new DocumentInput();
+
+        documentClientCall.updatedocument(documentRepositoryDto);
 
         return response;
 
+    }
+
+    private boolean keyPresent(String keyName) {
+        ResponseEntity<DocumentOutput> block = documentClientCall.getdocument(keyName);
+        DocumentOutput doc = block!=null ? block.getBody(): null;
+        return doc != null ? true : false ;
     }
 
     private FileCreationResponse.UploadMethodEnum extractUploadMethod(SdkHttpMethod method) {
@@ -102,25 +126,15 @@ public class UriBuilderService {
     private PresignedPutObjectRequest  builsUploadUrl(String documentType, String keyName, String contentType) {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
-        try {
-            S3Presigner presigner = getS3Presigner();
-            return  signBucket(presigner, bucketName, keyName,contentType);
 
-        }catch (S3Exception e) {
-
-            throw new ResponseStatusException(
-                HttpStatus.INTERNAL_SERVER_ERROR, "S3Exception -> Message  "+ e.getMessage());
-        }catch (Exception e) {
-
-            throw new ResponseStatusException(
-                HttpStatus.INTERNAL_SERVER_ERROR, "Generic Exception -> Message  "+ e.getMessage());
-        }
+        S3Presigner presigner = getS3Presigner();
+        return  signBucket(presigner, bucketName, keyName,contentType);
 
     }
 
     private S3Presigner getS3Presigner() {
         ProfileCredentialsProvider credentialsProvider = ProfileCredentialsProvider.create();
-
+        Region region = Region.EU_CENTRAL_1;
         return S3Presigner.builder()
                 .region(region)
                 .credentialsProvider(credentialsProvider)
@@ -145,26 +159,41 @@ public class UriBuilderService {
 
     }
 
-    private String createKeyName(String documentType) {
-        UUID temp = UUID.randomUUID();
-        String uuidString = Long.toHexString(temp.getMostSignificantBits())
-                + Long.toHexString(temp.getLeastSignificantBits());
-        return documentType+"-"+uuidString;
-    }
 
-    public FileDownloadResponse createUriForDownloadFile(String fileKey) {
+
+    public FileDownloadResponse createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId) {
         // chiamare l'api di  GestoreRepositori per recupero dati
         //todo
 
+        ResponseEntity<UserConfigurationOutput> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfigurationOutput user = null;
+        if (userResponse!=null ){
+            user = userResponse.getBody();
+        }
+        if (user == null ){
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
+        }
+        ResponseEntity<DocumentOutput> block = documentClientCall.getdocument(fileKey);
+        DocumentOutput doc = block!=null ? block.getBody(): null;
+        if (doc==null ){
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey);
+        }
+        List<String> canRead = user.getCanRead();
+// TODO: 26/01/2023  mettere doc.getDocumentType
+        String typeDocument = doc.getCheckSum();
+        if (!canRead.contains(typeDocument)){
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Client : "+ xPagopaSafestorageCxId+  " not has privilege for download document type " +typeDocument);
+        }
 
-        ResponseEntity <DocumentRepositoryDto> d = gGetRepositoryClient.retrieveDocument(fileKey);
-        DocumentRepositoryDto doc = d!=null ? d.getBody(): null;
 
         FileDownloadResponse downloadResponse = new FileDownloadResponse();
-        downloadResponse.setChecksum("");
+        downloadResponse.setChecksum(doc.getCheckSum());
         downloadResponse.setContentLength(BigDecimal.TEN);
         downloadResponse.setContentType("");
-        downloadResponse.setDocumentStatus("");
+        downloadResponse.setDocumentStatus(doc.getDocumentState().value());
         downloadResponse.setDocumentType("");
 
         downloadResponse.setKey(fileKey);
@@ -178,60 +207,28 @@ public class UriBuilderService {
     }
 
     private FileDownloadInfo createFileDownloadInfo(String fileKey, String status,  String documentType) {
-
+        S3Presigner presigner = getS3Presigner();
         String bucketName = mapDocumentTypeToBucket.get(documentType);
         FileDownloadInfo fileDOwnloadInfo = null;
         if (hotStatus.contains(status)){
-            fileDOwnloadInfo =getPresignedUrl(bucketName,  fileKey );
+            fileDOwnloadInfo =getPresignedUrl(presigner, bucketName,  fileKey );
         }else{
-            fileDOwnloadInfo =recoverDocumentFromBucket(   bucketName,fileKey);
+            fileDOwnloadInfo =recoverDocumentFromBucket( presigner,  bucketName,fileKey);
         }
 
          return fileDOwnloadInfo;
 
     }
 
-    private FileDownloadInfo recoverDocumentFromBucket(String bucketName, String keyName) {
+    private FileDownloadInfo recoverDocumentFromBucket(S3Presigner presigner, String bucketName, String fileKey) {
         FileDownloadInfo fdinfo = new FileDownloadInfo();
         // mettere codice per far partire il recupero del file
         //todo
-
-        try {
-            AmazonS3 s3Client = createS3();
-            fdinfo.setRetryAfter(MAX_RECOVER_COLD );
-            com.amazonaws.services.s3.model.RestoreObjectRequest requestRestore = new com.amazonaws.services.s3.model.RestoreObjectRequest(bucketName, keyName, 2);
-            s3Client.restoreObjectV2(requestRestore);
-            ObjectMetadata response = s3Client.getObjectMetadata(bucketName, keyName);
-            Boolean restoreFlag = response.getOngoingRestore();
-            System.out.format("Restoration status: %s.\n",
-                    restoreFlag ? "in progress" : "not in progress (finished or failed)");
-            fdinfo.setRetryAfter(MAX_RECOVER_COLD);        ;
-        } catch (AmazonServiceException e) {
-            // The call was transmitted successfully, but Amazon S3 couldn't process
-            // it, so it returned an error response.
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "AmazonServiceException -> Message  "+ e.getMessage() + " The call was transmitted successfully, but Amazon S3 couldn't process ");
-
-        } catch (SdkClientException e) {
-            // Amazon S3 couldn't be contacted for a response, or the client
-            // couldn't parse the response from Amazon S3.
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "ResponseStatusException -> Message  "+ e.getMessage() + " Amazon S3 couldn't be contacted for a response, or the client couldn't parse the response from Amazon S3. ");
-
-        }
+        fdinfo.setRetryAfter(MAX_RECOVER_COLD );
         return fdinfo;
     }
 
-    private AmazonS3 createS3() {
-        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
-                .withCredentials(new com.amazonaws.auth.profile.ProfileCredentialsProvider())
-                .withRegion(region.id())
-                .build();
-        return s3Client;
-    }
-
-    private FileDownloadInfo getPresignedUrl( String bucketName, String keyName) {
-        S3Presigner presigner = getS3Presigner();
+    private FileDownloadInfo getPresignedUrl(S3Presigner presigner, String bucketName, String keyName) {
         FileDownloadInfo fdinfo = new FileDownloadInfo();
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)

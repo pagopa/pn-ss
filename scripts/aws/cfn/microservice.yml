@@ -118,6 +118,12 @@ Parameters:
   PnSsSNSNameStagingBucket:
     Type: String
     Description: 'Nome SNS Topic per notifiche SS Staging Bucket'
+  
+  PnSsManagedPolicyName:
+    Type: String
+    Description: 'Nome della managed policy associata alla state machine'
+    Default: 'PnSsManagedPolicyName'
+  
 
 Resources:
 
@@ -147,13 +153,13 @@ Resources:
         LoadBalancerListenerArn: !Ref ApplicationLoadBalancerListenerArn
         LoadbalancerRulePriority: !Ref MicroserviceNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
-        TaskRoleManagedPolicyArn: !Ref PnSmManagedPolicy
+        TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
   
-  PnSmManagedPolicy:
+  PnSsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: 'String'
-      ManagedPolicyName: !Ref PnSmManagedPolicyName
+      ManagedPolicyName: !Ref PnSsManagedPolicyName
       PolicyDocument: 
         Version: 2012-10-17
         Statement:

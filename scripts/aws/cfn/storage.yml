@@ -285,7 +285,7 @@ Outputs:
 
   PnSsBucketArn:
     Description: 'ARN Bucket SS'
-    Value: !GetATt PnSsBucket.Arn
+    Value: !GetAtt PnSsBucket.Arn
   
   PnSsStagingBucketName:
     Description: 'Nome Bucket SS Staging'

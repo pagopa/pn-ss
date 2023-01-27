@@ -75,10 +75,6 @@ paths:
             description: Not configured
         '200':
           description: OK
-          content:
-            application/json:
-              schema:        
-                $ref: '#/components/schemas/DocumentType'
   
   '/safe-storage/internal/v1/doctypes': 
     post:
@@ -151,10 +147,6 @@ paths:
             description: Not configured
         '200':
           description: OK
-          content:
-            application/json:
-              schema:        
-                $ref: '#/components/schemas/Document'  
                 
   '/safe-storage/internal/v1/documents': 
     post:
@@ -227,10 +219,6 @@ paths:
             description: Not configured
         '200':
           description: OK
-          content:
-            application/json:
-              schema:        
-                $ref: '#/components/schemas/UserConfiguration'  
                 
   '/safe-storage/internal/v1/userConfigurations':
     post:
@@ -284,7 +272,7 @@ components:
         typeId:
           type: string
           description: nome del tipo di documento
-          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR, PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
+          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
         checksum:
           description: >-
             codice di verifica del corretto caricamento del file

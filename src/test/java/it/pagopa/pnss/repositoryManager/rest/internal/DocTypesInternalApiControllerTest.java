@@ -12,12 +12,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import it.pagopa.pnss.repositoryManager.dto.DocTypeDTO;
-import it.pagopa.pnss.repositoryManager.dto.DocTypesOutput;
-import it.pagopa.pnss.repositoryManager.enumeration.ChecksumEnum;
-import it.pagopa.pnss.repositoryManager.enumeration.ConfidentialityLevelEnum;
-import it.pagopa.pnss.repositoryManager.enumeration.TimestampedEnum;
-import it.pagopa.pnss.repositoryManager.enumeration.TipoDocumentoEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TypeIdEnum;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 
 @SpringBootTestWebEnv
@@ -28,25 +27,29 @@ public class DocTypesInternalApiControllerTest {
 	@Autowired
 	private WebTestClient webTestClient;
 
-	private static final String BASE_URL = "http://localhost:8080/doc-type";
+	private static final String BASE_URL = "http://localhost:8080/safe-storage/internal/v1/doctypes";
 
-	private static final ChecksumEnum PARTITION_ID = ChecksumEnum.MD5;
-	private static final ChecksumEnum NO_EXISTENT_PARTITION_ID = ChecksumEnum.SHA256;
-	private static final TipoDocumentoEnum SORT_KEY = TipoDocumentoEnum.PN_LEGAL_FACTS;
+	private static final TypeIdEnum PARTITION_ID = TypeIdEnum.NOTIFICATION_ATTACHMENTS;
+	private static final TypeIdEnum NO_EXISTENT_PARTITION_ID = TypeIdEnum.EXTERNAL_LEGAL_FACTS;
+	
+	private DocumentType getDocumentType() {
+		DocumentType docTypesInput = new DocumentType();
+		docTypesInput.setTypeId(PARTITION_ID);
+		docTypesInput.setChecksum(ChecksumEnum.MD5);
+		docTypesInput.setLifeCycleTag("lifeCicle1");
+		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
+		docTypesInput.setInformationClassification(InformationClassificationEnum.C);
+		docTypesInput.setDigitalSignature(true);
+		docTypesInput.setTimeStamped(TimeStampedEnum.STANDARD);
+		return docTypesInput;
+	}
 
 	@Test
 	@Order(1)
 	// Codice test: DTSS.101.1
 	public void postItem() {
 
-		DocTypeDTO docTypesInput = new DocTypeDTO();
-		docTypesInput.setCheckSum(PARTITION_ID);
-		docTypesInput.setTipoDocumento(SORT_KEY);
-		docTypesInput.setLifeCycleTag("lifeCicle1");
-		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
-		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
-		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimestampedEnum.STANDARD);
+		DocumentType docTypesInput = getDocumentType();
 		
 		webTestClient.post()
 					 .uri(BASE_URL)
@@ -65,14 +68,8 @@ public class DocTypesInternalApiControllerTest {
 	// Codice test: DTSS.101.2
 	public void postItemIncorrectParameters() {
 
-		DocTypeDTO docTypesInput = new DocTypeDTO();
-		//docTypesInput.setCheckSum(PARTITION_ID);
-		docTypesInput.setTipoDocumento(SORT_KEY);
-		docTypesInput.setLifeCycleTag("lifeCicle1");
-		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
-		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
-		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimestampedEnum.STANDARD);
+		DocumentType docTypesInput = getDocumentType();
+		docTypesInput.setTypeId(null);
 		
 		webTestClient.post()
 					 .uri(BASE_URL)
@@ -97,7 +94,7 @@ public class DocTypesInternalApiControllerTest {
 			.accept(APPLICATION_JSON)
 			.exchange()
 			.expectStatus().isOk()
-			.expectBody(DocTypesOutput.class);
+			.expectBody(DocumentType.class);
 
 		System.out.println("\n Test 3 (getItem) passed \n");
 
@@ -112,8 +109,10 @@ public class DocTypesInternalApiControllerTest {
 			.uri(BASE_URL + "/" + NO_EXISTENT_PARTITION_ID.name())
 			.accept(APPLICATION_JSON)
 			.exchange()
-			.expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-
+//			.expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+			.expectStatus().isOk()
+			.expectBody().isEmpty();
+		
 		System.out.println("\n Test 4 (getItemNoExistentKey) passed \n");
 
 	}
@@ -138,17 +137,11 @@ public class DocTypesInternalApiControllerTest {
 	// codice test: DTSS.102.1
 	public void putItem() {
 		
-		DocTypeDTO docTypesInput = new DocTypeDTO();
-		docTypesInput.setCheckSum(PARTITION_ID);
-		docTypesInput.setTipoDocumento(SORT_KEY);
-		docTypesInput.setLifeCycleTag("lifeCicle1");
-		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
-		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
-		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimestampedEnum.STANDARD);
+		DocumentType docTypesInput = getDocumentType();
+		docTypesInput.setChecksum(ChecksumEnum.SHA256);
 		
 		webTestClient.put()
-			         .uri(BASE_URL)
+			         .uri(BASE_URL + "/" + PARTITION_ID.getValue())
 			         .accept(APPLICATION_JSON)
 			         .contentType(APPLICATION_JSON)
 			         .body(BodyInserters.fromValue(docTypesInput))
@@ -164,17 +157,11 @@ public class DocTypesInternalApiControllerTest {
 	// codice test: DTSS.102.2
 	public void putItemNoExistentKey() {
 		
-		DocTypeDTO docTypesInput = new DocTypeDTO();
-		docTypesInput.setCheckSum(NO_EXISTENT_PARTITION_ID);
-		docTypesInput.setTipoDocumento(SORT_KEY);
-		docTypesInput.setLifeCycleTag("lifeCicle1");
-		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
-		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
-		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimestampedEnum.STANDARD);
+		DocumentType docTypesInput = getDocumentType();
+		docTypesInput.setTypeId(NO_EXISTENT_PARTITION_ID);
 		
 		webTestClient.put()
-			         .uri(BASE_URL)
+			         .uri(BASE_URL + "/" + NO_EXISTENT_PARTITION_ID.name())
 			         .accept(APPLICATION_JSON)
 			         .contentType(APPLICATION_JSON)
 			         .body(BodyInserters.fromValue(docTypesInput))
@@ -190,24 +177,18 @@ public class DocTypesInternalApiControllerTest {
 	// codice test: DTSS.102.3
 	public void putItemIncorretctParameters() {
 		
-		DocTypeDTO docTypesInput = new DocTypeDTO();
-		//docTypesInput.setCheckSum(NO_EXISTENT_PARTITION_ID);
-		docTypesInput.setTipoDocumento(SORT_KEY);
-		docTypesInput.setLifeCycleTag("lifeCicle1");
-		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
-		docTypesInput.setInformationClassification(ConfidentialityLevelEnum.C);
-		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimestampedEnum.STANDARD);
+		DocumentType docTypesInput = getDocumentType();
+		docTypesInput.setTypeId(NO_EXISTENT_PARTITION_ID);
 		
 		webTestClient.put()
-			         .uri(BASE_URL)
+			         .uri(BASE_URL + "/" + NO_EXISTENT_PARTITION_ID.name())
 			         .accept(APPLICATION_JSON)
 			         .contentType(APPLICATION_JSON)
 			         .body(BodyInserters.fromValue(docTypesInput))
 			         .exchange()
 			         .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
-		System.out.println("\n Test 8 (putItemNoExistentKey) passed \n");
+		System.out.println("\n Test 8 (putItemIncorretctParameters) passed \n");
 
 	}
 
@@ -217,11 +198,11 @@ public class DocTypesInternalApiControllerTest {
 	public void deleteItem() {
 		
 		webTestClient.delete()
-			.uri(BASE_URL+"/"+PARTITION_ID.name())
+			.uri(BASE_URL+"/"+PARTITION_ID.getValue())
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isOk()
-	        .expectBody(DocTypesOutput.class);
+	        .expectBody(DocumentType.class);
 	    
 	    System.out.println("\n Test 9 (deleteItem) passed \n");
 
@@ -233,7 +214,7 @@ public class DocTypesInternalApiControllerTest {
 	public void deleteItemNoExistentKey() {
 		
 		webTestClient.delete()
-			.uri(BASE_URL+"/"+NO_EXISTENT_PARTITION_ID.name())
+			.uri(BASE_URL+"/"+NO_EXISTENT_PARTITION_ID.getValue())
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);

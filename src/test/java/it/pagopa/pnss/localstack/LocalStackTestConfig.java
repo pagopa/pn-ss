@@ -14,7 +14,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import it.pagopa.pnss.repositoryManager.entity.DocTypesEntity;
+import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
 import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
 import software.amazon.awssdk.core.internal.waiters.ResponseOrException;
@@ -78,8 +78,8 @@ public class LocalStackTestConfig {
                                                          .orElseThrow(() -> new RuntimeException("User Configuration table was not created."));
         // The actual error can be inspected in response.exception()
         
-        DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DOC_TYPES_TABLE_NAME,
-		                												   TableSchema.fromBean(DocTypesEntity.class));
+        DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(DOC_TYPES_TABLE_NAME,
+		                												   TableSchema.fromBean(DocTypeEntity.class));
 		docTypesTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
 															                      .writeCapacityUnits(5L)
 															                      .build()));

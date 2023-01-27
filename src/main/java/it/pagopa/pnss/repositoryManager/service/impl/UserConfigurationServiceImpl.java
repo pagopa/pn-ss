@@ -11,6 +11,7 @@ import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.dto.UserConfigurationInput;
 import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
 import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
+import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.service.UserConfigurationService;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -44,7 +45,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
 		} catch (DynamoDbException e) {
 			System.err.println(e.getMessage());
-			throw new RepositoryManagerException.DynamoDbException();
+			throw new RepositoryManagerException();
 		}
 	}
 
@@ -65,12 +66,12 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
 			} else {
 				System.out.println("L'utente non può essere aggiunto, id già esistente");
-				throw new RepositoryManagerException.IdClientAlreadyPresent(userInput.getName());
+				throw new ItemAlreadyPresent(userInput.getName());
 
 			}
 		} catch (DynamoDbException e) {
 			System.err.println(e.getMessage());
-			throw new RepositoryManagerException.DynamoDbException();
+			throw new RepositoryManagerException();
 
 		}
 
@@ -88,11 +89,11 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 				System.out.println("Modifica avvenuta con successo");
 				return objectMapper.convertValue(userEntity, UserConfigurationOutput.class);
 			} else {
-				throw new RepositoryManagerException.DynamoDbException();
+				throw new RepositoryManagerException();
 			}
 		} catch (DynamoDbException e) {
 			System.err.println(e.getMessage());
-			throw new RepositoryManagerException.DynamoDbException();
+			throw new RepositoryManagerException();
 		}
 	}
 
@@ -111,7 +112,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
 		} catch (DynamoDbException e) {
 			System.err.println(e.getMessage());
-			throw new RepositoryManagerException.DynamoDbException();
+			throw new RepositoryManagerException();
 
 		}
 	}

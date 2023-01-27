@@ -11,19 +11,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
-import it.pagopa.pnss.repositoryManager.dto.DocTypeDTO;
 import it.pagopa.pnss.repositoryManager.dto.DocTypesOutput;
-import it.pagopa.pnss.repositoryManager.entity.DocTypesEntity;
+import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
+import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositoryManager.exception.ItemDoesNotExist;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.service.DocTypesService;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 @Service
+@Slf4j
 public class DocTypesServiceImpl implements DocTypesService {
 	
 	@Autowired
@@ -32,28 +34,31 @@ public class DocTypesServiceImpl implements DocTypesService {
     private ObjectMapper objectMapper;
 	
 	public DocumentType getDocType(String typeId) {
+		
+		if (typeId.isBlank()) {
+			throw new RepositoryManagerException("typeId not specified");
+		}
 	
 		try {
-            DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypesEntity.class));
-            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(typeId).build());
+            DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(
+            		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
             
-            Iterator<DocTypesEntity> result = docTypesTable.query(queryConditional).items().iterator();
-		
-            DocTypesEntity docType = result.next();
-            
-            return objectMapper.convertValue(docType, DocumentType.class);
+            DocTypeEntity result = docTypesTable.getItem(Key.builder().partitionValue(typeId).build());
+            return objectMapper.convertValue(result, DocumentType.class);
             
 		} catch (DynamoDbException e) {
-            System.err.println(e.getMessage());
-            throw new RepositoryManagerException.DynamoDbException();  
+            log.error("getDocType",e);
+            throw new RepositoryManagerException(e.getMessage());  
         }
 	}
 	
+	//TODO for external api
 	public List<DocTypesOutput> getAllDocType() {
 		
 		try {
-            DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypesEntity.class));
-            Iterator<DocTypesEntity> iterator = docTypesTable.scan().items().iterator();
+            DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(
+            		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+            Iterator<DocTypeEntity> iterator = docTypesTable.scan().items().iterator();
             List<DocTypesOutput> listOutput = new ArrayList<>();
         	while (iterator.hasNext()) {
         		listOutput.add(objectMapper.convertValue(iterator.next(), DocTypesOutput.class));
@@ -61,75 +66,84 @@ public class DocTypesServiceImpl implements DocTypesService {
             return listOutput;
             
 		} catch (DynamoDbException e) {
-            System.err.println(e.getMessage());
-            throw new RepositoryManagerException.DynamoDbException();  
+			log.error("getAllDocType",e);
+            throw new RepositoryManagerException(e.getMessage());  
         }
 	}
 	
-	public DocumentType insertDocTypes(DocumentType docTypesInput) {
+	public DocumentType insertDocType(DocumentType docTypesInput) {
         
         try {
-            DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypesEntity.class));
+            DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(
+            		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+            DocTypeEntity docTypesEntity = objectMapper.convertValue(docTypesInput, DocTypeEntity.class);
             
-            DocTypesEntity docTypesEntity = objectMapper.convertValue(docTypesInput, DocTypesEntity.class);
-            
-            
-            if(docTypesTable.getItem(docTypesEntity) == null) {
+            if (docTypesTable.getItem(docTypesEntity) == null) {
             	
             	docTypesTable.putItem(docTypesEntity);
-				System.out.println("DocType data added to the table");
-	            
+				log.info("DocType data added to the table");
 				return objectMapper.convertValue(docTypesEntity, DocumentType.class);
 
             } else {
-				System.out.println("User cannot be added to the table, user id already exists");
-            	throw new RepositoryManagerException.IdClientAlreadyPresent(docTypesInput.getChecksum().name());
+            	log.error("DocType cannot be added to the table, DocType id already exists");
+            	throw new ItemAlreadyPresent(docTypesInput.getTypeId().getValue());
 
             }
         } catch (DynamoDbException  e){
-            System.err.println(e.getMessage());
-			throw new RepositoryManagerException.DynamoDbException();
-
+            log.error("insertDocTypes",e);
+			throw new RepositoryManagerException();
         }
         
 	}
 	
-	public DocumentType updateDocTypes(DocTypeDTO docTypesInput) {
+	public DocumentType updateDocType(String typeId, DocumentType docTypesInput) {
+		
+		if (typeId == null || typeId.isBlank()) {
+			throw new RepositoryManagerException("typeId not specified");
+		}
+		if (docTypesInput != null && !docTypesInput.getTypeId().getValue().equals(typeId)) {
+			throw new RepositoryManagerException("typeId does not match");
+		}
 		
 		try {
-			DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME,
-					TableSchema.fromBean(DocTypesEntity.class));
-			DocTypesEntity docTypesEntity = objectMapper.convertValue(docTypesInput, DocTypesEntity.class);
+			DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(
+					DynamoTableNameConstant.DOC_TYPES_TABLE_NAME,TableSchema.fromBean(DocTypeEntity.class));
+			DocTypeEntity docTypesEntity = objectMapper.convertValue(docTypesInput, DocTypeEntity.class);
 
 			if (docTypesTable.getItem(docTypesEntity) != null) {
+				
 				docTypesTable.putItem(docTypesEntity);
-				System.out.println("Modifica avvenuta con successo");
+				log.info("DocType updated");
 				return objectMapper.convertValue(docTypesEntity, DocumentType.class);
 
 			} else {
-				throw new RepositoryManagerException.DynamoDbException();
+				throw new RepositoryManagerException("DocType cannot be updated: DocType does not exists");
 			}
+			
 		} catch (DynamoDbException e) {
-			System.err.println(e.getMessage());
-            throw new RepositoryManagerException.DynamoDbException();
+			log.error("updateDocTypes",e);
+            throw new RepositoryManagerException();
 		}
 	}
 	
-	public DocumentType deleteDocTypes(String checkSum) {
+	public void deleteDocType(String typeId) {
 		
     	try {
-            DynamoDbTable<DocTypesEntity> docTypesTable = enhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypesEntity.class));
-            QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(checkSum).build());
-            Iterator<DocTypesEntity> result = docTypesTable.query(queryConditional).items().iterator();
+            DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(
+            		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+            DocTypeEntity result = docTypesTable.getItem(Key.builder().partitionValue(typeId).build());
             
-            DocTypesEntity docTypesEntity = result.next();
-            docTypesTable.deleteItem(docTypesEntity);
-            
-            System.out.println("Cancellazione avvenuta con successo");
-            return objectMapper.convertValue(docTypesEntity, DocumentType.class);               
-    	}catch (DynamoDbException  e){
-            System.err.println(e.getMessage());
-            throw new RepositoryManagerException.DynamoDbException();
+            if (result == null) {
+            	throw new ItemDoesNotExist(typeId);
+            }
+            else {
+	            docTypesTable.deleteItem(result);
+	            log.info("DocType deleted");
+            }
+                          
+    	} catch (DynamoDbException  e) {
+            log.error("deleteDocTypes",e);
+            throw new RepositoryManagerException();
         }
     }
 }

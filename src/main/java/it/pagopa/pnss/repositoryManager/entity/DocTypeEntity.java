@@ -3,10 +3,11 @@ package it.pagopa.pnss.repositoryManager.entity;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConvertedEnum;
 
-import it.pagopa.pnss.repositoryManager.enumeration.ChecksumEnum;
-import it.pagopa.pnss.repositoryManager.enumeration.ConfidentialityLevelEnum;
-import it.pagopa.pnss.repositoryManager.enumeration.TimestampedEnum;
-import it.pagopa.pnss.repositoryManager.enumeration.TipoDocumentoEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TypeIdEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
+
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -17,32 +18,32 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 @DynamoDbBean
 @Data
 @ToString
-public class DocTypesEntity {
+public class DocTypeEntity {
 	
 	@Getter(AccessLevel.NONE)
-	private TipoDocumentoEnum tipoDocumento;
+	private TypeIdEnum typeId;
 	private ChecksumEnum checkSum;
 	private String lifeCycleTag;
 	private String tipoTrasformazione;
 	@Getter(AccessLevel.NONE)
-	private ConfidentialityLevelEnum informationClassification;
+	private InformationClassificationEnum informationClassification;
 	private Boolean digitalSignature;
 	@Getter(AccessLevel.NONE)
-	private TimestampedEnum timeStamped;
+	private TimeStampedEnum timeStamped;
 	
 	@DynamoDbPartitionKey
 	@DynamoDBTypeConvertedEnum
-	public TipoDocumentoEnum getTipoDocumento() {
-		return tipoDocumento;
+	public TypeIdEnum getTypeId() {
+		return typeId;
 	}
 
 	@DynamoDBTypeConvertedEnum
-	public ConfidentialityLevelEnum getInformationClassification() {
+	public InformationClassificationEnum getInformationClassification() {
 		return informationClassification;
 	}
 
 	@DynamoDBTypeConvertedEnum
-	public TimestampedEnum getTimeStamped() {
+	public TimeStampedEnum getTimeStamped() {
 		return timeStamped;
 	}
 	

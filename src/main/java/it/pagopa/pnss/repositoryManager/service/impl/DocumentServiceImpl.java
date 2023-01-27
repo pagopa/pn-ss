@@ -11,6 +11,7 @@ import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
 import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
 import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
+import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.service.DocumentService;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -40,7 +41,7 @@ public class DocumentServiceImpl implements DocumentService {
             
 		} catch (DynamoDbException e) {
             System.err.println(e.getMessage());
-            throw new RepositoryManagerException.DynamoDbException();  
+            throw new RepositoryManagerException();  
         }
 	}
 	
@@ -56,11 +57,11 @@ public class DocumentServiceImpl implements DocumentService {
 				
 				return objectMapper.convertValue(documentEntity, DocumentOutput.class);
             } else {
-            	throw new RepositoryManagerException.IdClientAlreadyPresent(documentInput.getCheckSum());
+            	throw new ItemAlreadyPresent(documentInput.getCheckSum());
             }
 		} catch (DynamoDbException e) {
 			System.err.println(e.getMessage());
-			throw new RepositoryManagerException.DynamoDbException();
+			throw new RepositoryManagerException();
 		}
 
 	}
@@ -76,12 +77,12 @@ public class DocumentServiceImpl implements DocumentService {
 	            System.out.println("Modifica avvenuta con successo");
 	            return objectMapper.convertValue(documentEntity, DocumentOutput.class);
 	    	} else {
-	    		throw new RepositoryManagerException.DynamoDbException();
+	    		throw new RepositoryManagerException();
     	    }
     		
     	} catch (DynamoDbException  e){
             System.err.println(e.getMessage());
-            throw new RepositoryManagerException.DynamoDbException();
+            throw new RepositoryManagerException();
         }    	
     	
     }
@@ -100,7 +101,7 @@ public class DocumentServiceImpl implements DocumentService {
             
     	}catch (DynamoDbException  e){
             System.err.println(e.getMessage());
-            throw new RepositoryManagerException.DynamoDbException();
+            throw new RepositoryManagerException();
         }    	
     }
 }

@@ -20,15 +20,297 @@ Parameters:
     Type: String
     Description: 'keep track of used projects commitIds'
   
-  CdcKinesisSourceStreamArn:
+  # CdcKinesisSourceStreamArn:
+  #   Type: String
+  #   Description: 'Where to send CDC'
+  
+  PnSsQueueNameNotificaDisponibilita:
     Type: String
-    Description: 'Where to send CDC'
+    Description: Description
+    Default: pn-ss-notifica-disponibilita-queue
+
+  PnSsQueueNameStagingBucket:
+    Type: String
+    Description: Description
+    Default: pn-ss-staging-bucket-queue
+
+  PnSsEventRuleNameNotificaDisponibilita:
+    Type: String
+    Description: Description
+    Default: pn-ss-notifica-disponibilita-event-rule
+
+  PnSsEventRuleNameStagingBucket:
+    Type: String
+    Description: Description
+    Default: pn-ss-staging-bucket-event-rule
+  
+  PnSsSNSNameStagingBucket:
+    Type: String
+    Description: Description
+    Default: pn-ss-staging-bucket-topic
 
 Resources:
-    NullResource:
-        Type: AWS::CloudFormation::WaitConditionHandle
+  # NullResource:
+  #     Type: AWS::CloudFormation::WaitConditionHandle
 
+  PnSsTableAnagraficaClient:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "name"
+          AttributeType: "S"
+        - AttributeName: "APIKey"
+          AttributeType: "S"
+      KeySchema: 
+        - AttributeName: "name"
+          KeyType: "HASH"
+        - AttributeName: "APIKey"
+          KeyType: "RANGE"
+      #KinesisStreamSpecification:
+      #  StreamArn: "String"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: "KMS"
+      TableClass: "STANDARD"
+    DeletionPolicy: Retain
+
+  PnSsTableTipologieDocumenti:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "tipoDocumento"
+          AttributeType: "S"
+      KeySchema: 
+        - AttributeName: "tipoDocumento"
+          KeyType: "HASH"
+      #KinesisStreamSpecification:
+      #  StreamArn: "String"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: "KMS"
+      TableClass: "STANDARD"
+    DeletionPolicy: Retain
+
+  PnSsTableDocumenti:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "checksum"
+          AttributeType: "S"
+      KeySchema: 
+        - AttributeName: "checksum"
+          KeyType: "HASH"
+      #KinesisStreamSpecification:
+      #  StreamArn: "String"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: "KMS"
+      TableClass: "STANDARD"
+    DeletionPolicy: Retain
+
+  PnSsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: 'Private'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              #  KMSMasterKeyID: KMS-KEY-AR
+      # IntelligentTieringConfigurations:
+      #   IntelligentTieringConfigurations
+      # InventoryConfigurations:
+      #   InventoryConfigurations
+      # LifecycleConfiguration:
+      #   Rules:
+      #     -
+      #LoggingConfiguration:
+      #  DestinationBucketName: "String"
+      #  LogFilePrefix: "String"
+      #MetricsConfigurations:
+      #  MetricsConfigurations
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      #ObjectLockConfiguration:
+      #  ObjectLockEnabled: "String"
+      #ObjectLockEnabled: false
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      #ReplicationConfiguration:
+      #  Role: "false"
+      #  Rules:
+      #    -
+
+  PnSsStagingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: 'Private'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              #  KMSMasterKeyID: KMS-KEY-AR
+      #LoggingConfiguration:
+      #  DestinationBucketName: "String"
+      #  LogFilePrefix: "String"
+      #MetricsConfigurations:
+      #  MetricsConfigurations
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  PnSsQueueStagingBucket:
+    Type: AWS::SQS::Queue
+    Properties:
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: "alias/aws/sqs"
+      MessageRetentionPeriod: 1209600
+      QueueName: !Ref PnSsQueueNameStagingBucket
+      ReceiveMessageWaitTimeSeconds: 20      
+      RedrivePolicy:
+        deadLetterTargetArn : !GetAtt PnSsDLQueueStagingBucket.Arn
+        maxReceiveCount : 10
+      VisibilityTimeout: 30
+
+  PnSsDLQueueStagingBucket:
+    Type: AWS::SQS::Queue
+    Properties:
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: "alias/aws/sqs"
+      MessageRetentionPeriod: 1209600
+      QueueName: !Join [ '', [ !Ref PnSsQueueNameStagingBucket, '-dlq' ] ]
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 30 
+
+  PnSsSNSStagingBucket:
+    Type: AWS::SNS::Topic
+    Properties:
+      #DataProtectionPolicy: JSON
+      KmsMasterKeyId: alias/aws/sns
+      Subscription:
+        - Endpoint: !GetAtt PnSsQueueStagingBucket.Arn
+          Protocol: sqs
+      TopicName: !Ref PnSsSNSNameStagingBucket
+  
+  PnSsSNSPolicyStagingBucket:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Statement: 
+          - Action: 
+              - "sns:Publish"
+            Effect: "Allow"
+            Principal:  
+              Service: 
+                - "events.amazonaws.com"
+            Resource: '*'
+      Topics: 
+        - !Ref PnSsSNSStagingBucket
+
+  PnSsEventRuleStagingBucket:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Description
+      EventPattern:   
+        source: 
+          - 'aws.s3' 
+        account: 
+          - !Sub ${AWS::AccountId}
+        detail-type: 
+          - 'Object Created'
+        detail:
+          bucket:
+            name: 
+              - !Ref PnSsEventRuleNameStagingBucket
+      Name: !Ref PnSsEventRuleNameStagingBucket
+      State: 'ENABLED'
+      Targets:
+        - Arn: !Ref PnSsSNSStagingBucket
+          Id: "TopicTargetForStagingBucket"
+  
 Outputs:
-    SampleOutput:
-      Description: A Sample Output
-      Value: 'na'
+  PnSsTableNameAnagraficaClient:
+    Description: 'Nome della tabella SS Anagrafica Client'
+    Value: !Ref PnSsTableAnagraficaClient
+  
+  PnSsTableArnAnagraficaClient:
+    Description: 'ARN della Tabella DynamoDB relativa alla Macchina a Stati'
+    Value: !GetAtt PnSsTableAnagraficaClient.Arn
+  
+  PnSsTableNameTipologieDocumenti:
+    Description: 'Nome della tabella SS Tipologie Documenti'
+    Value: !Ref PnSsTableTipologieDocumenti
+
+  PnSsTableArnTipologieDocumenti:
+    Description: 'ARN della tabella SS Tipologie Documenti'
+    Value: !GetAtt PnSsTableTipologieDocumenti.Arn
+  
+  PnSsTableNameDocumenti:
+    Description: 'Nome tabella SS Documenti'
+    Value: !Ref PnSsTableDocumenti
+
+  PnSsTableArnDocumenti:
+    Description: 'ARN della tabella SS Documenti'
+    Value: !GetAtt PnSsTableDocumenti.Arn
+
+  PnSsBucketName:
+    Description: 'Nome Bucket SS'
+    Value: !Ref PnSsBucket
+
+  PnSsBucketArn:
+    Description: 'ARN Bucket SS'
+    Value: !GetAtt PnSsBucket.Arn
+  
+  PnSsStagingBucketName:
+    Description: 'Nome Bucket SS Staging'
+    Value: !Ref PnSsStagingBucket
+
+  PnSsStagingBucketArn:
+    Description: 'ARN Bucket SS Staging'
+    Value: !GetAtt PnSsStagingBucket.Arn
+
+  PnSsQueueNameStagingBucket:
+    Description: 'Nome coda per notifiche SS Staging Bucket'
+    Value: !GetAtt  PnSsQueueStagingBucket.QueueName
+
+  PnSsQueueArnStagingBucket:
+    Description: 'ARN coda per notifiche SS Staging Bucket'
+    Value: !GetAtt  PnSsQueueStagingBucket.Arn
+
+  PnSsQueueURLStagingBucket:
+    Description: 'URL coda per notifiche SS Staging Bucket'
+    Value: !Ref PnSsQueueStagingBucket
+
+  PnSsDLQueueNameStagingBucket:
+    Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
+    Value: !GetAtt PnSsDLQueueStagingBucket.QueueName
+
+  PnSsSNSNameStagingBucket:
+    Description: 'Nome SNS Topic per notifiche SS Staging Bucket'
+    Value: !GetAtt PnSsSNSStagingBucket.TopicName

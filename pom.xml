@@ -37,17 +37,18 @@
 
     <dependencies>
 
-        <dependency>
-            <groupId>it.pagopa.pn</groupId>
-            <artifactId>pn-commons</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
-        </dependency>
+		<dependency>
+			<groupId>it.pagopa.pn</groupId>
+			<artifactId>pn-commons</artifactId>
+			<version>2.0.0-SNAPSHOT</version>
+		</dependency>
 
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-annotations</artifactId>
             <version>1.6.5</version>
         </dependency>
+        
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
@@ -72,11 +73,18 @@
             <scope>test</scope>
         </dependency>
 
+       	<!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-dynamodb -->
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-dynamodb</artifactId>
+		</dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        
         <dependency>
             <groupId>jakarta.xml.ws</groupId>
             <artifactId>jakarta.xml.ws-api</artifactId>
@@ -103,38 +111,40 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>localstack</artifactId>
+			<scope>test</scope>
+		</dependency>
+
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>com.sun.xml.ws</groupId>
-                <artifactId>jaxws-maven-plugin</artifactId>
-                <version>2.3.2</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>wsimport</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <wsdlLocation>/ArubaSignService.wsdl</wsdlLocation>
-                    <wsdlDirectory>${project.basedir}/src/main/resources/wsdl</wsdlDirectory>
-                    <extension>true</extension>
-                    <keep>true</keep>
-                    <packageName>it.pagopa.pnss.transformation.wsdl</packageName>
-                    <sourceDestDir>src/main/java</sourceDestDir>
-                </configuration>
-            </plugin>
-
-
-
-
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>com.sun.xml.ws</groupId>
+				<artifactId>jaxws-maven-plugin</artifactId>
+				<version>2.3.2</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>wsimport</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<wsdlLocation>/ArubaSignService.wsdl</wsdlLocation>
+					<wsdlDirectory>${project.basedir}/src/main/resources/wsdl</wsdlDirectory>
+					<extension>true</extension>
+					<keep>true</keep>
+					<packageName>it.pagopa.pnss.transformation.wsdl</packageName>
+					<sourceDestDir>src/main/java</sourceDestDir>
+				</configuration>
+			</plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -145,6 +155,7 @@
                     </excludes>
                 </configuration>
             </plugin>
+            
             <plugin>
                 <groupId>org.openapitools</groupId>
                 <artifactId>openapi-generator-maven-plugin</artifactId>

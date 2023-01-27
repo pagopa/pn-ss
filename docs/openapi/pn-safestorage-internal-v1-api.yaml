@@ -338,17 +338,13 @@ components:
           description: Elenco dei tipi di documenti che il client è autorizzato a creare.
         signatureInfo:
           type: object
-        userConfigurationDestination:
-          $ref: '#/components/schemas/UserConfigurationDestination'
-    UserConfigurationDestination:
-      type: object
-      properties:
-        destinations:
-          type: array
-          items:
-            type: string
-          
-        
+        destination:
+          type: object
+          description: Informazioni per contattare in modalità push i sistemi client.
+          properties:
+            sqsUrl:
+              type: string
+              description: URL della coda SQS a cui contattare il client
 
   securitySchemes:
     ApiKeyAuth:
@@ -358,6 +354,3 @@ components:
 
 security:
   - ApiKeyAuth: [] # use the same name as under securitySchemes
-
-
-

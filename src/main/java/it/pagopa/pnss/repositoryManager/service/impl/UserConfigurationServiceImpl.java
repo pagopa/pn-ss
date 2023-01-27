@@ -1,27 +1,26 @@
 package it.pagopa.pnss.repositoryManager.service.impl;
 
-import java.util.Iterator;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationInput;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
 import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositoryManager.exception.ItemDoesNotExist;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.service.UserConfigurationService;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 @Service
+@Slf4j
 public class UserConfigurationServiceImpl implements UserConfigurationService {
 
 	@Autowired
@@ -29,89 +28,101 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 	@Autowired
 	private ObjectMapper objectMapper;
 
-
-	public UserConfigurationOutput getUser(String name) {
+	public UserConfiguration getUserConfiguration(String username) {
+		
 		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,
-					TableSchema.fromBean(UserConfigurationEntity.class));
-			QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(name).build());
-
-			Iterator<UserConfigurationEntity> result = userConfigurationTable.query(queryConditional).items()
-					.iterator();
-
-			UserConfigurationEntity user = result.next();
-
-			return objectMapper.convertValue(user, UserConfigurationOutput.class);
+			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(
+					DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,TableSchema.fromBean(UserConfigurationEntity.class));
+			UserConfigurationEntity result = userConfigurationTable.getItem(Key.builder().partitionValue(username).build());
+            return objectMapper.convertValue(result, UserConfiguration.class);
 
 		} catch (DynamoDbException e) {
-			System.err.println(e.getMessage());
+			log.error("getUser", e);
 			throw new RepositoryManagerException();
 		}
 	}
 
-	public UserConfigurationOutput postUser(UserConfigurationInput userInput) {
+	public UserConfiguration insertUserConfiguration(UserConfiguration userConfigurationInput) {
+		
+		if (userConfigurationInput == null) {
+			throw new RepositoryManagerException("Document values not specified");
+		}
 
 		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,
-					TableSchema.fromBean(UserConfigurationEntity.class));
-
-			UserConfigurationEntity userEntity = objectMapper.convertValue(userInput, UserConfigurationEntity.class);
+			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(
+					DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,TableSchema.fromBean(UserConfigurationEntity.class));
+			UserConfigurationEntity userEntity = objectMapper.convertValue(userConfigurationInput,UserConfigurationEntity.class);
 
 			if (userConfigurationTable.getItem(userEntity) == null) {
 
 				userConfigurationTable.putItem(userEntity);
-				System.out.println("User inserito nel db ");
-
-				return objectMapper.convertValue(userEntity, UserConfigurationOutput.class);
+				log.info("User Configuration added to the table");
+				return objectMapper.convertValue(userEntity, UserConfiguration.class);
 
 			} else {
-				System.out.println("L'utente non può essere aggiunto, id già esistente");
-				throw new ItemAlreadyPresent(userInput.getName());
-
+				throw new ItemAlreadyPresent(userConfigurationInput.getUsername());
 			}
+			
 		} catch (DynamoDbException e) {
-			System.err.println(e.getMessage());
+			log.error("insertUserConfiguration",e);
 			throw new RepositoryManagerException();
-
 		}
 
 	}
 
-	public UserConfigurationOutput updateUser(UserConfigurationInput user) {
+	public UserConfiguration patchUserConfiguration(String username, UserConfiguration userConfigurationInput) {
+		
+		if (username == null || username.isBlank()) {
+			throw new RepositoryManagerException("User configuration name not specified");
+		}
+		if (userConfigurationInput == null) {
+			throw new RepositoryManagerException("User configuration values not specified");
+		}
+		if (!userConfigurationInput.getUsername().isBlank() && !userConfigurationInput.getUsername().equals(username)) {
+			throw new RepositoryManagerException("User configuration key does not match");
+		}
 
 		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,
-					TableSchema.fromBean(UserConfigurationEntity.class));
-			UserConfigurationEntity userEntity = objectMapper.convertValue(user, UserConfigurationEntity.class);
+			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(
+					DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,TableSchema.fromBean(UserConfigurationEntity.class));
+			UserConfigurationEntity userEntity = userConfigurationTable.getItem(Key.builder().partitionValue(username).build());
 
-			if (userConfigurationTable.getItem(userEntity) != null) {
-				userConfigurationTable.putItem(userEntity);
-				System.out.println("Modifica avvenuta con successo");
-				return objectMapper.convertValue(userEntity, UserConfigurationOutput.class);
-			} else {
-				throw new RepositoryManagerException();
-			}
+            if (userConfigurationTable.getItem(userEntity) != null) { 
+            	
+            	userEntity.setCanRead(userConfigurationInput.getCanRead());
+            	userEntity.setCanCreate(userConfigurationInput.getCanCreate());
+            	
+            	userConfigurationTable.updateItem(userEntity);
+	            log.info("User Configuration updated");
+	            return objectMapper.convertValue(userEntity, UserConfiguration.class);
+	            
+	    	} else {
+	    		throw new RepositoryManagerException("User Configuration cannot be updated: Document does not exists");
+    	    }
+            
 		} catch (DynamoDbException e) {
-			System.err.println(e.getMessage());
+			log.error("patchUserConfiguration",e);
 			throw new RepositoryManagerException();
 		}
 	}
 
-	public UserConfigurationOutput deleteUser(String name) {
+	public void deleteUserConfiguration(String username) {
 
 		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,
-					TableSchema.fromBean(UserConfigurationEntity.class));
-			QueryConditional queryConditional = QueryConditional.keyEqualTo(Key.builder().partitionValue(name).build());
-			Iterator<UserConfigurationEntity> result = userConfigurationTable.query(queryConditional).items()
-					.iterator();
-			UserConfigurationEntity userEntity = result.next();
-			userConfigurationTable.deleteItem(userEntity);
-			System.out.println("Cancellazione avvenuta con successo");
-			return objectMapper.convertValue(userEntity, UserConfigurationOutput.class);
+			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(
+					DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,TableSchema.fromBean(UserConfigurationEntity.class));
+			UserConfigurationEntity result = userConfigurationTable.getItem(Key.builder().partitionValue(username).build());
+			
+            if (result == null) {
+            	throw new ItemDoesNotExist(username);
+            }
+            else {
+            	userConfigurationTable.deleteItem(result);
+	            log.info("User Configuration deleted");   
+            }
 
 		} catch (DynamoDbException e) {
-			System.err.println(e.getMessage());
+			log.error("deleteUserConfiguration",e);
 			throw new RepositoryManagerException();
 
 		}

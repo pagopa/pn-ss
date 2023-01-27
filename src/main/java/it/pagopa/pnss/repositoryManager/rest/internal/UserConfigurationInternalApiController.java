@@ -1,56 +1,56 @@
 package it.pagopa.pnss.repositoryManager.rest.internal;
 
-import javax.validation.Valid;
+import static org.springframework.http.HttpStatus.OK;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ServerWebExchange;
 
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationInput;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
+import it.pagopa.pn.template.internal.rest.v1.api.UserConfigurationInternalApi;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pnss.repositoryManager.service.UserConfigurationService;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/userconfigurations")
-public class UserConfigurationInternalApiController {
-
+public class UserConfigurationInternalApiController implements UserConfigurationInternalApi {
+ 
 	@Autowired
 	private UserConfigurationService userService;
 
-	@GetMapping(path = "/{name}")
-	public Mono<ResponseEntity<UserConfigurationOutput>> getUser(@PathVariable String name) 
-	{
-		UserConfigurationOutput userConfigurationOutput = userService.getUser(name);
-		return Mono.just(ResponseEntity.ok().body(userConfigurationOutput));
-	}
+	@Override
+    public Mono<ResponseEntity<UserConfiguration>> getUserConfiguration(String userName,  final ServerWebExchange exchange) {
+        
+		UserConfiguration userConfiguration = userService.getUserConfiguration(userName);
+    	return Mono.just(ResponseEntity.ok().body(userConfiguration));
 
-	@PostMapping()
-	public Mono<ResponseEntity<UserConfigurationOutput>> postUser(@Valid @RequestBody UserConfigurationInput user) 
-	{
-		UserConfigurationOutput userConfigurationOutput = userService.postUser(user);
-		return Mono.just(ResponseEntity.ok().body(userConfigurationOutput));
-	}
+    }
+    
+	@Override
+    public Mono<ResponseEntity<UserConfiguration>> insertUserConfiguration(Mono<UserConfiguration> userConfiguration,  final ServerWebExchange exchange) {
 
-	@PutMapping
-	public Mono<ResponseEntity<UserConfigurationOutput>> updateUser(@Valid @RequestBody UserConfigurationInput user) 
-	{
-		UserConfigurationOutput userConfigurationOutput = userService.updateUser(user);
-		return Mono.just(ResponseEntity.ok().body(userConfigurationOutput));
-	}
+    	return userConfiguration.map(request -> {
+    		UserConfiguration userConfigurationInserted = userService.insertUserConfiguration(request);
+    		return ResponseEntity.ok().body(userConfigurationInserted);
+    	});
 
-	@DeleteMapping(path = "/{name}")
-	public Mono<ResponseEntity<UserConfigurationOutput>> deleteUser(@PathVariable String name) 
-	{
-		UserConfigurationOutput userConfigurationOutput = userService.deleteUser(name);
-		return Mono.just(ResponseEntity.ok().body(userConfigurationOutput));
-	}
+    }
+
+	@Override
+    public Mono<ResponseEntity<UserConfiguration>> patchUserConfiguration(String userName, Mono<UserConfiguration> userConfiguration,  final ServerWebExchange exchange) {
+
+    	return userConfiguration.map(request -> {
+    		UserConfiguration userConfigurationUpdated = userService.patchUserConfiguration(userName, request);
+    		return ResponseEntity.ok().body(userConfigurationUpdated);
+    	});
+    }
+
+	@Override
+    public Mono<ResponseEntity<Void>> deleteUserConfiguration(String userName,  final ServerWebExchange exchange) {
+       
+		userService.deleteUserConfiguration(userName);
+    	return Mono.just(new ResponseEntity<>(OK));	
+
+    }
 
 }

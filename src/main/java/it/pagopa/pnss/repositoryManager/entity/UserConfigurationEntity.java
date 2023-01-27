@@ -2,7 +2,6 @@ package it.pagopa.pnss.repositoryManager.entity;
 
 import java.util.List;
 
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationDestinationDTO;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -17,20 +16,20 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortK
 public class UserConfigurationEntity {
 	
 	@Getter(AccessLevel.NONE)
-	private String name;
+	private String username;
 	private List<String> canCreate;
 	private List<String> canRead;
 	private String signatureInfo;
-	private UserConfigurationDestinationDTO destination; 
+	private UserConfigurationDestinationEntity destination; 
 	@Getter(AccessLevel.NONE)
 	private String apiKey;
 	
 	@DynamoDbPartitionKey
-	public String getName() {
-		return name;
-	}
+	public String getUsername() {
+		return username;
+	}	
 	
-	@DynamoDbSortKey
+//	@DynamoDbSortKey
 	public String getApiKey() {
 		return apiKey;
 	}

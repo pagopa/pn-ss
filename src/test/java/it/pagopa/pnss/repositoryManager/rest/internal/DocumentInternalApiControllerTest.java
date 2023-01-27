@@ -149,7 +149,7 @@ public class DocumentInternalApiControllerTest {
 	        .expectStatus().isOk();
 		
 		EntityExchangeResult<Document> documentUpdated = webTestClient.get()
-			.uri(BASE_URL+"/"+documentInput.getDocumentKey())
+			.uri(BASE_URL + "/" + PARTITION_ID)
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isOk()

@@ -40,8 +40,8 @@ public class DocumentInternalApiController implements DocumentInternalApi {
     public Mono<ResponseEntity<Document>> patchDoc(String documentKey, Mono<Document> document,  final ServerWebExchange exchange) {
     	
     	return document.map(request -> {
-    		Document documentInserted = documentService.patchDocument(documentKey, request);
-    		return ResponseEntity.ok().body(documentInserted);
+    		Document documentUpdated = documentService.patchDocument(documentKey, request);
+    		return ResponseEntity.ok().body(documentUpdated);
     	});
 
     }

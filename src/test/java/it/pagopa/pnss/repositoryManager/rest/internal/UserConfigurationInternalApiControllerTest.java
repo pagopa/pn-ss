@@ -3,7 +3,9 @@ package it.pagopa.pnss.repositoryManager.rest.internal;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.util.ArrayList;
+import java.util.List;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -11,12 +13,12 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationDestinationDTO;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationInput;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 
 @SpringBootTestWebEnv
@@ -28,26 +30,34 @@ public class UserConfigurationInternalApiControllerTest {
 	private WebTestClient webTestClient;
 	
 	private static final String PARTITION_ID = "provachiave1";
-	private static final String SORT_ID = "sortedKey1";
 	private static final String NO_EXISTENT_PARTITION_ID = "prova_chiave_bad";
 	
-	private static final String BASE_URL = "http://localhost:8090/user-configuration";
+	private static final String BASE_URL = "/safe-storage/internal/v1/userConfigurations";
+	
+	private UserConfiguration getUserConfiguration() {
+		List<String> canCreate = new ArrayList<>();
+		canCreate.add("A");
+		List<String> canRead  = new ArrayList<>();
+		canRead.add("DD");
+		UserConfigurationDestination destination = new UserConfigurationDestination(); 
+		destination.setSqsUrl("URL");
+		
+		UserConfiguration userConfiguration = new UserConfiguration();
+		userConfiguration.setUsername(PARTITION_ID);
+		userConfiguration.setCanCreate(canCreate);
+		userConfiguration.setCanRead(canRead);
+		userConfiguration.setSignatureInfo("mmm");
+		userConfiguration.setDestination(destination);
+		userConfiguration.setApiKey("apiKey");
+		return userConfiguration;
+	}
 	
 	@Test
 	@Order(1)
 	// codice test: ANSS.101.1
 	public void postItem() {
 		
-		UserConfigurationInput userInput = new UserConfigurationInput();
-		userInput.setName(PARTITION_ID);
-		userInput.setApiKey(SORT_ID);
-		userInput.setCanCreate(new ArrayList<String>());
-		userInput.getCanCreate().add("create1");
-		userInput.setCanRead(new ArrayList<String>());
-		userInput.getCanRead().add("read1");
-		userInput.setDestination(new UserConfigurationDestinationDTO());
-		userInput.getDestination().setSqsUrl("url1");
-		userInput.setSignatureInfo("info1");
+		UserConfiguration userInput = getUserConfiguration();
 		
 		webTestClient.post()
 	        .uri(BASE_URL)
@@ -55,8 +65,7 @@ public class UserConfigurationInternalApiControllerTest {
 	        .contentType(APPLICATION_JSON)
 	        .body(BodyInserters.fromValue(userInput))
 	        .exchange()
-	        .expectStatus()
-	        .isOk();
+	        .expectStatus().isOk();
 		
 		System.out.println("\n Test 1 (postItem) insert 1");
 		
@@ -68,16 +77,7 @@ public class UserConfigurationInternalApiControllerTest {
     // codice test: ANSS.101.1
     public void postItemPartitionKeyDuplicated() {
     	
-		UserConfigurationInput userInput = new UserConfigurationInput();
-		userInput.setName(PARTITION_ID);
-		userInput.setApiKey(SORT_ID);
-		userInput.setCanCreate(new ArrayList<String>());
-		userInput.getCanCreate().add("create1");
-		userInput.setCanRead(new ArrayList<String>());
-		userInput.getCanRead().add("read1");
-		userInput.setDestination(new UserConfigurationDestinationDTO());
-		userInput.getDestination().setSqsUrl("url1");
-		userInput.setSignatureInfo("info1");
+    	UserConfiguration userInput = getUserConfiguration();
     	
 		webTestClient.post()
 		        .uri(BASE_URL)
@@ -85,8 +85,7 @@ public class UserConfigurationInternalApiControllerTest {
 		        .contentType(APPLICATION_JSON)
 		        .body(BodyInserters.fromValue(userInput))
 		        .exchange()
-		        .expectStatus()
-		        .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+		        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 		
 		System.out.println("\n Test 2 (postItemPartitionKeyDuplicated) insert 2");
 	
@@ -102,9 +101,8 @@ public class UserConfigurationInternalApiControllerTest {
 			.uri(BASE_URL+"/"+PARTITION_ID)
 	        .accept(APPLICATION_JSON)
 	        .exchange()
-	        .expectStatus()
-	        .isOk()
-	        .expectBody(UserConfigurationOutput.class);
+	        .expectStatus().isOk()
+	        .expectBody(UserConfiguration.class);
         
         System.out.println("\n Test 3 (getItem) passed \n");
 	}
@@ -118,8 +116,7 @@ public class UserConfigurationInternalApiControllerTest {
 			.uri(BASE_URL/*+"/"+PARTITION_ID*/)
 	        .accept(APPLICATION_JSON)
 	        .exchange()
-	        .expectStatus()
-	        .isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+	        .expectStatus().isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
         
         System.out.println("\n Test 4 (getItemIncorrectParameters) passed \n");
 	}
@@ -133,7 +130,8 @@ public class UserConfigurationInternalApiControllerTest {
 			.uri(BASE_URL+"/"+NO_EXISTENT_PARTITION_ID)
 	        .accept(APPLICATION_JSON)
 	        .exchange()
-	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+	        .expectStatus().isOk()
+	        .expectBody().isEmpty();
         
         System.out.println("\n Test 5 (getItemNoExistentKey) passed \n");
 	}
@@ -141,85 +139,70 @@ public class UserConfigurationInternalApiControllerTest {
     @Test
     @Order(6)
     // codice test: ANSS.102.1
-    public void putItem() {
+    public void patchItem() {
     	
-		UserConfigurationInput userInput = new UserConfigurationInput();
-		userInput.setName(PARTITION_ID);
-		userInput.setApiKey(SORT_ID);
-		userInput.setCanCreate(new ArrayList<String>());
-    	userInput.getCanCreate().add("create2");
-    	userInput.setCanRead(new ArrayList<String>());
-    	userInput.getCanRead().add("read2");
-    	userInput.setDestination(new UserConfigurationDestinationDTO());
-    	userInput.getDestination().setSqsUrl("url2");
-    	userInput.setSignatureInfo("info2");
+		List<String> canCreate = new ArrayList<>();
+		canCreate.add("B");
     	
-		webTestClient.put()
-	        .uri(BASE_URL)
+    	UserConfiguration userInput = getUserConfiguration();
+    	userInput.setCanCreate(canCreate);
+    	
+		webTestClient.patch()
+	        .uri(BASE_URL+"/"+PARTITION_ID)
 	        .accept(APPLICATION_JSON)
 	        .contentType(APPLICATION_JSON)
 	        .body(BodyInserters.fromValue(userInput))
 	        .exchange()
-	        .expectStatus()
-	        .isOk();
+	        .expectStatus().isOk();
+		
+		EntityExchangeResult<UserConfiguration> userConfigurationUpdated = webTestClient.get()
+				.uri(BASE_URL + "/" + PARTITION_ID)
+		        .accept(APPLICATION_JSON)
+		        .exchange()
+		        .expectStatus().isOk()
+		        .expectBody(UserConfiguration.class).returnResult();
+			
+			Assertions.assertEquals(userInput.getCanCreate(), userConfigurationUpdated.getResponseBody().getCanCreate());
 	
-		System.out.println("\n Test 6 (putItem) passed \n");
+		System.out.println("\n Test 6 (patchItem) passed \n");
     }
     
     @Test
     @Order(7)
     // codice test: ANSS.102.2
-    public void putItemNoExistentKey() {
+    public void patchItemNoExistentKey() {
     	
-		UserConfigurationInput userInput = new UserConfigurationInput();
-		userInput.setName(NO_EXISTENT_PARTITION_ID);
-		userInput.setApiKey(SORT_ID);
-		userInput.setCanCreate(new ArrayList<String>());
-    	userInput.getCanCreate().add("create2");
-    	userInput.setCanRead(new ArrayList<String>());
-    	userInput.getCanRead().add("read2");
-    	userInput.setDestination(new UserConfigurationDestinationDTO());
-    	userInput.getDestination().setSqsUrl("url2");
-    	userInput.setSignatureInfo("info2");
+    	UserConfiguration userInput = getUserConfiguration();
+    	userInput.setUsername(NO_EXISTENT_PARTITION_ID);
     	
-		webTestClient.put()
-	        .uri(BASE_URL)
+		webTestClient.patch()
+	        .uri(BASE_URL+"/"+NO_EXISTENT_PARTITION_ID)
 	        .accept(APPLICATION_JSON)
 	        .contentType(APPLICATION_JSON)
 	        .body(BodyInserters.fromValue(userInput))
 	        .exchange()
-	        .expectStatus()
-	        .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 	
-		System.out.println("\n Test 7 (putItemNoExistentKey) passed \n");
+		System.out.println("\n Test 7 (NO_EXISTENT_PARTITION_ID) passed \n");
     }
     
     @Test
     @Order(8)
     // codice test: ANSS.102.3
-    public void putItemIncorrectParameters() {
+    public void patchItemIncorrectParameters() {
     	
-		UserConfigurationInput userInput = new UserConfigurationInput();
-		userInput.setName(NO_EXISTENT_PARTITION_ID);
-//		userInput.setApiKey(SORT_ID);
-		userInput.setCanCreate(new ArrayList<String>());
-    	userInput.getCanCreate().add("create2");
-    	userInput.setCanRead(new ArrayList<String>());
-    	userInput.getCanRead().add("read2");
-    	userInput.setDestination(new UserConfigurationDestinationDTO());
-    	userInput.getDestination().setSqsUrl("url2");
-    	userInput.setSignatureInfo("info2");
+    	UserConfiguration userInput = getUserConfiguration();
     	
-		webTestClient.put()
-	        .uri(BASE_URL)
+		webTestClient.patch()
+	        .uri(BASE_URL /*+ "/" + PARTITION_ID*/)
 	        .accept(APPLICATION_JSON)
 	        .contentType(APPLICATION_JSON)
 	        .body(BodyInserters.fromValue(userInput))
 	        .exchange()
 	        .expectStatus()
-	        .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+	        .isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
 	
-		System.out.println("\n Test 8 (putItemIncorrectParameters) passed \n");
+		System.out.println("\n Test 8 (patchItemIncorrectParameters) passed \n");
     }
     
     @Test
@@ -231,10 +214,8 @@ public class UserConfigurationInternalApiControllerTest {
 			.uri(BASE_URL+"/"+PARTITION_ID)
 	        .accept(APPLICATION_JSON)
 	        .exchange()
-	        .expectStatus()
-	        .isOk()
-	        .expectBody(UserConfigurationOutput.class)
-	        ;
+	        .expectStatus().isOk()
+	        .expectBody().isEmpty();	        ;
 	    
 	    System.out.println("\n Test 9 (deleteItem) passed \n");
     }

@@ -44,6 +44,9 @@ public class LocalStackTestConfig {
         System.setProperty("aws.config.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.config.secret.key", localStackContainer.getSecretKey());
         System.setProperty("aws.config.default.region", localStackContainer.getRegion());
+        System.setProperty("aws.region",  localStackContainer.getRegion());
+        System.setProperty("aws.access.key", localStackContainer.getAccessKey());
+        System.setProperty("aws.secret.key", localStackContainer.getSecretKey());
 
 ////      SQS Override Endpoint
 //        System.setProperty("aws.sqs.test.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SQS)));

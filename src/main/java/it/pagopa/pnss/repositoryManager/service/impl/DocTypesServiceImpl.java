@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pnss.common.client.dto.DocTypesOutput;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
-import it.pagopa.pnss.repositoryManager.dto.DocTypesOutput;
 import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositoryManager.exception.ItemDoesNotExist;

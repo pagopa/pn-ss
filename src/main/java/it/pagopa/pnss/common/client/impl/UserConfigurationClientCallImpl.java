@@ -1,9 +1,10 @@
 package it.pagopa.pnss.common.client.impl;
 
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.dto.UserConfigurationInput;
+import it.pagopa.pnss.common.client.dto.UserConfigurationOutput;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationInput;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;

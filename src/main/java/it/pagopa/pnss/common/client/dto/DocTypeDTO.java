@@ -1,3 +1,4 @@
+package it.pagopa.pnss.common.client.dto;
 //package it.pagopa.pnss.repositoryManager.dto;
 //
 //import it.pagopa.pnss.repositoryManager.enumeration.ChecksumEnum;

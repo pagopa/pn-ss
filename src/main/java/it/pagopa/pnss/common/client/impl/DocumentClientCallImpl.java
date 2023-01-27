@@ -1,9 +1,10 @@
 package it.pagopa.pnss.common.client.impl;
 
 import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.dto.DocumentInput;
+import it.pagopa.pnss.common.client.dto.DocumentOutput;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
-import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;

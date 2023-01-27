@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositoryManager.enumeration;
+package it.pagopa.pnss.common.client.enumeration;
 
 public enum TipoDocumentoEnum {
 	

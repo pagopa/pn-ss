@@ -3,7 +3,7 @@ package it.pagopa.pnss.repositoryManager.service;
 import java.util.List;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pnss.repositoryManager.dto.DocTypesOutput;
+import it.pagopa.pnss.common.client.dto.DocTypesOutput;
 
 public interface DocTypesService {
 	

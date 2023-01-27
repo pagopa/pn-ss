@@ -5,9 +5,10 @@ import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
-import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
+import it.pagopa.pnss.common.client.dto.DocumentInput;
+import it.pagopa.pnss.common.client.dto.DocumentOutput;
+import it.pagopa.pnss.common.client.dto.UserConfigurationOutput;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -193,7 +194,7 @@ public class UriBuilderService {
         downloadResponse.setChecksum(doc.getCheckSum());
         downloadResponse.setContentLength(BigDecimal.TEN);
         downloadResponse.setContentType("");
-        downloadResponse.setDocumentStatus(doc.getDocumentState().value());
+        downloadResponse.setDocumentStatus(doc.getDocumentState().name());
         downloadResponse.setDocumentType("");
 
         downloadResponse.setKey(fileKey);

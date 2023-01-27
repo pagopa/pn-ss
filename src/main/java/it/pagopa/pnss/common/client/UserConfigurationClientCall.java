@@ -1,10 +1,10 @@
 package it.pagopa.pnss.common.client;
 
-import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationInput;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
 import org.springframework.http.ResponseEntity;
-import reactor.core.publisher.Mono;
+
+import it.pagopa.pnss.common.client.dto.UserConfigurationInput;
+import it.pagopa.pnss.common.client.dto.UserConfigurationOutput;
+import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 
 public interface UserConfigurationClientCall {
 

@@ -26,7 +26,7 @@ public class FileDownloadApiController implements FileDownloadApi {
 
 
 
-        FileDownloadResponse response  = uriBuilderService.createUriForDownloadFile(fileKey);
+        FileDownloadResponse response  = uriBuilderService.createUriForDownloadFile(fileKey,xPagopaSafestorageCxId);
         if (response ==null ){
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "File Not Found for fileKey: " + fileKey);

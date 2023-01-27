@@ -3,12 +3,15 @@ package it.pagopa.pnss.uriBuilder.service;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
-import it.pagopa.pnss.uriBuilder.client.GetRepositoryClient;
-import it.pagopa.pnss.uriBuilder.model.DocumentRepositoryDto;
-import org.aspectj.lang.annotation.After;
-import org.springframework.beans.factory.annotation.Autowired;
+import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
+import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
+import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.regions.Region;
@@ -21,25 +24,23 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import javax.annotation.PostConstruct;
-import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.*;
 
+import static it.pagopa.pnss.common.Constant.*;
+
 @Service
 public class UriBuilderService {
 
-    @Autowired
-    GetRepositoryClient gGetRepositoryClient;
+    UserConfigurationClientCall userConfigurationClientCall;
+    DocumentClientCall documentClientCall;
 
-    public static final String PN_NOTIFICATION_ATTACHMENTS ="PN_NOTIFICATION_ATTACHMENTS";
-    public static final String PN_AAR="PN_AAR";
-    public static final String PN_LEGAL_FACTS="PN_LEGAL_FACTS";
-    public static final String PN_EXTERNAL_LEGAL_FACTS="PN_EXTERNAL_LEGAL_FACTS";
-    public static final String PN_DOWNTIME_LEGAL_FACTS="PN_DOWNTIME_LEGAL_FACTS";
-    public static final BigDecimal MAX_RECOVER_COLD = new BigDecimal(259200);
-    public static final String BUCKET_STAGING="Staging";
-    public static final String BUCKET_HOT ="Hot";
+    public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall) {
+        this.userConfigurationClientCall = userConfigurationClientCall;
+        this.documentClientCall = documentClientCall;
+    }
+
     List <String> hotStatus;
     List <String> coldStatus;
     Map<String,String> mapDocumentTypeToBucket ;
@@ -56,9 +57,35 @@ public class UriBuilderService {
         coldStatus = Arrays.asList("hot");
     }
 
-    public FileCreationResponse createUriForUploadFile(String contentType, String documentType, String status) {
+    public FileCreationResponse createUriForUploadFile(String xPagopaSafestorageCxId, String contentType, String documentType, String status) throws InterruptedException {
+
+        ResponseEntity<UserConfigurationOutput> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfigurationOutput user = null;
+        if (userResponse!=null ){
+            user = userResponse.getBody();
+        }
+
+        if (user == null ){
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
+        }
+
+        List<String> canRead = user.getCanRead();
+        if (!canRead.contains(documentType)){
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Client : "+ xPagopaSafestorageCxId+  " not has privilege for download document type " +documentType);
+        }
+
         FileCreationResponse response = new FileCreationResponse();
-        String keyName = createKeyName(documentType);
+        GenerateRandoKeyFile g = GenerateRandoKeyFile.getInstance();
+        String keyName = g.createKeyName(documentType);
+        int riprova = 0;
+        while (keyPresent(keyName) && riprova <10){
+            Thread.sleep(1000);
+            keyName = g.createKeyName(documentType);
+            riprova++;
+        }
+
         response.setKey(keyName);
         String secret=null;
         response.setSecret(secret);
@@ -75,11 +102,18 @@ public class UriBuilderService {
         response.setUploadUrl(myURL);
         response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
 
-        DocumentRepositoryDto documentRepositoryDto = new DocumentRepositoryDto();
-        gGetRepositoryClient.upLoadDocument(documentRepositoryDto);
+        DocumentInput documentRepositoryDto = new DocumentInput();
+
+        documentClientCall.updatedocument(documentRepositoryDto);
 
         return response;
 
+    }
+
+    private boolean keyPresent(String keyName) {
+        ResponseEntity<DocumentOutput> block = documentClientCall.getdocument(keyName);
+        DocumentOutput doc = block!=null ? block.getBody(): null;
+        return doc != null ? true : false ;
     }
 
     private FileCreationResponse.UploadMethodEnum extractUploadMethod(SdkHttpMethod method) {
@@ -125,26 +159,41 @@ public class UriBuilderService {
 
     }
 
-    private String createKeyName(String documentType) {
-        UUID temp = UUID.randomUUID();
-        String uuidString = Long.toHexString(temp.getMostSignificantBits())
-                + Long.toHexString(temp.getLeastSignificantBits());
-        return documentType+"-"+uuidString;
-    }
 
-    public FileDownloadResponse createUriForDownloadFile(String fileKey) {
+
+    public FileDownloadResponse createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId) {
         // chiamare l'api di  GestoreRepositori per recupero dati
         //todo
 
+        ResponseEntity<UserConfigurationOutput> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfigurationOutput user = null;
+        if (userResponse!=null ){
+            user = userResponse.getBody();
+        }
+        if (user == null ){
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
+        }
+        ResponseEntity<DocumentOutput> block = documentClientCall.getdocument(fileKey);
+        DocumentOutput doc = block!=null ? block.getBody(): null;
+        if (doc==null ){
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey);
+        }
+        List<String> canRead = user.getCanRead();
+// TODO: 26/01/2023  mettere doc.getDocumentType
+        String typeDocument = doc.getCheckSum();
+        if (!canRead.contains(typeDocument)){
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Client : "+ xPagopaSafestorageCxId+  " not has privilege for download document type " +typeDocument);
+        }
 
-        ResponseEntity <DocumentRepositoryDto> d = gGetRepositoryClient.retrieveDocument(fileKey);
-        DocumentRepositoryDto doc = d!=null ? d.getBody(): null;
 
         FileDownloadResponse downloadResponse = new FileDownloadResponse();
-        downloadResponse.setChecksum("");
+        downloadResponse.setChecksum(doc.getCheckSum());
         downloadResponse.setContentLength(BigDecimal.TEN);
         downloadResponse.setContentType("");
-        downloadResponse.setDocumentStatus("");
+        downloadResponse.setDocumentStatus(doc.getDocumentState().value());
         downloadResponse.setDocumentType("");
 
         downloadResponse.setKey(fileKey);

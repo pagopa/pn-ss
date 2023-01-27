@@ -94,10 +94,18 @@ Parameters:
   PnSsBucketName:
     Type: String
     Description: 'Nome Bucket SS'
+
+  PnSsBucketArn:
+    Type: String
+    Description: 'ARN Bucket SS'
   
   PnSsStagingBucketName:
     Type: String
     Description: 'Nome Bucket SS Staging'
+
+  PnSsStagingBucketArn:
+    Type: String
+    Description: 'ARN Bucket SS Staging'
 
   PnSsQueueNameStagingBucket:
     Type: String
@@ -154,6 +162,7 @@ Resources:
         LoadbalancerRulePriority: !Ref MicroserviceNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
+        # HealthCheckPath: 
   
   PnSsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -181,8 +190,9 @@ Resources:
               - 's3:GetObject*'
               - 's3:*MultipartUpload*'
             Resource:
-              - !Sub '${PnSsBucketName}'
-              - !Sub '${PnSsStagingBucketName}'
+              - !Sub '${PnSsStagingBucketArn}'
+              - !Sub '${PnSsBucketArn}'
+
           - Effect: Allow
             Action:
               - 'sqs:ReceiveMessage'
@@ -190,5 +200,7 @@ Resources:
               - 'sqs:PurgeQueue'
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
+
+
 
               

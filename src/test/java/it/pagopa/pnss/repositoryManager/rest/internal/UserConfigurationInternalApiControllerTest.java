@@ -32,7 +32,7 @@ public class UserConfigurationInternalApiControllerTest {
 	private static final String PARTITION_ID = "provachiave1";
 	private static final String NO_EXISTENT_PARTITION_ID = "prova_chiave_bad";
 	
-	private static final String BASE_URL = "/safe-storage/internal/v1/userConfigurations";
+	private static final String BASE_URL = "http://localhost:8080/safestorage/internal/v1/userConfigurations";
 	
 	private UserConfiguration getUserConfiguration() {
 		List<String> canCreate = new ArrayList<>();

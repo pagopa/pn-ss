@@ -28,7 +28,7 @@ public class DocumentInternalApiControllerTest {
 	@Autowired
 	private WebTestClient webTestClient;
 
-	private static final String BASE_URL = "/safe-storage/internal/v1/documents/";
+	private static final String BASE_URL = "http://localhost:8080/safestorage/internal/v1/documents/";
 
 	private static final String PARTITION_ID = "documentKey1";
 	private static final String NO_EXISTENT_PARTITION_ID = "cdocumentKey_bad";

@@ -27,7 +27,7 @@ public class DocTypesInternalApiControllerTest {
 	@Autowired
 	private WebTestClient webTestClient;
 
-	private static final String BASE_URL = "http://localhost:8080/safe-storage/internal/v1/doctypes";
+	private static final String BASE_URL = "http://localhost:8080/safestorage/internal/v1/doctypes";
 
 	private static final TypeIdEnum PARTITION_ID = TypeIdEnum.NOTIFICATION_ATTACHMENTS;
 	private static final TypeIdEnum NO_EXISTENT_PARTITION_ID = TypeIdEnum.EXTERNAL_LEGAL_FACTS;

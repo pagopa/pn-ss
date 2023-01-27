@@ -25,7 +25,7 @@ paths:
   ################################################################################################
   ###                                      CONFIGURAZIONI                                      ###
   ################################################################################################
-  '/safe-storage/internal/v1/doctypes/{typeId}':
+  '/safestorage/internal/v1/doctypes/{typeId}':
     get:
       operationId: getDocType
       summary: Restituisce una tipologia di documento.
@@ -76,7 +76,7 @@ paths:
         '200':
           description: OK
   
-  '/safe-storage/internal/v1/doctypes': 
+  '/safestorage/internal/v1/doctypes': 
     post:
       operationId: insertDocType
       summary: Inserisce una nuova tipologia di documento.
@@ -97,7 +97,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DocumentType'
                 
-  '/safe-storage/internal/v1/documents/{documentKey}':
+  '/safestorage/internal/v1/documents/{documentKey}':
     get:
       operationId: getDocument
       summary: Restituisce un documento.
@@ -148,7 +148,7 @@ paths:
         '200':
           description: OK
                 
-  '/safe-storage/internal/v1/documents': 
+  '/safestorage/internal/v1/documents': 
     post:
       operationId: insertDocument
       summary: Inserisce una nuovo documento.
@@ -169,7 +169,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Document'
                 
-  '/safe-storage/internal/v1/userConfigurations/{userName}':
+  '/safestorage/internal/v1/userConfigurations/{userName}':
     get:
       operationId: getUserConfiguration
       summary: Restituisce una anagrafica client.
@@ -220,7 +220,7 @@ paths:
         '200':
           description: OK
                 
-  '/safe-storage/internal/v1/userConfigurations':
+  '/safestorage/internal/v1/userConfigurations':
     post:
       operationId: insertUserConfiguration
       summary: Inserisce una nuova anagrafica client.

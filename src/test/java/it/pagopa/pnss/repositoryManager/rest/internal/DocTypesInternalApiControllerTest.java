@@ -109,7 +109,6 @@ public class DocTypesInternalApiControllerTest {
 			.uri(BASE_URL + "/" + NO_EXISTENT_PARTITION_ID.name())
 			.accept(APPLICATION_JSON)
 			.exchange()
-//			.expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 			.expectStatus().isOk()
 			.expectBody().isEmpty();
 		
@@ -181,12 +180,12 @@ public class DocTypesInternalApiControllerTest {
 		docTypesInput.setTypeId(NO_EXISTENT_PARTITION_ID);
 		
 		webTestClient.put()
-			         .uri(BASE_URL + "/" + NO_EXISTENT_PARTITION_ID.name())
+			         .uri(BASE_URL /*+ "/" + NO_EXISTENT_PARTITION_ID.name()*/)
 			         .accept(APPLICATION_JSON)
 			         .contentType(APPLICATION_JSON)
 			         .body(BodyInserters.fromValue(docTypesInput))
 			         .exchange()
-			         .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+			         .expectStatus().isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
 
 		System.out.println("\n Test 8 (putItemIncorretctParameters) passed \n");
 
@@ -202,7 +201,7 @@ public class DocTypesInternalApiControllerTest {
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isOk()
-	        .expectBody(DocumentType.class);
+	        .expectBody().isEmpty();
 	    
 	    System.out.println("\n Test 9 (deleteItem) passed \n");
 

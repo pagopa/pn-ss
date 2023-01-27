@@ -71,12 +71,16 @@ public class DocTypesServiceImpl implements DocTypesService {
         }
 	}
 	
-	public DocumentType insertDocType(DocumentType docTypesInput) {
+	public DocumentType insertDocType(DocumentType docTypeInput) {
+		
+		if (docTypeInput == null) {
+			throw new RepositoryManagerException("DocType values not specified");
+		}
         
         try {
             DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(
             		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
-            DocTypeEntity docTypesEntity = objectMapper.convertValue(docTypesInput, DocTypeEntity.class);
+            DocTypeEntity docTypesEntity = objectMapper.convertValue(docTypeInput, DocTypeEntity.class);
             
             if (docTypesTable.getItem(docTypesEntity) == null) {
             	
@@ -86,7 +90,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 
             } else {
             	log.error("DocType cannot be added to the table, DocType id already exists");
-            	throw new ItemAlreadyPresent(docTypesInput.getTypeId().getValue());
+            	throw new ItemAlreadyPresent(docTypeInput.getTypeId().getValue());
 
             }
         } catch (DynamoDbException  e){
@@ -96,19 +100,22 @@ public class DocTypesServiceImpl implements DocTypesService {
         
 	}
 	
-	public DocumentType updateDocType(String typeId, DocumentType docTypesInput) {
+	public DocumentType updateDocType(String typeId, DocumentType docTypeInput) {
 		
 		if (typeId == null || typeId.isBlank()) {
 			throw new RepositoryManagerException("typeId not specified");
 		}
-		if (docTypesInput != null && !docTypesInput.getTypeId().getValue().equals(typeId)) {
+		if (docTypeInput == null) {
+			throw new RepositoryManagerException("DocType values not specified");
+		}
+		if (!docTypeInput.getTypeId().getValue().equals(typeId)) {
 			throw new RepositoryManagerException("typeId does not match");
 		}
 		
 		try {
 			DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(
 					DynamoTableNameConstant.DOC_TYPES_TABLE_NAME,TableSchema.fromBean(DocTypeEntity.class));
-			DocTypeEntity docTypesEntity = objectMapper.convertValue(docTypesInput, DocTypeEntity.class);
+			DocTypeEntity docTypesEntity = objectMapper.convertValue(docTypeInput, DocTypeEntity.class);
 
 			if (docTypesTable.getItem(docTypesEntity) != null) {
 				

@@ -1,57 +1,57 @@
 package it.pagopa.pnss.repositoryManager.rest.internal;
 
-import javax.validation.Valid;
+import static org.springframework.http.HttpStatus.OK;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ServerWebExchange;
 
-import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
-import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
+import it.pagopa.pn.template.internal.rest.v1.api.DocumentInternalApi;
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pnss.repositoryManager.service.DocumentService;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/documents")
-public class DocumentInternalApiController {
+public class DocumentInternalApiController implements DocumentInternalApi {
 
 	@Autowired
 	private DocumentService documentService;
+	
+	@Override
+    public Mono<ResponseEntity<Document>> getDocument(String documentKey,  final ServerWebExchange exchange) {
 
-	@GetMapping(value = "/{documentKey}")
-	public Mono<ResponseEntity<DocumentOutput>> getdocument(@PathVariable("checkSum") String checkSum) 
-	{
-		DocumentOutput documentOut = documentService.getDocument(checkSum);
-		return Mono.just(ResponseEntity.ok().body(documentOut));
-	}
+    	Document document = documentService.getDocument(documentKey);
+    	return Mono.just(ResponseEntity.ok().body(document));
 
-	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<DocumentOutput>> postdocument(@Valid @RequestBody DocumentInput documentInput) 
-	{
-		DocumentOutput documentOut = documentService.postdocument(documentInput);
-		return Mono.just(ResponseEntity.ok().body(documentOut));
-	}
+    }
 
-	@PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<DocumentOutput>> updatedocument(@Valid @RequestBody DocumentInput document) 
-	{
-		DocumentOutput documentOut = documentService.updatedocument(document);
-		return Mono.just(ResponseEntity.ok().body(documentOut));
-	}
+	@Override
+    public  Mono<ResponseEntity<Document>> insertDocument(Mono<Document> document,  final ServerWebExchange exchange) {
 
-	@DeleteMapping(path = "/{documentKey}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<DocumentOutput>> deletedocument(@PathVariable("checkSum") String checkSum) 
-	{
-		DocumentOutput documentOut = documentService.deletedocument(checkSum);
-		return Mono.just(ResponseEntity.ok().body(documentOut));
-	}
+    	return document.map(request -> {
+    		Document documentInserted = documentService.insertDocument(request);
+    		return ResponseEntity.ok().body(documentInserted);
+    	});
+
+    }
+
+	@Override
+    public Mono<ResponseEntity<Document>> patchDoc(String documentKey, Mono<Document> document,  final ServerWebExchange exchange) {
+    	
+    	return document.map(request -> {
+    		Document documentInserted = documentService.patchDocument(documentKey, request);
+    		return ResponseEntity.ok().body(documentInserted);
+    	});
+
+    }
+
+	@Override
+    public Mono<ResponseEntity<Void>> deleteDocument(String documentKey,  final ServerWebExchange exchange) {
+		
+		documentService.deleteDocument(documentKey);
+    	return Mono.just(new ResponseEntity<>(OK));	
+    	
+    }
 
 }

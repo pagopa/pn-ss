@@ -1,13 +1,12 @@
 package it.pagopa.pnss.repositoryManager.service;
 
-import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
-import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 
 public interface DocumentService {
 	
-	DocumentOutput getDocument(String documentKey);
-	DocumentOutput postdocument(DocumentInput documentInput);
-	DocumentOutput updatedocument(DocumentInput documentInput);
-	DocumentOutput deletedocument(String documentKey);
+	Document getDocument(String documentKey);
+	Document insertDocument(Document documentInput);
+	Document patchDocument(String documentKey, Document documentInput);
+	void deleteDocument(String documentKey);
 
 }

@@ -306,13 +306,19 @@ components:
         retentionPeriod:
           type: string
         checkSum: 
+          description:
+            codice di verifica del corretto caricamento del file
+            https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
           type: string
+          enum: [ 'MD5', 'SHA256']  
         contentLenght:
           type: string
         contentType:
           type: string
         documentType:
           type: string
+          description: nome del tipo di documento
+          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
     UserConfiguration:
       type: object
       properties:

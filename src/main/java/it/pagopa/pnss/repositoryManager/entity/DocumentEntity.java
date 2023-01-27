@@ -1,6 +1,6 @@
 package it.pagopa.pnss.repositoryManager.entity;
 
-import it.pagopa.pnss.repositoryManager.enumeration.DocumentStateEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentStateEnum;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;

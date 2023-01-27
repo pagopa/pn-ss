@@ -9,8 +9,8 @@ public interface DocTypesService {
 	
 	DocumentType getDocType(String typeId);
 	List<DocTypesOutput> getAllDocType();
-	DocumentType insertDocType(DocumentType docTypesInput);
-	DocumentType updateDocType(String typeId, DocumentType DocumentType);
+	DocumentType insertDocType(DocumentType docTypeInput);
+	DocumentType updateDocType(String typeId, DocumentType docType);
 	void deleteDocType(String typeId);
 
 }

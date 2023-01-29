@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositoryManager.rest.internal;
+package it.pagopa.pnss.repositorymanager.rest.internal;
 
 import static org.springframework.http.HttpStatus.OK;
 
@@ -9,11 +9,11 @@ import org.springframework.web.server.ServerWebExchange;
 
 import it.pagopa.pn.template.internal.rest.v1.api.DocTypeInternalApi;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pnss.repositoryManager.service.DocTypesService;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import reactor.core.publisher.Mono;
 
 @RestController
-public class DocTypesInternalApiController implements DocTypeInternalApi {
+public class DocTypeInternalApiController implements DocTypeInternalApi {
 	
 	@Autowired
 	private DocTypesService docTypesService;

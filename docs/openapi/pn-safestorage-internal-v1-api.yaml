@@ -169,14 +169,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/Document'
                 
-  '/safestorage/internal/v1/userConfigurations/{userName}':
+  '/safestorage/internal/v1/userConfigurations/{name}':
     get:
       operationId: getUserConfiguration
       summary: Restituisce una anagrafica client.
       tags:
         - userConfigurationInternal
       parameters:
-        - $ref: '#/components/parameters/userName'       
+        - $ref: '#/components/parameters/name'       
       responses:
         '404':
             description: Not configured
@@ -192,7 +192,7 @@ paths:
       tags:
         - userConfigurationInternal
       parameters:
-        - $ref: '#/components/parameters/userName'          
+        - $ref: '#/components/parameters/name'          
       requestBody:
         content:
           application/json:
@@ -213,7 +213,7 @@ paths:
       tags:
         - userConfigurationInternal
       parameters:
-        - $ref: '#/components/parameters/userName'       
+        - $ref: '#/components/parameters/name'       
       responses:
         '404':
             description: Not configured
@@ -257,9 +257,9 @@ components:
       required: true
       schema:
         type: string
-    userName:
-      name: userName
-      description: username
+    name:
+      name: name
+      description: Nome del client
       in: path
       required: true
       schema:
@@ -269,7 +269,7 @@ components:
     DocumentType:
       type: object
       properties:
-        typeId:
+        name:
           type: string
           description: nome del tipo di documento
           enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
@@ -322,7 +322,7 @@ components:
     UserConfiguration:
       type: object
       properties:
-        username:
+        name:
           type: string
         apiKey:
           type: string

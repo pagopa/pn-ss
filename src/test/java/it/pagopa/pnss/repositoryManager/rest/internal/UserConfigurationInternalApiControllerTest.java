@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.rest.internal;
+package it.pagopa.pnss.repositoryManager.rest.internal;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 

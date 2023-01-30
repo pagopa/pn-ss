@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.service.impl;
+package it.pagopa.pnss.repositoryManager.service.impl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,9 +11,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
-import it.pagopa.pnss.repositorymanager.service.DocTypesService;
-import it.pagopa.pnss.repositorymanager.service.DocumentsConfigsService;
-import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
+import it.pagopa.pnss.repositoryManager.service.DocTypesService;
+import it.pagopa.pnss.repositoryManager.service.DocumentsConfigsService;
+import it.pagopa.pnss.repositoryManager.service.StorageConfigurationsService;
 
 
 /** Fare riferimento al file "\pn-ss\docs\openapi\pn-safestorage-v1-api.yaml" */

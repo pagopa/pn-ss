@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.rest;
+package it.pagopa.pnss.repositoryManager.rest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -10,8 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.template.rest.v1.api.CfgApi;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
-import it.pagopa.pnss.repositorymanager.service.DocumentsConfigsService;
-import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
+import it.pagopa.pnss.repositoryManager.service.DocumentsConfigsService;
+import it.pagopa.pnss.repositoryManager.service.UserConfigurationService;
 import reactor.core.publisher.Mono;
 
 

@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.service;
+package it.pagopa.pnss.repositoryManager.service;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 

@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.entity;
+package it.pagopa.pnss.repositoryManager.entity;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentStateEnum;
 import lombok.AccessLevel;

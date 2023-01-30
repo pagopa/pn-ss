@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.rest.internal;
+package it.pagopa.pnss.repositoryManager.rest.internal;
 
 import static org.springframework.http.HttpStatus.OK;
 
@@ -9,7 +9,7 @@ import org.springframework.web.server.ServerWebExchange;
 
 import it.pagopa.pn.template.internal.rest.v1.api.UserConfigurationInternalApi;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
+import it.pagopa.pnss.repositoryManager.service.UserConfigurationService;
 import reactor.core.publisher.Mono;
 
 @RestController

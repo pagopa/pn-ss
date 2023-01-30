@@ -2,9 +2,9 @@ package it.pagopa.pnss.localstack;
 
 //import static it.pagopa.pnss.constant.QueueNameConstant.*;
 import static it.pagopa.pnss.localstack.LocalStackUtils.DEFAULT_LOCAL_STACK_TAG;
-import static it.pagopa.pnss.repositorymanager.constant.DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME;
-import static it.pagopa.pnss.repositorymanager.constant.DynamoTableNameConstant.DOCUMENT_TABLE_NAME;
-import static it.pagopa.pnss.repositorymanager.constant.DynamoTableNameConstant.DOC_TYPES_TABLE_NAME;
+import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME;
+import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.DOCUMENT_TABLE_NAME;
+import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.DOC_TYPES_TABLE_NAME;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.DYNAMODB;
 
 import javax.annotation.PostConstruct;
@@ -14,9 +14,9 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
-import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
-import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
+import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
+import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
+import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
 import software.amazon.awssdk.core.internal.waiters.ResponseOrException;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;

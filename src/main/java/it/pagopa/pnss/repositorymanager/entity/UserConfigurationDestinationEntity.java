@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.entity;
+package it.pagopa.pnss.repositoryManager.entity;
 
 import lombok.Data;
 import lombok.ToString;

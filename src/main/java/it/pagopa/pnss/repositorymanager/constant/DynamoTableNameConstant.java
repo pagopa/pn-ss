@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.constant;
+package it.pagopa.pnss.repositoryManager.constant;
 
 public final class DynamoTableNameConstant {
 

@@ -1,6 +1,6 @@
-package it.pagopa.pnss.repositorymanager;
+package it.pagopa.pnss.repositoryManager;
 
-import it.pagopa.pnss.repositorymanager.service.impl.UserConfigurationServiceImpl;
+import it.pagopa.pnss.repositoryManager.service.impl.UserConfigurationServiceImpl;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 

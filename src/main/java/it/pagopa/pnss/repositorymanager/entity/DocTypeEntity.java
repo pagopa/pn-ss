@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.entity;
+package it.pagopa.pnss.repositoryManager.entity;
 
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConvertedEnum;

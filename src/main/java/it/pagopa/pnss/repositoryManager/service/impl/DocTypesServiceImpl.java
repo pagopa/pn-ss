@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.service.impl;
+package it.pagopa.pnss.repositoryManager.service.impl;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -10,12 +10,12 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pnss.repositorymanager.constant.DynamoTableNameConstant;
-import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
-import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
-import it.pagopa.pnss.repositorymanager.exception.ItemDoesNotExist;
-import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
-import it.pagopa.pnss.repositorymanager.service.DocTypesService;
+import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
+import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
+import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositoryManager.exception.ItemDoesNotExist;
+import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
+import it.pagopa.pnss.repositoryManager.service.DocTypesService;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;

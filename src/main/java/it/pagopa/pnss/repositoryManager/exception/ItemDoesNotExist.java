@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.exception;
+package it.pagopa.pnss.repositoryManager.exception;
 
 import java.io.Serializable;
 

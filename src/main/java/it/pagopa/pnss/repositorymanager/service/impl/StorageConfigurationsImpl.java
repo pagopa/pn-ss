@@ -1,8 +1,8 @@
-package it.pagopa.pnss.repositorymanager.service.impl;
+package it.pagopa.pnss.repositoryManager.service.impl;
 
 import org.springframework.stereotype.Service;
 
-import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
+import it.pagopa.pnss.repositoryManager.service.StorageConfigurationsService;
 
 @Service
 // @Slf4j

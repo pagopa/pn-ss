@@ -1,5 +1,7 @@
 package it.pagopa.pnss.common.client.impl;
 
+import it.pagopa.pn.commons.abstractions.KeyValueStore;
+import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositoryManager.dto.DocTypesInput;
@@ -11,8 +13,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 //@Service
-public class DocTypesClientCallImpl implements DocTypesClientCall {
-    private final WebClient ecInternalWebClient= WebClient.builder().build();
+public class DocTypesClientCallImpl extends CommonBaseClient implements DocTypesClientCall {
+    private final WebClient.Builder ecInternalWebClient= WebClient.builder();
 
     @Value("${gestore.repository.anagrafica.docTypes}")
     String anagraficaDocTypesClientEndpoint;
@@ -21,7 +23,8 @@ public class DocTypesClientCallImpl implements DocTypesClientCall {
 
     @Override
     public ResponseEntity<DocTypesOutput> getdocTypes(String tipologiaDocumento) throws IdClientNotFoundException {
-        return ecInternalWebClient.get()
+
+        return getWebClient().get()
                 .uri(String.format(anagraficaDocTypesClientEndpoint, tipologiaDocumento))
                 .retrieve()
                 .bodyToMono(ResponseEntity.class).block();
@@ -41,4 +44,12 @@ public class DocTypesClientCallImpl implements DocTypesClientCall {
     public Mono<ResponseEntity<DocTypesOutput>> deletedocTypes(String checksum) throws IdClientNotFoundException {
         return null;
     }
+
+
+    public WebClient getWebClient(){
+        WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
+        return builder.build();
+    }
+
+
 }

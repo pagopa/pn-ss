@@ -1,5 +1,7 @@
 package it.pagopa.pnss.common;
 
+import software.amazon.awssdk.regions.Region;
+
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
@@ -23,4 +25,6 @@ public class Constant {
     public static final List<String> listaTipologieDoc = Arrays.asList(PN_NOTIFICATION_ATTACHMENTS, PN_AAR, PN_LEGAL_FACTS, PN_EXTERNAL_LEGAL_FACTS, PN_DOWNTIME_LEGAL_FACTS);
     public static final List<String> listaTipoDocumenti =  Arrays.asList(APPLICATION_PDF, APPLICATION_ZIP, IMAGE_TIFF);
     public static final List<String> listaStatus =  Arrays.asList(PRELOADED, ATTACHED);
+
+    public static final Region EU_CENTRAL_1 = Region.EU_CENTRAL_1;
 }

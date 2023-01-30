@@ -8,6 +8,7 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
 import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
 import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,9 @@ import java.util.*;
 import static it.pagopa.pnss.common.Constant.*;
 
 @Service
+@Slf4j
 public class UriBuilderService {
+
 
     UserConfigurationClientCall userConfigurationClientCall;
     DocumentClientCall documentClientCall;
@@ -66,25 +69,38 @@ public class UriBuilderService {
         }
 
         if (user == null ){
+            log.info("Utente NON TROVATO "+ xPagopaSafestorageCxId);
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
         }
 
         List<String> canRead = user.getCanRead();
         if (!canRead.contains(documentType)){
+            log.info("Utente :"+ xPagopaSafestorageCxId +" non abilitato a caricare documenti di tipo "+documentType);
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Client : "+ xPagopaSafestorageCxId+  " not has privilege for download document type " +documentType);
         }
+        log.info("Utente :"+ xPagopaSafestorageCxId +" abilitato a  "+documentType);
 
         FileCreationResponse response = new FileCreationResponse();
         GenerateRandoKeyFile g = GenerateRandoKeyFile.getInstance();
+        log.info("Utente :"+ xPagopaSafestorageCxId +" docuemntType   "+documentType + "Inizio produzione chiave ");
+
         String keyName = g.createKeyName(documentType);
         int riprova = 0;
         while (keyPresent(keyName) && riprova <10){
+            log.info( "keyname : "+ keyName + " gia presente riprovo a calcolare");
             Thread.sleep(1000);
             keyName = g.createKeyName(documentType);
             riprova++;
         }
+        if (riprova>10 && keyPresent(keyName)){
+            log.info( " NON e' stato possibile produrre un key ");
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Non e' stato possibile produrre una chiave per user " + xPagopaSafestorageCxId);
+
+        }
+        log.info("Utente :"+ xPagopaSafestorageCxId +" docuemntType   "+documentType + " keyname : "+ keyName);
 
         response.setKey(keyName);
         String secret=null;
@@ -92,8 +108,8 @@ public class UriBuilderService {
 
         PresignedPutObjectRequest presignedRequest = builsUploadUrl( documentType,keyName,contentType);
         String myURL = presignedRequest.url().toString();
-        System.out.println("Presigned URL to upload a file to: " +myURL);
-        System.out.println("Which HTTP method needs to be used when uploading a file: " + presignedRequest.httpRequest().method());
+        log.info("Presigned URL to upload a file to: " +myURL);
+        log.info("Which HTTP method needs to be used when uploading a file: " + presignedRequest.httpRequest().method());
 
         // chiamare l'api di Gestore repository per salvare i dati
         //todo
@@ -103,6 +119,7 @@ public class UriBuilderService {
         response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
 
         DocumentInput documentRepositoryDto = new DocumentInput();
+        log.info("Upload dati documento su gestore repository: " +myURL);
 
         documentClientCall.updatedocument(documentRepositoryDto);
 
@@ -134,7 +151,7 @@ public class UriBuilderService {
 
     private S3Presigner getS3Presigner() {
         ProfileCredentialsProvider credentialsProvider = ProfileCredentialsProvider.create();
-        Region region = Region.EU_CENTRAL_1;
+        Region region = EU_CENTRAL_1;
         return S3Presigner.builder()
                 .region(region)
                 .credentialsProvider(credentialsProvider)

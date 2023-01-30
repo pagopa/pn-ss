@@ -1,5 +1,6 @@
 package it.pagopa.pnss.common.client.impl;
 
+import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
@@ -11,17 +12,17 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 @Service
-public class DocumentClientCallImpl implements DocumentClientCall {
-    private final WebClient ecInternalWebClient= WebClient.builder().build();
+public class DocumentClientCallImpl extends CommonBaseClient implements DocumentClientCall {
+    private final WebClient.Builder ecInternalWebClient= WebClient.builder();
 
     @Value("${gestore.repository.anagrafica.docClient}")
     String anagraficaDocumentiClientEndpoint;
 
 
-    
+
     @Override
     public ResponseEntity<DocumentOutput> getdocument(String keyFile) throws IdClientNotFoundException {
-        return ecInternalWebClient.get()
+        return getWebClient().get()
                 .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                 .retrieve()
                 .bodyToMono(ResponseEntity.class).block();
@@ -29,7 +30,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
 
     @Override
     public ResponseEntity<DocumentOutput> postdocument(DocumentInput documentInput) throws IdClientNotFoundException {
-        return ecInternalWebClient.post()
+        return getWebClient().post()
                 .uri(String.format(anagraficaDocumentiClientEndpoint))
                 .bodyValue(documentInput)
                 .retrieve()
@@ -38,7 +39,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
 
     @Override
     public ResponseEntity<DocumentOutput> updatedocument(DocumentInput documentInput) throws IdClientNotFoundException {
-        return ecInternalWebClient.put()
+        return getWebClient().put()
                 .uri(String.format(anagraficaDocumentiClientEndpoint))
                 .bodyValue(documentInput)
                 .retrieve()
@@ -49,4 +50,9 @@ public class DocumentClientCallImpl implements DocumentClientCall {
     public ResponseEntity<DocumentOutput> deletedocument(String keyFile) throws IdClientNotFoundException {
         return null;
     }
+    public WebClient getWebClient(){
+        WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
+        return builder.build();
+    }
+
 }

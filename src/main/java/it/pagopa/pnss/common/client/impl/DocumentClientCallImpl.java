@@ -15,7 +15,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class DocumentClientCallImpl extends CommonBaseClient implements DocumentClientCall {
     private final WebClient.Builder ecInternalWebClient= WebClient.builder();
 
-    @Value("${gestore.repository.anagrafica.docClient}")
+    @Value("${gestore.repository.anagrafica.internal.docClient}")
     String anagraficaDocumentiClientEndpoint;
 
 

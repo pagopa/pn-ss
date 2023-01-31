@@ -17,12 +17,14 @@ public class DocTypesClientCallImpl extends CommonBaseClient implements DocTypes
     @Value("${gestore.repository.anagrafica.docTypes}")
     String anagraficaDocTypesClientEndpoint;
 
+    @Value("${gestore.repository.anagrafica.internal.docTypes}")
+    String anagraficaDocTypesInternalClientEndpoint;
 
 
     @Override
     public ResponseEntity<DocumentType>  getdocTypes(String tipologiaDocumento) throws IdClientNotFoundException {
         return getWebClient().get()
-                .uri(String.format(anagraficaDocTypesClientEndpoint, tipologiaDocumento))
+                .uri(String.format(anagraficaDocTypesInternalClientEndpoint, tipologiaDocumento))
                 .retrieve()
                 .bodyToMono(ResponseEntity.class).block();
     }

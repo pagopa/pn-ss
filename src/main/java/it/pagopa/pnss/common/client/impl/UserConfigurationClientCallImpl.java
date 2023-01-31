@@ -18,12 +18,13 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
     @Value("${gestore.repository.anagrafica.userConfiguration}")
     String anagraficaUserConfigurationClientEndpoint;
 
-
+    @Value("${gestore.repository.anagrafica.internal.userConfiguration}")
+    String anagraficaUserConfigurationInternalClientEndpoint;
 
     @Override
     public ResponseEntity<UserConfiguration> getUser(String name) throws IdClientNotFoundException {
         return getWebClient().get()
-                .uri(String.format(anagraficaUserConfigurationClientEndpoint, name))
+                .uri(String.format(anagraficaUserConfigurationInternalClientEndpoint, name))
                 .retrieve()
                 .bodyToMono(ResponseEntity.class).block();
     }

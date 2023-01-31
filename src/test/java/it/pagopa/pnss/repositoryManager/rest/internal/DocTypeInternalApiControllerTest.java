@@ -2,6 +2,7 @@ package it.pagopa.pnss.repositoryManager.rest.internal;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
@@ -79,8 +81,7 @@ public class DocTypeInternalApiControllerTest {
 					 .contentType(APPLICATION_JSON)
 					 .body(BodyInserters.fromValue(docTypesInput))
 					 .exchange()
-		        .expectStatus()
-		        .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+		        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
 		log.info("\n Test 2 (postItemIncorrectParameters) passed \n");
 
@@ -92,7 +93,7 @@ public class DocTypeInternalApiControllerTest {
 	public void getItem() {
 
 		webTestClient.get()
-			.uri(BASE_URL + "/" + PARTITION_ID.name())
+			.uri(BASE_URL + "/" + PARTITION_ID.getValue())
 			.accept(APPLICATION_JSON)
 			.exchange()
 			.expectStatus().isOk()
@@ -108,11 +109,10 @@ public class DocTypeInternalApiControllerTest {
 	public void getItemNoExistentKey() {
 
 		webTestClient.get()
-			.uri(BASE_URL + "/" + NO_EXISTENT_PARTITION_ID.name())
+			.uri(BASE_URL + "/" + NO_EXISTENT_PARTITION_ID.getValue())
 			.accept(APPLICATION_JSON)
 			.exchange()
-			.expectStatus().isOk()
-			.expectBody().isEmpty();
+			.expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 		
 		log.info("\n Test 4 (getItemNoExistentKey) passed \n");
 
@@ -141,6 +141,8 @@ public class DocTypeInternalApiControllerTest {
 		DocumentType docTypesInput = getDocumentType();
 		docTypesInput.setChecksum(ChecksumEnum.SHA256);
 		
+		log.info("\n Test 6 (putItem) URL : {} \n", BASE_URL + "/" + PARTITION_ID.getValue());
+		
 		webTestClient.put()
 			         .uri(BASE_URL + "/" + PARTITION_ID.getValue())
 			         .accept(APPLICATION_JSON)
@@ -162,7 +164,7 @@ public class DocTypeInternalApiControllerTest {
 		docTypesInput.setName(NO_EXISTENT_PARTITION_ID);
 		
 		webTestClient.put()
-			         .uri(BASE_URL + "/" + NO_EXISTENT_PARTITION_ID.name())
+			         .uri(BASE_URL + "/" + NO_EXISTENT_PARTITION_ID.getValue())
 			         .accept(APPLICATION_JSON)
 			         .contentType(APPLICATION_JSON)
 			         .body(BodyInserters.fromValue(docTypesInput))
@@ -198,12 +200,15 @@ public class DocTypeInternalApiControllerTest {
 	// codice test: DTSS.103.1
 	public void deleteItem() {
 		
-		webTestClient.delete()
-			.uri(BASE_URL+"/"+PARTITION_ID.getValue())
-	        .accept(APPLICATION_JSON)
-	        .exchange()
-	        .expectStatus().isOk()
-	        .expectBody().isEmpty();
+		EntityExchangeResult<DocumentType> result =
+			webTestClient.delete()
+				.uri(BASE_URL+"/"+PARTITION_ID.getValue())
+		        .accept(APPLICATION_JSON)
+		        .exchange()
+		        .expectStatus().isOk()
+		        .expectBody(DocumentType.class).returnResult();
+		
+		Assertions.assertEquals(PARTITION_ID.getValue(), result.getResponseBody().getName().getValue());
 	    
 	    log.info("\n Test 9 (deleteItem) passed \n");
 

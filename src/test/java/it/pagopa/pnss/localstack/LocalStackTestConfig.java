@@ -18,8 +18,8 @@ import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
 import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
 import software.amazon.awssdk.core.internal.waiters.ResponseOrException;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
@@ -28,7 +28,9 @@ import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 public class LocalStackTestConfig {
 
     @Autowired
-    private DynamoDbEnhancedClient enhancedClient;
+//    private DynamoDbEnhancedClient enhancedClient;
+    private DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient;
+    
 
     @Autowired
     private DynamoDbWaiter dynamoDbWaiter;
@@ -39,6 +41,8 @@ public class LocalStackTestConfig {
 
     static {
         localStackContainer.start();
+        
+        System.setProperty("test.aws.region", localStackContainer.getRegion());
 
 //      Override aws config
         System.setProperty("aws.config.access.key", localStackContainer.getAccessKey());
@@ -70,7 +74,7 @@ public class LocalStackTestConfig {
     
     @PostConstruct
     public void createTableAnagraficaClient() {
-        DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(ANAGRAFICA_CLIENT_TABLE_NAME,
+        DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationTable = dynamoDbEnhancedAsyncClient.table(ANAGRAFICA_CLIENT_TABLE_NAME,
                                                                                              TableSchema.fromBean(UserConfigurationEntity.class));
         userConfigurationTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
                                                                                           .writeCapacityUnits(5L)
@@ -81,7 +85,7 @@ public class LocalStackTestConfig {
                                                          .orElseThrow(() -> new RuntimeException("User Configuration table was not created."));
         // The actual error can be inspected in response.exception()
         
-        DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(DOC_TYPES_TABLE_NAME,
+        DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(DOC_TYPES_TABLE_NAME,
 		                												   TableSchema.fromBean(DocTypeEntity.class));
 		docTypesTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
 															                      .writeCapacityUnits(5L)
@@ -91,7 +95,7 @@ public class LocalStackTestConfig {
 															.orElseThrow(() -> new RuntimeException("Doc Types table was not created."));
 		// The actual error can be inspected in response.exception()
 		
-        DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DOCUMENT_TABLE_NAME,
+		DynamoDbAsyncTable<DocumentEntity> documentTable = dynamoDbEnhancedAsyncClient.table(DOCUMENT_TABLE_NAME,
 		                													TableSchema.fromBean(DocumentEntity.class));
 		documentTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
 															                      .writeCapacityUnits(5L)

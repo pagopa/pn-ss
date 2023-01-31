@@ -11,6 +11,6 @@ public interface DocTypesService {
 	List<DocumentType> getAllDocType();
 	Mono<DocumentType> insertDocType(DocumentType docTypeInput);
 	Mono<DocumentType> updateDocType(String typeId, DocumentType docType);
-	Mono<Void> deleteDocType(String typeId);
+	Mono<DocumentType> deleteDocType(String typeId);
 
 }

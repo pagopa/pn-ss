@@ -1,8 +1,8 @@
 package it.pagopa.pnss.common.client.impl;
 
 import it.pagopa.pn.commons.pnclients.CommonBaseClient;
+import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.dto.UserConfigurationDTO;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +21,7 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
 
 
     @Override
-    public ResponseEntity<UserConfigurationDTO> getUser(String name) throws IdClientNotFoundException {
+    public ResponseEntity<UserConfiguration> getUser(String name) throws IdClientNotFoundException {
         return getWebClient().get()
                 .uri(String.format(anagraficaUserConfigurationClientEndpoint, name))
                 .retrieve()
@@ -29,17 +29,17 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
     }
 
     @Override
-    public ResponseEntity<UserConfigurationDTO> postUser(UserConfigurationDTO user) throws IdClientNotFoundException {
+    public ResponseEntity<UserConfiguration> postUser(UserConfiguration user) throws IdClientNotFoundException {
         return null;
     }
 
     @Override
-    public ResponseEntity<UserConfigurationDTO> updateUser(UserConfigurationDTO user) throws IdClientNotFoundException {
+    public ResponseEntity<UserConfiguration> updateUser(UserConfiguration user) throws IdClientNotFoundException {
         return null;
     }
 
     @Override
-    public ResponseEntity<UserConfigurationDTO> deleteUser(String name) throws IdClientNotFoundException {
+    public ResponseEntity<UserConfiguration> deleteUser(String name) throws IdClientNotFoundException {
         return null;
     }
 

@@ -1,16 +1,14 @@
 package it.pagopa.pnss.uriBuilder.service;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
+import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
+import it.pagopa.pnss.common.Constant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.dto.DocumentDTO;
-import it.pagopa.pnss.common.client.dto.DocumentStateEnumDTO;
-import it.pagopa.pnss.common.client.dto.UserConfigurationDTO;
-import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
-import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
@@ -66,8 +64,8 @@ public class UriBuilderService {
 
     public FileCreationResponse createUriForUploadFile(String xPagopaSafestorageCxId, String contentType, String documentType, String status) throws InterruptedException {
 
-        ResponseEntity<UserConfigurationDTO> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
-        UserConfigurationDTO user = null;
+        ResponseEntity<UserConfiguration> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfiguration user = null;
         if (userResponse!=null ){
             user = userResponse.getBody();
         }
@@ -78,8 +76,8 @@ public class UriBuilderService {
                     HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
         }
 
-        List<String> canRead = user.getCanRead();
-        if (!canRead.contains(documentType)){
+        List<String> canCreate = user.getCanCreate();
+        if (!canCreate.contains(documentType)){
             log.info("Utente :"+ xPagopaSafestorageCxId +" non abilitato a caricare documenti di tipo "+documentType);
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Client : "+ xPagopaSafestorageCxId+  " not has privilege for download document type " +documentType);
@@ -122,23 +120,43 @@ public class UriBuilderService {
         response.setUploadUrl(myURL);
         response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
 
-        DocumentDTO documentRepositoryDto = new DocumentDTO();
+        Document documentRepositoryDto = new Document();
         log.info("Upload dati documento su gestore repository: " +myURL);
         documentRepositoryDto.setContentType(contentType);
         documentRepositoryDto.setDocumentKey(keyName);
-        documentRepositoryDto.setDocumentState(DocumentStateEnumDTO.BOOKED);
-        documentRepositoryDto.setDocumentType(documentType);
+        documentRepositoryDto.setDocumentState(Document.DocumentStateEnum.BOOKED);
+        documentRepositoryDto.setDocumentType(retrieveDocType(documentType));
         //documentRepositoryDto.setRetentionPeriod();
 
-        documentClientCall.updatedocument(documentRepositoryDto);
+        documentClientCall.postdocument(documentRepositoryDto);
 
         return response;
 
     }
 
+    private Document.DocumentTypeEnum retrieveDocType(String documentType) {
+        if (documentType.equals(PN_DOWNTIME_LEGAL_FACTS)){
+            //return Document.DocumentTypeEnum.PN_DOWNTIME_LEGAL_FACTS
+        }
+        if (documentType.equals(PN_NOTIFICATION_ATTACHMENTS)){
+            return Document.DocumentTypeEnum.NOTIFICATION_ATTACHMENTS;
+        }
+        if (documentType.equals(PN_AAR)){
+            return Document.DocumentTypeEnum.AAR;
+        }
+        if (documentType.equals(PN_LEGAL_FACTS)){
+            return Document.DocumentTypeEnum.LEGAL_FACTS;
+        }
+        if (documentType.equals(PN_EXTERNAL_LEGAL_FACTS)){
+            return Document.DocumentTypeEnum.EXTERNAL_LEGAL_FACTS;
+        }
+        return null;
+
+    }
+
     private boolean keyPresent(String keyName) {
-        ResponseEntity<DocumentDTO> block = documentClientCall.getdocument(keyName);
-        DocumentDTO doc = block!=null ? block.getBody(): null;
+        ResponseEntity<Document> block = documentClientCall.getdocument(keyName);
+        Document doc = block!=null ? block.getBody(): null;
         return doc != null ? true : false ;
     }
 
@@ -191,8 +209,8 @@ public class UriBuilderService {
         // chiamare l'api di  GestoreRepositori per recupero dati
         //todo
 
-        ResponseEntity<UserConfigurationDTO> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
-        UserConfigurationDTO user = null;
+        ResponseEntity<UserConfiguration> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfiguration user = null;
         if (userResponse!=null ){
             user = userResponse.getBody();
         }
@@ -200,15 +218,15 @@ public class UriBuilderService {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
         }
-        ResponseEntity<DocumentDTO> block = documentClientCall.getdocument(fileKey);
-        DocumentDTO doc = block!=null ? block.getBody(): null;
+        ResponseEntity<Document> block = documentClientCall.getdocument(fileKey);
+        Document doc = block!=null ? block.getBody(): null;
         if (doc==null ){
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey);
         }
         List<String> canRead = user.getCanRead();
 
-        String typeDocument = doc.getDocumentType();
+        String typeDocument = doc.getDocumentType().getValue();
         if (!canRead.contains(typeDocument)){
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Client : "+ xPagopaSafestorageCxId+  " not has privilege for download document type " +typeDocument);
@@ -226,11 +244,11 @@ public class UriBuilderService {
                 log.error("Unabel parse to bigdecimal value "+contentLength);
             }
         }
-        downloadResponse.setChecksum(doc.getCheckSum());
+        downloadResponse.setChecksum(doc.getCheckSum().getValue());
         downloadResponse.setContentLength(fileLength);
         downloadResponse.setContentType(doc.getContentType());
-        downloadResponse.setDocumentStatus(doc.getDocumentState().value());
-        downloadResponse.setDocumentType(doc.getDocumentType());
+        downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
+        downloadResponse.setDocumentType(doc.getDocumentType().getValue());
 
         downloadResponse.setKey(fileKey);
         downloadResponse.setRetentionUntil(new Date());

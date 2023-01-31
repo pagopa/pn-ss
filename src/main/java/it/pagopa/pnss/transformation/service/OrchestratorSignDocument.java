@@ -1,10 +1,10 @@
 package it.pagopa.pnss.transformation.service;
 
 import io.awspring.cloud.messaging.listener.Acknowledgment;
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pnss.common.Constant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.dto.DocumentDTO;
-import it.pagopa.pnss.common.client.dto.DocumentStateEnumDTO;
+
 import it.pagopa.pnss.transformation.model.S3ObjectCreated;
 import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
 import it.pagopa.pnss.transformation.wsdl.TypeOfTransportNotImplemented_Exception;
@@ -48,8 +48,8 @@ public class OrchestratorSignDocument {
         byte[] fileInput = objectResponse.asByteArray();
 
         // readDocument from DB
-        ResponseEntity<DocumentDTO> getdocument = documentClientCall.getdocument(key);
-        DocumentDTO doc = getdocument.getBody();
+        ResponseEntity<Document> getdocument = documentClientCall.getdocument(key);
+        Document doc = getdocument.getBody();
         if (getdocument==null || getdocument.getBody()==null || getdocument.getBody().getContentType().isEmpty()){
 
         }
@@ -74,7 +74,7 @@ public class OrchestratorSignDocument {
         byte[] fileSigned = signReturnV2.getBinaryoutput();
         PutObjectResponse putObjectResponse=  uploadObjectService.execute(key,fileSigned);
 
-        doc.setDocumentState(DocumentStateEnumDTO.STAGED);
+        doc.setDocumentState(Document.DocumentStateEnum.STAGED);
         documentClientCall.updatedocument(doc);
 
     }

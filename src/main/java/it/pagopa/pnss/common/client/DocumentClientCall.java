@@ -1,17 +1,17 @@
 package it.pagopa.pnss.common.client;
 
+import it.pagopa.pnss.common.client.dto.DocumentDTO;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
-import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
+
 import org.springframework.http.ResponseEntity;
 import reactor.core.publisher.Mono;
 
 public interface DocumentClientCall {
 
-    ResponseEntity<DocumentOutput> getdocument(String keyFile) throws IdClientNotFoundException;
-    ResponseEntity<DocumentOutput> postdocument(DocumentInput documentInput) throws IdClientNotFoundException;
+    ResponseEntity<DocumentDTO> getdocument(String keyFile) throws IdClientNotFoundException;
+    ResponseEntity<DocumentDTO> postdocument(DocumentDTO DocumentDTO) throws IdClientNotFoundException;
 
-    ResponseEntity<DocumentOutput> updatedocument( DocumentInput document) throws IdClientNotFoundException;
+    ResponseEntity<DocumentDTO> updatedocument( DocumentDTO document) throws IdClientNotFoundException;
 
-    ResponseEntity<DocumentOutput> deletedocument(String keyFile) throws IdClientNotFoundException;
+    ResponseEntity<DocumentDTO> deletedocument(String keyFile) throws IdClientNotFoundException;
 }

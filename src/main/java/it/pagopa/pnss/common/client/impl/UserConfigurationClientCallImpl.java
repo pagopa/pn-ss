@@ -2,9 +2,9 @@ package it.pagopa.pnss.common.client.impl;
 
 import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.dto.UserConfigurationDTO;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationInput;
-import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -21,7 +21,7 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
 
 
     @Override
-    public ResponseEntity<UserConfigurationOutput> getUser(String name) throws IdClientNotFoundException {
+    public ResponseEntity<UserConfigurationDTO> getUser(String name) throws IdClientNotFoundException {
         return getWebClient().get()
                 .uri(String.format(anagraficaUserConfigurationClientEndpoint, name))
                 .retrieve()
@@ -29,17 +29,17 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
     }
 
     @Override
-    public ResponseEntity<UserConfigurationOutput> postUser(UserConfigurationInput user) throws IdClientNotFoundException {
+    public ResponseEntity<UserConfigurationDTO> postUser(UserConfigurationDTO user) throws IdClientNotFoundException {
         return null;
     }
 
     @Override
-    public ResponseEntity<UserConfigurationOutput> updateUser(UserConfigurationInput user) throws IdClientNotFoundException {
+    public ResponseEntity<UserConfigurationDTO> updateUser(UserConfigurationDTO user) throws IdClientNotFoundException {
         return null;
     }
 
     @Override
-    public ResponseEntity<UserConfigurationOutput> deleteUser(String name) throws IdClientNotFoundException {
+    public ResponseEntity<UserConfigurationDTO> deleteUser(String name) throws IdClientNotFoundException {
         return null;
     }
 

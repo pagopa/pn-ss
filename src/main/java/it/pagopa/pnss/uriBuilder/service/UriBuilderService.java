@@ -5,10 +5,14 @@ import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.dto.DocumentDTO;
+import it.pagopa.pnss.common.client.dto.DocumentStateEnumDTO;
+import it.pagopa.pnss.common.client.dto.UserConfigurationDTO;
 import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
 import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
 import it.pagopa.pnss.repositoryManager.dto.UserConfigurationOutput;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -62,8 +66,8 @@ public class UriBuilderService {
 
     public FileCreationResponse createUriForUploadFile(String xPagopaSafestorageCxId, String contentType, String documentType, String status) throws InterruptedException {
 
-        ResponseEntity<UserConfigurationOutput> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
-        UserConfigurationOutput user = null;
+        ResponseEntity<UserConfigurationDTO> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfigurationDTO user = null;
         if (userResponse!=null ){
             user = userResponse.getBody();
         }
@@ -118,8 +122,13 @@ public class UriBuilderService {
         response.setUploadUrl(myURL);
         response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
 
-        DocumentInput documentRepositoryDto = new DocumentInput();
+        DocumentDTO documentRepositoryDto = new DocumentDTO();
         log.info("Upload dati documento su gestore repository: " +myURL);
+        documentRepositoryDto.setContentType(contentType);
+        documentRepositoryDto.setDocumentKey(keyName);
+        documentRepositoryDto.setDocumentState(DocumentStateEnumDTO.BOOKED);
+        documentRepositoryDto.setDocumentType(documentType);
+        //documentRepositoryDto.setRetentionPeriod();
 
         documentClientCall.updatedocument(documentRepositoryDto);
 
@@ -128,8 +137,8 @@ public class UriBuilderService {
     }
 
     private boolean keyPresent(String keyName) {
-        ResponseEntity<DocumentOutput> block = documentClientCall.getdocument(keyName);
-        DocumentOutput doc = block!=null ? block.getBody(): null;
+        ResponseEntity<DocumentDTO> block = documentClientCall.getdocument(keyName);
+        DocumentDTO doc = block!=null ? block.getBody(): null;
         return doc != null ? true : false ;
     }
 
@@ -182,8 +191,8 @@ public class UriBuilderService {
         // chiamare l'api di  GestoreRepositori per recupero dati
         //todo
 
-        ResponseEntity<UserConfigurationOutput> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
-        UserConfigurationOutput user = null;
+        ResponseEntity<UserConfigurationDTO> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfigurationDTO user = null;
         if (userResponse!=null ){
             user = userResponse.getBody();
         }
@@ -191,15 +200,15 @@ public class UriBuilderService {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
         }
-        ResponseEntity<DocumentOutput> block = documentClientCall.getdocument(fileKey);
-        DocumentOutput doc = block!=null ? block.getBody(): null;
+        ResponseEntity<DocumentDTO> block = documentClientCall.getdocument(fileKey);
+        DocumentDTO doc = block!=null ? block.getBody(): null;
         if (doc==null ){
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey);
         }
         List<String> canRead = user.getCanRead();
-// TODO: 26/01/2023  mettere doc.getDocumentType
-        String typeDocument = doc.getCheckSum();
+
+        String typeDocument = doc.getDocumentType();
         if (!canRead.contains(typeDocument)){
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Client : "+ xPagopaSafestorageCxId+  " not has privilege for download document type " +typeDocument);
@@ -207,15 +216,25 @@ public class UriBuilderService {
 
 
         FileDownloadResponse downloadResponse = new FileDownloadResponse();
+
+        String contentLength = doc.getContentLenght();
+        BigDecimal fileLength = null;
+        if (StringUtils.isNotEmpty(contentLength)){
+            try {
+                fileLength = new BigDecimal(contentLength);
+            }catch (Exception e){
+                log.error("Unabel parse to bigdecimal value "+contentLength);
+            }
+        }
         downloadResponse.setChecksum(doc.getCheckSum());
-        downloadResponse.setContentLength(BigDecimal.TEN);
-        downloadResponse.setContentType("");
+        downloadResponse.setContentLength(fileLength);
+        downloadResponse.setContentType(doc.getContentType());
         downloadResponse.setDocumentStatus(doc.getDocumentState().value());
-        downloadResponse.setDocumentType("");
+        downloadResponse.setDocumentType(doc.getDocumentType());
 
         downloadResponse.setKey(fileKey);
         downloadResponse.setRetentionUntil(new Date());
-        downloadResponse.setVersionId("");
+        downloadResponse.setVersionId(null);
 
          downloadResponse.setDownload(createFileDownloadInfo(fileKey,downloadResponse.getDocumentStatus(), downloadResponse.getDocumentType()));
 

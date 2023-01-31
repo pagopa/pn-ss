@@ -4,13 +4,13 @@ import it.pagopa.pnss.transformation.wsdl.ArubaSignServiceService;
 import it.pagopa.pnss.transformation.wsdl.Auth;
 import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.namespace.QName;
-import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -22,13 +22,23 @@ public abstract class CommonArubaService {
 
 
     Auth identity;
+    @Value("${aruba.delegated.domain}")
+    public   String delegated_domain;
+    @Value("${aruba.delegated.password}")
+    public   String delegated_password;
+    @Value("${aruba.delegated.user}")
+    public   String delegated_user;
+    @Value("${aruba.otpPwd}")
+    public   String otpPwd;
+    @Value("${aruba.typeOtpAuth}")
+    public   String typeOtpAuth;
+    @Value("${aruba.user}")
+    public   String user;
 
-    public static  String delegated_domain="demoprod";
-    public static  String delegated_password="password11";
-    public static  String delegated_user="delegato";
-    public static  String otpPwd="dsign";
-    public static  String typeOtpAuth="demoprod";
-    public static  String user="titolare_aut";
+    @Value("${aruba.cert_id}")
+    public String certId = "AS0";
+    @Value("${aruba.sign.wsdl.url}")
+    public   String arubaUrlWsdl;
 
     protected CommonArubaService() throws MalformedURLException {
     }

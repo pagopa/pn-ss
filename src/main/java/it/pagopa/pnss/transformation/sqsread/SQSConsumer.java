@@ -31,7 +31,7 @@ public class SQSConsumer {
     @Autowired
     OrchestratorSignDocument orchestrator;
 
-    @SqsListener(value = SIGN_QUEUE_NAME, deletionPolicy = SqsMessageDeletionPolicy.NEVER)
+//    @SqsListener(value = SIGN_QUEUE_NAME, deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     public void lavorazioneRichiesta(final S3ObjectCreated s3ObjectCreated, final Acknowledgment acknowledgment) {
         orchestrator.incomingMessageFlow(s3ObjectCreated, acknowledgment);//.subscribe();
     }

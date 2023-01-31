@@ -1,19 +1,20 @@
 package it.pagopa.pnss.common.client;
 
-import org.springframework.http.ResponseEntity;
+import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 
-import it.pagopa.pnss.common.client.dto.UserConfigurationInput;
-import it.pagopa.pnss.common.client.dto.UserConfigurationOutput;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+
+import org.springframework.http.ResponseEntity;
+import reactor.core.publisher.Mono;
 
 public interface UserConfigurationClientCall {
 
-    ResponseEntity<UserConfigurationOutput> getUser(String name) throws IdClientNotFoundException;
+    ResponseEntity<UserConfiguration> getUser(String name) throws IdClientNotFoundException;
 
-    ResponseEntity<UserConfigurationOutput> postUser(UserConfigurationInput user) throws IdClientNotFoundException;
+    ResponseEntity<UserConfiguration> postUser(UserConfiguration user) throws IdClientNotFoundException;
 
-    ResponseEntity<UserConfigurationOutput> updateUser(UserConfigurationInput user) throws IdClientNotFoundException;
+    ResponseEntity<UserConfiguration> updateUser(UserConfiguration user) throws IdClientNotFoundException;
 
-    ResponseEntity<UserConfigurationOutput> deleteUser(String name) throws IdClientNotFoundException;
+    ResponseEntity<UserConfiguration> deleteUser(String name) throws IdClientNotFoundException;
 
 }

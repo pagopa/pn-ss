@@ -1,11 +1,11 @@
 package it.pagopa.pnss.repositoryManager;
 
-import it.pagopa.pnss.repositoryManager.service.UserConfigurationService;
+import it.pagopa.pnss.repositoryManager.service.impl.UserConfigurationServiceImpl;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 /**
- * The module containing all dependencies required by the {@link UserConfigurationService}.
+ * The module containing all dependencies required by the {@link UserConfigurationServiceImpl}.
  */
 public class DependencyFactory {
 

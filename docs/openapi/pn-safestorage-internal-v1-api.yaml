@@ -1,0 +1,356 @@
+openapi: 3.0.3
+info:
+  title: >-
+    SafeStorageInternal
+  version: v1.0
+  license:
+    name: PN software license
+    url: 'https://www.pn.pagopa.it/LICENSE'
+  description: >-
+    __SafeStorageInternal__: CRUD interne
+    
+servers:
+  - url: >-
+      https://api.pn.pagopa.it
+    description: Server url
+tags:
+  - name: docTypeInternal
+    description: Tipo Documento
+  - name: documentInternal
+    description: Documenti
+  - name: userConfigurationInternal
+    description: Anagrafica Client   
+paths:
+
+  ################################################################################################
+  ###                                      CONFIGURAZIONI                                      ###
+  ################################################################################################
+  '/safestorage/internal/v1/doctypes/{typeId}':
+    get:
+      operationId: getDocType
+      summary: Restituisce una tipologia di documento.
+      tags:
+        - docTypeInternal
+      parameters:
+        - $ref: '#/components/parameters/typeId'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentType'
+    put:
+      operationId: updateDocType
+      summary: Aggiorna una tipologia di documento.
+      tags:
+        - docTypeInternal
+      parameters:
+        - $ref: '#/components/parameters/typeId' 
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentType'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentType'                  
+    delete:
+      operationId: deleteDocType
+      summary: Elimina una tipologia di documento.
+      tags:
+        - docTypeInternal
+      parameters:
+        - $ref: '#/components/parameters/typeId'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+  
+  '/safestorage/internal/v1/doctypes': 
+    post:
+      operationId: insertDocType
+      summary: Inserisce una nuova tipologia di documento.
+      tags:
+        - docTypeInternal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentType'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentType'
+                
+  '/safestorage/internal/v1/documents/{documentKey}':
+    get:
+      operationId: getDocument
+      summary: Restituisce un documento.
+      tags:
+        - documentInternal
+      parameters:
+        - $ref: '#/components/parameters/documentKey'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'  
+    patch:
+      operationId: patchDoc
+      summary: Aggiorna un documento.
+      tags:
+        - documentInternal
+      parameters:
+        - $ref: '#/components/parameters/documentKey'          
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'                  
+    delete:
+      operationId: deleteDocument
+      summary: Elimina un documento.
+      tags:
+        - documentInternal
+      parameters:
+        - $ref: '#/components/parameters/documentKey'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+                
+  '/safestorage/internal/v1/documents': 
+    post:
+      operationId: insertDocument
+      summary: Inserisce una nuovo documento.
+      tags:
+        - documentInternal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+                
+  '/safestorage/internal/v1/userConfigurations/{name}':
+    get:
+      operationId: getUserConfiguration
+      summary: Restituisce una anagrafica client.
+      tags:
+        - userConfigurationInternal
+      parameters:
+        - $ref: '#/components/parameters/name'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserConfiguration'
+    patch:
+      operationId: patchUserConfiguration
+      summary: Aggiorna una anagrafica client.
+      tags:
+        - userConfigurationInternal
+      parameters:
+        - $ref: '#/components/parameters/name'          
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserConfiguration'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserConfiguration'    
+    delete:
+      operationId: deleteUserConfiguration
+      summary: Elimina una anagrafica client.
+      tags:
+        - userConfigurationInternal
+      parameters:
+        - $ref: '#/components/parameters/name'       
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+                
+  '/safestorage/internal/v1/userConfigurations':
+    post:
+      operationId: insertUserConfiguration
+      summary: Inserisce una nuova anagrafica client.
+      tags:
+        - userConfigurationInternal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserConfiguration'        
+      responses:
+        '404':
+            description: Not configured
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserConfiguration'    
+
+components:
+  parameters:
+    typeId: 
+      name: typeId
+      description: Identificativo del tipo di documento
+      in: path
+      required: true
+      schema:
+        type: string
+    documentKey:
+      name: documentKey
+      description: Identificativo del documento
+      in: path
+      required: true
+      schema:
+        type: string
+    name:
+      name: name
+      description: Nome del client
+      in: path
+      required: true
+      schema:
+        type: string    
+      
+  schemas:
+    DocumentType:
+      type: object
+      properties:
+        name:
+          type: string
+          description: nome del tipo di documento
+          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
+        checksum:
+          description: >-
+            codice di verifica del corretto caricamento del file
+            https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
+          type: string
+          enum: [ 'MD5', 'SHA256']  
+        lifeCycleTag:
+          type: string
+        tipoTrasformazione:
+          type: string
+        informationClassification:
+          description: >-
+            * `C` - Confidential
+            * `HC`- Highly Confidential
+            See [information classification](https://pagopa.atlassian.net/wiki/spaces/EN/pages/357204284/Data+Classification+Handling#Classificazione)
+          type: string
+          enum: [ 'C', 'HC' ] 
+        digitalSignature:
+          type: boolean
+        timeStamped:
+          type: string
+          enum: [ 'NONE', 'STANDARD' ]
+    Document:
+      type: object
+      properties:
+        documentKey:
+          type: string
+        documentState:
+          type: string
+          enum: ['BOOKED','STAGED','VALID','AVAILABLE','FREEZED','ATTACHED','TO_DELETE','DELETED']
+        retentionPeriod:
+          type: string
+        checkSum: 
+          description:
+            codice di verifica del corretto caricamento del file
+            https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
+          type: string
+          enum: [ 'MD5', 'SHA256']  
+        contentLenght:
+          type: string
+        contentType:
+          type: string
+        documentType:
+          type: string
+          description: nome del tipo di documento
+          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
+    UserConfiguration:
+      type: object
+      properties:
+        name:
+          type: string
+        apiKey:
+          type: string
+        canCreate:
+          type: array
+          items: 
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+        canRead:
+          type: array
+          items: 
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+        signatureInfo:
+          type: object
+        destination:
+          type: object
+          description: Informazioni per contattare in modalità push i sistemi client.
+          properties:
+            sqsUrl:
+              type: string
+              description: URL della coda SQS a cui contattare il client
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+security:
+  - ApiKeyAuth: [] # use the same name as under securitySchemes

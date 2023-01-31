@@ -1,22 +1,16 @@
 package it.pagopa.pnss.repositoryManager.exception;
 
-public class RepositoryManagerException extends RuntimeException {
+import java.io.Serializable;
 
-    public RepositoryManagerException() {
+public class RepositoryManagerException extends RuntimeException implements Serializable {
+
+    private static final long serialVersionUID = -4751475694166796479L;
+
+	public RepositoryManagerException() {
         super("Generic exception in RepositoryManagerService");
     }
-
-    public static class IdClientAlreadyPresent extends RuntimeException{
-
-        public IdClientAlreadyPresent(String idClient) {
-            super(String.format("Id client %s already exists", idClient));
-        }
-    }
-
-    public static class DynamoDbException extends RuntimeException{
-
-        public DynamoDbException() {
-            super("Error interacting with DynamoDb");
-        }
+	
+	public RepositoryManagerException(String msg) {
+        super(msg);
     }
 }

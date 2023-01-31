@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositoryManager.dto;
+package it.pagopa.pnss.common.client.enumeration;
 
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConvertedEnum;

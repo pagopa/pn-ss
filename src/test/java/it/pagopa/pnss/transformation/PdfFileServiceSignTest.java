@@ -4,6 +4,7 @@ import com.sun.xml.ws.util.ByteArrayDataSource;
 import it.pagopa.pnss.transformation.model.InputPdfFileSignRequestV2;
 import it.pagopa.pnss.transformation.model.PdfFileSignReturnV2;
 import it.pagopa.pnss.transformation.service.SignServiceSoap;
+import it.pagopa.pnss.transformation.wsdl.Auth;
 import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
 import it.pagopa.pnss.transformation.wsdl.TypeOfTransportNotImplemented_Exception;
 import it.pagopa.pnss.transformation.wsdl.TypeTransport;
@@ -48,7 +49,7 @@ public class PdfFileServiceSignTest {
         byte[] buf = readPdfDocoument();
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
-        signRequestV2.setIdentity(service.createIdentity(null));
+        signRequestV2.setIdentity(createIdentity());
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
         signRequestV2.setTransport(TypeTransport.STREAM);
@@ -60,13 +61,25 @@ public class PdfFileServiceSignTest {
         PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
         Assertions.assertNotNull(response);
     }
+
+    private Auth createIdentity() {
+        Auth auth = new Auth();
+
+        auth.setDelegatedDomain("demoprod");
+        auth.setDelegatedPassword("password11");
+        auth.setDelegatedUser("delegato");
+        auth.setOtpPwd("dsign");
+        auth.setTypeOtpAuth("demoprod");
+        auth.setUser("titolare_aut");
+        return auth;
+    }
     @Test
     public void testPDFFileCorrupted() throws JAXBException, TypeOfTransportNotImplemented_Exception {
         InputPdfFileSignRequestV2 input = new InputPdfFileSignRequestV2();
         byte[] buf = readPdfDocoument();
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
-        signRequestV2.setIdentity(service.createIdentity(null));
+        signRequestV2.setIdentity(createIdentity());
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(null);
         signRequestV2.setTransport(TypeTransport.STREAM);
@@ -87,7 +100,7 @@ public class PdfFileServiceSignTest {
         byte[] buf = readPdfDocoument();
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
-        signRequestV2.setIdentity(service.createIdentity(null));
+        signRequestV2.setIdentity(createIdentity());
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
         signRequestV2.setTransport(null);
@@ -107,7 +120,7 @@ public class PdfFileServiceSignTest {
         byte[] buf = readPdfDocoument();
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
-        signRequestV2.setIdentity(service.createIdentity(null));
+        signRequestV2.setIdentity(createIdentity());
         signRequestV2.getIdentity().setUser("");
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
@@ -129,7 +142,7 @@ public class PdfFileServiceSignTest {
         byte[] buf = readPdfDocoument();
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
-        signRequestV2.setIdentity(service.createIdentity(null));
+        signRequestV2.setIdentity(createIdentity());
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
         signRequestV2.setTransport(TypeTransport.BYNARYNET);
@@ -149,7 +162,7 @@ public class PdfFileServiceSignTest {
         byte[] buf = readPdfDocoument();
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
-        signRequestV2.setIdentity(service.createIdentity(null));
+        signRequestV2.setIdentity(createIdentity());
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
         signRequestV2.setTransport(TypeTransport.STREAM);
@@ -169,7 +182,7 @@ public class PdfFileServiceSignTest {
         byte[] buf = readPdfDocoument();
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("");
-        signRequestV2.setIdentity(service.createIdentity(null));
+        signRequestV2.setIdentity(createIdentity());
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
         signRequestV2.setTransport(TypeTransport.STREAM);
@@ -192,7 +205,7 @@ public class PdfFileServiceSignTest {
         byte[] buf = readPdfDocoument();
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
-        signRequestV2.setIdentity(service.createIdentity(null));
+        signRequestV2.setIdentity(createIdentity());
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
         signRequestV2.setTransport(TypeTransport.STREAM);

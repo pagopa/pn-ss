@@ -150,22 +150,25 @@ public class UserConfigurationInternalApiControllerTest {
     	
     	log.info("\n Test 6 (patchItem) userConfigurationInput : {} \n", userInput);
     	
-		webTestClient.patch()
+    	EntityExchangeResult<UserConfiguration> userConfigurationUpdated1 = webTestClient.patch()
 	        .uri(BASE_URL+"/"+PARTITION_ID)
 	        .accept(APPLICATION_JSON)
 	        .contentType(APPLICATION_JSON)
 	        .body(BodyInserters.fromValue(userInput))
 	        .exchange()
-	        .expectStatus().isOk();
+	        .expectStatus().isOk()
+	        .expectBody(UserConfiguration.class).returnResult();
+    	
+    	log.info("\n Test 6 (patchItem) userConfigurationUpdated1 : {} \n", userConfigurationUpdated1.getResponseBody());
 		
-		EntityExchangeResult<UserConfiguration> userConfigurationUpdated = webTestClient.get()
+		EntityExchangeResult<UserConfiguration> userConfigurationUpdated2 = webTestClient.get()
 				.uri(BASE_URL + "/" + PARTITION_ID)
 		        .accept(APPLICATION_JSON)
 		        .exchange()
 		        .expectStatus().isOk()
 		        .expectBody(UserConfiguration.class).returnResult();
 		
-		log.info("\n Test 6 (patchItem) userConfigurationUpdated : {} \n", userConfigurationUpdated);
+		log.info("\n Test 6 (patchItem) userConfigurationUpdated2 : {} \n", userConfigurationUpdated2.getResponseBody());
 			
 		//Assertions.assertEquals(userInput.getCanCreate(), userConfigurationUpdated.getResponseBody().getCanCreate());
 	

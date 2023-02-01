@@ -57,6 +57,8 @@ public class DocTypesServiceImpl implements DocTypesService {
 //       DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
 //        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
 //       
+//       
+//       
 //       List<DocumentType> listDocType = new ArrayList<>();
 //       docTypesTable.scan().items().map(d -> listDocType.add(objectMapper.convertValue(d, DocumentType.class)));
 //       log.info("getAllDocType() : listDocType : {}", listDocType);

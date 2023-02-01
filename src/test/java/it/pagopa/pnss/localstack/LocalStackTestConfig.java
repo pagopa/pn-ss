@@ -5,7 +5,11 @@ import static it.pagopa.pnss.localstack.LocalStackUtils.DEFAULT_LOCAL_STACK_TAG;
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME;
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.DOCUMENT_TABLE_NAME;
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.DOC_TYPES_TABLE_NAME;
+import static java.util.Map.entry;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.DYNAMODB;
+import static software.amazon.awssdk.services.dynamodb.model.TableStatus.ACTIVE;
+
+import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
@@ -17,20 +21,26 @@ import org.testcontainers.utility.DockerImageName;
 import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
 import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
+import it.pagopa.pnss.testutils.annotation.exception.DynamoDbInitTableCreationException;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.internal.waiters.ResponseOrException;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 
 @TestConfiguration
+@Slf4j
 public class LocalStackTestConfig {
 
     @Autowired
-//    private DynamoDbEnhancedClient enhancedClient;
-    private DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient;
-    
+    private DynamoDbClient dynamoDbClient;
+
+    @Autowired
+    private DynamoDbEnhancedClient enhancedClient;
 
     @Autowired
     private DynamoDbWaiter dynamoDbWaiter;
@@ -71,40 +81,35 @@ public class LocalStackTestConfig {
 //            throw new RuntimeException(e);
 //        }
     }
-    
-    @PostConstruct
-    public void createTableAnagraficaClient() {
-        DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationTable = dynamoDbEnhancedAsyncClient.table(ANAGRAFICA_CLIENT_TABLE_NAME,
-                                                                                             TableSchema.fromBean(UserConfigurationEntity.class));
-        userConfigurationTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
-                                                                                          .writeCapacityUnits(5L)
-                                                                                          .build()));
-   
-        ResponseOrException<DescribeTableResponse> responseUserConfiguration = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(ANAGRAFICA_CLIENT_TABLE_NAME).build()).matched();
-        DescribeTableResponse tableDescriptionUserConfiguration = responseUserConfiguration.response()
-                                                         .orElseThrow(() -> new RuntimeException("User Configuration table was not created."));
-        // The actual error can be inspected in response.exception()
-        
-        DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(DOC_TYPES_TABLE_NAME,
-		                												   TableSchema.fromBean(DocTypeEntity.class));
-		docTypesTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
-															                      .writeCapacityUnits(5L)
-															                      .build()));
-		ResponseOrException<DescribeTableResponse> responseDocTypes = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(DOC_TYPES_TABLE_NAME).build()).matched();
-		DescribeTableResponse tableDescriptionDocTypes= responseDocTypes.response()
-															.orElseThrow(() -> new RuntimeException("Doc Types table was not created."));
-		// The actual error can be inspected in response.exception()
-		
-		DynamoDbAsyncTable<DocumentEntity> documentTable = dynamoDbEnhancedAsyncClient.table(DOCUMENT_TABLE_NAME,
-		                													TableSchema.fromBean(DocumentEntity.class));
-		documentTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L)
-															                      .writeCapacityUnits(5L)
-															                      .build()));
-		ResponseOrException<DescribeTableResponse> responseDocument = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(DOCUMENT_TABLE_NAME).build()).matched();
-		DescribeTableResponse tableDescriptionDocument = responseDocument.response()
-		.orElseThrow(() -> new RuntimeException("Document table was not created."));
-		// The actual error can be inspected in response.exception()
 
+    private void createTable(final String tableName, final Class<?> entityClass) {
+        DynamoDbTable<?> dynamoDbTable = enhancedClient.table(tableName, TableSchema.fromBean(entityClass));
+        dynamoDbTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L).writeCapacityUnits(5L).build()));
+
+        // La creazione delle tabelle su Dynamo è asincrona. Bisogna aspettare tramite il DynamoDbWaiter
+        ResponseOrException<DescribeTableResponse> responseOrException = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(
+                tableName).build()).matched();
+        responseOrException.response().orElseThrow(() -> new DynamoDbInitTableCreationException(tableName));
     }
-    
+    private final static Map<String, Class<?>> TABLE_NAME_WITH_ENTITY_CLASS = Map.ofEntries(
+            entry(ANAGRAFICA_CLIENT_TABLE_NAME,UserConfigurationEntity.class),
+            entry(DOC_TYPES_TABLE_NAME, DocTypeEntity.class),
+            entry(DOCUMENT_TABLE_NAME, DocumentEntity.class)
+            );
+    @PostConstruct
+    public void initLocalStack() {
+        TABLE_NAME_WITH_ENTITY_CLASS.forEach((tableName, entityClass) -> {
+            log.info("<-- START initLocalStack -->");
+            try {
+                log.info("<-- START Dynamo db init-->");
+                DescribeTableResponse describeTableResponse = dynamoDbClient.describeTable(builder -> builder.tableName(tableName));
+                if (describeTableResponse.table().tableStatus() == ACTIVE) {
+                    log.info("Table {} already created on local stack's dynamo db", tableName);
+                }
+            } catch (ResourceNotFoundException resourceNotFoundException) {
+                log.info("Table {} not found on first dynamo init. Proceed to create", tableName);
+                createTable(tableName, entityClass);
+            }
+        });
+    }
 }

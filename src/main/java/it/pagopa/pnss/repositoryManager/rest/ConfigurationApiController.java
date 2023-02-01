@@ -49,7 +49,10 @@ public class ConfigurationApiController implements CfgApi {
     @Override
     public  Mono<ResponseEntity<DocumentTypesConfigurations>> getDocumentsConfigs( final ServerWebExchange exchange) {
     	
-    	return documentsConfigsService.getAllDocumentType().map(ResponseEntity::ok);
+    	// return documentsConfigsService.getAllDocumentType().map(ResponseEntity::ok);
+    	
+       	DocumentTypesConfigurations configurations = documentsConfigsService.getAllDocumentType();
+    	return Mono.just(ResponseEntity.ok().body(configurations));
     	
     }
 

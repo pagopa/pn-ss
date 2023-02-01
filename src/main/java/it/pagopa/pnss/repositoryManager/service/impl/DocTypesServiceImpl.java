@@ -1,5 +1,9 @@
 package it.pagopa.pnss.repositoryManager.service.impl;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -10,13 +14,16 @@ import it.pagopa.pnss.common.client.enumeration.TipoDocumentoEnum;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
+import it.pagopa.pnss.repositoryManager.exception.DynamoDbException;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.service.DocTypesService;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
@@ -26,6 +33,8 @@ public class DocTypesServiceImpl implements DocTypesService {
 	
 	@Autowired
 	private DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient;
+	@Autowired
+	private DynamoDbEnhancedClient enhancedClient;
 	@Autowired
     private ObjectMapper objectMapper;
 	
@@ -43,34 +52,33 @@ public class DocTypesServiceImpl implements DocTypesService {
 	}
 	
 	@Override
-	public Flux<DocumentType> getAllDocType() {
+	public List<DocumentType> getAllDocType() {
 		
-       DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
-       
-//       docTypesTable.scan().items().flatMapIterable(Flux::iterable);
+//       DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
+//        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
 //       
-//       Flux.from();
+//       List<DocumentType> listDocType = new ArrayList<>();
+//       docTypesTable.scan().items().map(d -> listDocType.add(objectMapper.convertValue(d, DocumentType.class)));
+//       log.info("getAllDocType() : listDocType : {}", listDocType);
+//       return Mono.just(listDocType);
+
+		List<DocumentType> listDocType= new ArrayList<>();
 		
+		try {
+            DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(
+            		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+            Iterator<DocTypeEntity> iterator = docTypesTable.scan().items().iterator();
+        	while (iterator.hasNext()) {
+        		listDocType.add(objectMapper.convertValue(iterator.next(), DocumentType.class));
+        	}
+            
+		} catch (DynamoDbException e) {
+			log.error("getAllDocType",e);
+            throw new RepositoryManagerException(e.getMessage());  
+        }
 		
-//		List<DocumentType> listDocType= new ArrayList<>();
-//		
-//		try {
-//            DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(
-//            		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
-//            Iterator<DocTypeEntity> iterator = docTypesTable.scan().items().iterator();
-//        	while (iterator.hasNext()) {
-//        		listDocType.add(objectMapper.convertValue(iterator.next(), DocumentType.class));
-//        	}
-//            
-//		} catch (DynamoDbException e) {
-//			log.error("getAllDocType",e);
-//            throw new RepositoryManagerException(e.getMessage());  
-//        }
-//		
-//		return listDocType;
-		
-		return null;
+		log.info("getAllDocType() : listDocType : {}", listDocType);
+		return listDocType;
 		
 	}
 	

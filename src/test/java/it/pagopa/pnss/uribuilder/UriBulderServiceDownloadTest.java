@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
@@ -23,7 +24,8 @@ public class UriBulderServiceDownloadTest {
 
     public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
 
-    public static final String urlDownload = "/safe-storage/v1/files/{fileKey}";
+    @Value("${file.download.api.url}")
+    public  String urlDownload;
 
     @Autowired
     private WebTestClient webClient;

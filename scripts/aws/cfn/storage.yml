@@ -23,26 +23,6 @@ Parameters:
   # CdcKinesisSourceStreamArn:
   #   Type: String
   #   Description: 'Where to send CDC'
-  
-  PnSsQueueNameNotificaDisponibilita:
-    Type: String
-    Description: Description
-    Default: pn-ss-notifica-disponibilita-queue
-
-  PnSsQueueNameStagingBucket:
-    Type: String
-    Description: Description
-    Default: pn-ss-staging-bucket-queue
-
-  PnSsEventRuleNameNotificaDisponibilita:
-    Type: String
-    Description: Description
-    Default: pn-ss-notifica-disponibilita-event-rule
-
-  PnSsEventRuleNameStagingBucket:
-    Type: String
-    Description: Description
-    Default: pn-ss-staging-bucket-event-rule
 
 Resources:
   # NullResource:
@@ -335,7 +315,7 @@ Outputs:
     Description: 'ARN coda per notifiche SS Staging Bucket'
     Value: !GetAtt  PnSsQueueStagingBucket.Arn
 
-  PnSsQueueURLStagingBucket:
+  PnSsQueueUrlStagingBucket:
     Description: 'URL coda per notifiche SS Staging Bucket'
     Value: !Ref PnSsQueueStagingBucket
 

@@ -155,9 +155,7 @@ Resources:
         ContainerEnvEntry7: !Sub 'PnSsTableNameTipologieDocumenti=${PnSsTableNameTipologieDocumenti}'
         ContainerEnvEntry8: !Sub 'PnSsTableNameDocumenti=${PnSsTableNameDocumenti}'
         ContainerEnvEntry9: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
-        MappedPaths: 
-        - '/safestorage/*'
-        - '/safe-storage/*'
+        MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref SubnetsIds
         VpcId: !Ref VpcId
@@ -204,6 +202,22 @@ Resources:
               - 'sqs:PurgeQueue'
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
+
+  PnSsQueuePolicyStagingBucket:
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !Sub '${PnSsQueueUrlStagingBucket}' 
+      PolicyDocument: 
+        Statement: 
+          - Action: 
+              - "SQS:SendMessage" 
+              - "SQS:ReceiveMessage"
+            Effect: "Allow"
+            Resource: !Sub ${PnSsQueueArnStagingBucket}
+            Principal:  
+              AWS: 
+                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
 
 
 

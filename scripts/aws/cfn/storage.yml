@@ -139,8 +139,22 @@ Resources:
             TagFilters: 
               - Key: 'documentType'
                 Value: 'PN_LEGAL_FACTS'
+            Transitions: 
+              - StorageClass: 'DEEP_ARCHIVE'
+                TransitionInDays: 1
+          - Id: 'PnSsLegalFactsExternal'
+            ExpirationInDays: 2
+            Status: 'Enabled'
+            TagFilters: 
               - Key: 'documentType'
                 Value: 'PN_EXTERNAL_LEGAL_FACTS'
+            Transitions: 
+              - StorageClass: 'DEEP_ARCHIVE'
+                TransitionInDays: 1
+          - Id: 'PnSsLegalFactsDowntime'
+            ExpirationInDays: 2
+            Status: 'Enabled'
+            TagFilters: 
               - Key: 'documentType'
                 Value: 'PN_DOWNTIME_LEGAL_FACTS'
             Transitions: 

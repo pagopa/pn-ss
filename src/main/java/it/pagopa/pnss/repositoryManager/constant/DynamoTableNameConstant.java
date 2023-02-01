@@ -13,5 +13,4 @@ public final class DynamoTableNameConstant {
     public static final String DOCUMENT_TABLE_NAME = "pn-ss-documenti";
 //    public static final String DOCUMENT_TABLE_NAME = "Document";
     
-    public static final String USER_CONFIGURATION_TABLE_NAME = "UserConfiguration";
 }

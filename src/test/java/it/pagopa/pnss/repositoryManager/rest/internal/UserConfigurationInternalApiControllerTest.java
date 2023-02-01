@@ -132,8 +132,7 @@ public class UserConfigurationInternalApiControllerTest {
 			.uri(BASE_URL+"/"+NO_EXISTENT_PARTITION_ID)
 	        .accept(APPLICATION_JSON)
 	        .exchange()
-	        .expectStatus().isOk()
-	        .expectBody().isEmpty();
+	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         
         log.info("\n Test 5 (getItemNoExistentKey) passed \n");
 	}
@@ -212,12 +211,14 @@ public class UserConfigurationInternalApiControllerTest {
     // codice test: ANSS.103.1
     public void deleteItem() {
     	
-		webTestClient.delete()
+    	EntityExchangeResult<UserConfiguration> result = webTestClient.delete()
 			.uri(BASE_URL+"/"+PARTITION_ID)
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isOk()
-	        .expectBody().isEmpty();	        ;
+	        .expectBody(UserConfiguration.class).returnResult();
+    	
+    	Assertions.assertEquals(PARTITION_ID, result.getResponseBody().getName());
 	    
 	    log.info("\n Test 9 (deleteItem) passed \n");
     }

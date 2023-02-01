@@ -141,8 +141,6 @@ public class DocTypeInternalApiControllerTest {
 		DocumentType docTypesInput = getDocumentType();
 		docTypesInput.setChecksum(ChecksumEnum.SHA256);
 		
-		log.info("\n Test 6 (putItem) URL : {} \n", BASE_URL + "/" + PARTITION_ID.getValue());
-		
 		webTestClient.put()
 			         .uri(BASE_URL + "/" + PARTITION_ID.getValue())
 			         .accept(APPLICATION_JSON)

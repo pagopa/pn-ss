@@ -8,16 +8,18 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
 import it.pagopa.pnss.repositoryManager.service.DocTypesService;
 import it.pagopa.pnss.repositoryManager.service.DocumentsConfigsService;
 import it.pagopa.pnss.repositoryManager.service.StorageConfigurationsService;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 
 /** Fare riferimento al file "\pn-ss\docs\openapi\pn-safestorage-v1-api.yaml" */
 @Service
+@Slf4j
 public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
 	
 	@Autowired
@@ -29,21 +31,20 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
     private ObjectMapper objectMapper;
 
 	@Override
-	public DocumentTypesConfigurations getAllDocumentType() {
+	public Mono<DocumentTypesConfigurations> getAllDocumentType() {
 		
 		// recupero la lista "documentsTypes"
 		List<DocumentTypeConfiguration> listDocTypeConf = new ArrayList<>();
-		List<DocumentType> listDocTypes = docTypesService.getAllDocType();
-		listDocTypes.forEach(docType -> 
-			listDocTypeConf.add(objectMapper.convertValue(docType, DocumentTypeConfiguration.class))
-		);
+		docTypesService.getAllDocType().map(
+				docTypeInternal -> listDocTypeConf.add(objectMapper.convertValue(docTypeInternal, DocumentTypeConfiguration.class)));
+		log.info("getAllDocumentType() : listDocTypeConf : {}",listDocTypeConf.toString());
 		
 		// recupero la lista "storageConfigurations"
 		// TODO attivita' in sospeso
 
 		DocumentTypesConfigurations result = new DocumentTypesConfigurations();
 		result.setDocumentsTypes(listDocTypeConf);
-		return result;
+		return Mono.just(result);
 	}
 
 }

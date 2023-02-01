@@ -1,7 +1,5 @@
 package it.pagopa.pnss.repositoryManager.service.impl;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +13,7 @@ import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositoryManager.service.DocTypesService;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -44,7 +43,15 @@ public class DocTypesServiceImpl implements DocTypesService {
 	}
 	
 	@Override
-	public List<DocumentType> getAllDocType() {
+	public Flux<DocumentType> getAllDocType() {
+		
+       DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
+        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+       
+//       docTypesTable.scan().items().flatMapIterable(Flux::iterable);
+//       
+//       Flux.from();
+		
 		
 //		List<DocumentType> listDocType= new ArrayList<>();
 //		
@@ -62,6 +69,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 //        }
 //		
 //		return listDocType;
+		
 		return null;
 		
 	}
@@ -99,7 +107,9 @@ public class DocTypesServiceImpl implements DocTypesService {
         		.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()))
                 .doOnSuccess(unused -> {
                 	docTypeEntityInput.setName(TipoDocumentoEnum.fromValue(typeId));
-                    docTypesTable.updateItem(docTypeEntityInput);
+                	// Puts a single item in the mapped table. 
+                	// If the table contains an item with the same primary key, it will be replaced with this item. 
+                    docTypesTable.putItem(docTypeEntityInput);
                 })
                 .thenReturn(docTypeEntityInput);
         
@@ -117,7 +127,6 @@ public class DocTypesServiceImpl implements DocTypesService {
         		.switchIfEmpty(Mono.error(new IdClientNotFoundException(typeId)))
         		.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()))
         		.doOnSuccess(unused -> docTypesTable.deleteItem(typeKey))
-        		.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class))
-        		;
+        		.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
     }
 }

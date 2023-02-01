@@ -1,7 +1,5 @@
 package it.pagopa.pnss.repositoryManager.rest.internal;
 
-import static org.springframework.http.HttpStatus.OK;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,36 +19,28 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	@Override
     public Mono<ResponseEntity<Document>> getDocument(String documentKey,  final ServerWebExchange exchange) {
 
-    	Document document = documentService.getDocument(documentKey);
-    	return Mono.just(ResponseEntity.ok().body(document));
+    	return documentService.getDocument(documentKey).map(ResponseEntity::ok);
 
     }
 
 	@Override
     public  Mono<ResponseEntity<Document>> insertDocument(Mono<Document> document,  final ServerWebExchange exchange) {
 
-    	return document.map(request -> {
-    		Document documentInserted = documentService.insertDocument(request);
-    		return ResponseEntity.ok().body(documentInserted);
-    	});
+		return document.flatMap(request -> documentService.insertDocument(request)).map(ResponseEntity::ok);
 
     }
 
 	@Override
     public Mono<ResponseEntity<Document>> patchDoc(String documentKey, Mono<Document> document,  final ServerWebExchange exchange) {
     	
-    	return document.map(request -> {
-    		Document documentUpdated = documentService.patchDocument(documentKey, request);
-    		return ResponseEntity.ok().body(documentUpdated);
-    	});
+		return document.flatMap(request -> documentService.patchDocument(documentKey, request)).map(ResponseEntity::ok);
 
     }
 
 	@Override
-    public Mono<ResponseEntity<Void>> deleteDocument(String documentKey,  final ServerWebExchange exchange) {
+    public Mono<ResponseEntity<Document>> deleteDocument(String documentKey,  final ServerWebExchange exchange) {
 		
-		documentService.deleteDocument(documentKey);
-    	return Mono.just(new ResponseEntity<>(OK));	
+		return documentService.deleteDocument(documentKey).map(ResponseEntity::ok);
     	
     }
 

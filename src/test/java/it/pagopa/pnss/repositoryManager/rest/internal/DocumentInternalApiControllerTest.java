@@ -15,6 +15,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.CheckSumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentStateEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentTypeEnum;
@@ -112,8 +113,7 @@ public class DocumentInternalApiControllerTest {
 			.uri(BASE_URL+"/"+NO_EXISTENT_PARTITION_ID)
 	        .accept(APPLICATION_JSON)
 	        .exchange()
-			.expectStatus().isOk()
-			.expectBody().isEmpty();
+	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 	    
 	    log.info("\n Test 4 (getItemNoExistentPartitionKey) passed \n");
   
@@ -207,12 +207,15 @@ public class DocumentInternalApiControllerTest {
     // codice test: DCSS.103.1
     public void deleteItem() {
     	
-		webTestClient.delete()
-			.uri(BASE_URL+"/"+PARTITION_ID)
-	        .accept(APPLICATION_JSON)
-	        .exchange()
-	        .expectStatus().isOk()
-	        .expectBody().isEmpty();
+    	EntityExchangeResult<Document> result =
+			webTestClient.delete()
+				.uri(BASE_URL+"/"+PARTITION_ID)
+		        .accept(APPLICATION_JSON)
+		        .exchange()
+		        .expectStatus().isOk()
+		        .expectBody(Document.class).returnResult();
+			
+		Assertions.assertEquals(PARTITION_ID, result.getResponseBody().getDocumentKey());
 	    
 	    log.info("\n Test 9 (deleteItem) passed \n");
   

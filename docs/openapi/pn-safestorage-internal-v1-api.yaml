@@ -151,6 +151,10 @@ paths:
             description: Not configured
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'            
                 
   '/safestorage/internal/v1/documents': 
     post:
@@ -223,6 +227,10 @@ paths:
             description: Not configured
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserConfiguration'           
                 
   '/safestorage/internal/v1/userConfigurations':
     post:

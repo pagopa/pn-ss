@@ -38,18 +38,19 @@ public class ConfigurationApiController implements CfgApi {
 	 */
 	@Override
     public Mono<ResponseEntity<UserConfiguration>> getCurrentClientConfig(String clientId,  final ServerWebExchange exchange) {
-    	
-		UserConfiguration userConfiguration = objectMapper.convertValue(userConfigurationService.getUserConfiguration(clientId), UserConfiguration.class);
-		return Mono.just(ResponseEntity.ok().body(userConfiguration));
+		
+		return userConfigurationService.getUserConfiguration(clientId)
+			.map(userConfigurationInternal -> 
+				ResponseEntity.ok(objectMapper.convertValue(userConfigurationInternal, it.pagopa.pn.template.rest.v1.dto.UserConfiguration.class))
+			);
 		
     }
     
     @Override
     public  Mono<ResponseEntity<DocumentTypesConfigurations>> getDocumentsConfigs( final ServerWebExchange exchange) {
-
-    	DocumentTypesConfigurations configurations = documentsConfigsService.getAllDocumentType();
-    	return Mono.just(ResponseEntity.ok().body(configurations));
-
+    	
+    	return documentsConfigsService.getAllDocumentType().map(ResponseEntity::ok);
+    	
     }
 
 }

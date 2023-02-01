@@ -1,7 +1,5 @@
 package it.pagopa.pnss.repositoryManager.rest.internal;
 
-import static org.springframework.http.HttpStatus.OK;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,40 +14,32 @@ import reactor.core.publisher.Mono;
 public class UserConfigurationInternalApiController implements UserConfigurationInternalApi {
  
 	@Autowired
-	private UserConfigurationService userService;
+	private UserConfigurationService userConfigurationService;
 
 	@Override
     public Mono<ResponseEntity<UserConfiguration>> getUserConfiguration(String name,  final ServerWebExchange exchange) {
         
-		UserConfiguration userConfiguration = userService.getUserConfiguration(name);
-    	return Mono.just(ResponseEntity.ok().body(userConfiguration));
+		return userConfigurationService.getUserConfiguration(name).map(ResponseEntity::ok);
 
     }
     
 	@Override
     public Mono<ResponseEntity<UserConfiguration>> insertUserConfiguration(Mono<UserConfiguration> userConfiguration,  final ServerWebExchange exchange) {
 
-    	return userConfiguration.map(request -> {
-    		UserConfiguration userConfigurationInserted = userService.insertUserConfiguration(request);
-    		return ResponseEntity.ok().body(userConfigurationInserted);
-    	});
+		return userConfiguration.flatMap(request -> userConfigurationService.insertUserConfiguration(request)).map(ResponseEntity::ok);
 
     }
 
 	@Override
-    public Mono<ResponseEntity<UserConfiguration>> patchUserConfiguration(String anme, Mono<UserConfiguration> userConfiguration,  final ServerWebExchange exchange) {
+    public Mono<ResponseEntity<UserConfiguration>> patchUserConfiguration(String name, Mono<UserConfiguration> userConfiguration,  final ServerWebExchange exchange) {
 
-    	return userConfiguration.map(request -> {
-    		UserConfiguration userConfigurationUpdated = userService.patchUserConfiguration(anme, request);
-    		return ResponseEntity.ok().body(userConfigurationUpdated);
-    	});
+		return userConfiguration.flatMap(request -> userConfigurationService.patchUserConfiguration(name, request)).map(ResponseEntity::ok);
     }
 
 	@Override
-    public Mono<ResponseEntity<Void>> deleteUserConfiguration(String name,  final ServerWebExchange exchange) {
+    public Mono<ResponseEntity<UserConfiguration>> deleteUserConfiguration(String name,  final ServerWebExchange exchange) {
        
-		userService.deleteUserConfiguration(name);
-    	return Mono.just(new ResponseEntity<>(OK));	
+		return userConfigurationService.deleteUserConfiguration(name).map(ResponseEntity::ok);
 
     }
 

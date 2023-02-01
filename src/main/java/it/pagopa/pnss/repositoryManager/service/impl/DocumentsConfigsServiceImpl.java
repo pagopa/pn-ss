@@ -9,7 +9,10 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.rest.v1.dto.ConfidentialityLevel;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
+import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration.ChecksumEnum;
+import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration.TimestampedEnum;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
 import it.pagopa.pnss.repositoryManager.service.DocTypesService;
 import it.pagopa.pnss.repositoryManager.service.DocumentsConfigsService;
@@ -27,17 +30,26 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
 	@SuppressWarnings("unused")
 	@Autowired
 	private StorageConfigurationsService storageConfigurationsService;
-	@Autowired
-    private ObjectMapper objectMapper;
+//	@Autowired
+//    private ObjectMapper objectMapper;
 
 	@Override
 	public DocumentTypesConfigurations getAllDocumentType() {
 		
 		// recupero la lista "documentsTypes"
 		List<DocumentTypeConfiguration> listDocTypeConf = new ArrayList<>();
-		docTypesService.getAllDocType().log().subscribe(dt -> {
-				listDocTypeConf.add(objectMapper.convertValue(dt, DocumentTypeConfiguration.class));
-			});
+//		docTypesService.getAllDocType().log().subscribe(dt -> {
+//				listDocTypeConf.add(objectMapper.convertValue(dt, DocumentTypeConfiguration.class));
+//			});
+		List<DocumentType> listDocTypes = docTypesService.getAllDocType();
+		listDocTypes.forEach(docType -> {
+			DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
+			dtc.setName(docType.getTipoDocumento() != null ? docType.getTipoDocumento().getValue() : null);
+			dtc.setInformationClassification(docType.getInformationClassification() != null ? ConfidentialityLevel.fromValue(docType.getInformationClassification().getValue()) : null);
+			dtc.setTimestamped(docType.getTimeStamped() != null ? TimestampedEnum.fromValue(docType.getTimeStamped().getValue()) : null);
+			dtc.setChecksum(docType.getChecksum() != null ? ChecksumEnum.fromValue(docType.getChecksum().getValue()) : null);
+			listDocTypeConf.add(dtc);
+		});
 		log.info("getAllDocumentType() : listDocTypeConf : {}", listDocTypeConf);
 		
 		// recupero la lista "storageConfigurations"

@@ -72,10 +72,10 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "checksum"
+        - AttributeName: "documentKey"
           AttributeType: "S"
       KeySchema: 
-        - AttributeName: "checksum"
+        - AttributeName: "documentKey"
           KeyType: "HASH"
       #KinesisStreamSpecification:
       #  StreamArn: "String"

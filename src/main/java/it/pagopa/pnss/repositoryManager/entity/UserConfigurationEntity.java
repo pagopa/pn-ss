@@ -8,7 +8,6 @@ import lombok.Getter;
 import lombok.ToString;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
 @DynamoDbBean
 @Data
@@ -21,7 +20,6 @@ public class UserConfigurationEntity {
 	private List<String> canRead;
 	private String signatureInfo;
 	private UserConfigurationDestinationEntity destination; 
-	@Getter(AccessLevel.NONE)
 	private String apiKey;
 	
 	@DynamoDbPartitionKey
@@ -29,9 +27,5 @@ public class UserConfigurationEntity {
 		return name;
 	}
 
-//	@DynamoDbSortKey
-	public String getApiKey() {
-		return apiKey;
-	}
 
 }

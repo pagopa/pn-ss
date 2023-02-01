@@ -70,8 +70,17 @@ public class DocumentServiceImpl implements DocumentService {
         Mono<DocumentEntity> monoEntity = Mono.fromCompletionStage(documentTable.getItem(Key.builder().partitionValue(documentKey).build()))
         		.switchIfEmpty(Mono.error(new IdClientNotFoundException(documentKey)))
         		.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()))
-                .doOnSuccess(unused -> {
+                .doOnSuccess(documentEntityStored -> {
                 	documentEntityInput.setDocumentKey(documentKey);
+                	// aggiorno solo lo stato
+                	if (documentEntityInput.getDocumentState() == null) {
+                		documentEntityInput.setDocumentState(documentEntityStored.getDocumentState());
+                	}
+                	documentEntityInput.setRetentionPeriod(documentEntityStored.getRetentionPeriod());
+                	documentEntityInput.setCheckSum(documentEntityStored.getCheckSum());
+                	documentEntityInput.setContentLenght(documentEntityStored.getContentLenght());
+                	documentEntityInput.setContentType(documentEntityStored.getContentType());
+                	documentEntityInput.setDocumentType(documentEntityStored.getDocumentType());
                 	// Updates an item in the mapped table, or adds it if it doesn't exist. 
                 	documentTable.updateItem(documentEntityInput);
                 })

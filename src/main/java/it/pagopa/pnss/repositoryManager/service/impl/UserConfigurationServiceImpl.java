@@ -72,8 +72,22 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
         Mono<UserConfigurationEntity> monoEntity = Mono.fromCompletionStage(userConfigurationTable.getItem(Key.builder().partitionValue(name).build()))
         		.switchIfEmpty(Mono.error(new IdClientNotFoundException(name)))
         		.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()))
-                .doOnSuccess(unused -> {
+                .doOnSuccess(entityStored -> {
                 	userConfigurationEntityInput.setName(name);
+                	
+                	if (entityStored.getCanCreate() != null && !entityStored.getCanCreate().isEmpty()
+                			&& userConfigurationEntityInput.getCanCreate() != null && !userConfigurationEntityInput.getCanCreate().isEmpty()) {
+                		userConfigurationEntityInput.getCanCreate().addAll(entityStored.getCanCreate());
+                	}
+                	if (entityStored.getCanRead() != null && !entityStored.getCanRead().isEmpty()
+                			&& userConfigurationEntityInput.getCanRead() != null && !userConfigurationEntityInput.getCanRead().isEmpty()) {
+                		userConfigurationEntityInput.getCanRead().addAll(entityStored.getCanRead());
+                	}
+                	
+                	userConfigurationEntityInput.setApiKey(entityStored.getApiKey());
+                	userConfigurationEntityInput.setDestination(entityStored.getDestination());
+                	userConfigurationEntityInput.setSignatureInfo(entityStored.getSignatureInfo());
+                	
                 	// Updates an item in the mapped table, or adds it if it doesn't exist. 
                 	userConfigurationTable.updateItem(userConfigurationEntityInput);
                 })

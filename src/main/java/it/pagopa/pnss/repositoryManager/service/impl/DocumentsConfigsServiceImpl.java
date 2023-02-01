@@ -35,14 +35,9 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
 		
 		// recupero la lista "documentsTypes"
 		List<DocumentTypeConfiguration> listDocTypeConf = new ArrayList<>();
-		
-//		docTypesService.getAllDocType().map(
-//				docTypeInternal -> listDocTypeConf.add(objectMapper.convertValue(docTypeInternal, DocumentTypeConfiguration.class)));
-			
-		List<DocumentType> listDocTypes = docTypesService.getAllDocType();
-		listDocTypes.forEach(docType -> 
-			listDocTypeConf.add(objectMapper.convertValue(docType, DocumentTypeConfiguration.class))
-		);
+		docTypesService.getAllDocType().log().subscribe(dt -> {
+				listDocTypeConf.add(objectMapper.convertValue(dt, DocumentTypeConfiguration.class));
+			});
 		log.info("getAllDocumentType() : listDocTypeConf : {}", listDocTypeConf);
 		
 		// recupero la lista "storageConfigurations"

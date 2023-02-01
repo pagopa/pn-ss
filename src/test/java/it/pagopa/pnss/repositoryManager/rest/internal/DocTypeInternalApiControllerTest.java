@@ -17,8 +17,8 @@ import org.springframework.web.reactive.function.BodyInserters;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.NameEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,12 +33,12 @@ public class DocTypeInternalApiControllerTest {
 
 	private static final String BASE_URL = "http://localhost:8080/safestorage/internal/v1/doctypes";
 
-	private static final NameEnum PARTITION_ID = NameEnum.NOTIFICATION_ATTACHMENTS;
-	private static final NameEnum NO_EXISTENT_PARTITION_ID = NameEnum.EXTERNAL_LEGAL_FACTS;
+	private static final TipoDocumentoEnum PARTITION_ID = TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS;
+	private static final TipoDocumentoEnum NO_EXISTENT_PARTITION_ID = TipoDocumentoEnum.EXTERNAL_LEGAL_FACTS;
 	
 	private DocumentType getDocumentType() {
 		DocumentType docTypesInput = new DocumentType();
-		docTypesInput.setName(PARTITION_ID);
+		docTypesInput.setTipoDocumento(PARTITION_ID);
 		docTypesInput.setChecksum(ChecksumEnum.MD5);
 		docTypesInput.setLifeCycleTag("lifeCicle1");
 		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
@@ -73,7 +73,7 @@ public class DocTypeInternalApiControllerTest {
 	public void postItemIncorrectParameter() {
 
 		DocumentType docTypesInput = getDocumentType();
-		docTypesInput.setName(null);
+		docTypesInput.setTipoDocumento(null);
 		
 		webTestClient.post()
 					 .uri(BASE_URL)
@@ -159,7 +159,7 @@ public class DocTypeInternalApiControllerTest {
 	public void putItemNoExistentKey() {
 		
 		DocumentType docTypesInput = getDocumentType();
-		docTypesInput.setName(NO_EXISTENT_PARTITION_ID);
+		docTypesInput.setTipoDocumento(NO_EXISTENT_PARTITION_ID);
 		
 		webTestClient.put()
 			         .uri(BASE_URL + "/" + NO_EXISTENT_PARTITION_ID.getValue())
@@ -179,7 +179,7 @@ public class DocTypeInternalApiControllerTest {
 	public void putItemIncorretctParameter() {
 		
 		DocumentType docTypesInput = getDocumentType();
-		docTypesInput.setName(NO_EXISTENT_PARTITION_ID);
+		docTypesInput.setTipoDocumento(NO_EXISTENT_PARTITION_ID);
 		
 		webTestClient.put()
 			         .uri(BASE_URL /*+ "/" + NO_EXISTENT_PARTITION_ID.name()*/)
@@ -206,7 +206,7 @@ public class DocTypeInternalApiControllerTest {
 		        .expectStatus().isOk()
 		        .expectBody(DocumentType.class).returnResult();
 		
-		Assertions.assertEquals(PARTITION_ID.getValue(), result.getResponseBody().getName().getValue());
+		Assertions.assertEquals(PARTITION_ID.getValue(), result.getResponseBody().getTipoDocumento().getValue());
 	    
 	    log.info("\n Test 9 (deleteItem) passed \n");
 

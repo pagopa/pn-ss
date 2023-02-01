@@ -20,7 +20,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class DocTypeEntity {
 	
 	@Getter(AccessLevel.NONE)
-	private TipoDocumentoEnum name;
+	private TipoDocumentoEnum tipoDocumento;
 	private ChecksumEnum checkSum;
 	private String lifeCycleTag;
 	private String tipoTrasformazione;
@@ -32,8 +32,8 @@ public class DocTypeEntity {
 	
 	@DynamoDbPartitionKey
 	@DynamoDBTypeConvertedEnum
-	public TipoDocumentoEnum getName() {
-		return name;
+	public TipoDocumentoEnum getTipoDocumento() {
+		return tipoDocumento;
 	}
 
 	@DynamoDBTypeConvertedEnum
@@ -45,7 +45,5 @@ public class DocTypeEntity {
 	public TimeStampedEnum getTimeStamped() {
 		return timeStamped;
 	}
-
-
 	
 }

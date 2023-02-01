@@ -281,7 +281,7 @@ components:
     DocumentType:
       type: object
       properties:
-        name:
+        tipoDocumento:
           type: string
           description: nome del tipo di documento
           enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 

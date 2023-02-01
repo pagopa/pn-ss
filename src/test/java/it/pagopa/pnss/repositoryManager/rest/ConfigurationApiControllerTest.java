@@ -21,8 +21,8 @@ import org.springframework.web.reactive.function.BodyInserters;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.NameEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
@@ -47,9 +47,9 @@ public class ConfigurationApiControllerTest {
 	final String PARTITION_ID_NAME_KEY_2 = "key2";
 
 
-	private DocumentType getDocumentType(NameEnum name) {
+	private DocumentType getDocumentType(TipoDocumentoEnum name) {
 		DocumentType docTypesInput = new DocumentType();
-		docTypesInput.setName(name);
+		docTypesInput.setTipoDocumento(name);
 		docTypesInput.setChecksum(ChecksumEnum.MD5);
 		docTypesInput.setLifeCycleTag("lifeCicle1");
 		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
@@ -81,7 +81,7 @@ public class ConfigurationApiControllerTest {
 	@Order(1)
 	public void getDocumentsConfigs() {
 		
-		final NameEnum namePrimo = NameEnum.AAR;
+		final TipoDocumentoEnum namePrimo = TipoDocumentoEnum.AAR;
 		DocumentType docTypePrimoInput = getDocumentType(namePrimo);
 
 		webTestClient.post()
@@ -94,7 +94,7 @@ public class ConfigurationApiControllerTest {
 		
 		log.info("Test 1. getDocumentsConfigs() : docType (Primo Input) inserito : {}", docTypePrimoInput);
 		
-		NameEnum nameSecondo = NameEnum.LEGAL_FACTS;
+		TipoDocumentoEnum nameSecondo = TipoDocumentoEnum.LEGAL_FACTS;
 		DocumentType docTypeSecondoInput = getDocumentType(nameSecondo);
 
 		webTestClient.post()

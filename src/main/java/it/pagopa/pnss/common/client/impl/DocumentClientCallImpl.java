@@ -1,52 +1,58 @@
 package it.pagopa.pnss.common.client.impl;
 
+import it.pagopa.pn.commons.pnclients.CommonBaseClient;
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pnss.common.client.DocumentClientCall;
+
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositoryManager.dto.DocumentInput;
-import it.pagopa.pnss.repositoryManager.dto.DocumentOutput;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 @Service
-public class DocumentClientCallImpl implements DocumentClientCall {
-    private final WebClient ecInternalWebClient= WebClient.builder().build();
+public class DocumentClientCallImpl extends CommonBaseClient implements DocumentClientCall {
+    private final WebClient.Builder ecInternalWebClient= WebClient.builder();
 
-    @Value("${gestore.repository.anagrafica.docClient}")
+    @Value("${gestore.repository.anagrafica.internal.docClient}")
     String anagraficaDocumentiClientEndpoint;
 
 
-    
+
     @Override
-    public ResponseEntity<DocumentOutput> getdocument(String keyFile) throws IdClientNotFoundException {
-        return ecInternalWebClient.get()
+    public ResponseEntity<Document> getdocument(String keyFile) throws IdClientNotFoundException {
+        return getWebClient().get()
                 .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                 .retrieve()
                 .bodyToMono(ResponseEntity.class).block();
     }
 
     @Override
-    public ResponseEntity<DocumentOutput> postdocument(DocumentInput documentInput) throws IdClientNotFoundException {
-        return ecInternalWebClient.post()
+    public ResponseEntity<Document> postdocument(Document Document) throws IdClientNotFoundException {
+        return getWebClient().post()
                 .uri(String.format(anagraficaDocumentiClientEndpoint))
-                .bodyValue(documentInput)
+                .bodyValue(Document)
                 .retrieve()
                 .bodyToMono(ResponseEntity.class).block();
     }
 
     @Override
-    public ResponseEntity<DocumentOutput> updatedocument(DocumentInput documentInput) throws IdClientNotFoundException {
-        return ecInternalWebClient.put()
+    public ResponseEntity<Document> updatedocument(Document Document) throws IdClientNotFoundException {
+        return getWebClient().put()
                 .uri(String.format(anagraficaDocumentiClientEndpoint))
-                .bodyValue(documentInput)
+                .bodyValue(Document)
                 .retrieve()
                 .bodyToMono(ResponseEntity.class).block();
     }
 
     @Override
-    public ResponseEntity<DocumentOutput> deletedocument(String keyFile) throws IdClientNotFoundException {
+    public ResponseEntity<Document> deletedocument(String keyFile) throws IdClientNotFoundException {
         return null;
     }
+    public WebClient getWebClient(){
+        WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
+        return builder.build();
+    }
+
 }

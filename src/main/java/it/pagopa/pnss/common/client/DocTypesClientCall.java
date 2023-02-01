@@ -1,22 +1,20 @@
 package it.pagopa.pnss.common.client;
 
-import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositoryManager.dto.DocTypesInput;
-import it.pagopa.pnss.repositoryManager.dto.DocTypesOutput;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
-import javax.validation.Valid;
+
+import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import reactor.core.publisher.Mono;
 
 public interface DocTypesClientCall {
 
-    ResponseEntity<DocTypesOutput> getdocTypes( String tipologiaDocumento)throws IdClientNotFoundException;
+    ResponseEntity<DocumentType>  getdocTypes(String tipologiaDocumento)throws IdClientNotFoundException;
 
-    Mono<ResponseEntity<DocTypesOutput>> postdocTypes(DocTypesInput docTypes) throws IdClientNotFoundException;
+    ResponseEntity<DocumentType> postdocTypes(DocumentType docTypes) throws IdClientNotFoundException;
 
-    Mono<ResponseEntity<DocTypesOutput>> updatedocTypes(DocTypesInput docTypes) throws IdClientNotFoundException;
+    ResponseEntity<DocumentType> updatedocTypes(DocumentType docTypes) throws IdClientNotFoundException;
 
-    Mono<ResponseEntity<DocTypesOutput>> deletedocTypes( String checksum) throws IdClientNotFoundException;
+    ResponseEntity<DocumentType> deletedocTypes( String checksum) throws IdClientNotFoundException;
 
 }

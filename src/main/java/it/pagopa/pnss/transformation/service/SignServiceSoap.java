@@ -20,12 +20,14 @@ import java.net.MalformedURLException;
 @Service
 public class SignServiceSoap extends CommonArubaService {
 
+
+
     protected SignServiceSoap() throws MalformedURLException {
     }
 
-    public SignReturnV2 singnPdfDocument(byte[] pdfFile, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException {
+    public SignReturnV2 singnPdfDocument(byte[] pdfFile, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
            SignRequestV2 signRequestV2 = new SignRequestV2();
-           signRequestV2.setCertID("AS0");
+           signRequestV2.setCertID(certId);
            signRequestV2.setIdentity(createIdentity(null));
            signRequestV2.setRequiredmark(marcatura);
            signRequestV2.setBinaryinput(pdfFile);
@@ -35,7 +37,7 @@ public class SignServiceSoap extends CommonArubaService {
 
            logCallAruba(signRequestV2);
 
-           ArubaSignService service = arubaSignService.getArubaSignServicePort();
+           ArubaSignService service = createArubaService(arubaUrlWsdl).getArubaSignServicePort();
            SignReturnV2 signReturnV2 = service.pdfsignatureV2(signRequestV2,null ,null,null ,null,null);
            return  signReturnV2;
        }
@@ -43,7 +45,7 @@ public class SignServiceSoap extends CommonArubaService {
 
 
 
-    public SignReturnV2 pkcs7signV2(byte[] buf, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException {
+    public SignReturnV2 pkcs7signV2(byte[] buf, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
         signRequestV2.setIdentity(createIdentity(null));
@@ -54,12 +56,12 @@ public class SignServiceSoap extends CommonArubaService {
 
         logCallAruba(signRequestV2);
 
-        ArubaSignService service = arubaSignService.getArubaSignServicePort();
+        ArubaSignService service = createArubaService(arubaUrlWsdl).getArubaSignServicePort();
         SignReturnV2 signReturnV2 = service.pkcs7SignV2(signRequestV2,false,true);
         return  signReturnV2;
     }
 
-    public SignReturnV2 xmlsignature(String contentType, InputStream xml, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException {
+    public SignReturnV2 xmlsignature(String contentType, InputStream xml, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
         signRequestV2.setIdentity(createIdentity(null));
@@ -72,7 +74,7 @@ public class SignServiceSoap extends CommonArubaService {
         logCallAruba(signRequestV2);
 
 
-        ArubaSignService service = arubaSignService.getArubaSignServicePort();
+        ArubaSignService service = createArubaService(arubaUrlWsdl).getArubaSignServicePort();
         XmlSignatureParameter parameter = new XmlSignatureParameter();
         parameter.setType(XmlSignatureType.XMLENVELOPED);
         SignReturnV2 signReturnV2 = service.xmlsignature(signRequestV2,parameter );

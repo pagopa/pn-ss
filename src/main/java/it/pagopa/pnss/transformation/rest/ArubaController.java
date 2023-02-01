@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.xml.bind.JAXBException;
 import java.io.*;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -28,7 +29,7 @@ public class ArubaController {
     @GetMapping(path = "/pdfsignatureV2", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity <SignReturnV2> pdfsignatureV2(
             @RequestParam(name ="marcatura") Boolean marcatura
-    ) throws TypeOfTransportNotImplemented_Exception, JAXBException {
+    ) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
 
         byte[] pdfDocument = readPdfDocoument();
 

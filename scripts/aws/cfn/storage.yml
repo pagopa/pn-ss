@@ -34,13 +34,9 @@ Resources:
       AttributeDefinitions:
         - AttributeName: "name"
           AttributeType: "S"
-        - AttributeName: "APIKey"
-          AttributeType: "S"
       KeySchema: 
         - AttributeName: "name"
           KeyType: "HASH"
-        - AttributeName: "APIKey"
-          KeyType: "RANGE"
       #KinesisStreamSpecification:
       #  StreamArn: "String"
       ProvisionedThroughput:

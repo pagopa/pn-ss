@@ -93,11 +93,11 @@ Parameters:
 
   PnSsBucketName:
     Type: String
-    Description: 'Nome Bucket SS'
+    Description: 'Nome del Bucket SS'
 
   PnSsBucketArn:
     Type: String
-    Description: 'ARN Bucket SS'
+    Description: 'ARN del Bucket SS'
   
   PnSsStagingBucketName:
     Type: String
@@ -115,7 +115,7 @@ Parameters:
     Type: String
     Description: 'ARN coda per notifiche SS Staging Bucket'
 
-  PnSsQueueURLStagingBucket:
+  PnSsQueueUrlStagingBucket:
     Type: String
     Description: 'URL coda per notifiche SS Staging Bucket'
 
@@ -148,12 +148,16 @@ Resources:
         ContainerImageURI: !Sub '${ContainerImageUri}'
         ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'
         ContainerEnvEntry2: !Sub 'PnSsBucketName=${PnSsBucketName}'
-        ContainerEnvEntry3: !Sub 'PnSsStagingBucketName=${PnSsStagingBucketName}'
-        ContainerEnvEntry4: !Sub 'PnSsTableNameAnagraficaClient=${PnSsTableNameAnagraficaClient}'
-        ContainerEnvEntry5: !Sub 'PnSsTableNameTipologieDocumenti=${PnSsTableNameTipologieDocumenti}'
-        ContainerEnvEntry6: !Sub 'PnSsTableNameDocumenti=${PnSsTableNameDocumenti}'
-        ContainerEnvEntry7: !Sub 'PnSsQueueURLStagingBucket=${PnSsQueueURLStagingBucket}'
-        MappedPaths: '/safestorage/*'
+        ContainerEnvEntry3: !Sub 'PnSsBucketArn=${PnSsBucketArn}'
+        ContainerEnvEntry4: !Sub 'PnSsStagingBucketName=${PnSsStagingBucketName}'
+        ContainerEnvEntry5: !Sub 'PnSsStagingBucketArn=${PnSsStagingBucketArn}'
+        ContainerEnvEntry6: !Sub 'PnSsTableNameAnagraficaClient=${PnSsTableNameAnagraficaClient}'
+        ContainerEnvEntry7: !Sub 'PnSsTableNameTipologieDocumenti=${PnSsTableNameTipologieDocumenti}'
+        ContainerEnvEntry8: !Sub 'PnSsTableNameDocumenti=${PnSsTableNameDocumenti}'
+        ContainerEnvEntry9: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
+        MappedPaths: 
+        - '/safestorage/*'
+        - '/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref SubnetsIds
         VpcId: !Ref VpcId

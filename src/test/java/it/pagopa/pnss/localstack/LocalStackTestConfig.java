@@ -1,6 +1,7 @@
 package it.pagopa.pnss.localstack;
 
 //import static it.pagopa.pnss.constant.QueueNameConstant.*;
+import static it.pagopa.pnss.common.QueueNameConstant.ALL_BUCKET_NAME_LIST;
 import static it.pagopa.pnss.common.QueueNameConstant.ALL_QUEUE_NAME_LIST;
 import static it.pagopa.pnss.localstack.LocalStackUtils.DEFAULT_LOCAL_STACK_TAG;
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME;
@@ -45,9 +46,9 @@ public class LocalStackTestConfig {
     @Autowired
     private DynamoDbEnhancedClient dynamoDbEnhancedClient;
 
-    @Autowired
-    private AmazonS3 amazonS3;
 
+    private static final String QUEUE_NAME = "order-event-test-queue";
+    private static final String BUCKET_NAME = "order-event-test-bucket";
     @Autowired
     private DynamoDbWaiter dynamoDbWaiter;
 
@@ -80,11 +81,16 @@ public class LocalStackTestConfig {
         System.setProperty("PnSsBucketName","PnSsBucketName");
         System.setProperty("PnSsBucketArn","PnSsBucketArn");
 
+
+
         try {
 
 //          Create SQS queue
             for (String queueName : ALL_QUEUE_NAME_LIST) {
                 localStackContainer.execInContainer("awslocal", "sqs", "create-queue", "--queue-name", queueName);
+            }
+            for (String bucketName : ALL_BUCKET_NAME_LIST){
+                localStackContainer.execInContainer("awslocal", "s3", "mb", "s3://" + bucketName);
             }
 
             // TODO: Create SNS topic

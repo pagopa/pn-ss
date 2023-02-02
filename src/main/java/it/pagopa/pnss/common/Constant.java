@@ -17,8 +17,7 @@ public class Constant {
     public static final String PN_EXTERNAL_LEGAL_FACTS = "PN_EXTERNAL_LEGAL_FACTS";
     public static final String PN_DOWNTIME_LEGAL_FACTS = "PN_DOWNTIME_LEGAL_FACTS";
     public static final BigDecimal MAX_RECOVER_COLD = new BigDecimal(259200);
-    public static final String BUCKET_STAGING="Staging";
-    public static final String BUCKET_HOT ="Hot";
+
     public static final String PRELOADED = "PRELOADED";
     public static final String ATTACHED = "ATTACHED";
 

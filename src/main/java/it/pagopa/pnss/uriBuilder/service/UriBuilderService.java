@@ -32,6 +32,8 @@ import java.time.Duration;
 import java.util.*;
 
 import static it.pagopa.pnss.common.Constant.*;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_STAGE_NAME;
 
 @Service
 @Slf4j
@@ -46,20 +48,17 @@ public class UriBuilderService {
         this.documentClientCall = documentClientCall;
     }
 
-    List <String> hotStatus;
-    List <String> coldStatus;
     Map<String,String> mapDocumentTypeToBucket ;
 
     @PostConstruct
     public void createMap() {
         mapDocumentTypeToBucket= new HashMap<>();
-        mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS,BUCKET_HOT);
-        mapDocumentTypeToBucket.put(PN_AAR,BUCKET_HOT);
-        mapDocumentTypeToBucket.put(PN_LEGAL_FACTS,BUCKET_STAGING);
-        mapDocumentTypeToBucket.put(PN_EXTERNAL_LEGAL_FACTS,BUCKET_HOT);
-        mapDocumentTypeToBucket.put(PN_DOWNTIME_LEGAL_FACTS,BUCKET_STAGING);
-        hotStatus = Arrays.asList("cold");
-        coldStatus = Arrays.asList("hot");
+        mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS,BUCKET_HOT_NAME);
+        mapDocumentTypeToBucket.put(PN_AAR,BUCKET_HOT_NAME);
+        mapDocumentTypeToBucket.put(PN_LEGAL_FACTS,BUCKET_STAGE_NAME);
+        mapDocumentTypeToBucket.put(PN_EXTERNAL_LEGAL_FACTS,BUCKET_HOT_NAME);
+        mapDocumentTypeToBucket.put(PN_DOWNTIME_LEGAL_FACTS,BUCKET_STAGE_NAME);
+
     }
 
     public FileCreationResponse createUriForUploadFile(String xPagopaSafestorageCxId, String contentType, String documentType, String status) throws InterruptedException {
@@ -176,7 +175,7 @@ public class UriBuilderService {
 
     }
 
-    private S3Presigner getS3Presigner() {
+    public static  S3Presigner getS3Presigner() {
         ProfileCredentialsProvider credentialsProvider = ProfileCredentialsProvider.create();
         Region region = EU_CENTRAL_1;
         return S3Presigner.builder()
@@ -264,7 +263,7 @@ public class UriBuilderService {
         S3Presigner presigner = getS3Presigner();
         String bucketName = mapDocumentTypeToBucket.get(documentType);
         FileDownloadInfo fileDOwnloadInfo = null;
-        if (hotStatus.contains(status)){
+        if (!Document.DocumentStateEnum.FREEZED.getValue().equals(status)){
             fileDOwnloadInfo =getPresignedUrl(presigner, bucketName,  fileKey );
         }else{
             fileDOwnloadInfo =recoverDocumentFromBucket( presigner,  bucketName,fileKey);

@@ -76,7 +76,7 @@ public class DocumentServiceImpl implements DocumentService {
                 	if (documentEntityInput.getDocumentState() == null) {
                 		documentEntityInput.setDocumentState(documentEntityStored.getDocumentState());
                 	}
-                	documentEntityInput.setRetentionPeriod(documentEntityStored.getRetentionPeriod());
+                	documentEntityInput.setRetentionUntil(documentEntityStored.getRetentionUntil());
                 	documentEntityInput.setCheckSum(documentEntityStored.getCheckSum());
                 	documentEntityInput.setContentLenght(documentEntityStored.getContentLenght());
                 	documentEntityInput.setContentType(documentEntityStored.getContentType());

@@ -52,7 +52,6 @@ public class ConfigurationApiControllerTest {
 		docTypesInput.setTipoDocumento(name);
 		docTypesInput.setChecksum(ChecksumEnum.MD5);
 		docTypesInput.setLifeCycleTag("lifeCicle1");
-		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
 		docTypesInput.setInformationClassification(InformationClassificationEnum.C);
 		docTypesInput.setDigitalSignature(true);
 		docTypesInput.setTimeStamped(TimeStampedEnum.STANDARD);

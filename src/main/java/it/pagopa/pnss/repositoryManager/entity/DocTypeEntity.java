@@ -20,15 +20,15 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class DocTypeEntity {
 	
 	@Getter(AccessLevel.NONE)
-	private TipoDocumentoEnum tipoDocumento;
-	private ChecksumEnum checkSum;
-	private String lifeCycleTag;
-	private String tipoTrasformazione;
+	private TipoDocumentoEnum tipoDocumento; // ok
+	private ChecksumEnum checkSum; // ok
+	private String lifeCycleTag; // ok
+//	private String tipoTrasformazione; // ko
 	@Getter(AccessLevel.NONE)
-	private InformationClassificationEnum informationClassification;
-	private Boolean digitalSignature;
+	private InformationClassificationEnum informationClassification; // ok
+	private Boolean digitalSignature; // ok
 	@Getter(AccessLevel.NONE)
-	private TimeStampedEnum timeStamped;
+	private TimeStampedEnum timeStamped; // ok
 	
 	@DynamoDbPartitionKey
 	@DynamoDBTypeConvertedEnum

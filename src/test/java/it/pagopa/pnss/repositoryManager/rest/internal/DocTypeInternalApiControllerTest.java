@@ -41,7 +41,6 @@ public class DocTypeInternalApiControllerTest {
 		docTypesInput.setTipoDocumento(PARTITION_ID);
 		docTypesInput.setChecksum(ChecksumEnum.MD5);
 		docTypesInput.setLifeCycleTag("lifeCicle1");
-		docTypesInput.setTipoTrasformazione("tipoTrasformazione1");
 		docTypesInput.setInformationClassification(InformationClassificationEnum.C);
 		docTypesInput.setDigitalSignature(true);
 		docTypesInput.setTimeStamped(TimeStampedEnum.STANDARD);

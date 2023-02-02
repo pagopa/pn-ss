@@ -15,12 +15,13 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class UserConfigurationEntity {
 	
 	@Getter(AccessLevel.NONE)
-	private String name;
-	private List<String> canCreate;
-	private List<String> canRead;
-	private String signatureInfo;
-	private UserConfigurationDestinationEntity destination; 
-	private String apiKey;
+	private String name; // ok
+	private List<String> canCreate; // ok
+	private List<String> canRead; // ok
+	/** __DA DEFINIRE__ configurazioni necessarie per la firma digitale */
+	private String signatureInfo; // da verificare il tipo
+	private UserConfigurationDestinationEntity destination;  // ok
+	private String apiKey; // ok
 	
 	@DynamoDbPartitionKey
 	public String getName() {

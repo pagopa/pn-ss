@@ -15,7 +15,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.CheckSumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentStateEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentTypeEnum;
@@ -40,9 +39,8 @@ public class DocumentInternalApiControllerTest {
 		Document document = new Document();
 		document.setDocumentKey(PARTITION_ID);
 		document.setDocumentState(DocumentStateEnum.FREEZED);
-		document.setRetentionPeriod("10000");
+		document.setRetentionUntil("2032-04-12T12:32:04.000Z");
 		document.setCheckSum(CheckSumEnum.MD5);
-		document.contentLenght("10000");
 		document.setContentType("xxxxx");
 		document.setDocumentType(DocumentTypeEnum.NOTIFICATION_ATTACHMENTS);
 		return document;

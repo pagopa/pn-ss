@@ -98,7 +98,7 @@ public class DocTypesServiceImpl implements DocTypesService {
         			sink.error(new ItemAlreadyPresent(docTypeInput.getTipoDocumento().getValue()));
         		}
         	})
-        	.doOnError(ItemAlreadyPresent.class, throwable -> log.info(throwable.getMessage()))
+        	.doOnError(ItemAlreadyPresent.class, throwable -> log.error("insertDocType() message : {}",throwable.getMessage(),throwable))
         	.doOnSuccess(unused -> docTypesTable.putItem(builder -> builder.item(docTypeEntityInput)))
         	.thenReturn(docTypeEntityInput);
         

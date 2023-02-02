@@ -1,14 +1,16 @@
 package it.pagopa.pnss.uriBuilder.service;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
+import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
+import it.pagopa.pnss.common.Constant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.dto.DocumentInput;
-import it.pagopa.pnss.common.client.dto.DocumentOutput;
-import it.pagopa.pnss.common.client.dto.UserConfigurationOutput;
 
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -32,7 +34,9 @@ import java.util.*;
 import static it.pagopa.pnss.common.Constant.*;
 
 @Service
+@Slf4j
 public class UriBuilderService {
+
 
     UserConfigurationClientCall userConfigurationClientCall;
     DocumentClientCall documentClientCall;
@@ -60,32 +64,45 @@ public class UriBuilderService {
 
     public FileCreationResponse createUriForUploadFile(String xPagopaSafestorageCxId, String contentType, String documentType, String status) throws InterruptedException {
 
-        ResponseEntity<UserConfigurationOutput> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
-        UserConfigurationOutput user = null;
+        ResponseEntity<UserConfiguration> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfiguration user = null;
         if (userResponse!=null ){
             user = userResponse.getBody();
         }
 
         if (user == null ){
+            log.info("Utente NON TROVATO "+ xPagopaSafestorageCxId);
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
         }
 
-        List<String> canRead = user.getCanRead();
-        if (!canRead.contains(documentType)){
+        List<String> canCreate = user.getCanCreate();
+        if (!canCreate.contains(documentType)){
+            log.info("Utente :"+ xPagopaSafestorageCxId +" non abilitato a caricare documenti di tipo "+documentType);
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Client : "+ xPagopaSafestorageCxId+  " not has privilege for download document type " +documentType);
         }
+        log.info("Utente :"+ xPagopaSafestorageCxId +" abilitato a  "+documentType);
 
         FileCreationResponse response = new FileCreationResponse();
         GenerateRandoKeyFile g = GenerateRandoKeyFile.getInstance();
+        log.info("Utente :"+ xPagopaSafestorageCxId +" docuemntType   "+documentType + "Inizio produzione chiave ");
+
         String keyName = g.createKeyName(documentType);
         int riprova = 0;
         while (keyPresent(keyName) && riprova <10){
+            log.info( "keyname : "+ keyName + " gia presente riprovo a calcolare");
             Thread.sleep(1000);
             keyName = g.createKeyName(documentType);
             riprova++;
         }
+        if (riprova>10 && keyPresent(keyName)){
+            log.info( " NON e' stato possibile produrre un key ");
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Non e' stato possibile produrre una chiave per user " + xPagopaSafestorageCxId);
+
+        }
+        log.info("Utente :"+ xPagopaSafestorageCxId +" docuemntType   "+documentType + " keyname : "+ keyName);
 
         response.setKey(keyName);
         String secret=null;
@@ -93,8 +110,8 @@ public class UriBuilderService {
 
         PresignedPutObjectRequest presignedRequest = builsUploadUrl( documentType,keyName,contentType);
         String myURL = presignedRequest.url().toString();
-        System.out.println("Presigned URL to upload a file to: " +myURL);
-        System.out.println("Which HTTP method needs to be used when uploading a file: " + presignedRequest.httpRequest().method());
+        log.info("Presigned URL to upload a file to: " +myURL);
+        log.info("Which HTTP method needs to be used when uploading a file: " + presignedRequest.httpRequest().method());
 
         // chiamare l'api di Gestore repository per salvare i dati
         //todo
@@ -103,17 +120,43 @@ public class UriBuilderService {
         response.setUploadUrl(myURL);
         response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
 
-        DocumentInput documentRepositoryDto = new DocumentInput();
+        Document documentRepositoryDto = new Document();
+        log.info("Upload dati documento su gestore repository: " +myURL);
+        documentRepositoryDto.setContentType(contentType);
+        documentRepositoryDto.setDocumentKey(keyName);
+        documentRepositoryDto.setDocumentState(Document.DocumentStateEnum.BOOKED);
+        documentRepositoryDto.setDocumentType(retrieveDocType(documentType));
+        //documentRepositoryDto.setRetentionPeriod();
 
-        documentClientCall.updatedocument(documentRepositoryDto);
+        documentClientCall.postdocument(documentRepositoryDto);
 
         return response;
 
     }
 
+    private Document.DocumentTypeEnum retrieveDocType(String documentType) {
+        if (documentType.equals(PN_DOWNTIME_LEGAL_FACTS)){
+            //return Document.DocumentTypeEnum.PN_DOWNTIME_LEGAL_FACTS
+        }
+        if (documentType.equals(PN_NOTIFICATION_ATTACHMENTS)){
+            return Document.DocumentTypeEnum.NOTIFICATION_ATTACHMENTS;
+        }
+        if (documentType.equals(PN_AAR)){
+            return Document.DocumentTypeEnum.AAR;
+        }
+        if (documentType.equals(PN_LEGAL_FACTS)){
+            return Document.DocumentTypeEnum.LEGAL_FACTS;
+        }
+        if (documentType.equals(PN_EXTERNAL_LEGAL_FACTS)){
+            return Document.DocumentTypeEnum.EXTERNAL_LEGAL_FACTS;
+        }
+        return null;
+
+    }
+
     private boolean keyPresent(String keyName) {
-        ResponseEntity<DocumentOutput> block = documentClientCall.getdocument(keyName);
-        DocumentOutput doc = block!=null ? block.getBody(): null;
+        ResponseEntity<Document> block = documentClientCall.getdocument(keyName);
+        Document doc = block!=null ? block.getBody(): null;
         return doc != null ? true : false ;
     }
 
@@ -135,7 +178,7 @@ public class UriBuilderService {
 
     private S3Presigner getS3Presigner() {
         ProfileCredentialsProvider credentialsProvider = ProfileCredentialsProvider.create();
-        Region region = Region.EU_CENTRAL_1;
+        Region region = EU_CENTRAL_1;
         return S3Presigner.builder()
                 .region(region)
                 .credentialsProvider(credentialsProvider)
@@ -166,8 +209,8 @@ public class UriBuilderService {
         // chiamare l'api di  GestoreRepositori per recupero dati
         //todo
 
-        ResponseEntity<UserConfigurationOutput> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
-        UserConfigurationOutput user = null;
+        ResponseEntity<UserConfiguration> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfiguration user = null;
         if (userResponse!=null ){
             user = userResponse.getBody();
         }
@@ -175,15 +218,15 @@ public class UriBuilderService {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
         }
-        ResponseEntity<DocumentOutput> block = documentClientCall.getdocument(fileKey);
-        DocumentOutput doc = block!=null ? block.getBody(): null;
+        ResponseEntity<Document> block = documentClientCall.getdocument(fileKey);
+        Document doc = block!=null ? block.getBody(): null;
         if (doc==null ){
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey);
         }
         List<String> canRead = user.getCanRead();
-// TODO: 26/01/2023  mettere doc.getDocumentType
-        String typeDocument = doc.getCheckSum();
+
+        String typeDocument = doc.getDocumentType().getValue();
         if (!canRead.contains(typeDocument)){
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Client : "+ xPagopaSafestorageCxId+  " not has privilege for download document type " +typeDocument);
@@ -191,15 +234,25 @@ public class UriBuilderService {
 
 
         FileDownloadResponse downloadResponse = new FileDownloadResponse();
-        downloadResponse.setChecksum(doc.getCheckSum());
-        downloadResponse.setContentLength(BigDecimal.TEN);
-        downloadResponse.setContentType("");
-        downloadResponse.setDocumentStatus(doc.getDocumentState().name());
-        downloadResponse.setDocumentType("");
+
+        String contentLength = doc.getContentLenght();
+        BigDecimal fileLength = null;
+        if (StringUtils.isNotEmpty(contentLength)){
+            try {
+                fileLength = new BigDecimal(contentLength);
+            }catch (Exception e){
+                log.error("Unabel parse to bigdecimal value "+contentLength);
+            }
+        }
+        downloadResponse.setChecksum(doc.getCheckSum().getValue());
+        downloadResponse.setContentLength(fileLength);
+        downloadResponse.setContentType(doc.getContentType());
+        downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
+        downloadResponse.setDocumentType(doc.getDocumentType().getValue());
 
         downloadResponse.setKey(fileKey);
         downloadResponse.setRetentionUntil(new Date());
-        downloadResponse.setVersionId("");
+        downloadResponse.setVersionId(null);
 
          downloadResponse.setDownload(createFileDownloadInfo(fileKey,downloadResponse.getDocumentStatus(), downloadResponse.getDocumentType()));
 

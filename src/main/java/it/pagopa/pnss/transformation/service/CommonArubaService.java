@@ -4,6 +4,7 @@ import it.pagopa.pnss.transformation.wsdl.ArubaSignServiceService;
 import it.pagopa.pnss.transformation.wsdl.Auth;
 import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -22,13 +23,27 @@ public abstract class CommonArubaService {
 
 
     Auth identity;
+    @Value("${aruba.delegated.domain}")
+    public   String delegated_domain;
+    @Value("${aruba.delegated.password}")
+    public   String delegated_password;
+    @Value("${aruba.delegated.user}")
+    public   String delegated_user;
+    @Value("${aruba.otpPwd}")
+    public   String otpPwd;
+    @Value("${aruba.typeOtpAuth}")
+    public   String typeOtpAuth;
+    @Value("${aruba.user}")
+    public   String user;
 
-    public static  String delegated_domain="demoprod";
-    public static  String delegated_password="password11";
-    public static  String delegated_user="delegato";
-    public static  String otpPwd="dsign";
-    public static  String typeOtpAuth="demoprod";
-    public static  String user="titolare_aut";
+    @Value("${aruba.cert_id}")
+    public String certId = "AS0";
+    @Value("${aruba.sign.wsdl.url}")
+    public   String arubaUrlWsdl;
+
+    @Value("${aruba.enabled.log}")
+    public   Boolean enableArubaLog;
+
 
     protected CommonArubaService() throws MalformedURLException {
     }
@@ -63,11 +78,16 @@ public abstract class CommonArubaService {
         JAXBContext jaxbContext = JAXBContext.newInstance(SignRequestV2.class);
         Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
         jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-//        File file = new File("C:\\PROGETTI\\DGSPA\\workspace\\pn-ssfile.xml");
         JAXBElement <SignRequestV2> jaxbElement
                 = new JAXBElement <SignRequestV2>(new QName("", "SignRequest"), SignRequestV2.class, signRequestV2);
-        jaxbMarshaller.marshal(jaxbElement, System.out);
+        if (enableArubaLog){
+          //File file = new File("C:\\PROGETTI\\DGSPA\\workspace\\pn-ssfile.xml");
+
+            jaxbMarshaller.marshal(jaxbElement, System.out);
 //        jaxbMarshaller.marshal(jaxbElement, file);
+            //jaxbMarshaller.marshal(jaxbElement, file);
+
+        }
     }
 
     public ArubaSignServiceService getArubaSignService() {

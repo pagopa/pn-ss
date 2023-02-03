@@ -52,12 +52,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 
 		return userConfiguration.flatMap(request -> userConfigurationService.patchUserConfiguration(name, request))
 				.map(ResponseEntity::ok)
-    			.onErrorResume(error -> {
-    				if (error instanceof ItemAlreadyPresent) {
-    					return Mono.just(ResponseEntity.notFound().build());
-    				}
-    				return Mono.just(ResponseEntity.badRequest().build());
-    			});
+    			.onErrorResume(IdClientNotFoundException.class, exception -> Mono.just(ResponseEntity.badRequest().build()));
     }
 
 	@Override

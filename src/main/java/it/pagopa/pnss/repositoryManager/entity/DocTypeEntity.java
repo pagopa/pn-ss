@@ -6,7 +6,6 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConvertedEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
-import it.pagopa.pnss.common.client.enumeration.TipoDocumentoEnum;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -20,7 +19,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class DocTypeEntity {
 	
 	@Getter(AccessLevel.NONE)
-	private TipoDocumentoEnum tipoDocumento; // ok
+	private /*TipoDocumentoEnum*/ String tipoDocumento; // ok
 	private ChecksumEnum checkSum; // ok
 	private String lifeCycleTag; // ok
 //	private String tipoTrasformazione; // ko
@@ -32,7 +31,7 @@ public class DocTypeEntity {
 	
 	@DynamoDbPartitionKey
 	@DynamoDBTypeConvertedEnum
-	public TipoDocumentoEnum getTipoDocumento() {
+	public String getTipoDocumento() {
 		return tipoDocumento;
 	}
 

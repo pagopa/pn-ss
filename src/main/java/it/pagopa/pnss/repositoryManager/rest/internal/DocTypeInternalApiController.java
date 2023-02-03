@@ -1,6 +1,5 @@
 package it.pagopa.pnss.repositoryManager.rest.internal;
 
-import org.apache.http.protocol.HTTP;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

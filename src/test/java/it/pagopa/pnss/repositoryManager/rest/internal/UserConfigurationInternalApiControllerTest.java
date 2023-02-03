@@ -34,7 +34,7 @@ public class UserConfigurationInternalApiControllerTest {
 	@Autowired
 	private WebTestClient webTestClient;
 	
-	private static final String BASE_PATH = "http://localhost:8080/safestorage/internal/v1/userConfigurations";
+	private static final String BASE_PATH = "/safestorage/internal/v1/userConfigurations";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{name}", BASE_PATH);
 	
 	private static final String PARTITION_ID_ENTITY = "key";
@@ -214,7 +214,7 @@ public class UserConfigurationInternalApiControllerTest {
 	        .contentType(APPLICATION_JSON)
 	        .body(BodyInserters.fromValue(userConfigurationInput))
 	        .exchange()
-	        .expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
+	        .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST);
 	
 		log.info("\n Test 7 (patchItemNoExistentKey) passed \n");
     }
@@ -260,7 +260,7 @@ public class UserConfigurationInternalApiControllerTest {
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus()
-	        .isEqualTo(HttpStatus.NOT_FOUND);
+	        .isEqualTo(HttpStatus.BAD_REQUEST);
 	    
 	    log.info("\n Test 10 (deleteItemNoExistentKey) passed \n");
     }

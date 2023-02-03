@@ -154,20 +154,20 @@ public class ConfigurationApiControllerTest {
 //		Collections.sort(returned);
 //
 //		Assertions.assertEquals(expected, returned);
-//		
-//		log.info("Test 1. getDocumentsConfigs() : test passed");
-//		
-//		webTestClient.delete()
-//			.uri(BASE_URL_DOC_TYPE+"/"+ namePrimo.getValue())
-//	        .accept(APPLICATION_JSON)
-//	        .exchange()
-//	        .expectStatus().isOk();
-//		
-//		webTestClient.delete()
-//			.uri(BASE_URL_DOC_TYPE+"/"+ nameSecondo.getValue())
-//	        .accept(APPLICATION_JSON)
-//	        .exchange()
-//	        .expectStatus().isOk();
+		
+		log.info("Test 1. getDocumentsConfigs() : test passed");
+		
+		webTestClient.delete()
+			.uri(BASE_URL_DOC_TYPE+"/"+ namePrimo.getValue())
+	        .accept(APPLICATION_JSON)
+	        .exchange()
+	        .expectStatus().isOk();
+		
+		webTestClient.delete()
+			.uri(BASE_URL_DOC_TYPE+"/"+ nameSecondo.getValue())
+	        .accept(APPLICATION_JSON)
+	        .exchange()
+	        .expectStatus().isOk();
 
 	}
 	

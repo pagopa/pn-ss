@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pnss.common.client.enumeration.TipoDocumentoEnum;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
@@ -88,14 +87,18 @@ public class DocTypesServiceImpl implements DocTypesService {
 	@Override
 	public Mono<DocumentType> insertDocType(DocumentType docTypeInput) {
 		
+		log.info("insertDocType() : docTypeInput : {}", docTypeInput);
+		
         DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
         		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
         DocTypeEntity docTypeEntityInput = objectMapper.convertValue(docTypeInput, DocTypeEntity.class);
         
         Mono<DocTypeEntity> monoEntity = Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(docTypeInput.getTipoDocumento().getValue()).build()))
-        	.handle( (docTypeFounded, sink) -> {
+        	.doOnSuccess( docTypeFounded -> {
+        		log.info("insertDocType() : docTypeFounded : {}", docTypeFounded);
         		if (docTypeFounded != null) {
-        			sink.error(new ItemAlreadyPresent(docTypeInput.getTipoDocumento().getValue()));
+        			 throw new ItemAlreadyPresent(docTypeInput.getTipoDocumento().getValue());
+//        			sink.error(new ItemAlreadyPresent(docTypeInput.getTipoDocumento().getValue()));
         		}
         	})
         	.doOnError(ItemAlreadyPresent.class, throwable -> log.error("insertDocType() message : {}",throwable.getMessage(),throwable))
@@ -117,7 +120,7 @@ public class DocTypesServiceImpl implements DocTypesService {
         		.switchIfEmpty(Mono.error(new IdClientNotFoundException(typeId)))
         		.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()))
                 .doOnSuccess(unused -> {
-                	docTypeEntityInput.setTipoDocumento(TipoDocumentoEnum.fromValue(typeId));
+                	docTypeEntityInput.setTipoDocumento(typeId);
                 	// Puts a single item in the mapped table. 
                 	// If the table contains an item with the same primary key, it will be replaced with this item. 
                     docTypesTable.putItem(docTypeEntityInput);

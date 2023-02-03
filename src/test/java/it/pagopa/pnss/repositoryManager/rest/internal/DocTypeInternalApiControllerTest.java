@@ -37,17 +37,14 @@ public class DocTypeInternalApiControllerTest {
 	private static final String BASE_PATH = "/safestorage/internal/v1/doctypes";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{typeId}", BASE_PATH);
 
-	private static final it.pagopa.pnss.common.client.enumeration.TipoDocumentoEnum PARTITION_ID_ENTITY 
-		= it.pagopa.pnss.common.client.enumeration.TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS;
-	
-	private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY.getValue();
-	private static final String PARTITION_ID_NO_EXISTENT = TipoDocumentoEnum.EXTERNAL_LEGAL_FACTS.getValue();
+	private static final String PARTITION_ID_DEFAULT = TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS.getValue();
+	private static final String PARTITION_ID_NO_EXISTENT = TipoDocumentoEnum.AAR.getValue();
 	
 	private static DocumentType docTypesInput;
 	
 	private static DynamoDbTable<DocTypeEntity> dynamoDbTable;
 	
-    private static void insertDocTypeEntity(it.pagopa.pnss.common.client.enumeration.TipoDocumentoEnum tipoDocumento) {
+    private static void insertDocTypeEntity(String tipoDocumento) {
     	log.info("execute insertDocTypeEntity()");
         var docTypeEntity = new DocTypeEntity();
         docTypeEntity.setTipoDocumento(tipoDocumento);
@@ -58,7 +55,7 @@ public class DocTypeInternalApiControllerTest {
     public static void insertDefaultDocType(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient) {
     	log.info("execute insertDefaultDocType()");
         dynamoDbTable = dynamoDbEnhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
-        insertDocTypeEntity(PARTITION_ID_ENTITY);
+        insertDocTypeEntity(PARTITION_ID_DEFAULT);
     }
 	
     @BeforeEach

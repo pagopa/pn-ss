@@ -200,7 +200,7 @@ public class UriBuilderService {
         Region region = EU_CENTRAL_1;
         return S3Presigner.builder()
                 .region(region)
-                .credentialsProvider(credentialsProvider)
+                //.credentialsProvider(credentialsProvider)
                 .build();
     }
 

@@ -1,6 +1,9 @@
 package it.pagopa.pnss.bucketManager.service;
 
+import com.amazonaws.services.lambda.runtime.ClientContext;
+import com.amazonaws.services.lambda.runtime.CognitoIdentity;
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.services.lambda.runtime.events.models.s3.S3EventNotification;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -9,6 +12,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 
 import java.io.IOException;
@@ -19,9 +23,71 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTestWebEnv
+@AutoConfigureWebTestClient
+@Slf4j
+  class HandlerTest {
 
- class HandlerTest {
     public S3Event event = new S3Event();
+    @Autowired
+    private Handler handler;
+
+    Context context = new Context() {
+        @Override
+        public String getAwsRequestId() {
+            return null;
+        }
+
+        @Override
+        public String getLogGroupName() {
+            return null;
+        }
+
+        @Override
+        public String getLogStreamName() {
+            return null;
+        }
+
+        @Override
+        public String getFunctionName() {
+            return null;
+        }
+
+        @Override
+        public String getFunctionVersion() {
+            return null;
+        }
+
+        @Override
+        public String getInvokedFunctionArn() {
+            return null;
+        }
+
+        @Override
+        public CognitoIdentity getIdentity() {
+            return null;
+        }
+
+        @Override
+        public ClientContext getClientContext() {
+            return null;
+        }
+
+        @Override
+        public int getRemainingTimeInMillis() {
+            return 0;
+        }
+
+        @Override
+        public int getMemoryLimitInMB() {
+            return 0;
+        }
+
+        @Override
+        public LambdaLogger getLogger() {
+            return null;
+        }
+    };
 
     String eventName = "ObjectCreated:*";
     S3EventNotification.S3EventNotificationRecord recordCreate = new S3EventNotification.S3EventNotificationRecord(
@@ -51,14 +117,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
     @Test
      void handlerTest() {
-        boolean result = false;
+        String result = "";
         this.event.getRecords().add(0, recordCreate);
-        this.eventName = "ObjectRemoved:*";
-        this.event.getRecords().add(1, recordCreate);
-        this.eventName = "ObjectRemoved:Delete";
-        this.event.getRecords().add(2, recordCreate);
 
-        if(this.event.getRecords().get(0).getEventName().equals("ObjectCreated:*")){
+        result = handler.handleRequest(event, context);
+
+        /*if(this.event.getRecords().get(0).getEventName().equals("ObjectCreated:*")){
             result = createdObjectTestOK(this.event.getRecords().get(0).getS3());
         }
         if (this.event.getRecords().get(1).getEventName().equals("ObjectRemoved:*")){
@@ -66,15 +130,13 @@ import static org.junit.jupiter.api.Assertions.*;
         }
         if (this.event.getRecords().get(2).getEventName().equals("ObjectRemoved:Delete")){
             result = removedObjectTestOK(this.event.getRecords().get(2).getS3());
-        }
-        Assertions.assertFalse(result);
+        }*/
+        Assertions.assertNotEquals("", result);
     }
 
     public Boolean createdObjectTestOK(S3EventNotification.S3Entity entity) {
         boolean result = false;
-        if(entity.getObject().getKey().equals("keyTest")){
-            result = true;
-        }
+
         Assertions.assertTrue(result);
         return result;
     }

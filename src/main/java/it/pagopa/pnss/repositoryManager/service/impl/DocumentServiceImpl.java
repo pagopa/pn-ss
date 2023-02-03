@@ -29,6 +29,7 @@ public class DocumentServiceImpl implements DocumentService {
     
 	@Override
 	public Mono<Document> getDocument(String documentKey) {
+		log.info("getDocument() : documentKey : {}", documentKey);
 		
         DynamoDbAsyncTable<DocumentEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
         		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
@@ -71,18 +72,14 @@ public class DocumentServiceImpl implements DocumentService {
         		.switchIfEmpty(Mono.error(new IdClientNotFoundException(documentKey)))
         		.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()))
                 .doOnSuccess(documentEntityStored -> {
-                	documentEntityInput.setDocumentKey(documentKey);
+                	log.info("patchDocument() : documentEntityStored : {}", documentEntityStored);
                 	// aggiorno solo lo stato
-                	if (documentEntityInput.getDocumentState() == null) {
-                		documentEntityInput.setDocumentState(documentEntityStored.getDocumentState());
+                	if (documentEntityInput.getDocumentState() != null) {
+                		documentEntityStored.setDocumentState(documentEntityInput.getDocumentState());
                 	}
-                	documentEntityInput.setRetentionUntil(documentEntityStored.getRetentionUntil());
-                	documentEntityInput.setCheckSum(documentEntityStored.getCheckSum());
-                	documentEntityInput.setContentLenght(documentEntityStored.getContentLenght());
-                	documentEntityInput.setContentType(documentEntityStored.getContentType());
-                	documentEntityInput.setDocumentType(documentEntityStored.getDocumentType());
+                	log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
                 	// Updates an item in the mapped table, or adds it if it doesn't exist. 
-                	documentTable.updateItem(documentEntityInput);
+                	documentTable.updateItem(documentEntityStored);
                 })
                 .thenReturn(documentEntityInput);
         

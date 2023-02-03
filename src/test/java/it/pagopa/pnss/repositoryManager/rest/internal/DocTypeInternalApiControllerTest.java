@@ -5,9 +5,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.http.HttpStatus;
@@ -30,7 +28,6 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @Slf4j
 public class DocTypeInternalApiControllerTest {
 
@@ -96,7 +93,7 @@ public class DocTypeInternalApiControllerTest {
 	
 	@Test
 	// Codice test: DTSS.101.2
-	void postItemIncorrectParameter() {
+	void postItemIncorrectParameters() {
 
 		docTypesInput.setTipoDocumento(null);
 		
@@ -106,7 +103,7 @@ public class DocTypeInternalApiControllerTest {
 					 .contentType(APPLICATION_JSON)
 					 .body(BodyInserters.fromValue(docTypesInput))
 					 .exchange()
-		        .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST);
+					 .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST);
 
 		log.info("\n Test 2 (postItemIncorrectParameters) passed \n");
 
@@ -252,7 +249,7 @@ public class DocTypeInternalApiControllerTest {
 	
 	@Test
 	// codice test: DTSS.103.3
-	void deleteItemIncorrectParameter() {
+	void deleteItemIncorrectParameters() {
 		
 		webTestClient.delete()
 			.uri(BASE_PATH)

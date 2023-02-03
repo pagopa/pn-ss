@@ -3,14 +3,13 @@ package it.pagopa.pnss.repositoryManager.rest;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.http.HttpStatus;
@@ -26,27 +25,69 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
+import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
+import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @Slf4j
 public class ConfigurationApiControllerTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
 	
-	private static final String BASE_URL_DOC_TYPE = "http://localhost:8080/safestorage/internal/v1/doctypes";
-	private static final String BASE_URL_USER_CONFIGURATION = "http://localhost:8080/safestorage/internal/v1/userConfigurations";
-	private static final String BASE_URL_CONFIGURATIONS_DOC_TYPE = "http://localhost:8080/safe-storage/v1/configurations/documents-types";
-	private static final String BASE_URL_CONFIGURATIONS_USER_CONF = "http://localhost:8080/safe-storage/v1/configurations/clients/";
+	private static final String BASE_URL_DOC_TYPE = "/safestorage/internal/v1/doctypes";
+	private static final String BASE_URL_USER_CONFIGURATION = "/safestorage/internal/v1/userConfigurations";
 	
-	private static final String PARTITION_ID_NAME_KEY_1 = "key1";
-	final String PARTITION_ID_NAME_KEY_2 = "key2";
-
-
+	private static final String BASE_URL_CONFIGURATIONS_DOC_TYPE = "/safe-storage/v1/configurations/documents-types";
+	
+	private static final String BASE_PATH_CONFIGURATIONS_USER_CONF = "/safe-storage/v1/configurations/clients/";
+	private static final String BASE_PATH_CONFIGURATIONS_USER_CONF_WITH_PARAM = String.format("%s/{clientId}", BASE_PATH_CONFIGURATIONS_USER_CONF);
+	
+	private static final String PARTITION_ID_DEFAULT_USER_CONF = "key1";
+	private static final String PARTITION_ID_NO_EXISTENT_USER_CONF = "key2";
+	
+	private static UserConfiguration userConfigurationInput;
+	
+	private static DynamoDbTable<UserConfigurationEntity> dynamoDbTable;
+	
+    private static void insertUserConfigurationEntity(String name) {
+    	log.info("execute insertUserConfigurationEntity()");
+        var userConfigurationEntity = new UserConfigurationEntity();
+        userConfigurationEntity.setName(name);
+        dynamoDbTable.putItem(builder -> builder.item(userConfigurationEntity));
+    }
+	
+    @BeforeAll
+    public static void insertDefaultUserConfiguration(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient) {
+    	log.info("execute insertDefaultUserConfiguration()");
+        dynamoDbTable = dynamoDbEnhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, TableSchema.fromBean(UserConfigurationEntity.class));
+        insertUserConfigurationEntity(PARTITION_ID_DEFAULT_USER_CONF);
+    }
+	
+	@BeforeEach
+	public void createUserConfiguration() {
+		List<String> canCreate = new ArrayList<>();
+		canCreate.add("A");
+		List<String> canRead  = new ArrayList<>();
+		canRead.add("DD");
+		UserConfigurationDestination destination = new UserConfigurationDestination(); 
+		destination.setSqsUrl("URL");
+		
+		userConfigurationInput = new UserConfiguration();
+		userConfigurationInput.setName(PARTITION_ID_DEFAULT_USER_CONF);
+		userConfigurationInput.setCanCreate(canCreate);
+		userConfigurationInput.setCanRead(canRead);
+		userConfigurationInput.setSignatureInfo("mmm");
+		userConfigurationInput.setDestination(destination);
+		userConfigurationInput.setApiKey("apiKey");
+	}
+	
 	private DocumentType getDocumentType(TipoDocumentoEnum name) {
 		DocumentType docTypesInput = new DocumentType();
 		docTypesInput.setTipoDocumento(name);
@@ -57,28 +98,9 @@ public class ConfigurationApiControllerTest {
 		docTypesInput.setTimeStamped(TimeStampedEnum.STANDARD);
 		return docTypesInput;
 	}
-	
-	private UserConfiguration getUserConfiguration(String name) {
-		List<String> canCreate = new ArrayList<>();
-		canCreate.add("A");
-		List<String> canRead  = new ArrayList<>();
-		canRead.add("DD");
-		UserConfigurationDestination destination = new UserConfigurationDestination(); 
-		destination.setSqsUrl("URL");
-		
-		UserConfiguration userConfiguration = new UserConfiguration();
-		userConfiguration.setName(name);
-		userConfiguration.setCanCreate(canCreate);
-		userConfiguration.setCanRead(canRead);
-		userConfiguration.setSignatureInfo("mmm");
-		userConfiguration.setDestination(destination);
-		userConfiguration.setApiKey("apiKey");
-		return userConfiguration;
-	}
 
 	@Test
-	@Order(1)
-	public void getDocumentsConfigs() {
+	void getDocumentsConfigs() {
 		
 		final TipoDocumentoEnum namePrimo = TipoDocumentoEnum.AAR;
 		DocumentType docTypePrimoInput = getDocumentType(namePrimo);
@@ -150,24 +172,10 @@ public class ConfigurationApiControllerTest {
 	}
 	
 	@Test
-	@Order(2)
-	public void getCurrentClientConfig() {
-		
-		
-		UserConfiguration userConfigurationInput = getUserConfiguration(PARTITION_ID_NAME_KEY_1);
-		
-		webTestClient.post()
-	        .uri(BASE_URL_USER_CONFIGURATION)
-	        .accept(APPLICATION_JSON)
-	        .contentType(APPLICATION_JSON)
-	        .body(BodyInserters.fromValue(userConfigurationInput))
-	        .exchange()
-	        .expectStatus().isOk();
-		
-		log.info("\n Test 2. getCurrentClientConfig() : userConfiguration inserito");
+	void getCurrentClientConfig() {
 		
 		EntityExchangeResult<it.pagopa.pn.template.rest.v1.dto.UserConfiguration> userConfigurationInserted = webTestClient.get()
-			.uri(BASE_URL_CONFIGURATIONS_USER_CONF+"/"+PARTITION_ID_NAME_KEY_1)
+			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_CONFIGURATIONS_USER_CONF_WITH_PARAM).build(PARTITION_ID_DEFAULT_USER_CONF))
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isOk()
@@ -183,40 +191,25 @@ public class ConfigurationApiControllerTest {
 	}
 	
 	@Test
-	@Order(3)
-	public void getCurrentClientConfigNoExistentKey() {
-		
-//		UserConfiguration userConfigurationInput = getUserConfiguration(PARTITION_ID_NAME_KEY_1);
-//		
-//		webTestClient.post()
-//	        .uri(BASE_URL_USER_CONFIGURATION)
-//	        .accept(APPLICATION_JSON)
-//	        .contentType(APPLICATION_JSON)
-//	        .body(BodyInserters.fromValue(userConfigurationInput))
-//	        .exchange()
-//	        .expectStatus().isOk();
-//		
-//		log.info("\n Test 3. getCurrentClientConfigNoExistentKey() : userConfiguration inserito, name {} \n", userConfigurationInput.getName());
-		
+	void getCurrentClientConfigNoExistentKey() {		
 		webTestClient.get()
-			.uri(BASE_URL_CONFIGURATIONS_USER_CONF+"/"+PARTITION_ID_NAME_KEY_2)
+			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_CONFIGURATIONS_USER_CONF_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT_USER_CONF))
 	        .accept(APPLICATION_JSON)
 	        .exchange()
-	        .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+	        .expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
 	    
 	    log.info("\n Test 3 (getCurrentClientConfigNoExistentKey) test passed \n");
 		
 	}
 	
 	@Test
-	@Order(4)
-	public void getCurrentClientIncorrectParameter() {
+	void getCurrentClientIncorrectParameter() {
 				
 		webTestClient.get()
-			.uri(BASE_URL_CONFIGURATIONS_USER_CONF)
-	        .accept(APPLICATION_JSON)
-	        .exchange()
-	        .expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
+			.uri(BASE_PATH_CONFIGURATIONS_USER_CONF)
+			.accept(APPLICATION_JSON)
+			.exchange()
+			.expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
 	    
 	    log.info("\n Test 3 (getCurrentClientIncorrectParameter) test passed \n");
 		

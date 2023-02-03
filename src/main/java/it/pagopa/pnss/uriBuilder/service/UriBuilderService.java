@@ -1,5 +1,7 @@
 package it.pagopa.pnss.uriBuilder.service;
 
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkClientException;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
@@ -169,9 +171,27 @@ public class UriBuilderService {
     private PresignedPutObjectRequest  builsUploadUrl(String documentType, String keyName, String contentType) {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
+        PresignedPutObjectRequest response = null;
+        try{
+            S3Presigner presigner = getS3Presigner();
+            response =signBucket(presigner, bucketName, keyName,contentType);
 
-        S3Presigner presigner = getS3Presigner();
-        return  signBucket(presigner, bucketName, keyName,contentType);
+        }catch (AmazonServiceException ase){
+            log.error(" Errore AMAZON AmazonServiceException" ,ase );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException " );
+        }catch (SdkClientException sce){
+            log.error(" Errore AMAZON SdkClientException" ,sce );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException " );
+        }catch (Exception e) {
+            log.error(" Errore Generico" ,e );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico " );
+
+        }
+
+        return  response;
 
     }
 
@@ -260,16 +280,32 @@ public class UriBuilderService {
     }
 
     private FileDownloadInfo createFileDownloadInfo(String fileKey, String status,  String documentType) {
-        S3Presigner presigner = getS3Presigner();
-        String bucketName = mapDocumentTypeToBucket.get(documentType);
         FileDownloadInfo fileDOwnloadInfo = null;
-        if (!Document.DocumentStateEnum.FREEZED.getValue().equals(status)){
-            fileDOwnloadInfo =getPresignedUrl(presigner, bucketName,  fileKey );
-        }else{
-            fileDOwnloadInfo =recoverDocumentFromBucket( presigner,  bucketName,fileKey);
+        try{
+            S3Presigner presigner = getS3Presigner();
+            String bucketName = mapDocumentTypeToBucket.get(documentType);
+            log.info("INIZIO RECUPERO URL DOWLOAND ");
+            if (!Document.DocumentStateEnum.FREEZED.getValue().equals(status)){
+                fileDOwnloadInfo =getPresignedUrl(presigner, bucketName,  fileKey );
+            }else{
+                fileDOwnloadInfo =recoverDocumentFromBucket( presigner,  bucketName,fileKey);
+            }
+        }catch (AmazonServiceException ase){
+            log.error(" Errore AMAZON AmazonServiceException" ,ase );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException " );
+        }catch (SdkClientException sce){
+            log.error(" Errore AMAZON SdkClientException" ,sce );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException " );
+        }catch (Exception e) {
+            log.error(" Errore Generico" ,e );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico " );
+
         }
 
-         return fileDOwnloadInfo;
+        return fileDOwnloadInfo;
 
     }
 
@@ -283,17 +319,22 @@ public class UriBuilderService {
 
     private FileDownloadInfo getPresignedUrl(S3Presigner presigner, String bucketName, String keyName) {
         FileDownloadInfo fdinfo = new FileDownloadInfo();
+        log.info("INIZIO CREAZIONE OGGETTO  GetObjectRequest");
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(keyName)
                 .build();
-
+        log.info("FINE  CREAZIONE OGGETTO  GetObjectRequest");
+        log.info("INIZIO  CREAZIONE OGGETTO  GetObjectPresignRequest");
         GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
                 .signatureDuration(Duration.ofMinutes(60))
                 .getObjectRequest(getObjectRequest)
                 .build();
+        log.info("FINE  CREAZIONE OGGETTO  GetObjectPresignRequest");
 
+        log.info("INIZIO  RECUPERO URL ");
         PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(getObjectPresignRequest);
+        log.info("FINE   RECUPERO URL ");
 
         String theUrl = presignedGetObjectRequest.url().toString();
         fdinfo.setUrl(theUrl);

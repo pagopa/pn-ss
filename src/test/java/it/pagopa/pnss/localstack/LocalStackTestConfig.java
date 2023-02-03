@@ -1,14 +1,20 @@
 package it.pagopa.pnss.localstack;
 
 //import static it.pagopa.pnss.constant.QueueNameConstant.*;
+import static it.pagopa.pnss.common.QueueNameConstant.ALL_BUCKET_NAME_LIST;
+import static it.pagopa.pnss.common.QueueNameConstant.ALL_QUEUE_NAME_LIST;
 import static it.pagopa.pnss.localstack.LocalStackUtils.DEFAULT_LOCAL_STACK_TAG;
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME;
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.DOCUMENT_TABLE_NAME;
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.DOC_TYPES_TABLE_NAME;
 import static java.util.Map.entry;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.DYNAMODB;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.S3;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SNS;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SQS;
 import static software.amazon.awssdk.services.dynamodb.model.TableStatus.ACTIVE;
 
+import java.io.IOException;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -40,50 +46,64 @@ public class LocalStackTestConfig {
     private DynamoDbClient dynamoDbClient;
 
     @Autowired
-    private DynamoDbEnhancedClient enhancedClient;
+    private DynamoDbEnhancedClient dynamoDbEnhancedClient;
 
     @Autowired
     private DynamoDbWaiter dynamoDbWaiter;
+    
+    private static final String QUEUE_NAME = "order-event-test-queue";
+    private static final String BUCKET_NAME = "order-event-test-bucket";
+
 
     static LocalStackContainer localStackContainer = new LocalStackContainer(DockerImageName.parse(DEFAULT_LOCAL_STACK_TAG)).withServices(
-//            SQS,
-            DYNAMODB);
+            SQS,
+            DYNAMODB,
+            S3);
 
     static {
         localStackContainer.start();
         
         System.setProperty("test.aws.region", localStackContainer.getRegion());
 
-//      Override aws config
+//      <-- Override spring-cloud-starter-aws-messaging endpoints for testing -->
+        System.setProperty("cloud.aws.sqs.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SQS)));
+
+//      <-- Override AWS services endpoint variables for testing -->
+        System.setProperty("test.aws.sqs.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SQS)));
+        System.setProperty("test.aws.dynamodb.endpoint", String.valueOf(localStackContainer.getEndpointOverride(DYNAMODB)));
+        System.setProperty("test.aws.sns.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SNS)));
         System.setProperty("aws.config.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.config.secret.key", localStackContainer.getSecretKey());
         System.setProperty("aws.config.default.region", localStackContainer.getRegion());
         System.setProperty("aws.region",  localStackContainer.getRegion());
         System.setProperty("aws.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.secret.key", localStackContainer.getSecretKey());
+        System.setProperty("PnSsStagingBucketName","PnSsStagingBucketName");
 
-////      SQS Override Endpoint
-//        System.setProperty("aws.sqs.test.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SQS)));
+        System.setProperty("PnSsStagingBucketArn","PnSsStagingBucketArn");
+        System.setProperty("PnSsBucketName","PnSsBucketName");
+        System.setProperty("PnSsBucketArn","PnSsBucketArn");
 
-//      DynamoDb Override Endpoint
-        //System.setProperty("aws.dynamodb.test.endpoint", String.valueOf(localStackContainer.getEndpointOverride(DYNAMODB)));
-        System.setProperty("test.aws.dynamodb.endpoint", String.valueOf(localStackContainer.getEndpointOverride(DYNAMODB)));
-        
-//        try {
-//
-////          Create SQS queue
-//            localStackContainer.execInContainer(createQueueCliCommand(NOTIFICATION_TRACKER_QUEUE_NAME));
-//            localStackContainer.execInContainer(createQueueCliCommand(SMS_QUEUE_NAME));
-//            localStackContainer.execInContainer(createQueueCliCommand(SMS_ERROR_QUEUE_NAME));
-//
-//            // TODO: Create DynamoDb schemas
-//        } catch (IOException | InterruptedException e) {
-//            throw new RuntimeException(e);
-//        }
+
+
+        try {
+
+//          Create SQS queue
+            for (String queueName : ALL_QUEUE_NAME_LIST) {
+                localStackContainer.execInContainer("awslocal", "sqs", "create-queue", "--queue-name", queueName);
+            }
+            for (String bucketName : ALL_BUCKET_NAME_LIST){
+                localStackContainer.execInContainer("awslocal", "s3", "mb", "s3://" + bucketName);
+            }
+
+            // TODO: Create SNS topic
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void createTable(final String tableName, final Class<?> entityClass) {
-        DynamoDbTable<?> dynamoDbTable = enhancedClient.table(tableName, TableSchema.fromBean(entityClass));
+        DynamoDbTable<?> dynamoDbTable = dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(entityClass));
         dynamoDbTable.createTable(builder -> builder.provisionedThroughput(b -> b.readCapacityUnits(5L).writeCapacityUnits(5L).build()));
 
         // La creazione delle tabelle su Dynamo è asincrona. Bisogna aspettare tramite il DynamoDbWaiter

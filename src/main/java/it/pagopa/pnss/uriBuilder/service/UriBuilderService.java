@@ -1,7 +1,5 @@
 package it.pagopa.pnss.uriBuilder.service;
 
-import static it.pagopa.pnss.common.Constant.BUCKET_HOT;
-import static it.pagopa.pnss.common.Constant.BUCKET_STAGING;
 import static it.pagopa.pnss.common.Constant.EU_CENTRAL_1;
 import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
 import static it.pagopa.pnss.common.Constant.PN_AAR;
@@ -9,10 +7,11 @@ import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
 import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
 import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
 import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_STAGE_NAME;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +23,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkClientException;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
@@ -57,20 +59,17 @@ public class UriBuilderService {
         this.documentClientCall = documentClientCall;
     }
 
-    List <String> hotStatus;
-    List <String> coldStatus;
     Map<String,String> mapDocumentTypeToBucket ;
 
     @PostConstruct
     public void createMap() {
         mapDocumentTypeToBucket= new HashMap<>();
-        mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS,BUCKET_HOT);
-        mapDocumentTypeToBucket.put(PN_AAR,BUCKET_HOT);
-        mapDocumentTypeToBucket.put(PN_LEGAL_FACTS,BUCKET_STAGING);
-        mapDocumentTypeToBucket.put(PN_EXTERNAL_LEGAL_FACTS,BUCKET_HOT);
-        mapDocumentTypeToBucket.put(PN_DOWNTIME_LEGAL_FACTS,BUCKET_STAGING);
-        hotStatus = Arrays.asList("cold");
-        coldStatus = Arrays.asList("hot");
+        mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS,BUCKET_HOT_NAME);
+        mapDocumentTypeToBucket.put(PN_AAR,BUCKET_HOT_NAME);
+        mapDocumentTypeToBucket.put(PN_LEGAL_FACTS,BUCKET_STAGE_NAME);
+        mapDocumentTypeToBucket.put(PN_EXTERNAL_LEGAL_FACTS,BUCKET_HOT_NAME);
+        mapDocumentTypeToBucket.put(PN_DOWNTIME_LEGAL_FACTS,BUCKET_STAGE_NAME);
+
     }
 
     public FileCreationResponse createUriForUploadFile(String xPagopaSafestorageCxId, String contentType, String documentType, String status) throws InterruptedException {
@@ -181,18 +180,36 @@ public class UriBuilderService {
     private PresignedPutObjectRequest  builsUploadUrl(String documentType, String keyName, String contentType) {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
+        PresignedPutObjectRequest response = null;
+        try{
+            S3Presigner presigner = getS3Presigner();
+            response =signBucket(presigner, bucketName, keyName,contentType);
 
-        S3Presigner presigner = getS3Presigner();
-        return  signBucket(presigner, bucketName, keyName,contentType);
+        }catch (AmazonServiceException ase){
+            log.error(" Errore AMAZON AmazonServiceException" ,ase );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException " );
+        }catch (SdkClientException sce){
+            log.error(" Errore AMAZON SdkClientException" ,sce );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException " );
+        }catch (Exception e) {
+            log.error(" Errore Generico" ,e );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico " );
+
+        }
+
+        return  response;
 
     }
 
-    private S3Presigner getS3Presigner() {
+    public static  S3Presigner getS3Presigner() {
         ProfileCredentialsProvider credentialsProvider = ProfileCredentialsProvider.create();
         Region region = EU_CENTRAL_1;
         return S3Presigner.builder()
                 .region(region)
-                .credentialsProvider(credentialsProvider)
+                //.credentialsProvider(credentialsProvider)
                 .build();
     }
 
@@ -272,16 +289,32 @@ public class UriBuilderService {
     }
 
     private FileDownloadInfo createFileDownloadInfo(String fileKey, String status,  String documentType) {
-        S3Presigner presigner = getS3Presigner();
-        String bucketName = mapDocumentTypeToBucket.get(documentType);
         FileDownloadInfo fileDOwnloadInfo = null;
-        if (hotStatus.contains(status)){
-            fileDOwnloadInfo =getPresignedUrl(presigner, bucketName,  fileKey );
-        }else{
-            fileDOwnloadInfo =recoverDocumentFromBucket( presigner,  bucketName,fileKey);
+        try{
+            S3Presigner presigner = getS3Presigner();
+            String bucketName = mapDocumentTypeToBucket.get(documentType);
+            log.info("INIZIO RECUPERO URL DOWLOAND ");
+            if (!Document.DocumentStateEnum.FREEZED.getValue().equals(status)){
+                fileDOwnloadInfo =getPresignedUrl(presigner, bucketName,  fileKey );
+            }else{
+                fileDOwnloadInfo =recoverDocumentFromBucket( presigner,  bucketName,fileKey);
+            }
+        }catch (AmazonServiceException ase){
+            log.error(" Errore AMAZON AmazonServiceException" ,ase );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException " );
+        }catch (SdkClientException sce){
+            log.error(" Errore AMAZON SdkClientException" ,sce );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException " );
+        }catch (Exception e) {
+            log.error(" Errore Generico" ,e );
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico " );
+
         }
 
-         return fileDOwnloadInfo;
+        return fileDOwnloadInfo;
 
     }
 
@@ -295,17 +328,22 @@ public class UriBuilderService {
 
     private FileDownloadInfo getPresignedUrl(S3Presigner presigner, String bucketName, String keyName) {
         FileDownloadInfo fdinfo = new FileDownloadInfo();
+        log.info("INIZIO CREAZIONE OGGETTO  GetObjectRequest");
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(keyName)
                 .build();
-
+        log.info("FINE  CREAZIONE OGGETTO  GetObjectRequest");
+        log.info("INIZIO  CREAZIONE OGGETTO  GetObjectPresignRequest");
         GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
                 .signatureDuration(Duration.ofMinutes(60))
                 .getObjectRequest(getObjectRequest)
                 .build();
+        log.info("FINE  CREAZIONE OGGETTO  GetObjectPresignRequest");
 
+        log.info("INIZIO  RECUPERO URL ");
         PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(getObjectPresignRequest);
+        log.info("FINE   RECUPERO URL ");
 
         String theUrl = presignedGetObjectRequest.url().toString();
         fdinfo.setUrl(theUrl);

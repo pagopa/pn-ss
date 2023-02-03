@@ -41,6 +41,10 @@ public abstract class CommonArubaService {
     @Value("${aruba.sign.wsdl.url}")
     public   String arubaUrlWsdl;
 
+    @Value("${aruba.enabled.log}")
+    public   Boolean enableArubaLog;
+
+
     protected CommonArubaService() throws MalformedURLException {
     }
 
@@ -74,13 +78,16 @@ public abstract class CommonArubaService {
         JAXBContext jaxbContext = JAXBContext.newInstance(SignRequestV2.class);
         Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
         jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-//        File file = new File("C:\\PROGETTI\\DGSPA\\workspace\\pn-ssfile.xml");
-        //File file = new File("C:\\PROGETTI\\DGSPA\\workspace\\pn-ssfile.xml");
         JAXBElement <SignRequestV2> jaxbElement
                 = new JAXBElement <SignRequestV2>(new QName("", "SignRequest"), SignRequestV2.class, signRequestV2);
-        jaxbMarshaller.marshal(jaxbElement, System.out);
+        if (enableArubaLog){
+          //File file = new File("C:\\PROGETTI\\DGSPA\\workspace\\pn-ssfile.xml");
+
+            jaxbMarshaller.marshal(jaxbElement, System.out);
 //        jaxbMarshaller.marshal(jaxbElement, file);
-        //jaxbMarshaller.marshal(jaxbElement, file);
+            //jaxbMarshaller.marshal(jaxbElement, file);
+
+        }
     }
 
     public ArubaSignServiceService getArubaSignService() {

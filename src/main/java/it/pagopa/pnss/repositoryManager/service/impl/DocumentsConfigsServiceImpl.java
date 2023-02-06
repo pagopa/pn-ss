@@ -53,7 +53,7 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
 		log.info("getAllDocumentType() : listDocTypeConf : {}", listDocTypeConf);
 		
 		// recupero la lista "storageConfigurations"
-		// TODO attivita' in sospeso
+		storageConfigurationsService.getLifecycleConfiguration();
 
 		DocumentTypesConfigurations result = new DocumentTypesConfigurations();
 		result.setDocumentsTypes(listDocTypeConf);

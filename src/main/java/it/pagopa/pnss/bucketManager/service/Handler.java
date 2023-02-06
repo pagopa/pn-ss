@@ -17,9 +17,11 @@ import javax.imageio.ImageIO;
 
 import com.amazonaws.services.lambda.runtime.events.models.s3.S3EventNotification;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pnss.bucketManager.exception.EventNameNotFoundException;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.impl.DocumentClientCallImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -63,7 +65,7 @@ public class Handler implements RequestHandler<S3Event, String> {
 
         } catch (Exception e) {
 
-            throw new RuntimeException(e);
+            throw new EventNameNotFoundException();
 
         }
         return result;
@@ -75,24 +77,24 @@ public class Handler implements RequestHandler<S3Event, String> {
         Document document = new Document();
         document.setDocumentKey(eventEntity.getObject().getKey());
         document.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
-        client.patchdocument(eventEntity.getObject().getKey(), document);
-        return "State correctly changed to Available";
+        ResponseEntity<Document> response = client.patchdocument(eventEntity.getObject().getKey(), document);
+        return String.valueOf(response.getStatusCodeValue());
     }
 
     public String freezedObject(S3EventNotification.S3Entity eventEntity) {
         Document document = new Document();
         document.setDocumentKey(eventEntity.getObject().getKey());
         document.setDocumentState(Document.DocumentStateEnum.FREEZED);
-        client.patchdocument(eventEntity.getObject().getKey(), document);
-        return "State correctly changed to Freezed";
+        ResponseEntity<Document> response = client.patchdocument(eventEntity.getObject().getKey(), document);
+        return String.valueOf(response.getStatusCodeValue());
     }
 
     private String deletedObject(S3EventNotification.S3Entity eventEntity) {
         Document document = new Document();
         document.setDocumentKey(eventEntity.getObject().getKey());
         document.setDocumentState(Document.DocumentStateEnum.DELETED);
-        client.patchdocument(eventEntity.getObject().getKey(), document);
-        return "State correctly changed to Deleted";
+        ResponseEntity<Document> response = client.patchdocument(eventEntity.getObject().getKey(), document);
+        return String.valueOf(response.getStatusCodeValue());
     }
 
 }

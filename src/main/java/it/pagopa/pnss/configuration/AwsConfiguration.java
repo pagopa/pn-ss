@@ -31,7 +31,7 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 
 @Configuration
 public class AwsConfiguration {
-
+	
     /**
      * Set in LocalStackTestConfig
      */
@@ -95,31 +95,6 @@ public class AwsConfiguration {
     }
 
     @Bean
-    public DynamoDbAsyncClient dynamoDbAsyncClient() {
-        DynamoDbAsyncClientBuilder dynamoDbAsyncClientBuilder = DynamoDbAsyncClient.builder()
-                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
-
-        if (dynamoDbLocalStackEndpoint != null) {
-            dynamoDbAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
-        } else {
-            dynamoDbAsyncClientBuilder.region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion());
-        }
-
-        return dynamoDbAsyncClientBuilder.build();
-    }
-
-    @Bean
-    public DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient(DynamoDbAsyncClient dynamoDbAsyncClient) {
-        return DynamoDbEnhancedAsyncClient.builder().dynamoDbClient(dynamoDbAsyncClient).build();
-    }
-
-    @Bean
-    public DynamoDbAsyncWaiter dynamoDbAsyncWaiter(DynamoDbAsyncClient dynamoDbAsyncClient) {
-        return DynamoDbAsyncWaiter.builder().client(dynamoDbAsyncClient).build();
-    }
-
-    // TODO: In the future, delete these synchronous dynamo clients. Only asynchronous Dynamo clients will be used
-    @Bean
     public DynamoDbClient dynamoDbClient() {
         DynamoDbClientBuilder dynamoDbClientBuilder = DynamoDbClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
 
@@ -131,7 +106,7 @@ public class AwsConfiguration {
 
         return dynamoDbClientBuilder.build();
     }
-
+    
     @Bean
     public DynamoDbEnhancedClient dynamoDbEnhancedClient(DynamoDbClient dynamoDbClient) {
         return DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoDbClient).build();
@@ -140,6 +115,30 @@ public class AwsConfiguration {
     @Bean
     public DynamoDbWaiter dynamoDbWaiter(DynamoDbClient dynamoDbClient) {
         return DynamoDbWaiter.builder().client(dynamoDbClient).build();
+    }
+    
+    @Bean
+    public DynamoDbAsyncClient dynamoDbAsyncClient() {
+        DynamoDbAsyncClientBuilder dynamoDbAsyncClientBuilder = DynamoDbAsyncClient.builder()
+                                                                                   .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+
+        if (dynamoDbLocalStackEndpoint != null) {
+            dynamoDbAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
+        } else {
+            dynamoDbAsyncClientBuilder.region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion());
+        }
+
+        return dynamoDbAsyncClientBuilder.build();
+    }
+    
+    @Bean
+    public DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient(DynamoDbAsyncClient dynamoDbAsyncClient) {
+        return DynamoDbEnhancedAsyncClient.builder().dynamoDbClient(dynamoDbAsyncClient).build();
+    }
+
+    @Bean
+    public DynamoDbAsyncWaiter dynamoDbAsyncWaiter(DynamoDbAsyncClient dynamoDbAsyncClient) {
+        return DynamoDbAsyncWaiter.builder().client(dynamoDbAsyncClient).build();
     }
 
     @Bean

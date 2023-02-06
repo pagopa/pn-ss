@@ -75,6 +75,10 @@ paths:
             description: Not configured
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentType' 
   
   '/safestorage/internal/v1/doctypes': 
     post:
@@ -147,6 +151,10 @@ paths:
             description: Not configured
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'            
                 
   '/safestorage/internal/v1/documents': 
     post:
@@ -219,6 +227,10 @@ paths:
             description: Not configured
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserConfiguration'           
                 
   '/safestorage/internal/v1/userConfigurations':
     post:
@@ -269,7 +281,7 @@ components:
     DocumentType:
       type: object
       properties:
-        name:
+        tipoDocumento:
           type: string
           description: nome del tipo di documento
           enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
@@ -281,12 +293,11 @@ components:
           enum: [ 'MD5', 'SHA256']  
         lifeCycleTag:
           type: string
-        tipoTrasformazione:
-          type: string
         informationClassification:
           description: >-
             * `C` - Confidential
-            * `HC`- Highly Confidential
+            * `HC`- Highly Confidential </br>
+            Se il valore è HC il file deve essere criptato.</br>
             See [information classification](https://pagopa.atlassian.net/wiki/spaces/EN/pages/357204284/Data+Classification+Handling#Classificazione)
           type: string
           enum: [ 'C', 'HC' ] 
@@ -302,8 +313,10 @@ components:
           type: string
         documentState:
           type: string
-          enum: ['BOOKED','STAGED','VALID','AVAILABLE','FREEZED','ATTACHED','TO_DELETE','DELETED']
-        retentionPeriod:
+          enum: ['BOOKED','STAGED','AVAILABLE','FREEZED','ATTACHED','DELETED']
+        retentionUntil:
+          description: >-
+            data di scadenza del file
           type: string
         checkSum: 
           description:
@@ -312,7 +325,7 @@ components:
           type: string
           enum: [ 'MD5', 'SHA256']  
         contentLenght:
-          type: string
+          type: number
         contentType:
           type: string
         documentType:

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.template.rest.v1.api.CfgApi;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
+import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositoryManager.service.DocumentsConfigsService;
 import it.pagopa.pnss.repositoryManager.service.UserConfigurationService;
 import reactor.core.publisher.Mono;
@@ -25,6 +26,14 @@ public class ConfigurationApiController implements CfgApi {
 	@Autowired
 	private ObjectMapper objectMapper;
 	
+    @Override
+    public  Mono<ResponseEntity<DocumentTypesConfigurations>> getDocumentsConfigs( final ServerWebExchange exchange) {
+    	
+       	DocumentTypesConfigurations configurations = documentsConfigsService.getAllDocumentType();
+    	return Mono.just(ResponseEntity.ok().body(configurations));
+    	
+    } //RepositoryManagerException
+	
 	/**
 	 * Ogni microservizio che vuole utilizzare SafeStorage deve essere censito, avere almeno una api-key assegnata, 
 	 * e avere alcune configurazioni:
@@ -38,18 +47,18 @@ public class ConfigurationApiController implements CfgApi {
 	 */
 	@Override
     public Mono<ResponseEntity<UserConfiguration>> getCurrentClientConfig(String clientId,  final ServerWebExchange exchange) {
-    	
-		UserConfiguration userConfiguration = objectMapper.convertValue(userConfigurationService.getUserConfiguration(clientId), UserConfiguration.class);
-		return Mono.just(ResponseEntity.ok().body(userConfiguration));
 		
-    }
-    
-    @Override
-    public  Mono<ResponseEntity<DocumentTypesConfigurations>> getDocumentsConfigs( final ServerWebExchange exchange) {
-
-    	DocumentTypesConfigurations configurations = documentsConfigsService.getAllDocumentType();
-    	return Mono.just(ResponseEntity.ok().body(configurations));
-
+		return userConfigurationService.getUserConfiguration(clientId)
+			.map(userConfigurationInternal -> 
+				ResponseEntity.ok(objectMapper.convertValue(userConfigurationInternal, it.pagopa.pn.template.rest.v1.dto.UserConfiguration.class))
+			)
+			.onErrorResume(error -> {
+				if (error instanceof IdClientNotFoundException) {
+					return Mono.just(ResponseEntity.notFound().build());
+				}
+				return Mono.just(ResponseEntity.badRequest().build());
+			});
+		
     }
 
 }

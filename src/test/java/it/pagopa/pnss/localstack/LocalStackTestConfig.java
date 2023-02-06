@@ -8,14 +8,17 @@ import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.DOCUMENT_TABLE_NAME;
 import static it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant.DOC_TYPES_TABLE_NAME;
 import static java.util.Map.entry;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.*;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.DYNAMODB;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.S3;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SNS;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SQS;
 import static software.amazon.awssdk.services.dynamodb.model.TableStatus.ACTIVE;
+
+import java.io.IOException;
+import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
-import com.amazonaws.services.s3.AmazonS3;
-import it.pagopa.pnss.testutils.annotation.exception.DynamoDbInitTableCreationException;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -24,6 +27,8 @@ import org.testcontainers.utility.DockerImageName;
 import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
 import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
+import it.pagopa.pnss.testutils.annotation.exception.DynamoDbInitTableCreationException;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.internal.waiters.ResponseOrException;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -32,9 +37,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
-
-import java.io.IOException;
-import java.util.Map;
 
 @TestConfiguration
 @Slf4j
@@ -46,11 +48,12 @@ public class LocalStackTestConfig {
     @Autowired
     private DynamoDbEnhancedClient dynamoDbEnhancedClient;
 
-
-    private static final String QUEUE_NAME = "order-event-test-queue";
-    private static final String BUCKET_NAME = "order-event-test-bucket";
     @Autowired
     private DynamoDbWaiter dynamoDbWaiter;
+    
+    private static final String QUEUE_NAME = "order-event-test-queue";
+    private static final String BUCKET_NAME = "order-event-test-bucket";
+
 
     static LocalStackContainer localStackContainer = new LocalStackContainer(DockerImageName.parse(DEFAULT_LOCAL_STACK_TAG)).withServices(
             SQS,
@@ -59,7 +62,7 @@ public class LocalStackTestConfig {
 
     static {
         localStackContainer.start();
-
+        
         System.setProperty("test.aws.region", localStackContainer.getRegion());
 
 //      <-- Override spring-cloud-starter-aws-messaging endpoints for testing -->
@@ -98,8 +101,6 @@ public class LocalStackTestConfig {
             throw new RuntimeException(e);
         }
     }
-    
-
 
     private void createTable(final String tableName, final Class<?> entityClass) {
         DynamoDbTable<?> dynamoDbTable = dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(entityClass));

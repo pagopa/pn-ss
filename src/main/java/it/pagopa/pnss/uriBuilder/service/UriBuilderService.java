@@ -1,22 +1,40 @@
 package it.pagopa.pnss.uriBuilder.service;
 
+import static it.pagopa.pnss.common.Constant.EU_CENTRAL_1;
+import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
+import static it.pagopa.pnss.common.Constant.PN_AAR;
+import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_STAGE_NAME;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.PostConstruct;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
+
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
-import it.pagopa.pnss.common.Constant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.regions.Region;
@@ -27,15 +45,6 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
-
-import javax.annotation.PostConstruct;
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.util.*;
-
-import static it.pagopa.pnss.common.Constant.*;
-import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
-import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_STAGE_NAME;
 
 @Service
 @Slf4j
@@ -254,17 +263,17 @@ public class UriBuilderService {
 
         FileDownloadResponse downloadResponse = new FileDownloadResponse();
 
-        String contentLength = doc.getContentLenght();
-        BigDecimal fileLength = null;
-        if (StringUtils.isNotEmpty(contentLength)){
-            try {
-                fileLength = new BigDecimal(contentLength);
-            }catch (Exception e){
-                log.error("Unabel parse to bigdecimal value "+contentLength);
-            }
-        }
+        BigDecimal contentLength = doc.getContentLenght();
+//        BigDecimal fileLength = null;
+//        if (StringUtils.isNotEmpty(contentLength)){
+//            try {
+//                fileLength = new BigDecimal(contentLength);
+//            }catch (Exception e){
+//                log.error("Unabel parse to bigdecimal value "+contentLength);
+//            }
+//        }
         downloadResponse.setChecksum(doc.getCheckSum().getValue());
-        downloadResponse.setContentLength(fileLength);
+        downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
         downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
         downloadResponse.setDocumentType(doc.getDocumentType().getValue());

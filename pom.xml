@@ -19,7 +19,7 @@
     </scm>
     <properties>
         <java.version>11</java.version>
-        <awspring.version>2.3.2</awspring.version>
+        <awspring.version>2.4.4</awspring.version>
         <spring-cloud-starter-openfeign>3.0.0</spring-cloud-starter-openfeign>
     </properties>
 

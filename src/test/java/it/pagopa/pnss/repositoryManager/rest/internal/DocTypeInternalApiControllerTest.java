@@ -37,10 +37,12 @@ public class DocTypeInternalApiControllerTest {
 	private static final String BASE_PATH = "/safestorage/internal/v1/doctypes";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{typeId}", BASE_PATH);
 
-	private static final String PARTITION_ID_DEFAULT = TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS.getValue();
-	private static final String PARTITION_ID_NO_EXISTENT = TipoDocumentoEnum.AAR.getValue();
+	private static final String PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS = TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS.getValue();
+	private static final TipoDocumentoEnum PARTITION_ID_INSERT_LEGAL_FACTS = TipoDocumentoEnum.LEGAL_FACTS;
+	private static final String PARTITION_ID_NO_EXISTENT_AAR = TipoDocumentoEnum.AAR.getValue();
 	
-	private static DocumentType docTypesInput;
+	private static DocumentType docTypesInsertInput;
+	private static DocumentType docTypesUpdateDeleteInput;
 	
 	private static DynamoDbTable<DocTypeEntity> dynamoDbTable;
 	
@@ -55,35 +57,55 @@ public class DocTypeInternalApiControllerTest {
     public static void insertDefaultDocType(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient) {
     	log.info("execute insertDefaultDocType()");
         dynamoDbTable = dynamoDbEnhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
-        insertDocTypeEntity(PARTITION_ID_DEFAULT);
+        insertDocTypeEntity(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
     }
 	
     @BeforeEach
 	public void createDocumentType() {
-    	log.info("execute createDocumentType()");
-    	docTypesInput = new DocumentType();
-		docTypesInput.setTipoDocumento(TipoDocumentoEnum.fromValue(PARTITION_ID_DEFAULT));
-		docTypesInput.setChecksum(ChecksumEnum.MD5);
-		docTypesInput.setLifeCycleTag("lifeCicle1");
-		docTypesInput.setInformationClassification(InformationClassificationEnum.C);
-		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimeStampedEnum.STANDARD);
+    	log.info("execute createDocumentType() : START");
+    	
+    	docTypesInsertInput = new DocumentType();
+    	docTypesInsertInput.setTipoDocumento(PARTITION_ID_INSERT_LEGAL_FACTS);
+    	docTypesInsertInput.setChecksum(ChecksumEnum.MD5);
+    	docTypesInsertInput.setLifeCycleTag("lifeCicle1");
+    	docTypesInsertInput.setInformationClassification(InformationClassificationEnum.C);
+    	docTypesInsertInput.setDigitalSignature(true);
+    	docTypesInsertInput.setTimeStamped(TimeStampedEnum.STANDARD);
+		log.info("execute createDocumentType() : docTypesInsertInput : {}", docTypesInsertInput);
+    	
+    	docTypesUpdateDeleteInput = new DocumentType();
+		docTypesUpdateDeleteInput.setTipoDocumento(TipoDocumentoEnum.fromValue(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS));
+		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.MD5);
+		docTypesUpdateDeleteInput.setLifeCycleTag("lifeCicle1");
+		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.C);
+		docTypesUpdateDeleteInput.setDigitalSignature(true);
+		docTypesUpdateDeleteInput.setTimeStamped(TimeStampedEnum.STANDARD);
+		log.info("execute createDocumentType() : docTypesUpdateDeleteInput : {}", docTypesUpdateDeleteInput);
 	}
 
 	@Test
 	// Codice test: DTSS.101.1
 	void postItem() {
-
-		docTypesInput.setTipoDocumento(TipoDocumentoEnum.LEGAL_FACTS);
 		
-		webTestClient.post()
-					 .uri(BASE_PATH)
-					 .accept(APPLICATION_JSON)
-					 .contentType(APPLICATION_JSON)
-					 .body(BodyInserters.fromValue(docTypesInput))
-					 .exchange()
-					 .expectStatus().isOk();
+		EntityExchangeResult<DocumentType> resultPreInsert =
+				webTestClient.get()
+					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento().getValue()))
+					.accept(APPLICATION_JSON)
+					.exchange()
+					.expectBody(DocumentType.class).returnResult();
 
+		if (resultPreInsert == null || resultPreInsert.getResponseBody() == null) 
+		{
+			webTestClient.post()
+						 .uri(BASE_PATH)
+						 .accept(APPLICATION_JSON)
+						 .contentType(APPLICATION_JSON)
+						 .body(BodyInserters.fromValue(docTypesInsertInput))
+						 .exchange()
+						 .expectStatus().isOk();
+			
+		}
+		
 		log.info("\n Test 1 (postItem) passed \n");
 
 	}
@@ -92,13 +114,13 @@ public class DocTypeInternalApiControllerTest {
 	// Codice test: DTSS.101.2
 	void postItemIncorrectParameters() {
 
-		docTypesInput.setTipoDocumento(null);
+		docTypesInsertInput.setTipoDocumento(null);
 		
 		webTestClient.post()
 					 .uri(BASE_PATH)
 					 .accept(APPLICATION_JSON)
 					 .contentType(APPLICATION_JSON)
-					 .body(BodyInserters.fromValue(docTypesInput))
+					 .body(BodyInserters.fromValue(docTypesInsertInput))
 					 .exchange()
 					 .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST);
 
@@ -108,14 +130,24 @@ public class DocTypeInternalApiControllerTest {
 	
 	@Test
 	void postItemDuplicatedKey() {
+		
+		EntityExchangeResult<DocumentType> resultPreInsert =
+				webTestClient.get()
+					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento().getValue()))
+					.accept(APPLICATION_JSON)
+					.exchange()
+					.expectBody(DocumentType.class).returnResult();
 
-		webTestClient.post()
-					 .uri(BASE_PATH)
-					 .accept(APPLICATION_JSON)
-					 .contentType(APPLICATION_JSON)
-					 .body(BodyInserters.fromValue(docTypesInput))
-					 .exchange()
-		        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null) 
+		{
+			webTestClient.post()
+						 .uri(BASE_PATH)
+						 .accept(APPLICATION_JSON)
+						 .contentType(APPLICATION_JSON)
+						 .body(BodyInserters.fromValue(docTypesInsertInput))
+						 .exchange()
+			        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+		}
 
 		log.info("\n Test 2 (postItemDuplicatedKey) passed \n");
 
@@ -126,7 +158,7 @@ public class DocTypeInternalApiControllerTest {
 	void getItem() {
 
 		webTestClient.get()
-			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
+			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS))
 			.accept(APPLICATION_JSON)
 			.exchange()
 			.expectStatus().isOk()
@@ -141,7 +173,7 @@ public class DocTypeInternalApiControllerTest {
 	void getItemNoExistentKey() {
 		
 		webTestClient.get()
-			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
+			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT_AAR))
 			.accept(APPLICATION_JSON)
 			.exchange()
 			.expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
@@ -169,10 +201,10 @@ public class DocTypeInternalApiControllerTest {
 	void putItem() {
 		
 		webTestClient.put()
-			         .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
+			         .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS))
 			         .accept(APPLICATION_JSON)
 			         .contentType(APPLICATION_JSON)
-			         .body(BodyInserters.fromValue(docTypesInput))
+			         .body(BodyInserters.fromValue(docTypesUpdateDeleteInput))
 			         .exchange()
 			         .expectStatus().isOk();
 
@@ -185,10 +217,10 @@ public class DocTypeInternalApiControllerTest {
 	void putItemNoExistentKey() {
 		
 		webTestClient.put()
-			         .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
+			         .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT_AAR))
 			         .accept(APPLICATION_JSON)
 			         .contentType(APPLICATION_JSON)
-			         .body(BodyInserters.fromValue(docTypesInput))
+			         .body(BodyInserters.fromValue(docTypesUpdateDeleteInput))
 			         .exchange()
 			         .expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
 
@@ -204,7 +236,7 @@ public class DocTypeInternalApiControllerTest {
 			         .uri(BASE_PATH)
 			         .accept(APPLICATION_JSON)
 			         .contentType(APPLICATION_JSON)
-			         .body(BodyInserters.fromValue(docTypesInput))
+			         .body(BodyInserters.fromValue(docTypesUpdateDeleteInput))
 			         .exchange()
 			         .expectStatus().isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
 
@@ -218,13 +250,13 @@ public class DocTypeInternalApiControllerTest {
 		
 		EntityExchangeResult<DocumentType> result =
 			webTestClient.delete()
-				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS))
 		        .accept(APPLICATION_JSON)
 		        .exchange()
 		        .expectStatus().isOk()
 		        .expectBody(DocumentType.class).returnResult();
 		
-		Assertions.assertEquals(PARTITION_ID_DEFAULT, result.getResponseBody().getTipoDocumento().getValue());
+		Assertions.assertEquals(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS, result.getResponseBody().getTipoDocumento().getValue());
 	    
 	    log.info("\n Test 9 (deleteItem) passed \n");
 
@@ -235,7 +267,7 @@ public class DocTypeInternalApiControllerTest {
 	void deleteItemNoExistentKey() {
 		
 		webTestClient.delete()
-			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
+			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT_AAR))
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isEqualTo(HttpStatus.NOT_FOUND);

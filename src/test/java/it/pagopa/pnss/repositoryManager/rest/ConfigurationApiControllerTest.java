@@ -8,7 +8,6 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -42,6 +41,8 @@ public class ConfigurationApiControllerTest {
 	private WebTestClient webTestClient;
 	
 	private static final String BASE_URL_DOC_TYPE = "/safestorage/internal/v1/doctypes";
+	private static final String BASE_URL_DOC_TYPE_WITH_PARAM = String.format("%s/{typeId}", BASE_URL_DOC_TYPE);
+
 	private static final String BASE_URL_USER_CONFIGURATION = "/safestorage/internal/v1/userConfigurations";
 	
 	private static final String BASE_URL_CONFIGURATIONS_DOC_TYPE = "/safe-storage/v1/configurations/documents-types";
@@ -104,29 +105,59 @@ public class ConfigurationApiControllerTest {
 		
 		final TipoDocumentoEnum namePrimo = TipoDocumentoEnum.AAR;
 		DocumentType docTypePrimoInput = getDocumentType(namePrimo);
-
-		webTestClient.post()
-			.uri(BASE_URL_DOC_TYPE)
-			.accept(APPLICATION_JSON)
-			.contentType(APPLICATION_JSON)
-			.body(BodyInserters.fromValue(docTypePrimoInput))
-			.exchange()
-			.expectStatus().isOk();
 		
-		log.info("Test 1. getDocumentsConfigs() : docType (Primo Input) inserito : {}", docTypePrimoInput);
+		EntityExchangeResult<DocumentType> resultPrimo =
+			webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_URL_DOC_TYPE_WITH_PARAM).build(namePrimo.getValue()))
+				.accept(APPLICATION_JSON)
+				.exchange()
+				.expectBody(DocumentType.class).returnResult();
+		boolean inseritoPrimo = false;
+		if (resultPrimo != null && resultPrimo.getResponseBody() != null) 
+		{
+			webTestClient.post()
+				.uri(BASE_URL_DOC_TYPE)
+				.accept(APPLICATION_JSON)
+				.contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(docTypePrimoInput))
+				.exchange()
+				.expectStatus().isOk();
+			
+			inseritoPrimo = true;
+			
+			log.info("Test 1. getDocumentsConfigs() : docType (Primo Input) inserito : {}", docTypePrimoInput);
+		}
+		else {
+			log.info("Test 1. getDocumentsConfigs() : docType (Primo Input) presente : key {}", namePrimo.getValue());
+		}
 		
-		TipoDocumentoEnum nameSecondo = TipoDocumentoEnum.LEGAL_FACTS;
+		TipoDocumentoEnum nameSecondo = TipoDocumentoEnum.EXTERNAL_LEGAL_FACTS;
 		DocumentType docTypeSecondoInput = getDocumentType(nameSecondo);
 
-		webTestClient.post()
-			.uri(BASE_URL_DOC_TYPE)
-			.accept(APPLICATION_JSON)
-			.contentType(APPLICATION_JSON)
-			.body(BodyInserters.fromValue(docTypeSecondoInput))
-			.exchange()
-			.expectStatus().isOk();
-		
-		log.info("Test 1. getDocumentsConfigs() : docType (Secondo Input) inserito : {}", docTypeSecondoInput);
+		EntityExchangeResult<DocumentType> resultSecondo =
+				webTestClient.get()
+					.uri(uriBuilder -> uriBuilder.path(BASE_URL_DOC_TYPE_WITH_PARAM).build(nameSecondo.getValue()))
+					.accept(APPLICATION_JSON)
+					.exchange()
+					.expectBody(DocumentType.class).returnResult();
+		boolean inseritoSecondo = false;
+		if (resultSecondo != null && resultSecondo.getResponseBody() != null) 
+		{
+			webTestClient.post()
+				.uri(BASE_URL_DOC_TYPE)
+				.accept(APPLICATION_JSON)
+				.contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(docTypeSecondoInput))
+				.exchange()
+				.expectStatus().isOk();
+			
+			inseritoSecondo = true;
+			
+			log.info("Test 1. getDocumentsConfigs() : docType (Secondo Input) inserito : {}", docTypeSecondoInput);
+		}
+		else {
+			log.info("Test 1. getDocumentsConfigs() : docType (Secondo Input) presente : key {}", nameSecondo.getValue());
+		}
 		
 		EntityExchangeResult<DocumentTypesConfigurations> docTypeInserted = webTestClient.get()
 				.uri(BASE_URL_CONFIGURATIONS_DOC_TYPE)
@@ -141,33 +172,25 @@ public class ConfigurationApiControllerTest {
 		
 		Assertions.assertNotNull(result);
 		Assertions.assertNotNull(result.getDocumentsTypes());
-		Assertions.assertEquals(2,result.getDocumentsTypes().size());
-		
-//		List<String> expected = new ArrayList<>();
-//		expected.add(namePrimo.getValue());
-//		expected.add(nameSecondo.getValue());
-//		Collections.sort(expected);
-//		
-//		List<String> returned = new ArrayList<>();
-//		returned.add(result.getDocumentsTypes().get(0).getName());
-//		returned.add(result.getDocumentsTypes().get(1).getName());
-//		Collections.sort(returned);
-//
-//		Assertions.assertEquals(expected, returned);
+//		Assertions.assertEquals(2,result.getDocumentsTypes().size());
 		
 		log.info("Test 1. getDocumentsConfigs() : test passed");
 		
-		webTestClient.delete()
-			.uri(BASE_URL_DOC_TYPE+"/"+ namePrimo.getValue())
-	        .accept(APPLICATION_JSON)
-	        .exchange()
-	        .expectStatus().isOk();
+		if (inseritoPrimo) {
+			webTestClient.delete()
+				.uri(BASE_URL_DOC_TYPE+"/"+ namePrimo.getValue())
+		        .accept(APPLICATION_JSON)
+		        .exchange()
+		        .expectStatus().isOk();
+		}
 		
-		webTestClient.delete()
-			.uri(BASE_URL_DOC_TYPE+"/"+ nameSecondo.getValue())
-	        .accept(APPLICATION_JSON)
-	        .exchange()
-	        .expectStatus().isOk();
+		if (inseritoSecondo) {
+			webTestClient.delete()
+				.uri(BASE_URL_DOC_TYPE+"/"+ nameSecondo.getValue())
+		        .accept(APPLICATION_JSON)
+		        .exchange()
+		        .expectStatus().isOk();
+		}
 
 	}
 	

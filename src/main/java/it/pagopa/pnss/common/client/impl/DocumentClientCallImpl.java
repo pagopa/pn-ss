@@ -1,5 +1,6 @@
 package it.pagopa.pnss.common.client.impl;
 
+import com.amazonaws.services.dynamodbv2.xspec.S;
 import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pnss.common.client.DocumentClientCall;
@@ -42,6 +43,15 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
         return getWebClient().put()
                 .uri(String.format(anagraficaDocumentiClientEndpoint))
                 .bodyValue(Document)
+                .retrieve()
+                .bodyToMono(ResponseEntity.class).block();
+    }
+
+    @Override
+    public ResponseEntity<Document> patchdocument(String keyFile, Document document) throws IdClientNotFoundException {
+        return getWebClient().patch()
+                .uri(String.format(anagraficaDocumentiClientEndpoint, document.getDocumentKey()))
+                .bodyValue(document)
                 .retrieve()
                 .bodyToMono(ResponseEntity.class).block();
     }

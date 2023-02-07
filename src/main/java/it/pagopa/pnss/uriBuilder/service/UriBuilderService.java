@@ -73,18 +73,22 @@ public class UriBuilderService {
     }
 
     public FileCreationResponse createUriForUploadFile(String xPagopaSafestorageCxId, String contentType, String documentType, String status) throws InterruptedException {
-
+        log.info("--- REST INIZIO CHIAMATA USER CONFIGURATION");
         ResponseEntity<UserConfiguration> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        log.info("--- REST INIZIO CHIAMATA USER CONFIGURATION");
         UserConfiguration user = null;
         if (userResponse!=null ){
             user = userResponse.getBody();
         }
-
+        log.info("--- CHECK UTENTE TROVATO ");
         if (user == null ){
             log.info("Utente NON TROVATO "+ xPagopaSafestorageCxId);
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
         }
+        log.info("--- UTENTE TROVATO ");
+
+        log.info("CHECK Utente :"+ xPagopaSafestorageCxId +" abilitato a  "+documentType);
 
         List<String> canCreate = user.getCanCreate();
         if (!canCreate.contains(documentType)){
@@ -137,9 +141,9 @@ public class UriBuilderService {
         documentRepositoryDto.setDocumentState(Document.DocumentStateEnum.BOOKED);
         documentRepositoryDto.setDocumentType(retrieveDocType(documentType));
         //documentRepositoryDto.setRetentionPeriod();
-
+        log.info("--- REST INIZIO UPDATE DOCUMENT ");
         documentClientCall.postdocument(documentRepositoryDto);
-
+        log.info("--- REST FINE  UPDATE DOCUMENT ");
         return response;
 
     }

@@ -125,7 +125,7 @@ public class DocTypeInternalApiControllerTest {
 					 .contentType(APPLICATION_JSON)
 					 .body(BodyInserters.fromValue(docTypesInsertInput))
 					 .exchange()
-					 .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+					 .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST);
 
 		log.info("\n Test 2 (postItemIncorrectParameters) passed \n");
 

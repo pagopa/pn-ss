@@ -17,6 +17,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.CheckSumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentStateEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentTypeEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -131,7 +132,7 @@ public class DocumentInternalApiControllerTest {
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isOk()
-	        .expectBody(Document.class);
+	        .expectBody(DocumentResponse.class);
 	    
 	    log.info("\n Test 3 (getItem) passed \n");
   
@@ -181,14 +182,14 @@ public class DocumentInternalApiControllerTest {
 	        .exchange()
 	        .expectStatus().isOk();
 		
-		EntityExchangeResult<Document> documentUpdated = webTestClient.get()
+		EntityExchangeResult<DocumentResponse> documentUpdated = webTestClient.get()
 			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isOk()
-	        .expectBody(Document.class).returnResult();
+	        .expectBody(DocumentResponse.class).returnResult();
 		
-		log.info("\n Test 6 (patchItem) documentUpdated : {} \n", documentUpdated.getResponseBody());
+		log.info("\n Test 6 (patchItem) documentUpdated : {} \n", documentUpdated.getResponseBody().getDocument());
 		
 //		Assertions.assertEquals(documentInput.getDocumentState(), documentUpdated.getResponseBody().getDocumentState());
 	
@@ -232,15 +233,15 @@ public class DocumentInternalApiControllerTest {
     // codice test: DCSS.103.1
     void deleteItem() {
     	
-    	EntityExchangeResult<Document> result =
+    	EntityExchangeResult<DocumentResponse> result =
 			webTestClient.delete()
 				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
 		        .accept(APPLICATION_JSON)
 		        .exchange()
 		        .expectStatus().isOk()
-		        .expectBody(Document.class).returnResult();
+		        .expectBody(DocumentResponse.class).returnResult();
 			
-		Assertions.assertEquals(PARTITION_ID_DEFAULT, result.getResponseBody().getDocumentKey());
+		Assertions.assertEquals(PARTITION_ID_DEFAULT, result.getResponseBody().getDocument().getDocumentKey());
 	    
 	    log.info("\n Test 9 (deleteItem) passed \n");
   

@@ -53,7 +53,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 		if (userConfigurationInput == null) {
 			throw new RepositoryManagerException("userConfiguration is null");
 		}
-		if (userConfigurationInput.getName() == null) {
+		if (userConfigurationInput.getName() == null || userConfigurationInput.getName().isBlank()) {
 			throw new RepositoryManagerException("userConfiguration Id is null");
 		}
 		
@@ -90,11 +90,19 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                 .doOnSuccess(entityStored -> {
                 	if (entityStored.getCanCreate() != null && !entityStored.getCanCreate().isEmpty()
                 			&& userConfigurationEntityInput.getCanCreate() != null && !userConfigurationEntityInput.getCanCreate().isEmpty()) {
-                		entityStored.getCanCreate().addAll(entityStored.getCanCreate());
+                		userConfigurationEntityInput.getCanCreate().forEach(can -> {
+                			if (!entityStored.getCanCreate().contains(can)) {
+                				entityStored.getCanCreate().add(can);
+                			}
+                		});
                 	}
                 	if (entityStored.getCanRead() != null && !entityStored.getCanRead().isEmpty()
                 			&& userConfigurationEntityInput.getCanRead() != null && !userConfigurationEntityInput.getCanRead().isEmpty()) {
-                		entityStored.getCanRead().addAll(entityStored.getCanRead());
+                		userConfigurationEntityInput.getCanRead().forEach(can -> {
+                			if (!entityStored.getCanRead().contains(can)) {
+                				entityStored.getCanRead().add(can);
+                			}
+                		});
                 	}
                 	log.info("patchUserConfiguration() : userConfigurationEntity for patch : {}", entityStored);
                 	// Updates an item in the mapped table, or adds it if it doesn't exist. 

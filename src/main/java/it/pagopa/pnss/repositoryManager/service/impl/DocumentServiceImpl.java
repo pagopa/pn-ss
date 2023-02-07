@@ -53,7 +53,7 @@ public class DocumentServiceImpl implements DocumentService {
 		if (documentInput == null) {
 			throw new RepositoryManagerException("document is null");
 		}
-		if (documentInput.getDocumentKey()== null) {
+		if (documentInput.getDocumentKey() == null || documentInput.getDocumentKey().isBlank()) {
 			throw new RepositoryManagerException("document Id is null");
 		}
 		

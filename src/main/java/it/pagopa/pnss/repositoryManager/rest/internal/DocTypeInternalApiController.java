@@ -12,6 +12,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
 import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.service.DocTypesService;
 import reactor.core.publisher.Mono;
 
@@ -39,6 +40,10 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 		else if (throwable instanceof IdClientNotFoundException) {
 			response.getError().setDescription(typeId == null ? "DocType not found" : String.format("DocType with id %s not found", typeId));
 			return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(response));
+		}
+		else if (throwable instanceof RepositoryManagerException) {
+			response.getError().setDescription("DocType has incorrect attribute" );
+			return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response));			
 		}
 		response.getError().setDescription(throwable.getMessage());
 		return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response));

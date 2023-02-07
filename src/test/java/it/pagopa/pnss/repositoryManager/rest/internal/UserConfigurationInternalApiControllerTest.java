@@ -18,6 +18,8 @@ import org.springframework.web.reactive.function.BodyInserters;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -53,9 +55,14 @@ public class UserConfigurationInternalApiControllerTest {
     }
 	
     @BeforeAll
-    public static void insertDefaultUserConfiguration(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient) {
+    public static void insertDefaultUserConfiguration(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
+    		@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) 
+    {
     	log.info("execute insertDefaultDocType()");
-        dynamoDbTable = dynamoDbEnhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, TableSchema.fromBean(UserConfigurationEntity.class));
+        dynamoDbTable = dynamoDbEnhancedClient.table(
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+        		gestoreRepositoryDynamoDbTableName.anagraficaClientName(),
+        		TableSchema.fromBean(UserConfigurationEntity.class));
         insertUserConfigurationEntity(PARTITION_ID_ENTITY);
     }
 	
@@ -135,7 +142,7 @@ public class UserConfigurationInternalApiControllerTest {
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isOk()
-	        .expectBody(UserConfiguration.class);
+	        .expectBody(UserConfigurationResponse.class);
         
         log.info("\n Test 3 (getItem) passed \n");
 	}
@@ -177,25 +184,25 @@ public class UserConfigurationInternalApiControllerTest {
     	
     	log.info("\n Test 6 (patchItem) userConfigurationInput : {} \n", userConfigurationInput);
     	
-    	EntityExchangeResult<UserConfiguration> userConfigurationUpdated1 = webTestClient.patch()
+    	EntityExchangeResult<UserConfigurationResponse> userConfigurationUpdated1 = webTestClient.patch()
 	        .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
 	        .accept(APPLICATION_JSON)
 	        .contentType(APPLICATION_JSON)
 	        .body(BodyInserters.fromValue(userConfigurationInput))
 	        .exchange()
 	        .expectStatus().isOk()
-	        .expectBody(UserConfiguration.class).returnResult();
+	        .expectBody(UserConfigurationResponse.class).returnResult();
     	
-    	log.info("\n Test 6 (patchItem) userConfigurationUpdated1 : {} \n", userConfigurationUpdated1.getResponseBody());
+    	log.info("\n Test 6 (patchItem) userConfigurationUpdated1 : {} \n", userConfigurationUpdated1.getResponseBody().getUserConfiguration());
 		
-		EntityExchangeResult<UserConfiguration> userConfigurationUpdated2 = webTestClient.get()
+		EntityExchangeResult<UserConfigurationResponse> userConfigurationUpdated2 = webTestClient.get()
 				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
 		        .accept(APPLICATION_JSON)
 		        .exchange()
 		        .expectStatus().isOk()
-		        .expectBody(UserConfiguration.class).returnResult();
+		        .expectBody(UserConfigurationResponse.class).returnResult();
 		
-		log.info("\n Test 6 (patchItem) userConfigurationUpdated2 : {} \n", userConfigurationUpdated2.getResponseBody());
+		log.info("\n Test 6 (patchItem) userConfigurationUpdated2 : {} \n", userConfigurationUpdated2.getResponseBody().getUserConfiguration());
 			
 		//Assertions.assertEquals(userInput.getCanCreate(), userConfigurationUpdated.getResponseBody().getCanCreate());
 	
@@ -214,7 +221,7 @@ public class UserConfigurationInternalApiControllerTest {
 	        .contentType(APPLICATION_JSON)
 	        .body(BodyInserters.fromValue(userConfigurationInput))
 	        .exchange()
-	        .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST);
+	        .expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
 	
 		log.info("\n Test 7 (patchItemNoExistentKey) passed \n");
     }
@@ -239,14 +246,14 @@ public class UserConfigurationInternalApiControllerTest {
     // codice test: ANSS.103.1
     void deleteItem() {
     	
-    	EntityExchangeResult<UserConfiguration> result = webTestClient.delete()
+    	EntityExchangeResult<UserConfigurationResponse> result = webTestClient.delete()
 			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus().isOk()
-	        .expectBody(UserConfiguration.class).returnResult();
+	        .expectBody(UserConfigurationResponse.class).returnResult();
     	
-    	Assertions.assertEquals(PARTITION_ID_ENTITY, result.getResponseBody().getName());
+    	Assertions.assertEquals(PARTITION_ID_ENTITY, result.getResponseBody().getUserConfiguration().getName());
 	    
 	    log.info("\n Test 9 (deleteItem) passed \n");
     }
@@ -260,7 +267,7 @@ public class UserConfigurationInternalApiControllerTest {
 	        .accept(APPLICATION_JSON)
 	        .exchange()
 	        .expectStatus()
-	        .isEqualTo(HttpStatus.BAD_REQUEST);
+	        .isEqualTo(HttpStatus.NOT_FOUND);
 	    
 	    log.info("\n Test 10 (deleteItemNoExistentKey) passed \n");
     }

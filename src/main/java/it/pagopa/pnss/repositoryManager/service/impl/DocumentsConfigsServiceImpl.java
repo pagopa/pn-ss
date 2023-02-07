@@ -6,8 +6,6 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.rest.v1.dto.ConfidentialityLevel;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
@@ -30,8 +28,6 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
 	@SuppressWarnings("unused")
 	@Autowired
 	private StorageConfigurationsService storageConfigurationsService;
-//	@Autowired
-//    private ObjectMapper objectMapper;
 
 	@Override
 	public DocumentTypesConfigurations getAllDocumentType() {

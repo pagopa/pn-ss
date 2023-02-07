@@ -8,8 +8,11 @@ import org.springframework.web.server.ServerWebExchange;
 
 import it.pagopa.pn.template.internal.rest.v1.api.DocumentInternalApi;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.service.DocumentService;
 import reactor.core.publisher.Mono;
 
@@ -19,59 +22,66 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	@Autowired
 	private DocumentService documentService;
 	
-	@Override
-    public Mono<ResponseEntity<Document>> getDocument(String documentKey,  final ServerWebExchange exchange) {
+	private DocumentResponse getResponse(Document document) {
+		DocumentResponse response = new DocumentResponse();
+		response.setDocument(document);
+		return response;
+	}
+	
+	private  Mono<ResponseEntity<DocumentResponse>> getResponse(String documentKey, Throwable throwable) 
+	{
+		DocumentResponse response = new DocumentResponse();
+		response.setError(new Error());
 
-    	return documentService.getDocument(documentKey)
-    			.map(ResponseEntity::ok)
-    			.onErrorResume(error -> {
-    				if (error instanceof IdClientNotFoundException) {
-    					return Mono.just(ResponseEntity.notFound().build());
-    				}
-    				return Mono.just(ResponseEntity.badRequest().build());
-    			});
+		if (throwable instanceof ItemAlreadyPresent) {
+			response.getError().setDescription(documentKey == null ? "Document already present" : String.format("DocType with id %s already present", documentKey));
+			return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(response));
+		}
+		else if (throwable instanceof IdClientNotFoundException) {
+			response.getError().setDescription(documentKey == null ? "Document not found" : String.format("DocType with id %s not found", documentKey));
+			return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(response));
+		}
+		else if (throwable instanceof RepositoryManagerException) {
+			response.getError().setDescription("Document has incorrect attribute" );
+			return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response));			
+		}
+		response.getError().setDescription(throwable.getMessage());
+		return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response));
+	}
+	
+	@Override
+    public Mono<ResponseEntity<DocumentResponse>> getDocument(String documentKey,  final ServerWebExchange exchange) {
+
+		return documentService.getDocument(documentKey)
+				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
+				.onErrorResume(throwable -> getResponse(documentKey, throwable));
 
     }
 
 	@Override
-    public  Mono<ResponseEntity<Document>> insertDocument(Mono<Document> document,  final ServerWebExchange exchange) {
+    public  Mono<ResponseEntity<DocumentResponse>> insertDocument(Mono<Document> document,  final ServerWebExchange exchange) {
 
 		return document.flatMap(request -> documentService.insertDocument(request))
-				.map(ResponseEntity::ok)
-    			.onErrorResume(error -> {
-    				if (error instanceof ItemAlreadyPresent) {
-    					return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).build());
-    				}
-    				return Mono.just(ResponseEntity.badRequest().build());
-    			});
+				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
+				.onErrorResume(throwable -> getResponse(null, throwable));
 
     }
 
 	@Override
-    public Mono<ResponseEntity<Document>> patchDoc(String documentKey, Mono<Document> document,  final ServerWebExchange exchange) {
+    public Mono<ResponseEntity<DocumentResponse>> patchDoc(String documentKey, Mono<Document> document,  final ServerWebExchange exchange) {
     	
 		return document.flatMap(request -> documentService.patchDocument(documentKey, request))
-				.map(ResponseEntity::ok)
-    			.onErrorResume(error -> {
-    				if (error instanceof IdClientNotFoundException) {
-    					return Mono.just(ResponseEntity.notFound().build());
-    				}
-    				return Mono.just(ResponseEntity.badRequest().build());
-    			});
+				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
+				.onErrorResume(throwable -> getResponse(documentKey, throwable));
 
     }
 
 	@Override
-    public Mono<ResponseEntity<Document>> deleteDocument(String documentKey,  final ServerWebExchange exchange) {
+    public Mono<ResponseEntity<DocumentResponse>> deleteDocument(String documentKey,  final ServerWebExchange exchange) {
 		
 		return documentService.deleteDocument(documentKey)
-				.map(ResponseEntity::ok)
-    			.onErrorResume(error -> {
-    				if (error instanceof IdClientNotFoundException) {
-    					return Mono.just(ResponseEntity.notFound().build());
-    				}
-    				return Mono.just(ResponseEntity.badRequest().build());
-    			});
+				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
+				.onErrorResume(throwable -> getResponse(documentKey, throwable));
     	
     }
 

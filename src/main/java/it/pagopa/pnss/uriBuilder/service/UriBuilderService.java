@@ -106,11 +106,7 @@ public class UriBuilderService {
         int riprova = 0;
         while (keyPresent(keyName) && riprova <10){
             log.info( "keyname : "+ keyName + " gia presente riprovo a calcolare");
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                log.error( " NON e' stato possibile produrre un key ",e);
-            }
+
             keyName = g.createKeyName(documentType);
             riprova++;
         }

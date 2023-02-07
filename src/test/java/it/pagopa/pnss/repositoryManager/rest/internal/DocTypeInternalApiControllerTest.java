@@ -19,6 +19,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassi
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -34,6 +35,8 @@ public class DocTypeInternalApiControllerTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
+	@Autowired
+	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
 
 	private static final String BASE_PATH = "/safestorage/internal/v1/doctypes";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{typeId}", BASE_PATH);
@@ -55,9 +58,14 @@ public class DocTypeInternalApiControllerTest {
     }
 	
     @BeforeAll
-    public static void insertDefaultDocType(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient) {
+    public static void insertDefaultDocType(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
+    		@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) 
+    {
     	log.info("execute insertDefaultDocType()");
-        dynamoDbTable = dynamoDbEnhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+        dynamoDbTable = dynamoDbEnhancedClient.table(
+//        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, 
+        		gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(),
+        		TableSchema.fromBean(DocTypeEntity.class));
         insertDocTypeEntity(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
     }
 	

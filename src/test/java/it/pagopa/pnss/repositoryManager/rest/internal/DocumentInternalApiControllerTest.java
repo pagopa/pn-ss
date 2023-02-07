@@ -18,6 +18,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.Document.CheckSumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentStateEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentTypeEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -53,9 +54,14 @@ public class DocumentInternalApiControllerTest {
     }
     
     @BeforeAll
-    public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient) {
+    public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
+    		@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) 
+    {
     	log.info("execute insertDefaultDocument()");
-    	dynamoDbTable = dynamoDbEnhancedClient.table(DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
+    	dynamoDbTable = dynamoDbEnhancedClient.table(
+//    			DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
+    			gestoreRepositoryDynamoDbTableName.documentiName(),
+    			TableSchema.fromBean(DocumentEntity.class));
     	insertDocumentEntity(PARTITION_ID_ENTITY);
     }
 	

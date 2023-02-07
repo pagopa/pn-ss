@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
@@ -26,6 +26,8 @@ public class DocumentServiceImpl implements DocumentService {
 	@Autowired
 	private DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient;
 	@Autowired
+	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
+	@Autowired
     private ObjectMapper objectMapper;
 	
 	private Mono<DocumentEntity> getErrorIdClientNotFoundException(String documentKey) {
@@ -38,7 +40,9 @@ public class DocumentServiceImpl implements DocumentService {
 		log.info("getDocument() : IN : documentKey {}", documentKey);
 		
         DynamoDbAsyncTable<DocumentEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
+//        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
+        		repositoryManagerDynamoTableName.documentiName(),
+        		TableSchema.fromBean(DocumentEntity.class));
         
         return Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(documentKey).build()))
         			.switchIfEmpty(getErrorIdClientNotFoundException(documentKey))
@@ -58,7 +62,9 @@ public class DocumentServiceImpl implements DocumentService {
 		}
 		
         DynamoDbAsyncTable<DocumentEntity> documentTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
+//        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
+        		repositoryManagerDynamoTableName.documentiName(),
+        		TableSchema.fromBean(DocumentEntity.class));
         DocumentEntity documentEntityInput = objectMapper.convertValue(documentInput, DocumentEntity.class);
         
         return Mono.fromCompletionStage(documentTable.getItem(Key.builder().partitionValue(documentInput.getDocumentKey()).build()))
@@ -79,7 +85,9 @@ public class DocumentServiceImpl implements DocumentService {
 		log.info("patchDocument() : IN : documentKey : {} , documentInput {}", documentKey, documentInput);
 		
         DynamoDbAsyncTable<DocumentEntity> documentTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
+//        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
+        		repositoryManagerDynamoTableName.documentiName(),
+        		TableSchema.fromBean(DocumentEntity.class));
         DocumentEntity documentEntityInput = objectMapper.convertValue(documentInput, DocumentEntity.class);
 
         return Mono.fromCompletionStage(documentTable.getItem(Key.builder().partitionValue(documentKey).build()))
@@ -105,7 +113,9 @@ public class DocumentServiceImpl implements DocumentService {
 		log.info("deleteDocument() : IN : documentKey {}", documentKey);
 
         DynamoDbAsyncTable<DocumentEntity> documentTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
+//        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
+        		repositoryManagerDynamoTableName.documentiName(),
+        		TableSchema.fromBean(DocumentEntity.class));
         Key typeKey = Key.builder().partitionValue(documentKey).build();
         
         return Mono.fromCompletionStage(documentTable.getItem(typeKey))

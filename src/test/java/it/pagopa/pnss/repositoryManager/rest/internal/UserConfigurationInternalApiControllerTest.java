@@ -19,6 +19,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -54,9 +55,14 @@ public class UserConfigurationInternalApiControllerTest {
     }
 	
     @BeforeAll
-    public static void insertDefaultUserConfiguration(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient) {
+    public static void insertDefaultUserConfiguration(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
+    		@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) 
+    {
     	log.info("execute insertDefaultDocType()");
-        dynamoDbTable = dynamoDbEnhancedClient.table(DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, TableSchema.fromBean(UserConfigurationEntity.class));
+        dynamoDbTable = dynamoDbEnhancedClient.table(
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+        		gestoreRepositoryDynamoDbTableName.anagraficaClientName(),
+        		TableSchema.fromBean(UserConfigurationEntity.class));
         insertUserConfigurationEntity(PARTITION_ID_ENTITY);
     }
 	

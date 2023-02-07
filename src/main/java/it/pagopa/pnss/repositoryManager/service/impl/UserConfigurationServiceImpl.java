@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
@@ -26,6 +26,8 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 	@Autowired
 	private DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient;
 	@Autowired
+	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
+	@Autowired
     private ObjectMapper objectMapper;
 	
 	private Mono<UserConfigurationEntity> getErrorIdClientNotFoundException(String name) {
@@ -38,7 +40,9 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 		log.info("getUserConfiguration() : IN : name {}", name);
 		
 		DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, TableSchema.fromBean(UserConfigurationEntity.class));
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+				repositoryManagerDynamoTableName.anagraficaClientName(),
+        		TableSchema.fromBean(UserConfigurationEntity.class));
         
         return Mono.fromCompletionStage(userConfigurationTable.getItem(Key.builder().partitionValue(name).build()))
         			.switchIfEmpty(getErrorIdClientNotFoundException(name))
@@ -58,7 +62,9 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 		}
 		
 		DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, TableSchema.fromBean(UserConfigurationEntity.class));
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+				repositoryManagerDynamoTableName.anagraficaClientName(),
+        		TableSchema.fromBean(UserConfigurationEntity.class));
 		UserConfigurationEntity documentEntityInput = objectMapper.convertValue(userConfigurationInput, UserConfigurationEntity.class);
         
         return Mono.fromCompletionStage(userConfigurationTable.getItem(Key.builder().partitionValue(userConfigurationInput.getName()).build()))
@@ -81,7 +87,9 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 		log.info("patchUserConfiguration() : IN : name : {} , userConfigurationInput {}", name, userConfigurationInput);
 		
 		DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, TableSchema.fromBean(UserConfigurationEntity.class));
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+				repositoryManagerDynamoTableName.anagraficaClientName(),
+        		TableSchema.fromBean(UserConfigurationEntity.class));
 		UserConfigurationEntity userConfigurationEntityInput = objectMapper.convertValue(userConfigurationInput, UserConfigurationEntity.class);
 
         return Mono.fromCompletionStage(userConfigurationTable.getItem(Key.builder().partitionValue(name).build()))
@@ -117,7 +125,9 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 		log.info("deleteUserConfiguration() : IN : name {}", name);
 
 		DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, TableSchema.fromBean(UserConfigurationEntity.class));
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+				repositoryManagerDynamoTableName.anagraficaClientName(),
+        		TableSchema.fromBean(UserConfigurationEntity.class));
         Key userConfigurationKey = Key.builder().partitionValue(name).build();
         
         return Mono.fromCompletionStage(userConfigurationTable.getItem(userConfigurationKey))

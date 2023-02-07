@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositoryManager.exception.DynamoDbException;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
@@ -36,6 +36,8 @@ public class DocTypesServiceImpl implements DocTypesService {
 	@Autowired
 	private DynamoDbEnhancedClient enhancedClient;
 	@Autowired
+	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
+	@Autowired
     private ObjectMapper objectMapper;
 	
 	private Mono<DocTypeEntity> getErrorIdClientNotFoundException(String typeId) {
@@ -48,7 +50,9 @@ public class DocTypesServiceImpl implements DocTypesService {
 		log.info("getDocType() : IN : typeId {}", typeId);
 	
         DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+        		repositoryManagerDynamoTableName.tipologieDocumentiName(),
+        		//DynamoTableNameConstant.DOC_TYPES_TABLE_NAME,
+        		TableSchema.fromBean(DocTypeEntity.class));
         
         return Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(typeId).build()))
         			.switchIfEmpty(getErrorIdClientNotFoundException(typeId))
@@ -77,7 +81,9 @@ public class DocTypesServiceImpl implements DocTypesService {
 		
 		try {
             DynamoDbTable<DocTypeEntity> docTypesTable = enhancedClient.table(
-            		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+            		repositoryManagerDynamoTableName.tipologieDocumentiName(),
+            		//DynamoTableNameConstant.DOC_TYPES_TABLE_NAME,
+            		TableSchema.fromBean(DocTypeEntity.class));
             Iterator<DocTypeEntity> iterator = docTypesTable.scan().items().iterator();
         	while (iterator.hasNext()) {
         		listDocType.add(objectMapper.convertValue(iterator.next(), DocumentType.class));
@@ -105,7 +111,9 @@ public class DocTypesServiceImpl implements DocTypesService {
 		}
 		
         DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+        		repositoryManagerDynamoTableName.tipologieDocumentiName(),
+        		//DynamoTableNameConstant.DOC_TYPES_TABLE_NAME,
+        		TableSchema.fromBean(DocTypeEntity.class));
         DocTypeEntity docTypeEntityInput = objectMapper.convertValue(docTypeInput, DocTypeEntity.class);
         
         return Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(docTypeInput.getTipoDocumento().getValue()).build()))
@@ -126,7 +134,9 @@ public class DocTypesServiceImpl implements DocTypesService {
 		log.info("updateDocType() : IN : typeId : {} , docTypeInput {}", typeId, docTypeInput);
 		
         DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+        		repositoryManagerDynamoTableName.tipologieDocumentiName(),
+        		//DynamoTableNameConstant.DOC_TYPES_TABLE_NAME,
+        		TableSchema.fromBean(DocTypeEntity.class));
         DocTypeEntity docTypeEntityInput = objectMapper.convertValue(docTypeInput, DocTypeEntity.class);
 
        return Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(typeId).build()))
@@ -147,7 +157,9 @@ public class DocTypesServiceImpl implements DocTypesService {
 		log.info("deleteDocType() : IN : typeId : {}", typeId);
 		
         DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
-        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+        		repositoryManagerDynamoTableName.tipologieDocumentiName(),
+        		//DynamoTableNameConstant.DOC_TYPES_TABLE_NAME,
+        		TableSchema.fromBean(DocTypeEntity.class));
         Key typeKey = Key.builder().partitionValue(typeId).build();
         
         return Mono.fromCompletionStage(docTypesTable.getItem(typeKey))

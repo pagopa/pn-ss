@@ -1,12 +1,6 @@
 package it.pagopa.pnss.uriBuilder.service;
 
-import static it.pagopa.pnss.common.Constant.EU_CENTRAL_1;
-import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
-import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+import static it.pagopa.pnss.common.Constant.*;
 import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
 import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_STAGE_NAME;
 
@@ -19,6 +13,7 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import it.pagopa.pn.template.rest.v1.dto.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -28,13 +23,10 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
-import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
-import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
-import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.regions.Region;
@@ -72,7 +64,15 @@ public class UriBuilderService {
 
     }
 
-    public FileCreationResponse createUriForUploadFile(String xPagopaSafestorageCxId, String contentType, String documentType, String status) throws InterruptedException {
+    public ResponseEntity<FileCreationResponse> createUriForUploadFile(String xPagopaSafestorageCxId, FileCreationRequest request) {
+        String contentType = request.getContentType();
+        String documentType = request.getDocumentType();
+        String status = request.getStatus();
+
+        ResponseEntity ret = validationField(contentType, documentType, status);
+        if (ret!=null){
+            return ret;
+        }
         log.info("--- REST INIZIO CHIAMATA USER CONFIGURATION");
         ResponseEntity<UserConfiguration> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
         log.info("--- REST INIZIO CHIAMATA USER CONFIGURATION");
@@ -106,7 +106,11 @@ public class UriBuilderService {
         int riprova = 0;
         while (keyPresent(keyName) && riprova <10){
             log.info( "keyname : "+ keyName + " gia presente riprovo a calcolare");
-            Thread.sleep(1000);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                log.error( " NON e' stato possibile produrre un key ",e);
+            }
             keyName = g.createKeyName(documentType);
             riprova++;
         }
@@ -144,8 +148,28 @@ public class UriBuilderService {
         log.info("--- REST INIZIO UPDATE DOCUMENT ");
         documentClientCall.postdocument(documentRepositoryDto);
         log.info("--- REST FINE  UPDATE DOCUMENT ");
-        return response;
+        return ResponseEntity.ok(response);
 
+    }
+
+    private ResponseEntity validationField(String contentType, String documentType, String status) {
+
+        if(!listaTipoDocumenti.contains(contentType)){
+            return ResponseEntity.badRequest().body("ContentType :"+contentType+" - Not valid");
+        }
+        if(!listaTipologieDoc.contains(documentType)){
+            return ResponseEntity.badRequest().body("DocumentType :"+documentType+" - Not valid");
+        }
+        if (!status.equals("")){
+            if (!listaStatus.contains(status)){
+                return ResponseEntity.badRequest().body("status :"+status+" - Not valid ");
+            }else{
+                if (!(documentType.equals("PN_NOTIFICATION_ATTACHMENTS")&& status.equals("PRELOADED"))){
+                    return ResponseEntity.badRequest().body("status :"+status+" - Not valid for documentType");
+                }
+            }
+        }
+        return null ;
     }
 
     private Document.DocumentTypeEnum retrieveDocType(String documentType) {

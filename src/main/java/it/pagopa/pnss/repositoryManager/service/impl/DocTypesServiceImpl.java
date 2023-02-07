@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
@@ -37,17 +38,23 @@ public class DocTypesServiceImpl implements DocTypesService {
 	@Autowired
     private ObjectMapper objectMapper;
 	
+	private Mono<DocTypeEntity> getErrorIdClientNotFoundException(String typeId) {
+		log.error("getDocType() : docType with typeId \"{}\" not found", typeId);
+		return Mono.error(new IdClientNotFoundException(typeId));
+	}
+	
 	@Override
 	public Mono<DocumentType> getDocType(String typeId) {
+		log.info("getDocType() : IN typeId {}", typeId);
 	
         DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
         		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
         
-        Mono<DocTypeEntity> monoEntity = Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(typeId).build()))
-        			.switchIfEmpty(Mono.error(new IdClientNotFoundException(typeId)))
-        			.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()));
-        
-        return monoEntity.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
+        return Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(typeId).build()))
+        			.switchIfEmpty(getErrorIdClientNotFoundException(typeId))
+        			//.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()));
+        			.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+        			.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
 	}
 	
 //	@Override
@@ -120,7 +127,7 @@ public class DocTypesServiceImpl implements DocTypesService {
         		.switchIfEmpty(Mono.error(new IdClientNotFoundException(typeId)))
         		.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()))
                 .doOnSuccess(unused -> {
-                	docTypeEntityInput.setTipoDocumento(typeId);
+                	docTypeEntityInput.setTipoDocumento(TipoDocumentoEnum.valueOf(typeId));
                 	// Puts a single item in the mapped table. 
                 	// If the table contains an item with the same primary key, it will be replaced with this item. 
                     docTypesTable.putItem(docTypeEntityInput);

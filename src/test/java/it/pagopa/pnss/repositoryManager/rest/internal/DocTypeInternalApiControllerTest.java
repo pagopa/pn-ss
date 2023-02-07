@@ -49,7 +49,7 @@ public class DocTypeInternalApiControllerTest {
     private static void insertDocTypeEntity(String tipoDocumento) {
     	log.info("execute insertDocTypeEntity()");
         var docTypeEntity = new DocTypeEntity();
-        docTypeEntity.setTipoDocumento(tipoDocumento);
+        docTypeEntity.setTipoDocumento(TipoDocumentoEnum.valueOf(tipoDocumento));
         dynamoDbTable.putItem(builder -> builder.item(docTypeEntity));
     }
 	

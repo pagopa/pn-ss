@@ -74,7 +74,8 @@ public class UriBuilderService {
             return ret;
         }
         log.info("--- REST INIZIO CHIAMATA USER CONFIGURATION");
-        ResponseEntity<UserConfiguration> userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+
+        ResponseEntity<UserConfiguration> userResponse = Mono.justOrEmpty(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)).block();
         log.info("--- REST INIZIO CHIAMATA USER CONFIGURATION");
         UserConfiguration user = null;
         if (userResponse!=null ){

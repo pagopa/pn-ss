@@ -39,20 +39,19 @@ public class DocTypesServiceImpl implements DocTypesService {
     private ObjectMapper objectMapper;
 	
 	private Mono<DocTypeEntity> getErrorIdClientNotFoundException(String typeId) {
-		log.error("getDocType() : docType with typeId \"{}\" not found", typeId);
+		log.error("getErrorIdClientNotFoundException() : docType with typeId \"{}\" not found", typeId);
 		return Mono.error(new IdClientNotFoundException(typeId));
 	}
-	
+		
 	@Override
 	public Mono<DocumentType> getDocType(String typeId) {
-		log.info("getDocType() : IN typeId {}", typeId);
+		log.info("getDocType() : IN : typeId {}", typeId);
 	
         DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
         		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
         
         return Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(typeId).build()))
         			.switchIfEmpty(getErrorIdClientNotFoundException(typeId))
-        			//.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()));
         			.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
         			.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
 	}
@@ -72,6 +71,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 	
 	@Override
 	public List<DocumentType> getAllDocType() {
+		log.info("getAllDocType() : START");
 		
 		List<DocumentType> listDocType= new ArrayList<>();
 		
@@ -88,66 +88,73 @@ public class DocTypesServiceImpl implements DocTypesService {
             throw new RepositoryManagerException(e.getMessage());  
         }
 		
+		log.info("getAllDocType() : listDocType {}", listDocType);
+		log.info("getAllDocType() : END ");
 		return listDocType;
 	}
 	
 	@Override
 	public Mono<DocumentType> insertDocType(DocumentType docTypeInput) {
+		log.info("insertDocType() : IN : docTypeInput : {}", docTypeInput);
 		
-		log.info("insertDocType() : docTypeInput : {}", docTypeInput);
+		if (docTypeInput == null) {
+			throw new RepositoryManagerException("docType is null");
+		}
+		if (docTypeInput.getTipoDocumento() == null) {
+			throw new RepositoryManagerException("docType Id is null");
+		}
 		
         DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
         		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
         DocTypeEntity docTypeEntityInput = objectMapper.convertValue(docTypeInput, DocTypeEntity.class);
         
-        Mono<DocTypeEntity> monoEntity = Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(docTypeInput.getTipoDocumento().getValue()).build()))
+        return Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(docTypeInput.getTipoDocumento().getValue()).build()))
         	.doOnSuccess( docTypeFounded -> {
-        		log.info("insertDocType() : docTypeFounded : {}", docTypeFounded);
+        		log.error("insertDocType() : docType founded : {}", docTypeFounded);
         		if (docTypeFounded != null) {
         			 throw new ItemAlreadyPresent(docTypeInput.getTipoDocumento().getValue());
-//        			sink.error(new ItemAlreadyPresent(docTypeInput.getTipoDocumento().getValue()));
         		}
         	})
-        	.doOnError(ItemAlreadyPresent.class, throwable -> log.error("insertDocType() message : {}",throwable.getMessage(),throwable))
+        	.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
         	.doOnSuccess(unused -> docTypesTable.putItem(builder -> builder.item(docTypeEntityInput)))
-        	.thenReturn(docTypeEntityInput);
-        
-        return monoEntity.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
-        
+        	.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+        	.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
 	}
 	
 	@Override
 	public Mono<DocumentType> updateDocType(String typeId, DocumentType docTypeInput) {
+		log.info("updateDocType() : IN : typeId : {} , docTypeInput {}", typeId, docTypeInput);
 		
         DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
         		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
         DocTypeEntity docTypeEntityInput = objectMapper.convertValue(docTypeInput, DocTypeEntity.class);
 
-        Mono<DocTypeEntity> monoEntity = Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(typeId).build()))
-        		.switchIfEmpty(Mono.error(new IdClientNotFoundException(typeId)))
-        		.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()))
+       return Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(typeId).build()))
+        		.switchIfEmpty(getErrorIdClientNotFoundException(typeId))
+        		.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
                 .doOnSuccess(unused -> {
-                	docTypeEntityInput.setTipoDocumento(TipoDocumentoEnum.valueOf(typeId));
+                	docTypeEntityInput.setTipoDocumento(TipoDocumentoEnum.fromValue(typeId));
                 	// Puts a single item in the mapped table. 
                 	// If the table contains an item with the same primary key, it will be replaced with this item. 
                     docTypesTable.putItem(docTypeEntityInput);
                 })
-                .thenReturn(docTypeEntityInput);
-        
-        return monoEntity.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
+                .doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+                .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
 	}
 	
 	@Override
 	public Mono<DocumentType> deleteDocType(String typeId) {
+		log.info("deleteDocType() : IN : typeId : {}", typeId);
 		
         DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
         		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
         Key typeKey = Key.builder().partitionValue(typeId).build();
         
         return Mono.fromCompletionStage(docTypesTable.getItem(typeKey))
-        		.switchIfEmpty(Mono.error(new IdClientNotFoundException(typeId)))
-        		.doOnError(IdClientNotFoundException.class, throwable -> log.info(throwable.getMessage()))
+        		.switchIfEmpty(getErrorIdClientNotFoundException(typeId))
+        		.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
         		.doOnSuccess(unused -> docTypesTable.deleteItem(typeKey))
+        		.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
         		.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
     }
 }

@@ -21,7 +21,7 @@ public class DocTypeEntity {
 	
 	@Getter(AccessLevel.NONE)
 	private TipoDocumentoEnum tipoDocumento; // ok
-	private ChecksumEnum checkSum; // ok
+	private ChecksumEnum checksum; // ok
 	private String lifeCycleTag; // ok
 //	private String tipoTrasformazione; // ko
 	@Getter(AccessLevel.NONE)

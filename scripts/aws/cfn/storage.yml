@@ -32,60 +32,62 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "name"
-          AttributeType: "S"
+        - AttributeName: 'name'
+          AttributeType: 'S'
       KeySchema: 
-        - AttributeName: "name"
-          KeyType: "HASH"
+        - AttributeName: 'name'
+          KeyType: 'HASH'
       #KinesisStreamSpecification:
-      #  StreamArn: "String"
+      #  StreamArn: 'String'
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
       SSESpecification:
         SSEEnabled: true
-        SSEType: "KMS"
-      TableClass: "STANDARD"
+        SSEType: 'KMS'
+      TableClass: 'STANDARD'
     DeletionPolicy: Retain
 
   PnSsTableTipologieDocumenti:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "tipoDocumento"
-          AttributeType: "S"
+        - AttributeName: 'tipoDocumento'
+          AttributeType: 'S'
       KeySchema: 
-        - AttributeName: "tipoDocumento"
-          KeyType: "HASH"
+        - AttributeName: 'tipoDocumento'
+          KeyType: 'HASH'
       #KinesisStreamSpecification:
-      #  StreamArn: "String"
+      #  StreamArn: 'String'
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
       SSESpecification:
         SSEEnabled: true
-        SSEType: "KMS"
-      TableClass: "STANDARD"
+        SSEType: 'KMS'
+      TableClass: 'STANDARD'
     DeletionPolicy: Retain
 
   PnSsTableDocumenti:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: "documentKey"
-          AttributeType: "S"
+        - AttributeName: 'documentKey'
+          AttributeType: 'S'
       KeySchema: 
-        - AttributeName: "documentKey"
-          KeyType: "HASH"
+        - AttributeName: 'documentKey'
+          KeyType: 'HASH'
+      StreamSpecification:
+          StreamViewType: 'NEW_AND_OLD_IMAGES'
       #KinesisStreamSpecification:
-      #  StreamArn: "String"
+      #  StreamArn: 'String'
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
       SSESpecification:
         SSEEnabled: true
-        SSEType: "KMS"
-      TableClass: "STANDARD"
+        SSEType: 'KMS'
+      TableClass: 'STANDARD'
     DeletionPolicy: Retain
 
   PnSsBucket:
@@ -108,68 +110,46 @@ Resources:
             AbortIncompleteMultipartUpload: 
                 DaysAfterInitiation: 1
             Status: 'Enabled'
-          - Id: 'PnSsAttachmentsPreloaded'
+          - Id: 'PnSsNotificationAttachmentTemporary'
             ExpirationInDays: 1
             Status: 'Enabled'
             TagFilters: 
-              - Key: 'documentType'
-                Value: 'PN_NOTIFICATION_ATTACHMENTS'
-              - Key: 'attachmentAttached'
-                Value: 'false'
-          - Id: 'PnSsAttachmentsAttached'
+              - Key: 'storageType'
+                Value: 'PN_TEMPORARY_DOCUMENT'
+          - Id: 'PnSsNotificationAttachment'
             ExpirationInDays: 120
             Status: 'Enabled'
             TagFilters:
-              - Key: 'documentType'
-                Value: 'PN_NOTIFICATION_ATTACHMENTS'
-              - Key: 'attachmentAttached'
-                Value: 'true'
+              - Key: 'storageType'
+                Value: 'PN_NOTIFIED_DOCUMENT'
           - Id: 'PnSsAar'
             ExpirationInDays: 3650
             Status: 'Enabled'
             TagFilters: 
-              - Key: 'documentType'
+              - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
               - StorageClass: 'DEEP_ARCHIVE'
                 TransitionInDays: 10
           - Id: 'PnSsLegalFacts'
-            ExpirationInDays: 2
+            ExpirationInDays: 3650
             Status: 'Enabled'
             TagFilters: 
-              - Key: 'documentType'
+              - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
               - StorageClass: 'DEEP_ARCHIVE'
-                TransitionInDays: 1
-          - Id: 'PnSsLegalFactsExternal'
-            ExpirationInDays: 2
-            Status: 'Enabled'
-            TagFilters: 
-              - Key: 'documentType'
-                Value: 'PN_EXTERNAL_LEGAL_FACTS'
-            Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
-                TransitionInDays: 1
-          - Id: 'PnSsLegalFactsDowntime'
-            ExpirationInDays: 2
-            Status: 'Enabled'
-            TagFilters: 
-              - Key: 'documentType'
-                Value: 'PN_DOWNTIME_LEGAL_FACTS'
-            Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
-                TransitionInDays: 1
+                TransitionInDays: 120
       #LoggingConfiguration:
-      #  DestinationBucketName: "String"
-      #  LogFilePrefix: "String"
+      #  DestinationBucketName: 'String'
+      #  LogFilePrefix: 'String'
       #MetricsConfigurations:
       #  MetricsConfigurations
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
       #ObjectLockConfiguration:
-      #  ObjectLockEnabled: "String"
+      #  ObjectLockEnabled: 'String'
       #ObjectLockEnabled: false
       OwnershipControls:
         Rules:
@@ -180,7 +160,7 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
       #ReplicationConfiguration:
-      #  Role: "false"
+      #  Role: 'false'
       #  Rules:
       #    -
 
@@ -195,8 +175,8 @@ Resources:
               SSEAlgorithm: 'aws:kms'
               #  KMSMasterKeyID: KMS-KEY-AR
       #LoggingConfiguration:
-      #  DestinationBucketName: "String"
-      #  LogFilePrefix: "String"
+      #  DestinationBucketName: 'String'
+      #  LogFilePrefix: 'String'
       #MetricsConfigurations:
       #  MetricsConfigurations
       NotificationConfiguration:
@@ -215,7 +195,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       KmsDataKeyReusePeriodSeconds: 300
-      KmsMasterKeyId: "alias/aws/sqs"
+      KmsMasterKeyId: 'alias/aws/sqs'
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20      
       RedrivePolicy:
@@ -227,7 +207,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       KmsDataKeyReusePeriodSeconds: 300
-      KmsMasterKeyId: "alias/aws/sqs"
+      KmsMasterKeyId: 'alias/aws/sqs'
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20
       VisibilityTimeout: 30 
@@ -247,11 +227,11 @@ Resources:
       PolicyDocument:
         Statement: 
           - Action: 
-              - "sns:Publish"
-            Effect: "Allow"
+              - 'sns:Publish'
+            Effect: 'Allow'
             Principal:  
               Service: 
-                - "events.amazonaws.com"
+                - 'events.amazonaws.com'
             Resource: '*'
       Topics: 
         - !Ref PnSsSNSStagingBucket
@@ -274,7 +254,7 @@ Resources:
       State: 'ENABLED'
       Targets:
         - Arn: !Ref PnSsSNSStagingBucket
-          Id: "TopicTargetForStagingBucket"
+          Id: 'TopicTargetForStagingBucket'
   
 Outputs:
   PnSsTableNameAnagraficaClient:

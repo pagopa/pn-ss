@@ -18,6 +18,8 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
 import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -33,6 +35,8 @@ public class DocTypeInternalApiControllerTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
+	@Autowired
+	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
 
 	private static final String BASE_PATH = "/safestorage/internal/v1/doctypes";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{typeId}", BASE_PATH);
@@ -49,14 +53,19 @@ public class DocTypeInternalApiControllerTest {
     private static void insertDocTypeEntity(String tipoDocumento) {
     	log.info("execute insertDocTypeEntity()");
         var docTypeEntity = new DocTypeEntity();
-        docTypeEntity.setTipoDocumento(tipoDocumento);
+        docTypeEntity.setTipoDocumento(TipoDocumentoEnum.fromValue(tipoDocumento));
         dynamoDbTable.putItem(builder -> builder.item(docTypeEntity));
     }
 	
     @BeforeAll
-    public static void insertDefaultDocType(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient) {
+    public static void insertDefaultDocType(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
+    		@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) 
+    {
     	log.info("execute insertDefaultDocType()");
-        dynamoDbTable = dynamoDbEnhancedClient.table(DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
+        dynamoDbTable = dynamoDbEnhancedClient.table(
+//        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, 
+        		gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(),
+        		TableSchema.fromBean(DocTypeEntity.class));
         insertDocTypeEntity(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
     }
 	
@@ -87,14 +96,16 @@ public class DocTypeInternalApiControllerTest {
 	// Codice test: DTSS.101.1
 	void postItem() {
 		
-		EntityExchangeResult<DocumentType> resultPreInsert =
+		EntityExchangeResult<DocumentTypeResponse> resultPreInsert =
 				webTestClient.get()
 					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento().getValue()))
 					.accept(APPLICATION_JSON)
 					.exchange()
-					.expectBody(DocumentType.class).returnResult();
+					.expectBody(DocumentTypeResponse.class).returnResult();
+		
+		log.info("\n Test 1 (postItem) resultPreInsert {} \n", resultPreInsert);
 
-		if (resultPreInsert == null || resultPreInsert.getResponseBody() == null) 
+		if (resultPreInsert == null || resultPreInsert.getResponseBody() == null || resultPreInsert.getResponseBody().getDocType() == null) 
 		{
 			webTestClient.post()
 						 .uri(BASE_PATH)
@@ -131,14 +142,14 @@ public class DocTypeInternalApiControllerTest {
 	@Test
 	void postItemDuplicatedKey() {
 		
-		EntityExchangeResult<DocumentType> resultPreInsert =
+		EntityExchangeResult<DocumentTypeResponse> resultPreInsert =
 				webTestClient.get()
 					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento().getValue()))
 					.accept(APPLICATION_JSON)
 					.exchange()
-					.expectBody(DocumentType.class).returnResult();
+					.expectBody(DocumentTypeResponse.class).returnResult();
 
-		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null) 
+		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null && resultPreInsert.getResponseBody().getDocType() != null) 
 		{
 			webTestClient.post()
 						 .uri(BASE_PATH)
@@ -162,7 +173,7 @@ public class DocTypeInternalApiControllerTest {
 			.accept(APPLICATION_JSON)
 			.exchange()
 			.expectStatus().isOk()
-			.expectBody(DocumentType.class);
+			.expectBody(DocumentTypeResponse.class);
 
 		log.info("\n Test 3 (getItem) passed \n");
 
@@ -248,15 +259,15 @@ public class DocTypeInternalApiControllerTest {
 	// codice test: DTSS.103.1
 	void deleteItem() {
 		
-		EntityExchangeResult<DocumentType> result =
+		EntityExchangeResult<DocumentTypeResponse> result =
 			webTestClient.delete()
 				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS))
 		        .accept(APPLICATION_JSON)
 		        .exchange()
 		        .expectStatus().isOk()
-		        .expectBody(DocumentType.class).returnResult();
+		        .expectBody(DocumentTypeResponse.class).returnResult();
 		
-		Assertions.assertEquals(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS, result.getResponseBody().getTipoDocumento().getValue());
+		Assertions.assertEquals(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS, result.getResponseBody().getDocType().getTipoDocumento().getValue());
 	    
 	    log.info("\n Test 9 (deleteItem) passed \n");
 

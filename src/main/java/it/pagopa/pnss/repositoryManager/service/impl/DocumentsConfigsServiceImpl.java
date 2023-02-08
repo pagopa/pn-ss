@@ -42,6 +42,7 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
 			DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
 			dtc.setName(docType.getTipoDocumento() != null ? docType.getTipoDocumento().getValue() : null);
 			dtc.setInformationClassification(docType.getInformationClassification() != null ? ConfidentialityLevel.fromValue(docType.getInformationClassification().getValue()) : null);
+			dtc.setDigitalSignature(docType.getDigitalSignature());
 			dtc.setTimestamped(docType.getTimeStamped() != null ? TimestampedEnum.fromValue(docType.getTimeStamped().getValue()) : null);
 			dtc.setChecksum(docType.getChecksum() != null ? ChecksumEnum.fromValue(docType.getChecksum().getValue()) : null);
 			listDocTypeConf.add(dtc);

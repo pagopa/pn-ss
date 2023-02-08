@@ -3,6 +3,7 @@ package it.pagopa.pnss.common.client.impl;
 import com.amazonaws.services.dynamodbv2.xspec.S;
 import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 
 import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
@@ -28,21 +29,21 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
 
 
     @Override
-    public Mono<Document> getdocument(String keyFile) throws IdClientNotFoundException {
+    public Mono<DocumentResponse> getdocument(String keyFile) throws IdClientNotFoundException {
         return getWebClient().get()
                 .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                 .retrieve()
                 .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentkeyNotPresentException(keyFile)))
-                .bodyToMono(Document.class);
+                .bodyToMono(DocumentResponse.class);
     }
 
     @Override
-    public Mono<Document> postdocument(Document Document) throws IdClientNotFoundException {
+    public Mono<DocumentResponse> postdocument(Document document) throws IdClientNotFoundException {
         return getWebClient().post()
-                .uri(String.format(anagraficaDocumentiClientEndpointpost))
-                .bodyValue(Document)
+                .uri(anagraficaDocumentiClientEndpointpost)
+                .bodyValue(document)
                 .retrieve()
-                .bodyToMono(Document.class);
+                .bodyToMono(DocumentResponse.class);
     }
 
     @Override

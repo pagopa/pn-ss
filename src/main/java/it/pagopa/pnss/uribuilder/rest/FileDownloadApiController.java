@@ -1,6 +1,6 @@
-package it.pagopa.pnss.uriBuilder.rest;
+package it.pagopa.pnss.uribuilder.rest;
 
-import it.pagopa.pnss.uriBuilder.service.UriBuilderService;
+import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import it.pagopa.pn.template.rest.v1.api.FileDownloadApi;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import lombok.RequiredArgsConstructor;

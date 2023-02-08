@@ -26,7 +26,9 @@ public class FileUploadApiController implements FileUploadApi {
     @Override
     public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId, Mono<FileCreationRequest> fileCreationRequest, final ServerWebExchange exchange){
 
-        return fileCreationRequest.map(request ->uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,request));
+        return fileCreationRequest
+                .flatMap(request ->uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,request))
+                .map(fileCreationResponse -> ResponseEntity.ok(fileCreationResponse));
 
     }
 

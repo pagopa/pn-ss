@@ -1,5 +1,6 @@
 package it.pagopa.pnss.common.client;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
@@ -9,7 +10,7 @@ import reactor.core.publisher.Mono;
 
 public interface UserConfigurationClientCall {
 
-    ResponseEntity<UserConfiguration> getUser(String name) throws IdClientNotFoundException;
+    Mono<UserConfigurationResponse> getUser(String name) throws IdClientNotFoundException;
 
     ResponseEntity<UserConfiguration> postUser(UserConfiguration user) throws IdClientNotFoundException;
 

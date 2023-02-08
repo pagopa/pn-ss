@@ -8,8 +8,8 @@ import reactor.core.publisher.Mono;
 
 public interface DocumentClientCall {
 
-    ResponseEntity<Document> getdocument(String keyFile) throws IdClientNotFoundException;
-    ResponseEntity<Document> postdocument(Document Document) throws IdClientNotFoundException;
+    Mono<Document> getdocument(String keyFile) throws IdClientNotFoundException;
+    Mono<Document> postdocument(Document Document) throws IdClientNotFoundException;
     ResponseEntity<Document> updatedocument( Document document) throws IdClientNotFoundException;
     ResponseEntity<Document> patchdocument( String keyFile, Document document) throws IdClientNotFoundException;
     ResponseEntity<Document> deletedocument(String keyFile) throws IdClientNotFoundException;

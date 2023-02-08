@@ -3,13 +3,16 @@ package it.pagopa.pnss.repositoryManager.service;
 import java.util.List;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 public interface DocTypesService {
 	
-	DocumentType getDocType(String typeId);
+	Mono<DocumentType> getDocType(String typeId);
+//	Flux<DocumentType> getAllDocType();
 	List<DocumentType> getAllDocType();
-	DocumentType insertDocType(DocumentType docTypeInput);
-	DocumentType updateDocType(String typeId, DocumentType docType);
-	void deleteDocType(String typeId);
+	Mono<DocumentType> insertDocType(DocumentType docTypeInput);
+	Mono<DocumentType> updateDocType(String typeId, DocumentType docType);
+	Mono<DocumentType> deleteDocType(String typeId);
 
 }

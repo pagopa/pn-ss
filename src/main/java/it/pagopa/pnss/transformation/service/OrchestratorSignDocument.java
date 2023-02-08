@@ -11,14 +11,18 @@ import it.pagopa.pnss.transformation.wsdl.TypeOfTransportNotImplemented_Exceptio
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import javax.xml.bind.JAXBException;
 import java.net.MalformedURLException;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
 
+import static it.pagopa.pnss.common.QueueNameConstant.MAXIMUM_LISTENING_TIME;
 
 
 @Service
@@ -37,8 +41,13 @@ public class OrchestratorSignDocument {
         this.documentClientCall = documentClientCall;
     }
 
-    public Flow.Publisher<Object> incomingMessageFlow(S3ObjectCreated s3ObjectCreated, Acknowledgment acknowledgment) {
-        return null;
+    public <T> Mono<Void> incomingMessageFlow(S3ObjectCreated queuePayload, Acknowledgment acknowledgment) {
+        return Mono.just(queuePayload)
+                .doOnNext(message -> this.signDocument(queuePayload))
+                .flatMap(unused -> Mono.fromFuture(CompletableFuture.supplyAsync(acknowledgment::acknowledge)))
+                .timeout(Duration.ofSeconds(MAXIMUM_LISTENING_TIME))
+                .doOnError(throwable -> log.error("Maximum listening time on incoming message queue exceed"))
+                .then();
     }
 
     public void signDocument(S3ObjectCreated s3Object){

@@ -35,13 +35,17 @@ paths:
         - $ref: '#/components/parameters/typeId'       
       responses:
         '404':
-            description: Not configured
+            description: Not Found
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/DocumentTypeResponse'
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentType'
+                $ref: '#/components/schemas/DocumentTypeResponse'
     put:
       operationId: updateDocType
       summary: Aggiorna una tipologia di documento.
@@ -56,13 +60,17 @@ paths:
               $ref: '#/components/schemas/DocumentType'        
       responses:
         '404':
-            description: Not configured
+            description: Not Found
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/DocumentTypeResponse'
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentType'                  
+                $ref: '#/components/schemas/DocumentTypeResponse'                  
     delete:
       operationId: deleteDocType
       summary: Elimina una tipologia di documento.
@@ -72,9 +80,17 @@ paths:
         - $ref: '#/components/parameters/typeId'       
       responses:
         '404':
-            description: Not configured
+            description: Not Found
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/DocumentTypeResponse'
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTypeResponse' 
   
   '/safestorage/internal/v1/doctypes': 
     post:
@@ -88,14 +104,14 @@ paths:
             schema:
               $ref: '#/components/schemas/DocumentType'        
       responses:
-        '404':
-            description: Not configured
+        '403':
+            description: Forbidden
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentType'
+                $ref: '#/components/schemas/DocumentTypeResponse'
                 
   '/safestorage/internal/v1/documents/{documentKey}':
     get:
@@ -113,7 +129,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Document'  
+                $ref: '#/components/schemas/DocumentResponse'  
     patch:
       operationId: patchDoc
       summary: Aggiorna un documento.
@@ -134,7 +150,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Document'                  
+                $ref: '#/components/schemas/DocumentResponse'                  
     delete:
       operationId: deleteDocument
       summary: Elimina un documento.
@@ -147,6 +163,10 @@ paths:
             description: Not configured
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'            
                 
   '/safestorage/internal/v1/documents': 
     post:
@@ -167,7 +187,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Document'
+                $ref: '#/components/schemas/DocumentResponse'
                 
   '/safestorage/internal/v1/userConfigurations/{name}':
     get:
@@ -185,7 +205,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserConfiguration'
+                $ref: '#/components/schemas/UserConfigurationResponse'
     patch:
       operationId: patchUserConfiguration
       summary: Aggiorna una anagrafica client.
@@ -206,7 +226,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserConfiguration'    
+                $ref: '#/components/schemas/UserConfigurationResponse'    
     delete:
       operationId: deleteUserConfiguration
       summary: Elimina una anagrafica client.
@@ -219,6 +239,10 @@ paths:
             description: Not configured
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserConfigurationResponse'           
                 
   '/safestorage/internal/v1/userConfigurations':
     post:
@@ -239,7 +263,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserConfiguration'    
+                $ref: '#/components/schemas/UserConfigurationResponse'    
 
 components:
   parameters:
@@ -266,10 +290,17 @@ components:
         type: string    
       
   schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
     DocumentType:
       type: object
       properties:
-        name:
+        tipoDocumento:
           type: string
           description: nome del tipo di documento
           enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
@@ -281,12 +312,11 @@ components:
           enum: [ 'MD5', 'SHA256']  
         lifeCycleTag:
           type: string
-        tipoTrasformazione:
-          type: string
         informationClassification:
           description: >-
             * `C` - Confidential
-            * `HC`- Highly Confidential
+            * `HC`- Highly Confidential </br>
+            Se il valore è HC il file deve essere criptato.</br>
             See [information classification](https://pagopa.atlassian.net/wiki/spaces/EN/pages/357204284/Data+Classification+Handling#Classificazione)
           type: string
           enum: [ 'C', 'HC' ] 
@@ -295,6 +325,13 @@ components:
         timeStamped:
           type: string
           enum: [ 'NONE', 'STANDARD' ]
+    DocumentTypeResponse:
+      type: object
+      properties:
+        docType:
+          $ref: '#/components/schemas/DocumentType'
+        error:
+          $ref: '#/components/schemas/Error'
     Document:
       type: object
       properties:
@@ -302,8 +339,10 @@ components:
           type: string
         documentState:
           type: string
-          enum: ['BOOKED','STAGED','VALID','AVAILABLE','FREEZED','ATTACHED','TO_DELETE','DELETED']
-        retentionPeriod:
+          enum: ['BOOKED','STAGED','AVAILABLE','FREEZED','ATTACHED','DELETED']
+        retentionUntil:
+          description: >-
+            data di scadenza del file
           type: string
         checkSum: 
           description:
@@ -312,13 +351,20 @@ components:
           type: string
           enum: [ 'MD5', 'SHA256']  
         contentLenght:
-          type: string
+          type: number
         contentType:
           type: string
         documentType:
           type: string
           description: nome del tipo di documento
           enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
+    DocumentResponse:
+      type: object
+      properties:
+        document:
+          $ref: '#/components/schemas/Document'
+        error:
+          $ref: '#/components/schemas/Error'      
     UserConfiguration:
       type: object
       properties:
@@ -345,6 +391,13 @@ components:
             sqsUrl:
               type: string
               description: URL della coda SQS a cui contattare il client
+    UserConfigurationResponse:
+      type: object
+      properties:
+        userConfiguration:
+          $ref: '#/components/schemas/UserConfiguration'
+        error:
+          $ref: '#/components/schemas/Error'                
 
   securitySchemes:
     ApiKeyAuth:

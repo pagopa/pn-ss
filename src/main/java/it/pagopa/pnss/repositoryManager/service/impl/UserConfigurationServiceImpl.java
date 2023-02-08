@@ -6,126 +6,136 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
+import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
-import it.pagopa.pnss.repositoryManager.exception.ItemDoesNotExist;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.service.UserConfigurationService;
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import reactor.core.publisher.Mono;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 @Service
 @Slf4j
 public class UserConfigurationServiceImpl implements UserConfigurationService {
 
 	@Autowired
-	private DynamoDbEnhancedClient enhancedClient;
+	private DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient;
 	@Autowired
-	private ObjectMapper objectMapper;
-
-	public UserConfiguration getUserConfiguration(String name) {
-		
-		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(
-					DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,TableSchema.fromBean(UserConfigurationEntity.class));
-			UserConfigurationEntity result = userConfigurationTable.getItem(Key.builder().partitionValue(name).build());
-            return objectMapper.convertValue(result, UserConfiguration.class);
-
-		} catch (DynamoDbException e) {
-			log.error("getUser", e);
-			throw new RepositoryManagerException();
-		}
+	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
+	@Autowired
+    private ObjectMapper objectMapper;
+	
+	private Mono<UserConfigurationEntity> getErrorIdClientNotFoundException(String name) {
+		log.error("getErrorIdClientNotFoundException() : userConfiguration with name \"{}\" not found", name);
+		return Mono.error(new IdClientNotFoundException(name));
 	}
 
-	public UserConfiguration insertUserConfiguration(UserConfiguration userConfiguration) {
+	@Override
+	public Mono<UserConfiguration> getUserConfiguration(String name) {
+		log.info("getUserConfiguration() : IN : name {}", name);
 		
-		if (userConfiguration == null) {
-			throw new RepositoryManagerException("Document values not specified");
-		}
-
-		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(
-					DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,TableSchema.fromBean(UserConfigurationEntity.class));
-			UserConfigurationEntity userEntity = objectMapper.convertValue(userConfiguration,UserConfigurationEntity.class);
-
-			if (userConfigurationTable.getItem(userEntity) == null) {
-
-				userConfigurationTable.putItem(userEntity);
-				log.info("User Configuration added to the table");
-				return objectMapper.convertValue(userEntity, UserConfiguration.class);
-
-			} else {
-				throw new ItemAlreadyPresent(userConfiguration.getName());
-			}
-			
-		} catch (DynamoDbException e) {
-			log.error("insertUserConfiguration",e);
-			throw new RepositoryManagerException();
-		}
-
+		DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationTable = dynamoDbEnhancedAsyncClient.table(
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+				repositoryManagerDynamoTableName.anagraficaClientName(),
+        		TableSchema.fromBean(UserConfigurationEntity.class));
+        
+        return Mono.fromCompletionStage(userConfigurationTable.getItem(Key.builder().partitionValue(name).build()))
+        			.switchIfEmpty(getErrorIdClientNotFoundException(name))
+        			.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+        			.map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity, UserConfiguration.class));
 	}
 
-	public UserConfiguration patchUserConfiguration(String name, UserConfiguration userConfigurationInput) {
+	@Override
+	public Mono<UserConfiguration> insertUserConfiguration(UserConfiguration userConfigurationInput) {
+		log.info("insertUserConfiguration() : IN : userConfigurationInput : {}", userConfigurationInput);
 		
-		if (name == null || name.isBlank()) {
-			throw new RepositoryManagerException("User configuration name not specified");
-		}
 		if (userConfigurationInput == null) {
-			throw new RepositoryManagerException("User configuration values not specified");
+			throw new RepositoryManagerException("userConfiguration is null");
 		}
-		if (!userConfigurationInput.getName().isBlank() && !userConfigurationInput.getName().equals(name)) {
-			throw new RepositoryManagerException("User configuration key does not match");
+		if (userConfigurationInput.getName() == null || userConfigurationInput.getName().isBlank()) {
+			throw new RepositoryManagerException("userConfiguration Id is null");
 		}
-
-		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(
-					DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,TableSchema.fromBean(UserConfigurationEntity.class));
-			UserConfigurationEntity userEntity = userConfigurationTable.getItem(Key.builder().partitionValue(name).build());
-
-            if (userConfigurationTable.getItem(userEntity) != null) { 
-            	
-            	userEntity.setCanRead(userConfigurationInput.getCanRead());
-            	userEntity.setCanCreate(userConfigurationInput.getCanCreate());
-            	
-            	userConfigurationTable.updateItem(userEntity);
-	            log.info("User Configuration updated");
-	            return objectMapper.convertValue(userEntity, UserConfiguration.class);
-	            
-	    	} else {
-	    		throw new RepositoryManagerException("User Configuration cannot be updated: Document does not exists");
-    	    }
-            
-		} catch (DynamoDbException e) {
-			log.error("patchUserConfiguration",e);
-			throw new RepositoryManagerException();
-		}
+		
+		DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationTable = dynamoDbEnhancedAsyncClient.table(
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+				repositoryManagerDynamoTableName.anagraficaClientName(),
+        		TableSchema.fromBean(UserConfigurationEntity.class));
+		UserConfigurationEntity documentEntityInput = objectMapper.convertValue(userConfigurationInput, UserConfigurationEntity.class);
+        
+        return Mono.fromCompletionStage(userConfigurationTable.getItem(Key.builder().partitionValue(userConfigurationInput.getName()).build()))
+        		.doOnSuccess( userConfigurationFounded -> {
+            		if (userConfigurationFounded != null) {
+            			log.error("insertUserConfiguration() : userConfiguration founded : {}", userConfigurationFounded);
+            			 throw new ItemAlreadyPresent(userConfigurationFounded.getApiKey());
+            		}
+            	})
+        		.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+	        	// Puts a single item in the mapped table. 
+	        	// If the table contains an item with the same primary key, it will be replaced with this item. 
+	        	.doOnSuccess(unused -> userConfigurationTable.putItem(builder -> builder.item(documentEntityInput)))
+	        	.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+	        	.map(documentEntity -> objectMapper.convertValue(documentEntity, UserConfiguration.class));
 	}
 
-	public void deleteUserConfiguration(String name) {
+	@Override
+	public Mono<UserConfiguration> patchUserConfiguration(String name, UserConfiguration userConfigurationInput) {
+		log.info("patchUserConfiguration() : IN : name : {} , userConfigurationInput {}", name, userConfigurationInput);
+		
+		DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationTable = dynamoDbEnhancedAsyncClient.table(
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+				repositoryManagerDynamoTableName.anagraficaClientName(),
+        		TableSchema.fromBean(UserConfigurationEntity.class));
+		UserConfigurationEntity userConfigurationEntityInput = objectMapper.convertValue(userConfigurationInput, UserConfigurationEntity.class);
 
-		try {
-			DynamoDbTable<UserConfigurationEntity> userConfigurationTable = enhancedClient.table(
-					DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,TableSchema.fromBean(UserConfigurationEntity.class));
-			UserConfigurationEntity result = userConfigurationTable.getItem(Key.builder().partitionValue(name).build());
-			
-            if (result == null) {
-            	throw new ItemDoesNotExist(name);
-            }
-            else {
-            	userConfigurationTable.deleteItem(result);
-	            log.info("User Configuration deleted");   
-            }
+        return Mono.fromCompletionStage(userConfigurationTable.getItem(Key.builder().partitionValue(name).build()))
+        		.switchIfEmpty(getErrorIdClientNotFoundException(name))
+        		.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+                .doOnSuccess(entityStored -> {
+                	if (entityStored.getCanCreate() != null && !entityStored.getCanCreate().isEmpty()
+                			&& userConfigurationEntityInput.getCanCreate() != null && !userConfigurationEntityInput.getCanCreate().isEmpty()) {
+                		userConfigurationEntityInput.getCanCreate().forEach(can -> {
+                			if (!entityStored.getCanCreate().contains(can)) {
+                				entityStored.getCanCreate().add(can);
+                			}
+                		});
+                	}
+                	if (entityStored.getCanRead() != null && !entityStored.getCanRead().isEmpty()
+                			&& userConfigurationEntityInput.getCanRead() != null && !userConfigurationEntityInput.getCanRead().isEmpty()) {
+                		userConfigurationEntityInput.getCanRead().forEach(can -> {
+                			if (!entityStored.getCanRead().contains(can)) {
+                				entityStored.getCanRead().add(can);
+                			}
+                		});
+                	}
+                	log.info("patchUserConfiguration() : userConfigurationEntity for patch : {}", entityStored);
+                	// Updates an item in the mapped table, or adds it if it doesn't exist. 
+                	userConfigurationTable.updateItem(entityStored);
+                })
+                .doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+                .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity, UserConfiguration.class));
+	}
 
-		} catch (DynamoDbException e) {
-			log.error("deleteUserConfiguration",e);
-			throw new RepositoryManagerException();
+	@Override
+	public Mono<UserConfiguration> deleteUserConfiguration(String name) {
+		log.info("deleteUserConfiguration() : IN : name {}", name);
 
-		}
+		DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationTable = dynamoDbEnhancedAsyncClient.table(
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+				repositoryManagerDynamoTableName.anagraficaClientName(),
+        		TableSchema.fromBean(UserConfigurationEntity.class));
+        Key userConfigurationKey = Key.builder().partitionValue(name).build();
+        
+        return Mono.fromCompletionStage(userConfigurationTable.getItem(userConfigurationKey))
+        		.switchIfEmpty(getErrorIdClientNotFoundException(name))
+        		.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+        		.doOnSuccess(unused -> userConfigurationTable.deleteItem(userConfigurationKey))
+        		.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+        		.map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity, UserConfiguration.class));
 	}
 
 }

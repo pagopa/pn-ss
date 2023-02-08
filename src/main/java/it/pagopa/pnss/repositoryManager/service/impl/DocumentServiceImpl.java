@@ -6,129 +6,123 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pnss.repositoryManager.constant.DynamoTableNameConstant;
+import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
 import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
-import it.pagopa.pnss.repositoryManager.exception.ItemDoesNotExist;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.service.DocumentService;
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import reactor.core.publisher.Mono;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 @Service
 @Slf4j
 public class DocumentServiceImpl implements DocumentService {
 	
 	@Autowired
-	private DynamoDbEnhancedClient enhancedClient;
+	private DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient;
+	@Autowired
+	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
 	@Autowired
     private ObjectMapper objectMapper;
+	
+	private Mono<DocumentEntity> getErrorIdClientNotFoundException(String documentKey) {
+		log.error("getErrorIdClientNotFoundException() : document with documentKey \"{}\" not found", documentKey);
+		return Mono.error(new IdClientNotFoundException(documentKey));
+	}
     
-	public Document getDocument(String documentKey) {
+	@Override
+	public Mono<Document> getDocument(String documentKey) {
+		log.info("getDocument() : IN : documentKey {}", documentKey);
 		
-		try {
-            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(
-            		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
-            DocumentEntity result = documentTable.getItem(Key.builder().partitionValue(documentKey).build());
-            return objectMapper.convertValue(result, Document.class);
-            
-		} catch (DynamoDbException e) {
-            log.error("getDocument",e);
-            throw new RepositoryManagerException();  
-        }
+        DynamoDbAsyncTable<DocumentEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
+//        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
+        		repositoryManagerDynamoTableName.documentiName(),
+        		TableSchema.fromBean(DocumentEntity.class));
+        
+        return Mono.fromCompletionStage(docTypesTable.getItem(Key.builder().partitionValue(documentKey).build()))
+        			.switchIfEmpty(getErrorIdClientNotFoundException(documentKey))
+        			.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+        			.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class));
 	}
 	
-	public Document insertDocument(Document documentInput) {
+	@Override
+	public Mono<Document> insertDocument(Document documentInput) {
+		log.info("insertDocument() : IN : documentInput : {}", documentInput);
 		
 		if (documentInput == null) {
-			throw new RepositoryManagerException("Document values not specified");
+			throw new RepositoryManagerException("document is null");
 		}
-   
-        try {
-            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
-            DocumentEntity documentEntity = objectMapper.convertValue(documentInput, DocumentEntity.class);
-                       
-            if (documentTable.getItem(documentEntity) == null) {
-            	
-            	documentTable.putItem(documentEntity);
-				log.info("Document added to the table");
-				return objectMapper.convertValue(documentEntity, Document.class);
-				
-            } else {
-            	throw new ItemAlreadyPresent(documentInput.getDocumentKey());
-            }
-            
-		} catch (DynamoDbException e) {
-			log.error(e.getMessage());
-			throw new RepositoryManagerException();
+		if (documentInput.getDocumentKey() == null || documentInput.getDocumentKey().isBlank()) {
+			throw new RepositoryManagerException("document Id is null");
 		}
-
+		
+        DynamoDbAsyncTable<DocumentEntity> documentTable = dynamoDbEnhancedAsyncClient.table(
+//        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
+        		repositoryManagerDynamoTableName.documentiName(),
+        		TableSchema.fromBean(DocumentEntity.class));
+        DocumentEntity documentEntityInput = objectMapper.convertValue(documentInput, DocumentEntity.class);
+        
+        return Mono.fromCompletionStage(documentTable.getItem(Key.builder().partitionValue(documentInput.getDocumentKey()).build()))
+        	.doOnSuccess( documentFounded -> {
+        		if (documentFounded != null) {
+        			log.error("insertDocument() : document founded : {}", documentFounded);
+        			 throw new ItemAlreadyPresent(documentInput.getDocumentKey());
+        		}
+        	})
+        	.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+        	.doOnSuccess(unused -> documentTable.putItem(builder -> builder.item(documentEntityInput)))
+        	.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+        	.map(documentEntity -> objectMapper.convertValue(documentEntity, Document.class));
 	}
 	
-	public Document patchDocument(String documentKey, Document documentInput) {
+	@Override
+	public Mono<Document> patchDocument(String documentKey, Document documentInput) {
+		log.info("patchDocument() : IN : documentKey : {} , documentInput {}", documentKey, documentInput);
 		
-		if (documentKey == null || documentKey.isBlank()) {
-			throw new RepositoryManagerException("Document key not specified");
-		}
-		if (documentInput == null) {
-			throw new RepositoryManagerException("Document values not specified");
-		}
-		if (!documentInput.getDocumentKey().isBlank() && !documentInput.getDocumentKey().equals(documentKey)) {
-			throw new RepositoryManagerException("Document key does not match");
-		}
-    	
-    	try {
-            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
-            DocumentEntity documentEntity = documentTable.getItem(Key.builder().partitionValue(documentKey).build());
+        DynamoDbAsyncTable<DocumentEntity> documentTable = dynamoDbEnhancedAsyncClient.table(
+//        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
+        		repositoryManagerDynamoTableName.documentiName(),
+        		TableSchema.fromBean(DocumentEntity.class));
+        DocumentEntity documentEntityInput = objectMapper.convertValue(documentInput, DocumentEntity.class);
 
-            if (documentTable.getItem(documentEntity) != null) { 
-            	
-            	if (documentInput.getDocumentState() != null) {
-            		documentEntity.setDocumentState(documentInput.getDocumentState());
-            	}
-            	if (documentInput.getRetentionPeriod() != null && !documentInput.getRetentionPeriod().isBlank()) {
-            		documentEntity.setRetentionPeriod(documentInput.getRetentionPeriod());
-            	}
-            	if (documentInput.getContentLenght() != null && !documentInput.getContentLenght().isBlank()) {
-            		documentEntity.setContentLenght(documentInput.getContentLenght());
-            	}
-            	
-	            documentTable.updateItem(documentEntity);
-	            log.info("Document updated");
-	            return objectMapper.convertValue(documentEntity, Document.class);
-	            
-	    	} else {
-	    		throw new RepositoryManagerException("Document cannot be updated: Document does not exists");
-    	    }
-    		
-    	} catch (DynamoDbException  e){
-            log.error("patchDocument",e);
-            throw new RepositoryManagerException();
-        }    	
+        return Mono.fromCompletionStage(documentTable.getItem(Key.builder().partitionValue(documentKey).build()))
+        		.switchIfEmpty(getErrorIdClientNotFoundException(documentKey))
+        		.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+                .doOnSuccess(documentEntityStored -> {
+                	log.info("patchDocument() : documentEntityStored : {}", documentEntityStored);
+                	// aggiorno solo lo stato
+                	if (documentEntityInput.getDocumentState() != null) {
+                		documentEntityStored.setDocumentState(documentEntityInput.getDocumentState());
+                	}
+                	log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
+                	// Updates an item in the mapped table, or adds it if it doesn't exist. 
+                	documentTable.updateItem(documentEntityStored);
+                })
+                .doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+                .map(documentEntity -> objectMapper.convertValue(documentEntity, Document.class));
     	
     }
 
-	public void deleteDocument(String documentKey) {
+	@Override
+	public Mono<Document> deleteDocument(String documentKey) {
+		log.info("deleteDocument() : IN : documentKey {}", documentKey);
 
-    	try {
-            DynamoDbTable<DocumentEntity> documentTable = enhancedClient.table(DynamoTableNameConstant.DOCUMENT_TABLE_NAME, TableSchema.fromBean(DocumentEntity.class));
-            DocumentEntity result = documentTable.getItem(Key.builder().partitionValue(documentKey).build());
-            
-            if (result == null) {
-            	throw new ItemDoesNotExist(documentKey);
-            }
-            else {
-            	documentTable.deleteItem(result);
-	            log.info("Document deleted");   
-            }
-            
-    	} catch (DynamoDbException  e) {
-            log.error("deleteDocument",e.getMessage());
-            throw new RepositoryManagerException();
-        }    	
+        DynamoDbAsyncTable<DocumentEntity> documentTable = dynamoDbEnhancedAsyncClient.table(
+//        		DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
+        		repositoryManagerDynamoTableName.documentiName(),
+        		TableSchema.fromBean(DocumentEntity.class));
+        Key typeKey = Key.builder().partitionValue(documentKey).build();
+        
+        return Mono.fromCompletionStage(documentTable.getItem(typeKey))
+        		.switchIfEmpty(getErrorIdClientNotFoundException(documentKey))
+        		.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+        		.doOnSuccess(unused -> documentTable.deleteItem(typeKey))
+        		.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+        		.map(documentEntity -> objectMapper.convertValue(documentEntity, Document.class));
     }
 }

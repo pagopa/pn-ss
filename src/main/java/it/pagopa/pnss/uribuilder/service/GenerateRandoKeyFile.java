@@ -1,4 +1,4 @@
-package it.pagopa.pnss.uriBuilder.service;
+package it.pagopa.pnss.uribuilder.service;
 
 import java.util.UUID;
 

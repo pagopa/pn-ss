@@ -1,45 +1,45 @@
 package it.pagopa.pnss.uribuilder;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
-import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 
-import it.pagopa.pnss.uriBuilder.service.UriBuilderService;
+import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
 
 import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpOutputMessage;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static it.pagopa.pnss.common.Constant.*;
 
@@ -99,14 +99,24 @@ public class UriBulderUploadTest {
         FileCreationResponse fcresp = new FileCreationResponse();
         fcresp.setUploadUrl("http://host:9090/urlFile");
 
-        UserConfiguration userConfig = new UserConfiguration();
-        userConfig.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
-        ResponseEntity<UserConfiguration> userConfigurationEntity =  ResponseEntity.ok(userConfig);
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
 
-        ResponseEntity<Document> respDoc = ResponseEntity.ok(null);
-        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(respDoc);
+
+        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentkeyNotPresentException("keyFile")));
+
+        DocumentResponse docResp = new DocumentResponse();
+        Document document = new Document();
+        document.setDocumentKey("keyFile");
+        docResp.setDocument(document);
+        Mono<DocumentResponse>  respDoc =  Mono.just(docResp);
+        Mockito.doReturn(respDoc).when(documentClientCall).postdocument(Mockito.any());
 
         WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
         FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult = responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
@@ -154,13 +164,23 @@ public class UriBulderUploadTest {
         FileCreationResponse fcresp = new FileCreationResponse();
         fcresp.setUploadUrl("http://host:9090/urlFile");
 
-        UserConfiguration userConfig = new UserConfiguration();
-        userConfig.setCanCreate(List.of(PN_AAR));
-        ResponseEntity<UserConfiguration> userConfigurationEntity =  ResponseEntity.ok(userConfig);
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setCanCreate(List.of(PN_AAR));
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
-        ResponseEntity<Document> respDoc = ResponseEntity.ok(null);
-        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(respDoc);
+        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentkeyNotPresentException("keyFile")));
+
+        DocumentResponse docResp = new DocumentResponse();
+        Document document = new Document();
+        document.setDocumentKey("keyFile");
+        docResp.setDocument(document);
+        Mono<DocumentResponse>  respDoc =  Mono.just(docResp);
+        Mockito.doReturn(respDoc).when(documentClientCall).postdocument(Mockito.any());
 
         WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
         FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult = responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
@@ -257,10 +277,11 @@ public class UriBulderUploadTest {
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("");
-        UserConfiguration userConfig = null;
-        ResponseEntity<UserConfiguration> userConfigurationEntity =  ResponseEntity.ok(userConfig);
 
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.empty()  ;
+
+        Mockito.doThrow(new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "User Not Found : ")).when(userConfigurationClientCall).getUser(Mockito.any());
 
         fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
                 .isNotFound();
@@ -272,8 +293,11 @@ public class UriBulderUploadTest {
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("");
-        UserConfiguration userConfig = new UserConfiguration();
-        ResponseEntity<UserConfiguration> userConfigurationEntity =  ResponseEntity.ok(userConfig);
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setCanCreate(new ArrayList<>());
+        userConfig.setUserConfiguration(userConfiguration);
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
 
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 

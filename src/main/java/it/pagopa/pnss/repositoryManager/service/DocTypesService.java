@@ -9,7 +9,7 @@ import reactor.core.publisher.Mono;
 public interface DocTypesService {
 	
 	Mono<DocumentType> getDocType(String typeId);
-//	Flux<DocumentType> getAllDocType();
+	Flux<DocumentType> getAllDocumentType();
 	List<DocumentType> getAllDocType();
 	Mono<DocumentType> insertDocType(DocumentType docTypeInput);
 	Mono<DocumentType> updateDocType(String typeId, DocumentType docType);

@@ -1,11 +1,10 @@
 package it.pagopa.pnss.repositoryManager.service;
 
-import java.util.List;
-
 import it.pagopa.pnss.common.client.dto.LifecycleRuleDTO;
+import reactor.core.publisher.Flux;
 
 public interface StorageConfigurationsService {
 	
-	public List<LifecycleRuleDTO> getLifecycleConfiguration();
+	public Flux<LifecycleRuleDTO> getLifecycleConfiguration();
 
 }

@@ -14,8 +14,10 @@ public class LifecycleRuleDTO implements Serializable {
 
 	private static final long serialVersionUID = -7879103125067342862L;
 	
-	String id;
-	Integer expirationDays;
-	Integer transitionDays;
+	String name;
+	/** Expiration (retentionPeriod). Example: "aaad bbby" (aaa=number, d=days, bbb=number, y=years) */
+	String expirationDays;
+	/** Transition, or Espiration  if Transition is empty (hotPeriod). Example: "aaad bbby" (aaa=numeber, d=days, bbb=number, y=years) */
+	String transitionDays;
 
 }

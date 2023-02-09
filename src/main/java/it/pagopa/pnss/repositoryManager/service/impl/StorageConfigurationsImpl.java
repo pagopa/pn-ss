@@ -1,16 +1,17 @@
 package it.pagopa.pnss.repositoryManager.service.impl;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import it.pagopa.pnss.common.client.dto.LifecycleRuleDTO;
+import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.repositoryManager.exception.BucketException;
 import it.pagopa.pnss.repositoryManager.service.StorageConfigurationsService;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.services.s3.S3Client;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationResponse;
 import software.amazon.awssdk.services.s3.model.LifecycleRule;
@@ -18,41 +19,81 @@ import software.amazon.awssdk.services.s3.model.LifecycleRule;
 @Service
 @Slf4j
 public class StorageConfigurationsImpl extends CommonS3ObjectService implements StorageConfigurationsService {
+
+	private static final String TAG_KEY = "storageType";
 	
-//	// @Value("PnSsBucketName") // nome della variabile di ambiente
-//	@Value("dgs-bing-ss-pnssbucket-27myu2kp62x9")
-//	private String pnSsBucketName;
+	@Autowired
+	private BucketName bucketName;
 	
-	@Value("${S3.bucket.hot.name}")
-	private String pnSsBucketName;
+	private String formatInYearsDays(Integer value) {
+		if (value == null) {
+			return null;
+		}
+		final int daysInYear = 365;
+		int years = value/daysInYear;
+		int days = value%daysInYear;
+		StringBuilder sb = new StringBuilder();
+		if (years != 0 ) {
+			sb.append(years+"y");
+		}
+		if (days != 0) {
+			if (years != 0 ) {
+				sb.append(" ");
+			}
+			sb.append(days+"d");
+		}
+		return sb.toString();
+	}
 	
-	public List<LifecycleRuleDTO> getLifecycleConfiguration() {
+	private LifecycleRuleDTO getLifecycleRuleDTO(LifecycleRule rule) {
+		log.info("getLifecycleRuleDTO() : START");
+		LifecycleRuleDTO dto = new LifecycleRuleDTO();
+		rule.filter().and().tags().forEach(tag -> {
+			log.info("getLifecycleRuleDTO() : tag : value for {} : {}", tag.key(), tag.value());
+			if (TAG_KEY.equals(tag.key())) {
+				dto.setName(tag.value());
+			}
+		});
+		dto.setExpirationDays(rule.expiration() != null ? formatInYearsDays(rule.expiration().days()) : null);
+		if (rule.hasTransitions() && rule.transitions().size() > 1) {
+			log.warn("getLifecycleRuleDTO() : rule with name {} has {} transitions : the first is used", rule.id(), rule.transitions().size());
+		}
+		dto.setTransitionDays(rule.hasTransitions() ? formatInYearsDays(rule.transitions().get(0).days()) : dto.getExpirationDays());
+		log.info("getLifecycleRuleDTO() : dto : {}", dto);
+		return dto;
+	}
+	
+	private GetBucketLifecycleConfigurationResponse getAsynchLifecycleConfigurationResponse() {
+		try {
+			log.info("getLifecycleConfiguration() : pnSsBucketName : {}", bucketName.ssHotName());
+			S3AsyncClient s3AsyncClient = getS3AsynchClient();
+	        GetBucketLifecycleConfigurationRequest request = 
+	        		GetBucketLifecycleConfigurationRequest.builder()
+										                  .bucket(bucketName.ssHotName())
+										                  .build();
+	        return s3AsyncClient.getBucketLifecycleConfiguration(request).get();
+		}
+		catch (Exception e) {
+			log.error("getAsynchLifecycleConfigurationResponse() : no response",e);
+			Thread.currentThread().interrupt();
+			return null;
+		}
+	}
+	
+	public Flux<LifecycleRuleDTO> getLifecycleConfiguration() {
 		log.info("getLifecycleConfiguration() : START");
 		
-		log.info("getLifecycleConfiguration() : pnSsBucketName : {}", pnSsBucketName);
-        GetBucketLifecycleConfigurationRequest getBucketLifecycleConfigurationRequest = GetBucketLifecycleConfigurationRequest.builder()
-                .bucket(pnSsBucketName)
-//                .expectedBucketOwner(accountId)
-                .build();
-        
-		S3Client s3 = getS3Client();
-        GetBucketLifecycleConfigurationResponse response = s3.getBucketLifecycleConfiguration(getBucketLifecycleConfigurationRequest);
-        
-        List<LifecycleRuleDTO> dtoList = new ArrayList<>();
-        List<LifecycleRule> rules = response.rules();
-        log.info("getLifecycleConfiguration() : rules : {}", rules);
-        for (LifecycleRule rule: rules) {
-        	 log.info("getLifecycleConfiguration() : rule : {}", rule);
-        	 
-        	 LifecycleRuleDTO dto = new LifecycleRuleDTO();
-        	 dto.setId(rule.id());
-        	 dto.setExpirationDays(rule.expiration().days());
-        	 dto.setTransitionDays(rule.transitions().get(0).days());
-        	 
-        	 log.info("getLifecycleConfiguration() : dto : {}", dto);
-        	 dtoList.add(dto);
-        }
-        
-        return dtoList;
+		GetBucketLifecycleConfigurationResponse response = getAsynchLifecycleConfigurationResponse();
+		if (response == null || response.rules() == null) {
+			throw new BucketException("No Rules founded");
+		}
+		
+		return Flux.fromIterable(response.rules())
+				.filter(rule -> rule.filter() != null && rule.filter().and() != null && rule.filter().and().hasTags())
+				.map(this::getLifecycleRuleDTO)
+				.onErrorResume(throwable -> {
+					log.error("getLifecycleConfiguration() : error",throwable);
+					return Mono.error(new BucketException(throwable.getMessage()));
+				});
 	}
 }

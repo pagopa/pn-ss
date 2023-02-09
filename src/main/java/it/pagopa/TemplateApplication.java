@@ -19,6 +19,9 @@ import org.springframework.context.annotation.PropertySource;
 // BUCKET
 @PropertySource("classpath:bucket/bucket.properties")
 
+// QUEUE
+@PropertySource("classpath:queue/queue.properties")
+
 public class TemplateApplication {
 
     public static void main(String[] args) {

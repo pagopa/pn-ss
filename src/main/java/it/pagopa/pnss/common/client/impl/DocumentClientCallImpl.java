@@ -3,14 +3,19 @@ package it.pagopa.pnss.common.client.impl;
 import com.amazonaws.services.dynamodbv2.xspec.S;
 import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 
+import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Mono;
 
 @Service
 public class DocumentClientCallImpl extends CommonBaseClient implements DocumentClientCall {
@@ -18,24 +23,27 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
 
     @Value("${gestore.repository.anagrafica.internal.docClient}")
     String anagraficaDocumentiClientEndpoint;
+    @Value("${gestore.repository.anagrafica.internal.docClient.post}")
+    String anagraficaDocumentiClientEndpointpost;
 
 
 
     @Override
-    public ResponseEntity<Document> getdocument(String keyFile) throws IdClientNotFoundException {
+    public Mono<DocumentResponse> getdocument(String keyFile) throws IdClientNotFoundException {
         return getWebClient().get()
                 .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                 .retrieve()
-                .bodyToMono(ResponseEntity.class).block();
+                .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentkeyNotPresentException(keyFile)))
+                .bodyToMono(DocumentResponse.class);
     }
 
     @Override
-    public ResponseEntity<Document> postdocument(Document Document) throws IdClientNotFoundException {
+    public Mono<DocumentResponse> postdocument(Document document) throws IdClientNotFoundException {
         return getWebClient().post()
-                .uri(String.format(anagraficaDocumentiClientEndpoint))
-                .bodyValue(Document)
+                .uri(anagraficaDocumentiClientEndpointpost)
+                .bodyValue(document)
                 .retrieve()
-                .bodyToMono(ResponseEntity.class).block();
+                .bodyToMono(DocumentResponse.class);
     }
 
     @Override
@@ -62,7 +70,7 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     }
     public WebClient getWebClient(){
         WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
-        return builder.build();
+        return builder.baseUrl("http://localhost:8080").build();
     }
 
 }

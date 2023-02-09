@@ -1,14 +1,18 @@
 package it.pagopa.pnss.common.client.impl;
 
 import it.pagopa.pn.commons.pnclients.CommonBaseClient;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Mono;
 
 @Service
 public class UserConfigurationClientCallImpl extends CommonBaseClient implements UserConfigurationClientCall {
@@ -22,11 +26,15 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
     String anagraficaUserConfigurationInternalClientEndpoint;
 
     @Override
-    public ResponseEntity<UserConfiguration> getUser(String name) throws IdClientNotFoundException {
+    public Mono<UserConfigurationResponse> getUser(String xPagopaSafestorageCxId) throws IdClientNotFoundException {
         return getWebClient().get()
-                .uri(String.format(anagraficaUserConfigurationInternalClientEndpoint, name))
+                .uri(String.format(anagraficaUserConfigurationInternalClientEndpoint, xPagopaSafestorageCxId))
                 .retrieve()
-                .bodyToMono(ResponseEntity.class).block();
+                .onStatus(HttpStatus.BAD_REQUEST::equals,clientResponse -> Mono.error(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Invalid User : " + xPagopaSafestorageCxId)))
+                .onStatus(HttpStatus.NOT_FOUND::equals,clientResponse -> Mono.error(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId)))
+                .bodyToMono(UserConfigurationResponse.class);
     }
 
     @Override
@@ -46,7 +54,7 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
 
     public WebClient getWebClient(){
         WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
-        return builder.build();
+        return builder.baseUrl("http://localhost:8080").build();
     }
 
 }

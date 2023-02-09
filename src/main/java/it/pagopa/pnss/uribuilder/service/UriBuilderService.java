@@ -3,6 +3,9 @@ package it.pagopa.pnss.uribuilder.service;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.*;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
@@ -74,7 +77,7 @@ public class UriBuilderService {
                    .flatMap(voidMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
                    .handle((userConfiguration, synchronousSink) -> {
                        if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
-                           synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                           throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                                                              "Client : " + xPagopaSafestorageCxId +
                                                                              " not has privilege for upload document type " +
                                                                              documentType));
@@ -220,16 +223,16 @@ public class UriBuilderService {
         // chiamare l'api di  GestoreRepositori per recupero dati
         //todo
 
-        ResponseEntity<UserConfiguration> userResponse = null; //userConfigurationClientCall.getUser(xPagopaSafestorageCxId);
+        UserConfigurationResponse userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId).block();
         UserConfiguration user = null;
         if (userResponse != null) {
-            user = userResponse.getBody();
+            user = userResponse.getUserConfiguration();
         }
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
         }
-        ResponseEntity<Document> block = null;// documentClientCall.getdocument(fileKey);
-        Document doc = block != null ? block.getBody() : null;
+        DocumentResponse block =  documentClientCall.getdocument(fileKey).block();
+        Document doc = block != null ? block.getDocument() : null;
         if (doc == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey);
         }

@@ -12,6 +12,7 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -219,45 +220,50 @@ public class UriBuilderService {
     }
 
 
-    public FileDownloadResponse createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId) {
+    public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId) {
         // chiamare l'api di  GestoreRepositori per recupero dati
         //todo
 
-        UserConfigurationResponse userResponse = userConfigurationClientCall.getUser(xPagopaSafestorageCxId).block();
-        UserConfiguration user = null;
-        if (userResponse != null) {
-            user = userResponse.getUserConfiguration();
-        }
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId);
-        }
-        DocumentResponse block =  documentClientCall.getdocument(fileKey).block();
-        Document doc = block != null ? block.getDocument() : null;
-        if (doc == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey);
-        }
-        List<String> canRead = user.getCanRead();
+        return Mono.fromCallable(() -> validationFieldCreateUri(fileKey, xPagopaSafestorageCxId))
+                .flatMap(voidMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
+                .doOnSuccess(o -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
+                .flatMap(userConfigurationResponse -> {
+                    List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
-        String typeDocument = doc.getDocumentType().getValue();
-        if (!canRead.contains(typeDocument)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                              "Client : " + xPagopaSafestorageCxId + " not has privilege for download document type " +
-                                              typeDocument);
-        }
+                    return documentClientCall.getdocument(fileKey)
+                            .onErrorResume(DocumentkeyNotPresentException.class,
+                                    throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey)))
+
+                             .map((documentResponse) -> {
+                                if (!canRead.contains(documentResponse.getDocument().getDocumentType().getValue())) {
+                                    throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                            "Client : " + xPagopaSafestorageCxId +
+                                                    " not has privilege for read document type " +
+                                                    documentResponse.getDocument().getDocumentType()));
+                                }
+
+                                 return documentResponse.getDocument();
+                             }).doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
+
+                }).map(doc -> {
+                    return  getFileDownloadResponse(fileKey, doc);
+                }).doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "));
 
 
+
+
+
+
+
+    }
+
+    @NotNull
+    private FileDownloadResponse getFileDownloadResponse(String fileKey, Document doc) {
         FileDownloadResponse downloadResponse = new FileDownloadResponse();
 
         BigDecimal contentLength = doc.getContentLenght();
-//        BigDecimal fileLength = null;
-//        if (StringUtils.isNotEmpty(contentLength)){
-//            try {
-//                fileLength = new BigDecimal(contentLength);
-//            }catch (Exception e){
-//                log.error("Unabel parse to bigdecimal value "+contentLength);
-//            }
-//        }
-        downloadResponse.setChecksum(doc.getCheckSum().getValue());
+
+        downloadResponse.setChecksum(doc.getCheckSum() !=null ? doc.getCheckSum().getValue():null);
         downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
         downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
@@ -268,11 +274,13 @@ public class UriBuilderService {
         downloadResponse.setVersionId(null);
 
         downloadResponse.setDownload(createFileDownloadInfo(fileKey,
-                                                            downloadResponse.getDocumentStatus(),
-                                                            downloadResponse.getDocumentType()));
-
+        downloadResponse.getDocumentStatus(),
+        downloadResponse.getDocumentType()));
         return downloadResponse;
+    }
 
+    private Mono<Boolean> validationFieldCreateUri(String fileKey, String xPagopaSafestorageCxId) {
+        return Mono.just(true);
     }
 
     private FileDownloadInfo createFileDownloadInfo(String fileKey, String status, String documentType) {

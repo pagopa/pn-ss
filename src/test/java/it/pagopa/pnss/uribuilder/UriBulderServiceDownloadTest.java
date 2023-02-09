@@ -7,6 +7,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -18,7 +19,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -139,8 +142,9 @@ public class UriBulderServiceDownloadTest {
         String docId = "1111-aaaa";
 
         mockUserConfiguration(List.of(PN_AAR));
-        mockGetDocument(null, docId);
 
+        mockGetDocument(null, docId);
+        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentkeyNotPresentException("keyFile")));
         fileDownloadTestCall( docId).expectStatus()
                 .isNotFound();
 
@@ -148,9 +152,8 @@ public class UriBulderServiceDownloadTest {
 
     @Test
     public void testIdClienteNonTrovatoDownload(){
-        UserConfigurationResponse userConfigurationResponse = new UserConfigurationResponse();
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfigurationResponse)  ;
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        Mockito.doThrow(new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "User Not Found : ")).when(userConfigurationClientCall).getUser(Mockito.any());
         String docId = "1111-aaaa";
         fileDownloadTestCall( docId).expectStatus()
                 .isNotFound();

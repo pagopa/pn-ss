@@ -19,6 +19,7 @@ import it.pagopa.pnss.repositoryManager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositoryManager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositoryManager.service.DocTypesService;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -26,6 +27,8 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.Page;
+import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 
 @Service
 @Slf4j
@@ -60,18 +63,21 @@ public class DocTypesServiceImpl implements DocTypesService {
         			.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
 	}
 	
-//	@Override
-//	public Flux<DocumentType> getAllDocType() {
-//		
-//       DynamoDbAsyncTable<DocTypeEntity> docTypesTable = dynamoDbEnhancedAsyncClient.table(
-//        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, TableSchema.fromBean(DocTypeEntity.class));
-//       
-//      return Flux.defer(() -> Flux.from(docTypesTable.scan().items()))               
-////							.doOnNext(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class))               
-//							.doOnError(RepositoryManagerException.class, throwable -> log.info(throwable.getMessage()))
-//							.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
-//		
-//	}
+	@Override
+	public Flux<DocumentType> getAllDocumentType() {
+		log.info("getAllDocumetType() : START");
+		
+        DynamoDbAsyncTable<DocTypeEntity> docTypesAsyncTable = dynamoDbEnhancedAsyncClient.table(
+        		repositoryManagerDynamoTableName.tipologieDocumentiName(),
+        		TableSchema.fromBean(DocTypeEntity.class));
+        
+        ScanEnhancedRequest scanEnhancedRequest = ScanEnhancedRequest.builder().build();
+        return Mono.from(docTypesAsyncTable.scan(scanEnhancedRequest))
+        			.doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+		        	.map(Page<DocTypeEntity>::items)
+		        	.flatMapMany(Flux::fromIterable)
+		        	.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
+	}
 	
 	@Override
 	public List<DocumentType> getAllDocType() {

@@ -303,7 +303,7 @@ components:
         tipoDocumento:
           type: string
           description: nome del tipo di documento
-          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
+          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS', 'PN_DOWNTIME_LEGAL_FACTS' ] 
         checksum:
           description: >-
             codice di verifica del corretto caricamento del file

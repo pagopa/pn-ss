@@ -185,6 +185,7 @@ Resources:
               - 'dynamodb:Batch*'
               - 'dynamodb:PartiQL*'
               - 'dynamodb:Update*'
+              - 'dynamodb:Put*'
             Resource:
               - !Sub '${PnSsTableArnAnagraficaClient}'
               - !Sub '${PnSsTableArnTipologieDocumenti}'

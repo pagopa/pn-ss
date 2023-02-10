@@ -27,8 +27,8 @@ public class DocTypeEntity {
 	private TipoDocumentoEnum tipoDocumento; // ok
 	private ChecksumEnum checksum; // ok
 
-//	@Getter(AccessLevel.NONE)
 	private   List<Map<String, CurrentStatusEntity>> statuses; // ok
+
 //	private String tipoTrasformazione; // ko
 	@Getter(AccessLevel.NONE)
 	private InformationClassificationEnum informationClassification; // ok

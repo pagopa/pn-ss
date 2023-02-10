@@ -3,8 +3,11 @@ package it.pagopa.pnss.repositoryManager.rest;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,10 +98,22 @@ public class ConfigurationApiControllerTest {
 	}
 	
 	private DocumentType getDocumentType(TipoDocumentoEnum name) {
+		List<Map<String, CurrentStatus>> statuses = new ArrayList<>();
+		Map<String, CurrentStatus> status = new HashMap<>();
+		CurrentStatus currentStatus = new CurrentStatus();
+		List<String> allowedStatusTransitions = new ArrayList<>();
+		currentStatus.setStorage("PN_TEMPORARY_DOCUMENT");
+		allowedStatusTransitions.add("ATTACHED");
+		currentStatus.setAllowedStatusTransitions(allowedStatusTransitions);
+		status.put("PRELOADED",currentStatus);
+		statuses.add(status);
+
+
+
 		DocumentType docTypesInput = new DocumentType();
 		docTypesInput.setTipoDocumento(name);
 		docTypesInput.setChecksum(ChecksumEnum.MD5);
-		docTypesInput.setLifeCycleTag("lifeCicle1");
+		docTypesInput.setStatuses(statuses);
 		docTypesInput.setInformationClassification(InformationClassificationEnum.C);
 		docTypesInput.setDigitalSignature(true);
 		docTypesInput.setTimeStamped(TimeStampedEnum.STANDARD);

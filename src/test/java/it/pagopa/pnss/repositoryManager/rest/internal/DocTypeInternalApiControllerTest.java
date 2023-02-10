@@ -2,6 +2,8 @@ package it.pagopa.pnss.repositoryManager.rest.internal;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
+import it.pagopa.pnss.repositoryManager.entity.CurrentStatusEntity;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,11 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @Slf4j
@@ -34,7 +41,7 @@ public class DocTypeInternalApiControllerTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
-	@Autowired
+//	@Autowired
 	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
 
 	private static final String BASE_PATH = "/safestorage/internal/v1/doctypes";
@@ -71,11 +78,20 @@ public class DocTypeInternalApiControllerTest {
     @BeforeEach
 	public void createDocumentType() {
     	log.info("execute createDocumentType() : START");
-    	
+		List<Map<String, CurrentStatus>> statuses = new ArrayList<>();
+		Map<String, CurrentStatus> status = new HashMap<>();
+		CurrentStatus currentStatus = new CurrentStatus();
+		List<String> allowedStatusTransitions = new ArrayList<>();
+		currentStatus.setStorage("PN_TEMPORARY_DOCUMENT");
+		allowedStatusTransitions.add("ATTACHED");
+		currentStatus.setAllowedStatusTransitions(allowedStatusTransitions);
+		status.put("PRELOADED",currentStatus);
+		statuses.add(status);
+
     	docTypesInsertInput = new DocumentType();
     	docTypesInsertInput.setTipoDocumento(PARTITION_ID_INSERT_LEGAL_FACTS);
     	docTypesInsertInput.setChecksum(ChecksumEnum.MD5);
-    	docTypesInsertInput.setLifeCycleTag("lifeCicle1");
+    	docTypesInsertInput.setStatuses(statuses);
     	docTypesInsertInput.setInformationClassification(InformationClassificationEnum.C);
     	docTypesInsertInput.setDigitalSignature(true);
     	docTypesInsertInput.setTimeStamped(TimeStampedEnum.STANDARD);
@@ -84,7 +100,8 @@ public class DocTypeInternalApiControllerTest {
     	docTypesUpdateDeleteInput = new DocumentType();
 		docTypesUpdateDeleteInput.setTipoDocumento(TipoDocumentoEnum.fromValue(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS));
 		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.MD5);
-		docTypesUpdateDeleteInput.setLifeCycleTag("lifeCicle1");
+//		docTypesUpdateDeleteInput.setLifeCycleTag("lifeCicle1");
+		docTypesInsertInput.setStatuses(statuses);
 		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.C);
 		docTypesUpdateDeleteInput.setDigitalSignature(true);
 		docTypesUpdateDeleteInput.setTimeStamped(TimeStampedEnum.STANDARD);

@@ -14,8 +14,7 @@ import reactor.core.publisher.Mono;
 public class DocTypesClientCallImpl extends CommonBaseClient implements DocTypesClientCall {
     private final WebClient.Builder ecInternalWebClient= WebClient.builder();
 
-    @Value("${gestore.repository.anagrafica.docTypes}")
-    String anagraficaDocTypesClientEndpoint;
+
 
     @Value("${gestore.repository.anagrafica.internal.docTypes}")
     String anagraficaDocTypesInternalClientEndpoint;

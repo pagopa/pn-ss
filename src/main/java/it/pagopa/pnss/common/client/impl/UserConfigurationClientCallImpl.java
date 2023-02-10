@@ -19,9 +19,6 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
 
     private final WebClient.Builder ecInternalWebClient= WebClient.builder();
 
-    @Value("${gestore.repository.anagrafica.userConfiguration}")
-    String anagraficaUserConfigurationClientEndpoint;
-
     @Value("${gestore.repository.anagrafica.internal.userConfiguration}")
     String anagraficaUserConfigurationInternalClientEndpoint;
 

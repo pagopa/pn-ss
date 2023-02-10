@@ -57,7 +57,7 @@ public class OrchestratorSignDocument {
         byte[] fileInput = objectResponse.asByteArray();
 
         // readDocument from DB
-        ResponseEntity<Document> getdocument = documentClientCall.getdocument(key);
+        ResponseEntity<Document> getdocument = null ; //documentClientCall.getdocument(key);
         Document doc = getdocument.getBody();
         if (getdocument==null || getdocument.getBody()==null || getdocument.getBody().getContentType().isEmpty()){
 

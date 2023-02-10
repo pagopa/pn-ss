@@ -1,29 +1,28 @@
 package it.pagopa.pnss.uribuilder;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
-import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import it.pagopa.pnss.uriBuilder.rest.FileDownloadApiController;
-import it.pagopa.pnss.uriBuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
@@ -73,34 +72,39 @@ public class UriBulderServiceDownloadTest {
 
     @Test
     public void testUrlGenerato(){
-        UserConfiguration userConfig = new UserConfiguration();
-        userConfig.setCanRead(List.of(PN_AAR));
-        ResponseEntity<UserConfiguration> userConfigurationEntity =  ResponseEntity.ok(userConfig);
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+
+        String docId = "1111-aaaa";
+
+        mockUserConfiguration(List.of(PN_AAR));
+
         Document d = new Document();
         d.setDocumentType(Document.DocumentTypeEnum.AAR);
         d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
-        ResponseEntity<Document> docRespEntity = ResponseEntity.ok(d);
-        String docId = "1111-aaaa";
-        Mockito.doReturn(docRespEntity).when(documentClientCall).getdocument(docId);
+
+
+
+        mockGetDocument(d, docId);
+
         fileDownloadTestCall(docId).expectStatus()
                 .isOk();
     }
 
+
+
     @Test
     public void testFileTrovatoBasketHot(){
-        UserConfiguration userConfig = new UserConfiguration();
-        userConfig.setCanRead(List.of(PN_AAR));
-        ResponseEntity<UserConfiguration> userConfigurationEntity =  ResponseEntity.ok(userConfig);
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        String docId = "1111-aaaa";
+
+        mockUserConfiguration(List.of(PN_AAR));
+
         Document d = new Document();
         d.setDocumentType(Document.DocumentTypeEnum.AAR);
         d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
-        ResponseEntity<Document> docRespEntity = ResponseEntity.ok(d);
-        String docId = "1111-aaaa";
-        Mockito.doReturn(docRespEntity).when(documentClientCall).getdocument(docId);
+
+        mockGetDocument(d, docId);
+
 
         //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
         fileDownloadTestCall( docId).expectStatus()
@@ -113,17 +117,15 @@ public class UriBulderServiceDownloadTest {
 
     @Test
     public void testFileTrovatoBasketCold(){
-        UserConfiguration userConfig = new UserConfiguration();
-        userConfig.setCanRead(List.of(PN_AAR));
-        ResponseEntity<UserConfiguration> userConfigurationEntity =  ResponseEntity.ok(userConfig);
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(PN_AAR));
+
+
         Document d = new Document();
         d.setDocumentType(Document.DocumentTypeEnum.AAR);
         d.setDocumentState(Document.DocumentStateEnum.FREEZED);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
-        ResponseEntity<Document> docRespEntity = ResponseEntity.ok(d);
-        String docId = "1111-aaaa";
-        Mockito.doReturn(docRespEntity).when(documentClientCall).getdocument(docId);
+        mockGetDocument(d, docId);
 
         //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
         fileDownloadTestCall( docId).expectStatus()
@@ -137,12 +139,12 @@ public class UriBulderServiceDownloadTest {
     @Test
     public void testFileNonTrovato(){
 
-        UserConfiguration userConfig = new UserConfiguration();
-
-        ResponseEntity<UserConfiguration> userConfigurationEntity =  ResponseEntity.ok(userConfig);
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-
         String docId = "1111-aaaa";
+
+        mockUserConfiguration(List.of(PN_AAR));
+
+        mockGetDocument(null, docId);
+        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentkeyNotPresentException("keyFile")));
         fileDownloadTestCall( docId).expectStatus()
                 .isNotFound();
 
@@ -150,9 +152,8 @@ public class UriBulderServiceDownloadTest {
 
     @Test
     public void testIdClienteNonTrovatoDownload(){
-        UserConfiguration userConfig = null;
-        ResponseEntity<UserConfiguration> userConfigurationEntity =  ResponseEntity.ok(userConfig);
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        Mockito.doThrow(new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "User Not Found : ")).when(userConfigurationClientCall).getUser(Mockito.any());
         String docId = "1111-aaaa";
         fileDownloadTestCall( docId).expectStatus()
                 .isNotFound();
@@ -161,22 +162,35 @@ public class UriBulderServiceDownloadTest {
 
     @Test
     public void testIdClienteNoPermessiDownload(){
+        String docId = "1111-aaaa";
 
-        UserConfiguration userConfig = new UserConfiguration();
-        userConfig.setCanRead(List.of(PN_NOTIFICATION_ATTACHMENTS));
-        ResponseEntity<UserConfiguration> userConfigurationEntity =  ResponseEntity.ok(userConfig);
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        mockUserConfiguration(List.of(PN_NOTIFICATION_ATTACHMENTS));
+
         Document d = new Document();
         d.setDocumentType(Document.DocumentTypeEnum.AAR);
-        ResponseEntity<Document> docRespEntity = ResponseEntity.ok(d);
-        String docId = "1111-aaaa";
-        Mockito.doReturn(docRespEntity).when(documentClientCall).getdocument(docId);
+
+        mockGetDocument(d, docId);
 
         fileDownloadTestCall(docId).expectStatus()
                 .isBadRequest();
     }
 
 
+    private void mockGetDocument(Document d, String docId) {
+        DocumentResponse documentResponse= new DocumentResponse();
+        documentResponse.setDocument(d);
+        Mono<DocumentResponse> docRespEntity = Mono.just(documentResponse);
+        Mockito.doReturn(docRespEntity).when(documentClientCall).getdocument(docId);
+    }
 
+    private void mockUserConfiguration(List<String> permessi) {
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setCanRead(permessi);
+        userConfig.setUserConfiguration(userConfiguration);
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
+
+        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+    }
 
 }

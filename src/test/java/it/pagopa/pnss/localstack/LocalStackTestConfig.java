@@ -1,7 +1,5 @@
 package it.pagopa.pnss.localstack;
 
-//import static it.pagopa.pnss.constant.QueueNameConstant.*;
-import static it.pagopa.pnss.common.QueueNameConstant.ALL_BUCKET_NAME_LIST;
 import static it.pagopa.pnss.common.QueueNameConstant.ALL_QUEUE_NAME_LIST;
 import static it.pagopa.pnss.localstack.LocalStackUtils.DEFAULT_LOCAL_STACK_TAG;
 import static java.util.Map.entry;
@@ -12,6 +10,7 @@ import static org.testcontainers.containers.localstack.LocalStackContainer.Servi
 import static software.amazon.awssdk.services.dynamodb.model.TableStatus.ACTIVE;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -21,6 +20,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
@@ -35,6 +35,9 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.services.s3.model.LifecycleRuleFilter;
+import software.amazon.awssdk.services.s3.model.Transition;
+import software.amazon.awssdk.services.s3.model.TransitionStorageClass;
 
 @TestConfiguration
 @Slf4j
@@ -52,8 +55,8 @@ public class LocalStackTestConfig {
     @Autowired
     private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
     
-    private static final String QUEUE_NAME = "order-event-test-queue";
-    private static final String BUCKET_NAME = "order-event-test-bucket";
+    @Autowired
+    private BucketName bucketName;
 
 
     static LocalStackContainer localStackContainer = new LocalStackContainer(DockerImageName.parse(DEFAULT_LOCAL_STACK_TAG)).withServices(
@@ -73,6 +76,7 @@ public class LocalStackTestConfig {
         System.setProperty("test.aws.sqs.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SQS)));
         System.setProperty("test.aws.dynamodb.endpoint", String.valueOf(localStackContainer.getEndpointOverride(DYNAMODB)));
         System.setProperty("test.aws.sns.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SNS)));
+        System.setProperty("test.aws.s3.endpoint", String.valueOf(localStackContainer.getEndpointOverride(S3)));
         System.setProperty("aws.config.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.config.secret.key", localStackContainer.getSecretKey());
         System.setProperty("aws.config.default.region", localStackContainer.getRegion());
@@ -82,7 +86,7 @@ public class LocalStackTestConfig {
         System.setProperty("PnSsStagingBucketName","PnSsStagingBucketName");
 
         System.setProperty("PnSsStagingBucketArn","PnSsStagingBucketArn");
-        System.setProperty("PnSsBucketName","PnSsBucketName");
+//        System.setProperty("PnSsBucketName","PnSsBucketName");
         System.setProperty("PnSsBucketArn","PnSsBucketArn");
 
 
@@ -93,11 +97,7 @@ public class LocalStackTestConfig {
             for (String queueName : ALL_QUEUE_NAME_LIST) {
                 localStackContainer.execInContainer("awslocal", "sqs", "create-queue", "--queue-name", queueName);
             }
-            for (String bucketName : ALL_BUCKET_NAME_LIST){
-                localStackContainer.execInContainer("awslocal", "s3", "mb", "s3://" + bucketName);
-            }
-
-            // TODO: Create SNS topic
+            
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -113,8 +113,32 @@ public class LocalStackTestConfig {
         responseOrException.response().orElseThrow(() -> new DynamoDbInitTableCreationException(tableName));
     }
     
+    //TODO aggiungere lifecycleRule per bucket relativo a PnSsBucketName
+    private void addLifecycleConfigurationToHotBucket() {
+    	//TODO metodo da completare
+        LifecycleRuleFilter ruleFilter_PN_TEMPORARY_DOCUMENT = LifecycleRuleFilter.builder()
+//                .prefix("glacierobjects/")
+                .build();
+        
+        Transition transition = Transition.builder()
+                .storageClass(TransitionStorageClass.STANDARD_IA)
+                .days(0)
+                .build();
+    }
+    
     @PostConstruct
     public void initLocalStack() {
+    	
+    	//TODO aggiungere lifecycleRule per bucket relativo a PnSsBucketName
+    	List<String> allBucketNameList = List.of(bucketName.ssHotName(),bucketName.ssStageName());
+        log.info("initLocalStack() : allBucketNameList  {}", allBucketNameList);
+        for (String bucketName : allBucketNameList){
+        	try {
+        		localStackContainer.execInContainer("awslocal", "s3", "mb", "s3://" + bucketName);
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
     	
         Map<String, Class<?>> tableNameWithEntityClass =
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),

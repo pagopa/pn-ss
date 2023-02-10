@@ -8,7 +8,7 @@ info:
     url: 'https://www.pn.pagopa.it/LICENSE'
   description: >-
     __SafeStorageInternal__: CRUD interne
-
+    
 servers:
   - url: >-
       https://api.pn.pagopa.it
@@ -19,7 +19,7 @@ tags:
   - name: documentInternal
     description: Documenti
   - name: userConfigurationInternal
-    description: Anagrafica Client
+    description: Anagrafica Client   
 paths:
 
   ################################################################################################
@@ -32,14 +32,14 @@ paths:
       tags:
         - docTypeInternal
       parameters:
-        - $ref: '#/components/parameters/typeId'
+        - $ref: '#/components/parameters/typeId'       
       responses:
         '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DocumentTypeResponse'
+            description: Not Found
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/DocumentTypeResponse'
         '200':
           description: OK
           content:
@@ -52,47 +52,47 @@ paths:
       tags:
         - docTypeInternal
       parameters:
-        - $ref: '#/components/parameters/typeId'
+        - $ref: '#/components/parameters/typeId' 
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DocumentType'
+              $ref: '#/components/schemas/DocumentType'        
       responses:
         '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DocumentTypeResponse'
+            description: Not Found
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/DocumentTypeResponse'
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentTypeResponse'
+                $ref: '#/components/schemas/DocumentTypeResponse'                  
     delete:
       operationId: deleteDocType
       summary: Elimina una tipologia di documento.
       tags:
         - docTypeInternal
       parameters:
-        - $ref: '#/components/parameters/typeId'
+        - $ref: '#/components/parameters/typeId'       
       responses:
         '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DocumentTypeResponse'
+            description: Not Found
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/DocumentTypeResponse'
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentTypeResponse'
-
-  '/safestorage/internal/v1/doctypes':
+                $ref: '#/components/schemas/DocumentTypeResponse' 
+  
+  '/safestorage/internal/v1/doctypes': 
     post:
       operationId: insertDocType
       summary: Inserisce una nuova tipologia di documento.
@@ -102,17 +102,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DocumentType'
+              $ref: '#/components/schemas/DocumentType'        
       responses:
         '403':
-          description: Forbidden
+            description: Forbidden
         '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentTypeResponse'
-
+                
   '/safestorage/internal/v1/documents/{documentKey}':
     get:
       operationId: getDocument
@@ -120,55 +120,55 @@ paths:
       tags:
         - documentInternal
       parameters:
-        - $ref: '#/components/parameters/documentKey'
+        - $ref: '#/components/parameters/documentKey'       
       responses:
         '404':
-          description: Not configured
+            description: Not configured
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentResponse'
+                $ref: '#/components/schemas/DocumentResponse'  
     patch:
       operationId: patchDoc
       summary: Aggiorna un documento.
       tags:
         - documentInternal
       parameters:
-        - $ref: '#/components/parameters/documentKey'
+        - $ref: '#/components/parameters/documentKey'          
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Document'
+              $ref: '#/components/schemas/Document'        
       responses:
         '404':
-          description: Not configured
+            description: Not configured
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentResponse'
+                $ref: '#/components/schemas/DocumentResponse'                  
     delete:
       operationId: deleteDocument
       summary: Elimina un documento.
       tags:
         - documentInternal
       parameters:
-        - $ref: '#/components/parameters/documentKey'
+        - $ref: '#/components/parameters/documentKey'       
       responses:
         '404':
-          description: Not configured
+            description: Not configured
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentResponse'
-
-  '/safestorage/internal/v1/documents':
+                $ref: '#/components/schemas/DocumentResponse'            
+                
+  '/safestorage/internal/v1/documents': 
     post:
       operationId: insertDocument
       summary: Inserisce una nuovo documento.
@@ -178,17 +178,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Document'
+              $ref: '#/components/schemas/Document'        
       responses:
         '404':
-          description: Not configured
+            description: Not configured
         '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentResponse'
-
+                
   '/safestorage/internal/v1/userConfigurations/{name}':
     get:
       operationId: getUserConfiguration
@@ -196,10 +196,10 @@ paths:
       tags:
         - userConfigurationInternal
       parameters:
-        - $ref: '#/components/parameters/name'
+        - $ref: '#/components/parameters/name'       
       responses:
         '404':
-          description: Not configured
+            description: Not configured
         '200':
           description: OK
           content:
@@ -212,38 +212,38 @@ paths:
       tags:
         - userConfigurationInternal
       parameters:
-        - $ref: '#/components/parameters/name'
+        - $ref: '#/components/parameters/name'          
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserConfiguration'
+              $ref: '#/components/schemas/UserConfiguration'        
       responses:
         '404':
-          description: Not configured
+            description: Not configured
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserConfigurationResponse'
+                $ref: '#/components/schemas/UserConfigurationResponse'    
     delete:
       operationId: deleteUserConfiguration
       summary: Elimina una anagrafica client.
       tags:
         - userConfigurationInternal
       parameters:
-        - $ref: '#/components/parameters/name'
+        - $ref: '#/components/parameters/name'       
       responses:
         '404':
-          description: Not configured
+            description: Not configured
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserConfigurationResponse'
-
+                $ref: '#/components/schemas/UserConfigurationResponse'           
+                
   '/safestorage/internal/v1/userConfigurations':
     post:
       operationId: insertUserConfiguration
@@ -254,20 +254,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserConfiguration'
+              $ref: '#/components/schemas/UserConfiguration'        
       responses:
         '404':
-          description: Not configured
+            description: Not configured
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserConfigurationResponse'
+                $ref: '#/components/schemas/UserConfigurationResponse'    
 
 components:
   parameters:
-    typeId:
+    typeId: 
       name: typeId
       description: Identificativo del tipo di documento
       in: path
@@ -287,8 +287,8 @@ components:
       in: path
       required: true
       schema:
-        type: string
-
+        type: string    
+      
   schemas:
     Error:
       type: object
@@ -303,18 +303,15 @@ components:
         tipoDocumento:
           type: string
           description: nome del tipo di documento
-          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ]
+          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS', 'PN_DOWNTIME_LEGAL_FACTS' ] 
         checksum:
           description: >-
             codice di verifica del corretto caricamento del file
             https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
           type: string
-          enum: [ 'MD5', 'SHA256']
-        statuses:
-          type: array
-          items:
-            additionalProperties:
-              $ref: '#/components/schemas/CurrentStatus'
+          enum: [ 'MD5', 'SHA256']  
+        lifeCycleTag:
+          type: string
         informationClassification:
           description: >-
             * `C` - Confidential
@@ -322,25 +319,12 @@ components:
             Se il valore è HC il file deve essere criptato.</br>
             See [information classification](https://pagopa.atlassian.net/wiki/spaces/EN/pages/357204284/Data+Classification+Handling#Classificazione)
           type: string
-          enum: [ 'C', 'HC' ]
+          enum: [ 'C', 'HC' ] 
         digitalSignature:
           type: boolean
         timeStamped:
           type: string
           enum: [ 'NONE', 'STANDARD' ]
-    CurrentStatus:
-      type: object
-      properties:
-        storage:
-          $ref: '#/components/schemas/Storage'
-        allowedStatusTransitions:
-          $ref: '#/components/schemas/AllowedStatusTransitions'
-    Storage:
-      type: string
-    AllowedStatusTransitions:
-      type: array
-      items:
-        type: string
     DocumentTypeResponse:
       type: object
       properties:
@@ -360,12 +344,12 @@ components:
           description: >-
             data di scadenza del file
           type: string
-        checkSum:
+        checkSum: 
           description:
             codice di verifica del corretto caricamento del file
             https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
           type: string
-          enum: [ 'MD5', 'SHA256']
+          enum: [ 'MD5', 'SHA256']  
         contentLenght:
           type: number
         contentType:
@@ -373,14 +357,14 @@ components:
         documentType:
           type: string
           description: nome del tipo di documento
-          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ]
+          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ] 
     DocumentResponse:
       type: object
       properties:
         document:
           $ref: '#/components/schemas/Document'
         error:
-          $ref: '#/components/schemas/Error'
+          $ref: '#/components/schemas/Error'      
     UserConfiguration:
       type: object
       properties:
@@ -390,12 +374,12 @@ components:
           type: string
         canCreate:
           type: array
-          items:
+          items: 
             type: string
           description: Elenco dei tipi di documenti che il client è autorizzato a creare.
         canRead:
           type: array
-          items:
+          items: 
             type: string
           description: Elenco dei tipi di documenti che il client è autorizzato a creare.
         signatureInfo:
@@ -413,7 +397,7 @@ components:
         userConfiguration:
           $ref: '#/components/schemas/UserConfiguration'
         error:
-          $ref: '#/components/schemas/Error'
+          $ref: '#/components/schemas/Error'                
 
   securitySchemes:
     ApiKeyAuth:

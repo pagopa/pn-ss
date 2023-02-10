@@ -1,6 +1,6 @@
-package it.pagopa.pnss.uriBuilder.rest;
+package it.pagopa.pnss.uribuilder.rest;
 
-import it.pagopa.pnss.uriBuilder.service.UriBuilderService;
+import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import it.pagopa.pn.template.rest.v1.api.FileDownloadApi;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,15 +25,6 @@ public class FileDownloadApiController implements FileDownloadApi {
     public Mono <ResponseEntity <FileDownloadResponse>> getFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly, final ServerWebExchange exchange) {
 
 
-
-        FileDownloadResponse response  = uriBuilderService.createUriForDownloadFile(fileKey,xPagopaSafestorageCxId);
-        if (response ==null ){
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "File Not Found for fileKey: " + fileKey);
-        }
-
-        Mono<ResponseEntity<FileDownloadResponse>> result = Mono.justOrEmpty(ResponseEntity.ok().body(response));
-
-        return  result;
+        return uriBuilderService.createUriForDownloadFile(fileKey,xPagopaSafestorageCxId).map(ResponseEntity::ok);
     }
 }

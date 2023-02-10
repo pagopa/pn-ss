@@ -3,18 +3,14 @@ package it.pagopa.pnss.uribuilder.service;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.*;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
@@ -93,7 +89,7 @@ public class UriBuilderService {
 
                        return documentClientCall.getdocument(keyName).doOnNext(document -> {
                            throw new DocumentkeyPresentException(keyName);
-                       }).onErrorResume(DocumentkeyNotPresentException.class, e -> {
+                       }).onErrorResume(DocumentKeyNotPresentException.class, e -> {
 
                            Document documentRepositoryDto = new Document();
                            documentRepositoryDto.setContentType(contentType);
@@ -231,7 +227,7 @@ public class UriBuilderService {
                     List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
                     return documentClientCall.getdocument(fileKey)
-                            .onErrorResume(DocumentkeyNotPresentException.class,
+                            .onErrorResume(DocumentKeyNotPresentException.class,
                                     throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey)))
 
                              .map((documentResponse) -> {

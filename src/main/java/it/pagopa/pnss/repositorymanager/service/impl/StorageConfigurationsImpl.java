@@ -1,0 +1,99 @@
+package it.pagopa.pnss.repositorymanager.service.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import it.pagopa.pnss.common.client.dto.LifecycleRuleDTO;
+import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.repositorymanager.exception.BucketException;
+import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
+import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationResponse;
+import software.amazon.awssdk.services.s3.model.LifecycleRule;
+
+@Service
+@Slf4j
+public class StorageConfigurationsImpl extends CommonS3ObjectService implements StorageConfigurationsService {
+
+	private static final String TAG_KEY = "storageType";
+	
+	@Autowired
+	private BucketName bucketName;
+	
+	private String formatInYearsDays(Integer value) {
+		if (value == null) {
+			return null;
+		}
+		final int daysInYear = 365;
+		int years = value/daysInYear;
+		int days = value%daysInYear;
+		StringBuilder sb = new StringBuilder();
+		if (years != 0 ) {
+			sb.append(years+"y");
+		}
+		if (days != 0) {
+			if (years != 0 ) {
+				sb.append(" ");
+			}
+			sb.append(days+"d");
+		}
+		return sb.toString();
+	}
+	
+	private LifecycleRuleDTO getLifecycleRuleDTO(LifecycleRule rule) {
+		log.info("getLifecycleRuleDTO() : START");
+		LifecycleRuleDTO dto = new LifecycleRuleDTO();
+		rule.filter().and().tags().forEach(tag -> {
+			log.info("getLifecycleRuleDTO() : tag : value for {} : {}", tag.key(), tag.value());
+			if (TAG_KEY.equals(tag.key())) {
+				dto.setName(tag.value());
+			}
+		});
+		dto.setExpirationDays(rule.expiration() != null ? formatInYearsDays(rule.expiration().days()) : null);
+		if (rule.hasTransitions() && rule.transitions().size() > 1) {
+			log.warn("getLifecycleRuleDTO() : rule with name {} has {} transitions : the first is used", rule.id(), rule.transitions().size());
+		}
+		dto.setTransitionDays(rule.hasTransitions() ? formatInYearsDays(rule.transitions().get(0).days()) : dto.getExpirationDays());
+		log.info("getLifecycleRuleDTO() : dto : {}", dto);
+		return dto;
+	}
+	
+	private GetBucketLifecycleConfigurationResponse getAsynchLifecycleConfigurationResponse() {
+		try {
+			log.info("getLifecycleConfiguration() : pnSsBucketName : {}", bucketName.ssHotName());
+			S3AsyncClient s3AsyncClient = getS3AsynchClient();
+	        GetBucketLifecycleConfigurationRequest request = 
+	        		GetBucketLifecycleConfigurationRequest.builder()
+										                  .bucket(bucketName.ssHotName())
+										                  .build();
+	        return s3AsyncClient.getBucketLifecycleConfiguration(request).get();
+		}
+		catch (Exception e) {
+			log.error("getAsynchLifecycleConfigurationResponse() : no response",e);
+			Thread.currentThread().interrupt();
+			return null;
+		}
+	}
+	
+	public Flux<LifecycleRuleDTO> getLifecycleConfiguration() {
+		log.info("getLifecycleConfiguration() : START");
+		
+		GetBucketLifecycleConfigurationResponse response = getAsynchLifecycleConfigurationResponse();
+		if (response == null || response.rules() == null) {
+			throw new BucketException("No Rules founded");
+		}
+		
+		return Flux.fromIterable(response.rules())
+				.filter(rule -> rule.filter() != null && rule.filter().and() != null && rule.filter().and().hasTags())
+				.map(this::getLifecycleRuleDTO)
+				.onErrorResume(throwable -> {
+					log.error("getLifecycleConfiguration() : error",throwable);
+					return Mono.error(new BucketException(throwable.getMessage()));
+				});
+	}
+}

@@ -1,12 +1,11 @@
 package it.pagopa.pnss.common.client.impl;
 
-import com.amazonaws.services.dynamodbv2.xspec.S;
 import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 
-import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -33,7 +31,7 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
         return getWebClient().get()
                 .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                 .retrieve()
-                .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentkeyNotPresentException(keyFile)))
+                .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
                 .bodyToMono(DocumentResponse.class);
     }
 
@@ -47,10 +45,10 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     }
 
     @Override
-    public ResponseEntity<Document> updatedocument(Document Document) throws IdClientNotFoundException {
+    public ResponseEntity<Document> updatedocument(Document document) throws IdClientNotFoundException {
         return getWebClient().put()
                 .uri(String.format(anagraficaDocumentiClientEndpoint))
-                .bodyValue(Document)
+                .bodyValue(document)
                 .retrieve()
                 .bodyToMono(ResponseEntity.class).block();
     }

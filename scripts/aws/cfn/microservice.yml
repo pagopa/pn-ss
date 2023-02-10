@@ -182,6 +182,9 @@ Resources:
               - 'dynamodb:Describe*'
               - 'dynamodb:Scan'
               - 'dynamodb:List*'
+              - 'dynamodb:Batch*'
+              - 'dynamodb:PartiQL*'
+              - 'dynamodb:Update*'
             Resource:
               - !Sub '${PnSsTableArnAnagraficaClient}'
               - !Sub '${PnSsTableArnTipologieDocumenti}'

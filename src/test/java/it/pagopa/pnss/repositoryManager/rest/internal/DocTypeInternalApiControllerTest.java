@@ -75,7 +75,7 @@ public class DocTypeInternalApiControllerTest {
     	docTypesInsertInput = new DocumentType();
     	docTypesInsertInput.setTipoDocumento(PARTITION_ID_INSERT_LEGAL_FACTS);
     	docTypesInsertInput.setChecksum(ChecksumEnum.MD5);
-    	docTypesInsertInput.setLifeCycleTag("lifeCicle1");
+    	//docTypesInsertInput.setLifeCycleTag("lifeCicle1");
     	docTypesInsertInput.setInformationClassification(InformationClassificationEnum.C);
     	docTypesInsertInput.setDigitalSignature(true);
     	docTypesInsertInput.setTimeStamped(TimeStampedEnum.STANDARD);
@@ -84,7 +84,7 @@ public class DocTypeInternalApiControllerTest {
     	docTypesUpdateDeleteInput = new DocumentType();
 		docTypesUpdateDeleteInput.setTipoDocumento(TipoDocumentoEnum.fromValue(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS));
 		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.MD5);
-		docTypesUpdateDeleteInput.setLifeCycleTag("lifeCicle1");
+		//docTypesUpdateDeleteInput.setLifeCycleTag("lifeCicle1");
 		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.C);
 		docTypesUpdateDeleteInput.setDigitalSignature(true);
 		docTypesUpdateDeleteInput.setTimeStamped(TimeStampedEnum.STANDARD);

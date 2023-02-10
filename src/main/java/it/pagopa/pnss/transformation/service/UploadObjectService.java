@@ -9,6 +9,9 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.nio.ByteBuffer;
 
+import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+import static it.pagopa.pnss.common.Constant.STORAGETYPE;
+
 @Service
 public class UploadObjectService  extends  CommonS3ObjectService {
 
@@ -20,6 +23,7 @@ public class UploadObjectService  extends  CommonS3ObjectService {
         PutObjectRequest objectRequest = PutObjectRequest.builder()
                 .bucket(bucketHot)
                 .key(key)
+                .tagging(STORAGETYPE) //Da verificare storageType
                 .build();
 
         PutObjectResponse putObjectResponse = s3.putObject(objectRequest, RequestBody.fromBytes(fileSigned));

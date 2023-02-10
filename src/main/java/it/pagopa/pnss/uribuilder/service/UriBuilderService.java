@@ -2,11 +2,9 @@ package it.pagopa.pnss.uribuilder.service;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.rest.v1.dto.*;
+import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
@@ -14,7 +12,6 @@ import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
@@ -33,10 +30,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import javax.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static it.pagopa.pnss.common.Constant.*;
 import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
@@ -49,6 +43,8 @@ public class UriBuilderService {
 
     UserConfigurationClientCall userConfigurationClientCall;
     DocumentClientCall documentClientCall;
+
+    DocTypesClientCall docTypesClientCall;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall) {
         this.userConfigurationClientCall = userConfigurationClientCall;
@@ -112,7 +108,7 @@ public class UriBuilderService {
                                    }))
                    .map(document -> {
                        PresignedPutObjectRequest presignedRequest =
-                               builsUploadUrl(documentType, document.getDocument().getDocumentKey(), contentType);
+                               builsUploadUrl(documentType, document.getDocument().getDocumentKey(), document.getDocument().getDocumentState(), contentType);
                        String myURL = presignedRequest.url().toString();
                        FileCreationResponse response = new FileCreationResponse();
                        response.setKey(document.getDocument().getDocumentKey());
@@ -175,13 +171,25 @@ public class UriBuilderService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private PresignedPutObjectRequest builsUploadUrl(String documentType, String keyName, String contentType) {
+    private PresignedPutObjectRequest builsUploadUrl(String documentType, String keyName, Document.DocumentStateEnum documentState, String contentType) {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
         PresignedPutObjectRequest response = null;
+        String storageType = "";
         try {
             S3Presigner presigner = getS3Presigner();
-            response = signBucket(presigner, bucketName, keyName, contentType);
+            if(docTypesClientCall.getdocTypes(documentType).getBody() != null) {
+                List<Map<String, CurrentStatus>> statuses = docTypesClientCall.getdocTypes(documentType).getBody().getStatuses();
+                Optional<Map<String, CurrentStatus>> status = statuses.stream()
+                        .filter(s -> s.containsKey(documentState))
+                        .findFirst();
+                if (status.isPresent()) {
+                    storageType = status.get().get(documentState).getStorage();
+                } else {
+                    log.error(" Errore Lo stato non corrisponde");
+                }
+            }
+            response = signBucket(presigner, bucketName, keyName, contentType, storageType);
 
         } catch (AmazonServiceException ase) {
             log.error(" Errore AMAZON AmazonServiceException", ase);
@@ -207,11 +215,19 @@ public class UriBuilderService {
                           .build();
     }
 
-    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType) {
+    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType, String storageType) {
 
-        PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName).key(keyName).contentType(contenType).build();
+        PutObjectRequest objectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(keyName)
+                .contentType(contenType)
+                .tagging(STORAGETYPE+storageType)
+                .build();
         PutObjectPresignRequest presignRequest =
-                PutObjectPresignRequest.builder().signatureDuration(Duration.ofMinutes(10)).putObjectRequest(objectRequest).build();
+                PutObjectPresignRequest.builder()
+                        .signatureDuration(Duration.ofMinutes(10))
+                        .putObjectRequest(objectRequest)
+                        .build();
 
         PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(presignRequest);
 

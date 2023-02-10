@@ -14,6 +14,9 @@ import lombok.ToString;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
+import java.util.List;
+import java.util.Map;
+
 @DynamoDbBean
 @Data
 @ToString
@@ -22,7 +25,8 @@ public class DocTypeEntity {
 	@Getter(AccessLevel.NONE)
 	private TipoDocumentoEnum tipoDocumento; // ok
 	private ChecksumEnum checksum; // ok
-	private String lifeCycleTag; // ok
+
+	private List<Map<String, CurrentStatusEntity>> statuses;
 //	private String tipoTrasformazione; // ko
 	@Getter(AccessLevel.NONE)
 	private InformationClassificationEnum informationClassification; // ok

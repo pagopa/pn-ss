@@ -227,8 +227,8 @@ Resources:
           - Action: 
               - 'SQS:SendMessage'
               - 'SQS:ReceiveMessage'
-              - 'sqs:Get*'
-              - 'sqs:List*'
+              - 'SQS:DeleteMessage'
+              - 'SQS:ChangeMessageVisibility'
             Effect: "Allow"
             Resource: !Sub ${PnSsQueueArnStagingBucket}
             Principal:  

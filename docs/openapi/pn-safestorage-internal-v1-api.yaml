@@ -310,6 +310,8 @@ components:
             https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
           type: string
           enum: [ 'MD5', 'SHA256']
+        initialStatus:
+          type: string
         statuses:
           type: array
           items:

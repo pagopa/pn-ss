@@ -22,17 +22,15 @@ import java.util.Map;
 public class DocTypeEntity {
 	
 	@Getter(AccessLevel.NONE)
-	private TipoDocumentoEnum tipoDocumento; // ok
-	private ChecksumEnum checksum; // ok
-
-	private   List<Map<String, CurrentStatusEntity>> statuses; // ok
-
-//	private String tipoTrasformazione; // ko
+	private TipoDocumentoEnum tipoDocumento;
+	private ChecksumEnum checksum;
+	private String initialStatus;
+	private List<Map<String, CurrentStatusEntity>> statuses;
 	@Getter(AccessLevel.NONE)
-	private InformationClassificationEnum informationClassification; // ok
-	private Boolean digitalSignature; // ok
+	private InformationClassificationEnum informationClassification;
+	private Boolean digitalSignature;
 	@Getter(AccessLevel.NONE)
-	private TimeStampedEnum timeStamped; // ok
+	private TimeStampedEnum timeStamped;
 	
 	@DynamoDbPartitionKey
 	@DynamoDBTypeConvertedEnum

@@ -42,7 +42,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(response));
         } else if (throwable instanceof DocumentTypeNotPresentException) {
             response.getError()
-                    .setDescription(typeId == null ? "Document type not found" : String.format("Doc with id %s not found", typeId));
+                    .setDescription(typeId == null ? "Document type not found" : String.format("DocumentType with id %s not found", typeId));
             return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(response));
         } else if (throwable instanceof RepositoryManagerException) {
             response.getError().setDescription("DocType has incorrect attribute");

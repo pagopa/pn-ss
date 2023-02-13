@@ -1,10 +1,17 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import org.springframework.stereotype.Service;
+
+import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.rest.v1.dto.ConfidentialityLevel;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration.ChecksumEnum;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration.TimestampedEnum;
+import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfigurationStatuses;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
 import it.pagopa.pn.template.rest.v1.dto.StorageConfiguration;
 import it.pagopa.pnss.common.client.dto.LifecycleRuleDTO;
@@ -14,10 +21,7 @@ import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.repositorymanager.service.DocumentsConfigsService;
 import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-
-import java.util.ArrayList;
 
 
 /**
@@ -41,6 +45,19 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         }
         DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
         dtc.setName(docType.getTipoDocumento() != null ? docType.getTipoDocumento().getValue() : null);
+        dtc.setInitialStatus(docType.getInitialStatus());
+        if (docType.getStatuses() != null &&  !docType.getStatuses().isEmpty()) {
+        	dtc.setStatuses(new HashMap<String, DocumentTypeConfigurationStatuses>());
+	        docType.getStatuses().forEach(status -> {
+	        	status.keySet().forEach(key -> {
+	        		CurrentStatus dtCurrentStatus = status.get(key);
+	        		DocumentTypeConfigurationStatuses dtcStatues = new DocumentTypeConfigurationStatuses();
+	        		dtcStatues.setStorage(dtCurrentStatus.getStorage());
+	        		dtcStatues.setAllowedStatusTransitions(dtCurrentStatus.getAllowedStatusTransitions());
+	        		dtc.getStatuses().put(key, dtcStatues);
+	        	});
+	        });
+        }
         dtc.setInformationClassification(
                 docType.getInformationClassification() != null ? ConfidentialityLevel.fromValue(docType.getInformationClassification()
                                                                                                        .getValue()) : null);

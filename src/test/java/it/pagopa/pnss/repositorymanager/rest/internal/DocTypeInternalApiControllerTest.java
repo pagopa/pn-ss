@@ -2,7 +2,11 @@ package it.pagopa.pnss.repositorymanager.rest.internal;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +18,7 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
@@ -27,11 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
@@ -77,31 +77,49 @@ public class DocTypeInternalApiControllerTest {
     @BeforeEach
 	public void createDocumentType() {
     	log.info("execute createDocumentType() : START");
-		List<Map<String, CurrentStatus>> statuses = new ArrayList<>();
-		Map<String, CurrentStatus> status = new HashMap<>();
-		CurrentStatus currentStatus = new CurrentStatus();
+		
 		List<String> allowedStatusTransitions = new ArrayList<>();
-		currentStatus.setStorage("PN_TEMPORARY_DOCUMENT");
 		allowedStatusTransitions.add("ATTACHED");
+
+		CurrentStatus currentStatus = new CurrentStatus();
+		currentStatus.setStorage("PN_LEGAL_FACTS");
 		currentStatus.setAllowedStatusTransitions(allowedStatusTransitions);
-		status.put("PRELOADED",currentStatus);
+		
+		Map<String, CurrentStatus> status = new HashMap<>();
+		status.put("SAVED",currentStatus);
+		
+		List<Map<String, CurrentStatus>> statuses = new ArrayList<>();
 		statuses.add(status);
 
     	docTypesInsertInput = new DocumentType();
     	docTypesInsertInput.setTipoDocumento(PARTITION_ID_INSERT_LEGAL_FACTS);
-    	docTypesInsertInput.setChecksum(ChecksumEnum.MD5);
+    	docTypesInsertInput.setChecksum(ChecksumEnum.SHA256); 
+    	docTypesInsertInput.setInitialStatus("SAVED");
     	docTypesInsertInput.setStatuses(statuses);
-    	docTypesInsertInput.setInformationClassification(InformationClassificationEnum.C);
+    	docTypesInsertInput.setInformationClassification(InformationClassificationEnum.HC);
     	docTypesInsertInput.setDigitalSignature(true);
     	docTypesInsertInput.setTimeStamped(TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesInsertInput : {}", docTypesInsertInput);
+		
+		List<String> allowedStatusTransitions1 = new ArrayList<>();
+		allowedStatusTransitions1.add("ATTACHED");
+
+		CurrentStatus currentStatus1 = new CurrentStatus();
+		currentStatus1.setStorage("PN_NOTIFICATION_ATTACHMENTS");
+		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions);
+		
+		Map<String, CurrentStatus> status1 = new HashMap<>();
+		status1.put("PRELOADED",currentStatus);
+		
+		List<Map<String, CurrentStatus>> statuses1 = new ArrayList<>();
+		statuses1.add(status1);
     	
     	docTypesUpdateDeleteInput = new DocumentType();
 		docTypesUpdateDeleteInput.setTipoDocumento(TipoDocumentoEnum.fromValue(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS));
-		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.MD5);
-//		docTypesUpdateDeleteInput.setLifeCycleTag("lifeCicle1");
-		docTypesInsertInput.setStatuses(statuses);
-		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.C);
+		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.SHA256); // ok
+		docTypesUpdateDeleteInput.setInitialStatus("PRELOADED");
+		docTypesUpdateDeleteInput.setStatuses(statuses1);
+		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.HC); // ok
 		docTypesUpdateDeleteInput.setDigitalSignature(true);
 		docTypesUpdateDeleteInput.setTimeStamped(TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesUpdateDeleteInput : {}", docTypesUpdateDeleteInput);

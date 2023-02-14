@@ -90,14 +90,6 @@ public class UriBulderUploadTest {
     }
 
 
-    private String generateSecret() {
-        SecureRandom random = new SecureRandom();
-        byte[] bytes = new byte[256];
-        random.nextBytes(bytes);
-        Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
-        return encoder.encodeToString(bytes);
-    }
-
     @Test
     public void testUrlGenStatusPre() throws Exception {
         FileCreationRequest fcr = new FileCreationRequest();
@@ -106,10 +98,7 @@ public class UriBulderUploadTest {
         fcr.setStatus(PRELOADED);
         FileCreationResponse fcresp = new FileCreationResponse();
         fcresp.setUploadUrl("http://host:9090/urlFile");
-        String srt = generateSecret();
 
-
-        System.out.println("TEST srt:" + srt);
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));

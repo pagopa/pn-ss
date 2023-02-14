@@ -66,7 +66,10 @@ public class UriBuilderService {
         String contentType = request.getContentType();
         String documentType = request.getDocumentType();
         String status = request.getStatus();
-
+        List<String> secret = new ArrayList<>();
+        secret.add(generateSecret());
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("secret", secret.toString());
 
         return Mono.fromCallable(() -> validationField(contentType, documentType, status))
                    .flatMap(voidMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
@@ -106,11 +109,11 @@ public class UriBuilderService {
                                    }))
                    .map(document -> {
                        PresignedPutObjectRequest presignedRequest =
-                               builsUploadUrl(documentType, document.getDocument().getDocumentKey(), contentType);
+                               builsUploadUrl(documentType, document.getDocument().getDocumentKey(), contentType,metadata);
                        String myURL = presignedRequest.url().toString();
                        FileCreationResponse response = new FileCreationResponse();
                        response.setKey(document.getDocument().getDocumentKey());
-                       response.setSecret(generateSecret());
+                       response.setSecret(secret.toString());
 
                        response.setUploadUrl(myURL);
                        response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
@@ -169,14 +172,14 @@ public class UriBuilderService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private PresignedPutObjectRequest builsUploadUrl(String documentType, String keyName, String contentType) {
+    private PresignedPutObjectRequest builsUploadUrl(String documentType, String keyName, String contentType, Map<String, String> secret) {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
         PresignedPutObjectRequest response = null;
+
         try {
             S3Presigner presigner = getS3Presigner();
-            response = signBucket(presigner, bucketName, keyName, contentType);
-
+            response = signBucket(presigner, bucketName, keyName, contentType,secret);
         } catch (AmazonServiceException ase) {
             log.error(" Errore AMAZON AmazonServiceException", ase);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException ");
@@ -201,14 +204,14 @@ public class UriBuilderService {
                           .build();
     }
 
-    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType) {
+    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType, Map<String, String> secret) {
 
-        PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName).key(keyName).contentType(contenType).build();
+        PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName).key(keyName).contentType(contenType).metadata(secret).build();
         PutObjectPresignRequest presignRequest =
-                PutObjectPresignRequest.builder().signatureDuration(Duration.ofMinutes(10)).putObjectRequest(objectRequest).build();
+                PutObjectPresignRequest.builder()
+                        .signatureDuration(Duration.ofMinutes(10)).putObjectRequest(objectRequest).build();
 
         PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(presignRequest);
-
         return presignedRequest;
 
     }

@@ -217,7 +217,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserConfiguration'
+              $ref: '#/components/schemas/UserConfigurationChanges'
       responses:
         '404':
           description: Not configured
@@ -415,7 +415,7 @@ components:
             type: string
           description: Elenco dei tipi di documenti che il client è autorizzato a creare.
         signatureInfo:
-          type: object
+          type: string
         destination:
           type: object
           description: Informazioni per contattare in modalità push i sistemi client.
@@ -430,6 +430,23 @@ components:
           $ref: '#/components/schemas/UserConfiguration'
         error:
           $ref: '#/components/schemas/Error'
+    UserConfigurationChanges:
+      type: object
+      properties:
+        canCreate:
+          type: array
+          items:
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+        canRead:
+          type: array
+          items:
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+        apiKey:
+          type: string
+        signatureInfo:
+          type: string
 
   securitySchemes:
     ApiKeyAuth:

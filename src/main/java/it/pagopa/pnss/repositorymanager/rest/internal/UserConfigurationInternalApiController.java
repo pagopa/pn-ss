@@ -9,6 +9,7 @@ import org.springframework.web.server.ServerWebExchange;
 import it.pagopa.pn.template.internal.rest.v1.api.UserConfigurationInternalApi;
 import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
@@ -89,9 +90,9 @@ public class UserConfigurationInternalApiController implements UserConfiguration
     }
 
 	@Override
-    public Mono<ResponseEntity<UserConfigurationResponse>> patchUserConfiguration(String name, Mono<UserConfiguration> userConfiguration,  final ServerWebExchange exchange) {
+    public Mono<ResponseEntity<UserConfigurationResponse>> patchUserConfiguration(String name, Mono<UserConfigurationChanges> userConfigurationChanges,  final ServerWebExchange exchange) {
 
-		return userConfiguration.flatMap(request -> userConfigurationService.patchUserConfiguration(name, request))
+		return userConfigurationChanges.flatMap(request -> userConfigurationService.patchUserConfiguration(name, request))
 				.map(userConfigurationOutput -> ResponseEntity.ok(getResponse(userConfigurationOutput)))
 				.onErrorResume(throwable -> getResponse(name, throwable));
     }

@@ -2,6 +2,7 @@ package it.pagopa.pnss.repositorymanager.service.impl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
@@ -44,10 +45,11 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
             throw new RepositoryManagerException("DocType is null: can't convert in DocumentTypeConfiguration");
         }
         DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
-        dtc.setName(docType.getTipoDocumento() != null ? docType.getTipoDocumento().getValue() : null);
+        dtc.setName(docType.getTipoDocumento() != null ? docType.getTipoDocumento() : null);
         dtc.setInitialStatus(docType.getInitialStatus());
         if (docType.getStatuses() != null &&  !docType.getStatuses().isEmpty()) {
-        	dtc.setStatuses(new HashMap<String, DocumentTypeConfigurationStatuses>());
+        	Map<String, DocumentTypeConfigurationStatuses> statuses = new HashMap<>();
+        	dtc.setStatuses(statuses);
 	        docType.getStatuses().forEach(status -> {
 	        	status.keySet().forEach(key -> {
 	        		CurrentStatus dtCurrentStatus = status.get(key);
@@ -84,13 +86,22 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         DocumentTypesConfigurations dtc = new DocumentTypesConfigurations();
         dtc.setDocumentsTypes(new ArrayList<>());
         dtc.setStorageConfigurations(new ArrayList<>());
-
-        return docTypesService.getAllDocumentType().doOnNext(documentType -> {
-            log.info("getDocumentsConfigs() : elem docType {}", documentType);
-            dtc.getDocumentsTypes().add(getDocumentTypeConfiguration(documentType));
-        }).flatMap(documentType -> storageConfigurationsService.getLifecycleConfiguration()).doOnNext(lifecycleRuleDTO -> {
+        
+        return storageConfigurationsService.getLifecycleConfiguration().doOnNext(lifecycleRuleDTO -> {
             log.info("getDocumentsConfigs() : elem lifecycleRule {}", lifecycleRuleDTO);
             dtc.getStorageConfigurations().add(getStorageConfiguration(lifecycleRuleDTO));
+        }).flatMap(lifecycleRule -> docTypesService.getAllDocumentType()).doOnNext(documentType -> {
+            log.info("getDocumentsConfigs() : elem docType {}", documentType);
+            dtc.getDocumentsTypes().add(getDocumentTypeConfiguration(documentType));
         }).then(Mono.just(dtc));
+
+        // NOTA: docTypesService.getAllDocumentType() potrebbe resituire una lista vuota
+//        return docTypesService.getAllDocumentType().doOnNext(documentType -> {
+//            log.info("getDocumentsConfigs() : elem docType {}", documentType);
+//            dtc.getDocumentsTypes().add(getDocumentTypeConfiguration(documentType));
+//        }).flatMap(documentType -> storageConfigurationsService.getLifecycleConfiguration()).doOnNext(lifecycleRuleDTO -> {
+//            log.info("getDocumentsConfigs() : elem lifecycleRule {}", lifecycleRuleDTO);
+//            dtc.getStorageConfigurations().add(getStorageConfiguration(lifecycleRuleDTO));
+//        }).then(Mono.just(dtc));
     }
 }

@@ -22,7 +22,6 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
@@ -95,7 +94,7 @@ public class ConfigurationApiControllerTest {
 		userConfigurationInput.setApiKey("apiKey");
 	}
 	
-	private DocumentType getDocumentType(TipoDocumentoEnum name) {
+	private DocumentType getDocumentType(String name) {
 		List<Map<String, CurrentStatus>> statuses = new ArrayList<>();
 		Map<String, CurrentStatus> status = new HashMap<>();
 		CurrentStatus currentStatus = new CurrentStatus();

@@ -141,7 +141,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Document'
+              $ref: '#/components/schemas/DocumentChanges'
       responses:
         '404':
           description: Not configured
@@ -303,7 +303,6 @@ components:
         tipoDocumento:
           type: string
           description: nome del tipo di documento
-          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ]
         checksum:
           description: >-
             codice di verifica del corretto caricamento del file
@@ -373,9 +372,7 @@ components:
         contentType:
           type: string
         documentType:
-          type: string
-          description: nome del tipo di documento
-          enum: [ 'PN_NOTIFICATION_ATTACHMENTS', 'PN_AAR', 'PN_LEGAL_FACTS', 'PN_EXTERNAL_LEGAL_FACTS' ]
+          $ref: '#/components/schemas/DocumentType'
     DocumentResponse:
       type: object
       properties:
@@ -383,6 +380,23 @@ components:
           $ref: '#/components/schemas/Document'
         error:
           $ref: '#/components/schemas/Error'
+    DocumentChanges:
+      type: object
+      properties:
+        documentState:
+          type: string
+          enum: ['BOOKED','STAGED','AVAILABLE','FREEZED','ATTACHED','DELETED']
+        retentionUntil:
+          description: >-
+            data di scadenza del file
+          type: string
+        checkSum:
+          description:
+            codice di verifica del corretto caricamento del file
+          type: string
+          enum: [ 'MD5', 'SHA256']
+        contentLenght:
+          type: number
     UserConfiguration:
       type: object
       properties:

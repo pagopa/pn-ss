@@ -23,7 +23,6 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
@@ -40,15 +39,13 @@ public class DocTypeInternalApiControllerTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
-//	@Autowired
-	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
 
 	private static final String BASE_PATH = "/safestorage/internal/v1/doctypes";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{typeId}", BASE_PATH);
 
-	private static final String PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS = TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS.getValue();
-	private static final TipoDocumentoEnum PARTITION_ID_INSERT_LEGAL_FACTS = TipoDocumentoEnum.LEGAL_FACTS;
-	private static final String PARTITION_ID_NO_EXISTENT_AAR = TipoDocumentoEnum.AAR.getValue();
+	private static final String PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS = "PN_NOTIFICATION_ATTACHMENTS";
+	private static final String PARTITION_ID_INSERT_LEGAL_FACTS = "PN_LEGAL_FACTS";
+	private static final String PARTITION_ID_NO_EXISTENT_AAR = "PN_AAR";
 	
 	private static DocumentType docTypesInsertInput;
 	private static DocumentType docTypesUpdateDeleteInput;
@@ -58,7 +55,7 @@ public class DocTypeInternalApiControllerTest {
     private static void insertDocTypeEntity(String tipoDocumento) {
     	log.info("execute insertDocTypeEntity()");
         var docTypeEntity = new DocTypeEntity();
-        docTypeEntity.setTipoDocumento(TipoDocumentoEnum.fromValue(tipoDocumento));
+        docTypeEntity.setTipoDocumento(tipoDocumento);
         dynamoDbTable.putItem(builder -> builder.item(docTypeEntity));
     }
 	
@@ -68,7 +65,6 @@ public class DocTypeInternalApiControllerTest {
     {
     	log.info("execute insertDefaultDocType()");
         dynamoDbTable = dynamoDbEnhancedClient.table(
-//        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, 
         		gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(),
         		TableSchema.fromBean(DocTypeEntity.class));
         insertDocTypeEntity(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
@@ -115,7 +111,7 @@ public class DocTypeInternalApiControllerTest {
 		statuses1.add(status1);
     	
     	docTypesUpdateDeleteInput = new DocumentType();
-		docTypesUpdateDeleteInput.setTipoDocumento(TipoDocumentoEnum.fromValue(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS));
+		docTypesUpdateDeleteInput.setTipoDocumento(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
 		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.SHA256); // ok
 		docTypesUpdateDeleteInput.setInitialStatus("PRELOADED");
 		docTypesUpdateDeleteInput.setStatuses(statuses1);
@@ -131,7 +127,7 @@ public class DocTypeInternalApiControllerTest {
 		
 		EntityExchangeResult<DocumentTypeResponse> resultPreInsert =
 				webTestClient.get()
-					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento().getValue()))
+					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento()))
 					.accept(APPLICATION_JSON)
 					.exchange()
 					.expectBody(DocumentTypeResponse.class).returnResult();
@@ -177,7 +173,7 @@ public class DocTypeInternalApiControllerTest {
 		
 		EntityExchangeResult<DocumentTypeResponse> resultPreInsert =
 				webTestClient.get()
-					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento().getValue()))
+					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento()))
 					.accept(APPLICATION_JSON)
 					.exchange()
 					.expectBody(DocumentTypeResponse.class).returnResult();
@@ -300,7 +296,7 @@ public class DocTypeInternalApiControllerTest {
 		        .expectStatus().isOk()
 		        .expectBody(DocumentTypeResponse.class).returnResult();
 		
-		Assertions.assertEquals(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS, result.getResponseBody().getDocType().getTipoDocumento().getValue());
+		Assertions.assertEquals(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS, result.getResponseBody().getDocType().getTipoDocumento());
 	    
 	    log.info("\n Test 9 (deleteItem) passed \n");
 

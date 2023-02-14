@@ -28,11 +28,9 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 import javax.annotation.PostConstruct;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static it.pagopa.pnss.common.Constant.*;
 import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
@@ -112,7 +110,7 @@ public class UriBuilderService {
                        String myURL = presignedRequest.url().toString();
                        FileCreationResponse response = new FileCreationResponse();
                        response.setKey(document.getDocument().getDocumentKey());
-                       response.setSecret(null);
+                       response.setSecret(generateSecret());
 
                        response.setUploadUrl(myURL);
                        response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
@@ -332,5 +330,13 @@ public class UriBuilderService {
         fdinfo.setUrl(theUrl);
         return fdinfo;
 
+    }
+
+    private String generateSecret() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[256];
+        random.nextBytes(bytes);
+        Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+        return encoder.encodeToString(bytes);
     }
 }

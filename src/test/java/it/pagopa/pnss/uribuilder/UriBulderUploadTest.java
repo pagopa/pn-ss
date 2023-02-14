@@ -36,9 +36,12 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.Random;
 
 import static it.pagopa.pnss.common.Constant.*;
 
@@ -87,7 +90,13 @@ public class UriBulderUploadTest {
     }
 
 
-
+    private String generateSecret() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[256];
+        random.nextBytes(bytes);
+        Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+        return encoder.encodeToString(bytes);
+    }
 
     @Test
     public void testUrlGenStatusPre() throws Exception {
@@ -97,7 +106,10 @@ public class UriBulderUploadTest {
         fcr.setStatus(PRELOADED);
         FileCreationResponse fcresp = new FileCreationResponse();
         fcresp.setUploadUrl("http://host:9090/urlFile");
+        String srt = generateSecret();
 
+
+        System.out.println("TEST srt:" + srt);
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));

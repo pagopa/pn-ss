@@ -8,8 +8,10 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
+import it.pagopa.pnss.configurationproperties.BucketName;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -46,6 +48,9 @@ public class UriBuilderService {
     UserConfigurationClientCall userConfigurationClientCall;
     DocumentClientCall documentClientCall;
 
+    @Autowired
+    private BucketName bucketName;
+
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
@@ -56,11 +61,11 @@ public class UriBuilderService {
     @PostConstruct
     public void createMap() {
         mapDocumentTypeToBucket = new HashMap<>();
-        mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS, BUCKET_HOT_NAME);
-        mapDocumentTypeToBucket.put(PN_AAR, BUCKET_HOT_NAME);
-        mapDocumentTypeToBucket.put(PN_LEGAL_FACTS, BUCKET_STAGE_NAME);
-        mapDocumentTypeToBucket.put(PN_EXTERNAL_LEGAL_FACTS, BUCKET_HOT_NAME);
-        mapDocumentTypeToBucket.put(PN_DOWNTIME_LEGAL_FACTS, BUCKET_STAGE_NAME);
+        mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS, bucketName.ssHotName());
+        mapDocumentTypeToBucket.put(PN_AAR, bucketName.ssHotName());
+        mapDocumentTypeToBucket.put(PN_LEGAL_FACTS, bucketName.ssStageName());
+        mapDocumentTypeToBucket.put(PN_EXTERNAL_LEGAL_FACTS, bucketName.ssHotName());
+        mapDocumentTypeToBucket.put(PN_DOWNTIME_LEGAL_FACTS, bucketName.ssStageName());
 
     }
 

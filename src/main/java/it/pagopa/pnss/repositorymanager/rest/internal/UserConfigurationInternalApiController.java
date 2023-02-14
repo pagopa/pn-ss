@@ -14,9 +14,11 @@ import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @RestController
+@Slf4j
 public class UserConfigurationInternalApiController implements UserConfigurationInternalApi {
  
 	@Autowired
@@ -28,25 +30,44 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 		return response;
 	}
 	
+    private Mono<ResponseEntity<UserConfigurationResponse>> buildErrorResponse(HttpStatus httpStatus, String errorMsg) {
+    	UserConfigurationResponse response = new UserConfigurationResponse();
+    	response.setError(new Error());
+    	response.getError().setDescription(errorMsg);
+    	return Mono.just(ResponseEntity.status(httpStatus).body(response));
+    }
+    
+    private Mono<ResponseEntity<UserConfigurationResponse>> buildErrorResponse(HttpStatus httpStatus, Throwable throwable) {
+    	UserConfigurationResponse response = new UserConfigurationResponse();
+    	response.setError(new Error());
+    	response.getError().setDescription(throwable.getMessage());
+    	return Mono.just(ResponseEntity.status(httpStatus).body(response));
+    }
+	
 	private  Mono<ResponseEntity<UserConfigurationResponse>> getResponse(String name, Throwable throwable) 
 	{
 		UserConfigurationResponse response = new UserConfigurationResponse();
 		response.setError(new Error());
 
 		if (throwable instanceof ItemAlreadyPresent) {
-			response.getError().setDescription(name == null ? "UserConfiguration already present" : String.format("UserConfiguration with id %s already present", name));
-			return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(response));
+			String errorMsg = name == null ? 
+					"UserConfiguration already present" : 
+					String.format("UserConfiguration with name %s already present", name);
+			return buildErrorResponse(HttpStatus.FORBIDDEN, errorMsg);
 		}
 		else if (throwable instanceof IdClientNotFoundException) {
-			response.getError().setDescription(name == null ? "UserConfiguration not found" : String.format("UserConfiguration with id %s not found", name));
-			return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(response));
+			String errorMsg = name == null ? 
+					"UserConfiguration not found" : 
+					String.format("UserConfiguration with name %s not found", name);
+			return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
 		}
 		else if (throwable instanceof RepositoryManagerException) {
-			response.getError().setDescription("UserConfiguration has incorrect attribute" );
-			return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response));			
-		}
-		response.getError().setDescription(throwable.getMessage());
-		return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response));
+			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);		
+	    } else {
+	    	log.info("getErrorResponse() : other");
+	    	log.error("errore",throwable);
+	    	return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
+	    }
 	}
 
 	@Override

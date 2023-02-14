@@ -51,10 +51,10 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
         log.info("insertUserConfiguration() : IN : userConfigurationInput : {}", userConfigurationInput);
 
         if (userConfigurationInput == null) {
-            throw new RepositoryManagerException("userConfiguration is null");
+            throw new RepositoryManagerException("UserConfiguration is null");
         }
         if (userConfigurationInput.getName() == null || userConfigurationInput.getName().isBlank()) {
-            throw new RepositoryManagerException("userConfiguration Id is null");
+            throw new RepositoryManagerException("UserConfiguration Name is null");
         }
 
         UserConfigurationEntity userConfigurationEntity = objectMapper.convertValue(userConfigurationInput, UserConfigurationEntity.class);

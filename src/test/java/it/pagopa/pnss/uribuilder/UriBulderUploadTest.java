@@ -301,7 +301,7 @@ public class UriBulderUploadTest {
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
         fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isBadRequest();
+                .isForbidden();
     }
 
 }

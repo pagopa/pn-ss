@@ -74,7 +74,7 @@ public class UriBuilderService {
                    .flatMap(voidMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
                    .handle((userConfiguration, synchronousSink) -> {
                        if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
-                           throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                           throw (new ResponseStatusException(HttpStatus.FORBIDDEN,
                                                                              "Client : " + xPagopaSafestorageCxId +
                                                                              " not has privilege for upload document type " +
                                                                              documentType));

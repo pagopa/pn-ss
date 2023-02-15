@@ -263,6 +263,7 @@ Resources:
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Ref PnSsGestoreBucketLambdaName
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.lambda_handler
       MemorySize: 256

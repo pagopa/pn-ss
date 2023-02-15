@@ -314,7 +314,7 @@ components:
         statuses:
           type: object
           additionalProperties:
-              $ref: '#/components/schemas/CurrentStatus'
+            $ref: '#/components/schemas/CurrentStatus'
         informationClassification:
           description: >-
             * `C` - Confidential
@@ -335,12 +335,16 @@ components:
           $ref: '#/components/schemas/AllowedStatusTransitions'
         storage:
           $ref: '#/components/schemas/Storage'
+        technicalState:
+          $ref: '#/components/schemas/TechnicalState'
     Storage:
       type: string
     AllowedStatusTransitions:
       type: array
       items:
         type: string
+    TechnicalState:
+      type: string
     DocumentTypeResponse:
       type: object
       properties:

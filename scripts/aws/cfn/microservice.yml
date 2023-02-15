@@ -131,6 +131,10 @@ Parameters:
     Type: String
     Description: 'Nome della managed policy associata alla state machine'
     Default: 'PnSsManagedPolicyName'
+
+  PnSsGestoreBucketLambdaName:
+    Type: String
+    Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
   
 
 Resources:

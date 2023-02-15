@@ -182,6 +182,7 @@ Resources:
               - 'dynamodb:Describe*'
               - 'dynamodb:Scan'
               - 'dynamodb:List*'
+              - 'dynamodb:DeleteItem'
               - 'dynamodb:Batch*'
               - 'dynamodb:PartiQL*'
               - 'dynamodb:Update*'

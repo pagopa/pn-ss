@@ -156,6 +156,7 @@ Resources:
         ContainerEnvEntry8: !Sub 'PnSsTableNameTipologieDocumenti=${PnSsTableNameTipologieDocumenti}'
         ContainerEnvEntry9: !Sub 'PnSsTableNameDocumenti=${PnSsTableNameDocumenti}'
         ContainerEnvEntry10: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
+        ContainerEnvEntry11: !Sub 'pst=${PresignedUrlMinutesLifespan}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref SubnetsIds

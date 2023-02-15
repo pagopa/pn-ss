@@ -87,15 +87,27 @@ public class UserConfigurationInternalApiControllerTest {
 	// codice test: ANSS.101.1
 	void postItem() {
 		
-		userConfigurationInput.setName("nameOther");
-		
-		webTestClient.post()
-	        .uri(BASE_PATH)
+		EntityExchangeResult<UserConfigurationResponse> resultPreInsert =
+			webTestClient.get()
+			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
 	        .accept(APPLICATION_JSON)
-	        .contentType(APPLICATION_JSON)
-	        .body(BodyInserters.fromValue(userConfigurationInput))
 	        .exchange()
-	        .expectStatus().isOk();
+	        .expectBody(UserConfigurationResponse.class).returnResult();
+		
+		log.info("\n Test 1 (postItem) resultPreInsert {} \n", resultPreInsert);
+
+		if (resultPreInsert == null || resultPreInsert.getResponseBody() == null || resultPreInsert.getResponseBody().getUserConfiguration() == null) 
+		{
+			userConfigurationInput.setName("nameOther");
+			
+			webTestClient.post()
+		        .uri(BASE_PATH)
+		        .accept(APPLICATION_JSON)
+		        .contentType(APPLICATION_JSON)
+		        .body(BodyInserters.fromValue(userConfigurationInput))
+		        .exchange()
+		        .expectStatus().isOk();
+		}
 		
 		log.info("\n Test 1 (postItem) passed \n");
 	}

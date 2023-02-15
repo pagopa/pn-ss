@@ -2,7 +2,11 @@ package it.pagopa.pnss.repositorymanager.rest.internal;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,11 +18,11 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
@@ -28,11 +32,6 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @Slf4j
@@ -40,15 +39,13 @@ public class DocTypeInternalApiControllerTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
-//	@Autowired
-	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
 
 	private static final String BASE_PATH = "/safestorage/internal/v1/doctypes";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{typeId}", BASE_PATH);
 
-	private static final String PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS = TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS.getValue();
-	private static final TipoDocumentoEnum PARTITION_ID_INSERT_LEGAL_FACTS = TipoDocumentoEnum.LEGAL_FACTS;
-	private static final String PARTITION_ID_NO_EXISTENT_AAR = TipoDocumentoEnum.AAR.getValue();
+	private static final String PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS = "PN_NOTIFICATION_ATTACHMENTS";
+	private static final String PARTITION_ID_INSERT_LEGAL_FACTS = "PN_LEGAL_FACTS";
+	private static final String PARTITION_ID_NO_EXISTENT_AAR = "PN_AAR";
 	
 	private static DocumentType docTypesInsertInput;
 	private static DocumentType docTypesUpdateDeleteInput;
@@ -58,7 +55,7 @@ public class DocTypeInternalApiControllerTest {
     private static void insertDocTypeEntity(String tipoDocumento) {
     	log.info("execute insertDocTypeEntity()");
         var docTypeEntity = new DocTypeEntity();
-        docTypeEntity.setTipoDocumento(TipoDocumentoEnum.fromValue(tipoDocumento));
+        docTypeEntity.setTipoDocumento(tipoDocumento);
         dynamoDbTable.putItem(builder -> builder.item(docTypeEntity));
     }
 	
@@ -68,7 +65,6 @@ public class DocTypeInternalApiControllerTest {
     {
     	log.info("execute insertDefaultDocType()");
         dynamoDbTable = dynamoDbEnhancedClient.table(
-//        		DynamoTableNameConstant.DOC_TYPES_TABLE_NAME, 
         		gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(),
         		TableSchema.fromBean(DocTypeEntity.class));
         insertDocTypeEntity(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
@@ -77,31 +73,43 @@ public class DocTypeInternalApiControllerTest {
     @BeforeEach
 	public void createDocumentType() {
     	log.info("execute createDocumentType() : START");
-		List<Map<String, CurrentStatus>> statuses = new ArrayList<>();
-		Map<String, CurrentStatus> status = new HashMap<>();
-		CurrentStatus currentStatus = new CurrentStatus();
-		List<String> allowedStatusTransitions = new ArrayList<>();
-		currentStatus.setStorage("PN_TEMPORARY_DOCUMENT");
-		allowedStatusTransitions.add("ATTACHED");
-		currentStatus.setAllowedStatusTransitions(allowedStatusTransitions);
-		status.put("PRELOADED",currentStatus);
-		statuses.add(status);
+    	
+		List<String> allowedStatusTransitions1 = new ArrayList<>();
+		allowedStatusTransitions1.add("ATTACHED");
+		
+		CurrentStatus currentStatus1 = new CurrentStatus();
+		currentStatus1.setStorage("PN_LEGAL_FACTS");
+		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
+		
+		Map<String, CurrentStatus> statuses1 = new HashMap<>();
+		statuses1.put("SAVED",currentStatus1);
 
     	docTypesInsertInput = new DocumentType();
     	docTypesInsertInput.setTipoDocumento(PARTITION_ID_INSERT_LEGAL_FACTS);
-    	docTypesInsertInput.setChecksum(ChecksumEnum.MD5);
-    	docTypesInsertInput.setStatuses(statuses);
-    	docTypesInsertInput.setInformationClassification(InformationClassificationEnum.C);
+    	docTypesInsertInput.setChecksum(ChecksumEnum.SHA256); 
+    	docTypesInsertInput.setInitialStatus("SAVED");
+    	docTypesInsertInput.setStatuses(statuses1);
+    	docTypesInsertInput.setInformationClassification(InformationClassificationEnum.HC);
     	docTypesInsertInput.setDigitalSignature(true);
     	docTypesInsertInput.setTimeStamped(TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesInsertInput : {}", docTypesInsertInput);
-    	
+		
+		List<String> allowedStatusTransitions2 = new ArrayList<>();
+		allowedStatusTransitions2.add("ATTACHED");
+		
+		CurrentStatus currentStatus2 = new CurrentStatus();
+		currentStatus2.setStorage("PN_NOTIFICATION_ATTACHMENTS");
+		currentStatus2.setAllowedStatusTransitions(allowedStatusTransitions1);
+		
+		Map<String, CurrentStatus> statuses2 = new HashMap<>();
+		statuses2.put("PRELOADED",currentStatus1);
+		
     	docTypesUpdateDeleteInput = new DocumentType();
-		docTypesUpdateDeleteInput.setTipoDocumento(TipoDocumentoEnum.fromValue(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS));
-		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.MD5);
-//		docTypesUpdateDeleteInput.setLifeCycleTag("lifeCicle1");
-		docTypesInsertInput.setStatuses(statuses);
-		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.C);
+		docTypesUpdateDeleteInput.setTipoDocumento(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
+		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.SHA256);
+		docTypesUpdateDeleteInput.setInitialStatus("PRELOADED");
+		docTypesUpdateDeleteInput.setStatuses(statuses2);
+		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.HC);
 		docTypesUpdateDeleteInput.setDigitalSignature(true);
 		docTypesUpdateDeleteInput.setTimeStamped(TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesUpdateDeleteInput : {}", docTypesUpdateDeleteInput);
@@ -113,7 +121,7 @@ public class DocTypeInternalApiControllerTest {
 		
 		EntityExchangeResult<DocumentTypeResponse> resultPreInsert =
 				webTestClient.get()
-					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento().getValue()))
+					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento()))
 					.accept(APPLICATION_JSON)
 					.exchange()
 					.expectBody(DocumentTypeResponse.class).returnResult();
@@ -159,7 +167,7 @@ public class DocTypeInternalApiControllerTest {
 		
 		EntityExchangeResult<DocumentTypeResponse> resultPreInsert =
 				webTestClient.get()
-					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento().getValue()))
+					.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(docTypesInsertInput.getTipoDocumento()))
 					.accept(APPLICATION_JSON)
 					.exchange()
 					.expectBody(DocumentTypeResponse.class).returnResult();
@@ -282,7 +290,7 @@ public class DocTypeInternalApiControllerTest {
 		        .expectStatus().isOk()
 		        .expectBody(DocumentTypeResponse.class).returnResult();
 		
-		Assertions.assertEquals(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS, result.getResponseBody().getDocType().getTipoDocumento().getValue());
+		Assertions.assertEquals(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS, result.getResponseBody().getDocType().getTipoDocumento());
 	    
 	    log.info("\n Test 9 (deleteItem) passed \n");
 

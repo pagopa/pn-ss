@@ -1,11 +1,43 @@
 package it.pagopa.pnss.uribuilder.service;
 
+import static it.pagopa.pnss.common.Constant.EU_CENTRAL_1;
+import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
+import static it.pagopa.pnss.common.Constant.PN_AAR;
+import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+import static it.pagopa.pnss.common.Constant.listaStatus;
+import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
+import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_STAGE_NAME;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.PostConstruct;
+
+import org.jetbrains.annotations.NotNull;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
 import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.rest.v1.dto.*;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
+import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
+import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
@@ -95,43 +127,46 @@ public class UriBuilderService {
                 .doOnSuccess(o -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
                 .flatMap(o -> {
 
-                    GenerateRandoKeyFile g = GenerateRandoKeyFile.getInstance();
-                    String keyName = g.createKeyName(documentType);
+                       GenerateRandoKeyFile g = GenerateRandoKeyFile.getInstance();
+                       String keyName = g.createKeyName(documentType);
 
-                    return documentClientCall.getdocument(keyName).doOnNext(document -> {
-                        throw new DocumentkeyPresentException(keyName);
-                    }).onErrorResume(DocumentKeyNotPresentException.class, e -> {
+                       return documentClientCall.getdocument(keyName).doOnNext(document -> {
+                           throw new DocumentkeyPresentException(keyName);
+                       }).onErrorResume(DocumentKeyNotPresentException.class, e -> {
 
-                        Document documentRepositoryDto = new Document();
-                        documentRepositoryDto.setContentType(contentType);
-                        documentRepositoryDto.setDocumentKey(keyName);
-                        documentRepositoryDto.setDocumentState(Document.DocumentStateEnum.BOOKED);
-                        documentRepositoryDto.setDocumentType(retrieveDocType(documentType));
-                        return documentClientCall.postdocument(documentRepositoryDto);
-                    });
-                })
-                .retryWhen(Retry.max(10)
-                        .filter(DocumentkeyPresentException.class::isInstance)
-                        .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
-                            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                    "Non e' stato possibile produrre una chiave per user " +
-                                            xPagopaSafestorageCxId);
-                        }))
-                .map(document -> {
-                    PresignedPutObjectRequest presignedRequest =
-                            builsUploadUrl(documentType, document.getDocument().getDocumentState(),document.getDocument().getDocumentKey(), contentType,metadata);
-                    String myURL = presignedRequest.url().toString();
-                    FileCreationResponse response = new FileCreationResponse();
-                    response.setKey(document.getDocument().getDocumentKey());
-                    response.setSecret(secret.toString());
+                    	   DocumentType documentTypeDto = new DocumentType();
+                    	   documentTypeDto.setTipoDocumento(documentType);
+
+                           Document documentRepositoryDto = new Document();
+                           documentRepositoryDto.setContentType(contentType);
+                           documentRepositoryDto.setDocumentKey(keyName);
+                           documentRepositoryDto.setDocumentState(Document.DocumentStateEnum.BOOKED);
+                           documentRepositoryDto.setDocumentType(documentTypeDto);
+                           return documentClientCall.postdocument(documentRepositoryDto);
+                       });
+                   })
+                   .retryWhen(Retry.max(10)
+                                   .filter(DocumentkeyPresentException.class::isInstance)
+                                   .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
+                                       throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                                                         "Non e' stato possibile produrre una chiave per user " +
+                                                                         xPagopaSafestorageCxId);
+                                   }))
+                   .map(document -> {
+                       PresignedPutObjectRequest presignedRequest =
+                               builsUploadUrl(documentType, document.getDocument().getDocumentState(),document.getDocument().getDocumentKey(), contentType,metadata);
+                       String myURL = presignedRequest.url().toString();
+                       FileCreationResponse response = new FileCreationResponse();
+                       response.setKey(document.getDocument().getDocumentKey());
+                       response.setSecret(secret.toString());
 
                     response.setUploadUrl(myURL);
                     response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
 
 
-                    return response;
-                })
-                .doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "));
+                       return response;
+                   })
+                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "));
     }
 
     private Mono<Boolean> validationField(String contentType, String documentType, String status) {
@@ -154,25 +189,25 @@ public class UriBuilderService {
         return Mono.just(true);
     }
 
-    private Document.DocumentTypeEnum retrieveDocType(String documentType) {
-        if (documentType.equals(PN_DOWNTIME_LEGAL_FACTS)) {
-            //return Document.DocumentTypeEnum.PN_DOWNTIME_LEGAL_FACTS
-        }
-        if (documentType.equals(PN_NOTIFICATION_ATTACHMENTS)) {
-            return Document.DocumentTypeEnum.NOTIFICATION_ATTACHMENTS;
-        }
-        if (documentType.equals(PN_AAR)) {
-            return Document.DocumentTypeEnum.AAR;
-        }
-        if (documentType.equals(PN_LEGAL_FACTS)) {
-            return Document.DocumentTypeEnum.LEGAL_FACTS;
-        }
-        if (documentType.equals(PN_EXTERNAL_LEGAL_FACTS)) {
-            return Document.DocumentTypeEnum.EXTERNAL_LEGAL_FACTS;
-        }
-        return null;
-
-    }
+//    private Document.DocumentTypeEnum retrieveDocType(String documentType) {
+//        if (documentType.equals(PN_DOWNTIME_LEGAL_FACTS)) {
+//            //return Document.DocumentTypeEnum.PN_DOWNTIME_LEGAL_FACTS
+//        }
+//        if (documentType.equals(PN_NOTIFICATION_ATTACHMENTS)) {
+//            return Document.DocumentTypeEnum.NOTIFICATION_ATTACHMENTS;
+//        }
+//        if (documentType.equals(PN_AAR)) {
+//            return Document.DocumentTypeEnum.AAR;
+//        }
+//        if (documentType.equals(PN_LEGAL_FACTS)) {
+//            return Document.DocumentTypeEnum.LEGAL_FACTS;
+//        }
+//        if (documentType.equals(PN_EXTERNAL_LEGAL_FACTS)) {
+//            return Document.DocumentTypeEnum.EXTERNAL_LEGAL_FACTS;
+//        }
+//        return null;
+//
+//    }
 
 
     private FileCreationResponse.UploadMethodEnum extractUploadMethod(SdkHttpMethod method) {
@@ -252,16 +287,16 @@ public class UriBuilderService {
                             .onErrorResume(DocumentKeyNotPresentException.class,
                                     throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey)))
 
-                            .map((documentResponse) -> {
-                                if (!canRead.contains(documentResponse.getDocument().getDocumentType().getValue())) {
+                             .map((documentResponse) -> {
+                                if (!canRead.contains(documentResponse.getDocument().getDocumentType().getTipoDocumento())) {
                                     throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                             "Client : " + xPagopaSafestorageCxId +
                                                     " not has privilege for read document type " +
                                                     documentResponse.getDocument().getDocumentType()));
                                 }
 
-                                return documentResponse.getDocument();
-                            }).doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
+                                 return documentResponse.getDocument();
+                             }).doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
 
                 }).map(doc -> {
                     return  getFileDownloadResponse(fileKey, doc);
@@ -292,8 +327,8 @@ public class UriBuilderService {
         downloadResponse.setVersionId(null);
 
         downloadResponse.setDownload(createFileDownloadInfo(fileKey,
-                downloadResponse.getDocumentStatus(),
-                downloadResponse.getDocumentType()));
+        downloadResponse.getDocumentStatus(),
+        downloadResponse.getDocumentType()));
         return downloadResponse;
     }
 

@@ -3,11 +3,8 @@ package it.pagopa.pnss.repositorymanager.rest;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,11 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TipoDocumentoEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
@@ -41,12 +33,7 @@ public class ConfigurationApiControllerTest {
 	@Autowired
 	private WebTestClient webTestClient;
 	
-	private static final String BASE_URL_DOC_TYPE = "/safestorage/internal/v1/doctypes";
-	private static final String BASE_URL_DOC_TYPE_WITH_PARAM = String.format("%s/{typeId}", BASE_URL_DOC_TYPE);
-
-	private static final String BASE_URL_USER_CONFIGURATION = "/safestorage/internal/v1/userConfigurations";
-	
-	private static final String BASE_URL_CONFIGURATIONS_DOC_TYPE = "/safe-storage/v1/configurations/documents-types";
+//	private static final String BASE_URL_CONFIGURATIONS_DOC_TYPE = "/safe-storage/v1/configurations/documents-types";
 	
 	private static final String BASE_PATH_CONFIGURATIONS_USER_CONF = "/safe-storage/v1/configurations/clients/";
 	private static final String BASE_PATH_CONFIGURATIONS_USER_CONF_WITH_PARAM = String.format("%s/{clientId}", BASE_PATH_CONFIGURATIONS_USER_CONF);
@@ -95,28 +82,27 @@ public class ConfigurationApiControllerTest {
 		userConfigurationInput.setApiKey("apiKey");
 	}
 	
-	private DocumentType getDocumentType(TipoDocumentoEnum name) {
-		List<Map<String, CurrentStatus>> statuses = new ArrayList<>();
-		Map<String, CurrentStatus> status = new HashMap<>();
-		CurrentStatus currentStatus = new CurrentStatus();
-		List<String> allowedStatusTransitions = new ArrayList<>();
-		currentStatus.setStorage("PN_TEMPORARY_DOCUMENT");
-		allowedStatusTransitions.add("ATTACHED");
-		currentStatus.setAllowedStatusTransitions(allowedStatusTransitions);
-		status.put("PRELOADED",currentStatus);
-		statuses.add(status);
-
-
-
-		DocumentType docTypesInput = new DocumentType();
-		docTypesInput.setTipoDocumento(name);
-		docTypesInput.setChecksum(ChecksumEnum.MD5);
-		docTypesInput.setStatuses(statuses);
-		docTypesInput.setInformationClassification(InformationClassificationEnum.C);
-		docTypesInput.setDigitalSignature(true);
-		docTypesInput.setTimeStamped(TimeStampedEnum.STANDARD);
-		return docTypesInput;
-	}
+//	private DocumentType getDocumentType(String name) {
+//		
+//		List<String> allowedStatusTransitions = new ArrayList<>();
+//		allowedStatusTransitions.add("ATTACHED");
+//		
+//		CurrentStatus currentStatus = new CurrentStatus();
+//		currentStatus.setStorage("PN_TEMPORARY_DOCUMENT");
+//		currentStatus.setAllowedStatusTransitions(allowedStatusTransitions);
+//		
+//		Map<String, CurrentStatus> statuses = new HashMap<>();
+//		statuses.put("PRELOADED",currentStatus);
+//
+//		DocumentType docTypesInput = new DocumentType();
+//		docTypesInput.setTipoDocumento(name);
+//		docTypesInput.setChecksum(ChecksumEnum.MD5);
+//		docTypesInput.setStatuses(statuses);
+//		docTypesInput.setInformationClassification(InformationClassificationEnum.C);
+//		docTypesInput.setDigitalSignature(true);
+//		docTypesInput.setTimeStamped(TimeStampedEnum.STANDARD);
+//		return docTypesInput;
+//	}
 
 	@Test
 	void getDocumentsConfigs() {

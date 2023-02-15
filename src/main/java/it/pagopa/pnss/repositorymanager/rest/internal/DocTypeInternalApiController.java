@@ -1,5 +1,10 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ServerWebExchange;
+
 import it.pagopa.pn.template.internal.rest.v1.api.DocTypeInternalApi;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
@@ -8,13 +13,11 @@ import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ServerWebExchange;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @RestController
+@Slf4j
 public class DocTypeInternalApiController implements DocTypeInternalApi {
 
     private final DocTypesService docTypesService;
@@ -28,27 +31,40 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
         response.setDocType(docType);
         return response;
     }
+    
+    private Mono<ResponseEntity<DocumentTypeResponse>> buildErrorResponse(HttpStatus httpStatus, String errorMsg) {
+    	DocumentTypeResponse response = new DocumentTypeResponse();
+    	response.setError(new Error());
+    	response.getError().setDescription(errorMsg);
+    	return Mono.just(ResponseEntity.status(httpStatus).body(response));
+    }
+    
+    private Mono<ResponseEntity<DocumentTypeResponse>> buildErrorResponse(HttpStatus httpStatus, Throwable throwable) {
+    	DocumentTypeResponse response = new DocumentTypeResponse();
+    	response.setError(new Error());
+    	response.getError().setDescription(throwable.getMessage());
+    	return Mono.just(ResponseEntity.status(httpStatus).body(response));
+    }
 
-    private Mono<ResponseEntity<DocumentTypeResponse>> getResponse(String typeId, Throwable throwable) {
-        DocumentTypeResponse response = new DocumentTypeResponse();
-        response.setError(new Error());
-
-        response.getError().setDescription(throwable.getMessage());
+    private Mono<ResponseEntity<DocumentTypeResponse>> getErrorResponse(String typeId, Throwable throwable) {
+    	log.info("getErrorResponse() : IN : typeId {} : throwable {}", typeId, throwable);
 
         if (throwable instanceof ItemAlreadyPresent) {
-            response.getError()
-                    .setDescription(
-                            typeId == null ? "DocType already present" : String.format("DocType with id %s already present", typeId));
-            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(response));
+        	String errorMsg = typeId == null ? 
+        			"DocType already present" : 
+        			String.format("DocType with id %s already present", typeId);
+        	return buildErrorResponse(HttpStatus.FORBIDDEN, errorMsg);
         } else if (throwable instanceof DocumentTypeNotPresentException) {
-            response.getError()
-                    .setDescription(typeId == null ? "Document type not found" : String.format("Doc with id %s not found", typeId));
-            return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(response));
+            String errorMsg = typeId == null ? 
+            		"Document type not found" : 
+            		String.format("DocumentType with id %s not found", typeId);
+            return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
         } else if (throwable instanceof RepositoryManagerException) {
-            response.getError().setDescription("DocType has incorrect attribute");
-            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response));
+        	return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
         } else {
-            return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response));
+        	log.info("getErrorResponse() : other");
+        	log.error("errore",throwable);
+        	return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
         }
     }
 
@@ -57,15 +73,17 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 
         return docTypesService.getDocType(typeId)
                               .map(docType -> ResponseEntity.ok(getResponse(docType)))
-                              .onErrorResume(throwable -> getResponse(typeId, throwable));
+                              .onErrorResume(throwable -> getErrorResponse(typeId, throwable));
     }
 
     @Override
     public Mono<ResponseEntity<DocumentTypeResponse>> insertDocType(Mono<DocumentType> documentType, final ServerWebExchange exchange) {
+    	
+    	log.info("insertDocType() : IN");
 
         return documentType.flatMap(docTypesService::insertDocType)
                            .map(docType -> ResponseEntity.ok(getResponse(docType)))
-                           .onErrorResume(throwable -> getResponse(null, throwable));
+                           .onErrorResume(throwable -> getErrorResponse(null, throwable));
 
     }
 
@@ -75,7 +93,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 
         return documentType.flatMap(request -> docTypesService.updateDocType(typeId, request))
                            .map(docType -> ResponseEntity.ok(getResponse(docType)))
-                           .onErrorResume(throwable -> getResponse(typeId, throwable));
+                           .onErrorResume(throwable -> getErrorResponse(typeId, throwable));
 
     }
 
@@ -84,7 +102,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 
         return docTypesService.deleteDocType(typeId)
                               .map(docType -> ResponseEntity.ok(getResponse(docType)))
-                              .onErrorResume(throwable -> getResponse(typeId, throwable));
+                              .onErrorResume(throwable -> getErrorResponse(typeId, throwable));
 
     }
 }

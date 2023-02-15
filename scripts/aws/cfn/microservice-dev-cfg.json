@@ -1,6 +1,6 @@
 {
   "Parameters": {
     "PnSsGestoreBucketLambdaName":"pn-safe-storage-gestore-bucket-lambda",
-    "PresignedUrlMinutesLifespan": 60
+    "PresignedUrlMinutesLifespan": "60"
   }
 }

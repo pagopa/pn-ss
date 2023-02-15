@@ -8,7 +8,7 @@ import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
@@ -25,7 +25,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpOutputMessage;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserter;
@@ -37,9 +36,12 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.Random;
 
 import static it.pagopa.pnss.common.Constant.*;
 
@@ -88,8 +90,6 @@ public class UriBulderUploadTest {
     }
 
 
-
-
     @Test
     public void testUrlGenStatusPre() throws Exception {
         FileCreationRequest fcr = new FileCreationRequest();
@@ -109,7 +109,7 @@ public class UriBulderUploadTest {
 
 
 
-        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentkeyNotPresentException("keyFile")));
+        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
 
         DocumentResponse docResp = new DocumentResponse();
         Document document = new Document();
@@ -173,7 +173,7 @@ public class UriBulderUploadTest {
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
-        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentkeyNotPresentException("keyFile")));
+        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
 
         DocumentResponse docResp = new DocumentResponse();
         Document document = new Document();
@@ -302,7 +302,7 @@ public class UriBulderUploadTest {
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
         fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isBadRequest();
+                .isForbidden();
     }
 
 }

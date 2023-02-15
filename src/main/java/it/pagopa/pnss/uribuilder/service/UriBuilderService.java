@@ -1,20 +1,50 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkClientException;
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
-import it.pagopa.pn.template.rest.v1.dto.*;
-import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
-import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
-import lombok.extern.slf4j.Slf4j;
+import static it.pagopa.pnss.common.Constant.EU_CENTRAL_1;
+import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
+import static it.pagopa.pnss.common.Constant.PN_AAR;
+import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+import static it.pagopa.pnss.common.Constant.listaStatus;
+import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
+import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_STAGE_NAME;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.PostConstruct;
+
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkClientException;
+
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
+import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
+import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
+import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
+import it.pagopa.pnss.configurationproperties.BucketName;
+import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
@@ -32,11 +62,9 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 import javax.annotation.PostConstruct;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static it.pagopa.pnss.common.Constant.*;
 import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
@@ -50,6 +78,9 @@ public class UriBuilderService {
     UserConfigurationClientCall userConfigurationClientCall;
     DocumentClientCall documentClientCall;
 
+    @Autowired
+    private BucketName bucketName;
+
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
@@ -60,11 +91,11 @@ public class UriBuilderService {
     @PostConstruct
     public void createMap() {
         mapDocumentTypeToBucket = new HashMap<>();
-        mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS, BUCKET_HOT_NAME);
-        mapDocumentTypeToBucket.put(PN_AAR, BUCKET_HOT_NAME);
-        mapDocumentTypeToBucket.put(PN_LEGAL_FACTS, BUCKET_STAGE_NAME);
-        mapDocumentTypeToBucket.put(PN_EXTERNAL_LEGAL_FACTS, BUCKET_HOT_NAME);
-        mapDocumentTypeToBucket.put(PN_DOWNTIME_LEGAL_FACTS, BUCKET_STAGE_NAME);
+        mapDocumentTypeToBucket.put(PN_NOTIFICATION_ATTACHMENTS, bucketName.ssHotName());
+        mapDocumentTypeToBucket.put(PN_AAR, bucketName.ssHotName());
+        mapDocumentTypeToBucket.put(PN_LEGAL_FACTS, bucketName.ssStageName());
+        mapDocumentTypeToBucket.put(PN_EXTERNAL_LEGAL_FACTS, bucketName.ssHotName());
+        mapDocumentTypeToBucket.put(PN_DOWNTIME_LEGAL_FACTS, bucketName.ssStageName());
 
     }
 
@@ -72,13 +103,16 @@ public class UriBuilderService {
         String contentType = request.getContentType();
         String documentType = request.getDocumentType();
         String status = request.getStatus();
-
+        List<String> secret = new ArrayList<>();
+        secret.add(generateSecret());
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("secret", secret.toString());
 
         return Mono.fromCallable(() -> validationField(contentType, documentType, status))
                    .flatMap(voidMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
                    .handle((userConfiguration, synchronousSink) -> {
                        if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
-                           throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                           throw (new ResponseStatusException(HttpStatus.FORBIDDEN,
                                                                              "Client : " + xPagopaSafestorageCxId +
                                                                              " not has privilege for upload document type " +
                                                                              documentType));
@@ -93,13 +127,16 @@ public class UriBuilderService {
 
                        return documentClientCall.getdocument(keyName).doOnNext(document -> {
                            throw new DocumentkeyPresentException(keyName);
-                       }).onErrorResume(DocumentkeyNotPresentException.class, e -> {
+                       }).onErrorResume(DocumentKeyNotPresentException.class, e -> {
+                    	   
+                    	   DocumentType documentTypeDto = new DocumentType();
+                    	   documentTypeDto.setTipoDocumento(documentType);
 
                            Document documentRepositoryDto = new Document();
                            documentRepositoryDto.setContentType(contentType);
                            documentRepositoryDto.setDocumentKey(keyName);
                            documentRepositoryDto.setDocumentState(Document.DocumentStateEnum.BOOKED);
-                           documentRepositoryDto.setDocumentType(retrieveDocType(documentType));
+                           documentRepositoryDto.setDocumentType(documentTypeDto);
                            return documentClientCall.postdocument(documentRepositoryDto);
                        });
                    })
@@ -112,11 +149,11 @@ public class UriBuilderService {
                                    }))
                    .map(document -> {
                        PresignedPutObjectRequest presignedRequest =
-                               builsUploadUrl(documentType, document.getDocument().getDocumentKey(), contentType);
+                               builsUploadUrl(documentType, document.getDocument().getDocumentKey(), contentType,metadata);
                        String myURL = presignedRequest.url().toString();
                        FileCreationResponse response = new FileCreationResponse();
                        response.setKey(document.getDocument().getDocumentKey());
-                       response.setSecret(null);
+                       response.setSecret(secret.toString());
 
                        response.setUploadUrl(myURL);
                        response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
@@ -147,25 +184,25 @@ public class UriBuilderService {
         return Mono.just(true);
     }
 
-    private Document.DocumentTypeEnum retrieveDocType(String documentType) {
-        if (documentType.equals(PN_DOWNTIME_LEGAL_FACTS)) {
-            //return Document.DocumentTypeEnum.PN_DOWNTIME_LEGAL_FACTS
-        }
-        if (documentType.equals(PN_NOTIFICATION_ATTACHMENTS)) {
-            return Document.DocumentTypeEnum.NOTIFICATION_ATTACHMENTS;
-        }
-        if (documentType.equals(PN_AAR)) {
-            return Document.DocumentTypeEnum.AAR;
-        }
-        if (documentType.equals(PN_LEGAL_FACTS)) {
-            return Document.DocumentTypeEnum.LEGAL_FACTS;
-        }
-        if (documentType.equals(PN_EXTERNAL_LEGAL_FACTS)) {
-            return Document.DocumentTypeEnum.EXTERNAL_LEGAL_FACTS;
-        }
-        return null;
-
-    }
+//    private Document.DocumentTypeEnum retrieveDocType(String documentType) {
+//        if (documentType.equals(PN_DOWNTIME_LEGAL_FACTS)) {
+//            //return Document.DocumentTypeEnum.PN_DOWNTIME_LEGAL_FACTS
+//        }
+//        if (documentType.equals(PN_NOTIFICATION_ATTACHMENTS)) {
+//            return Document.DocumentTypeEnum.NOTIFICATION_ATTACHMENTS;
+//        }
+//        if (documentType.equals(PN_AAR)) {
+//            return Document.DocumentTypeEnum.AAR;
+//        }
+//        if (documentType.equals(PN_LEGAL_FACTS)) {
+//            return Document.DocumentTypeEnum.LEGAL_FACTS;
+//        }
+//        if (documentType.equals(PN_EXTERNAL_LEGAL_FACTS)) {
+//            return Document.DocumentTypeEnum.EXTERNAL_LEGAL_FACTS;
+//        }
+//        return null;
+//
+//    }
 
 
     private FileCreationResponse.UploadMethodEnum extractUploadMethod(SdkHttpMethod method) {
@@ -175,14 +212,14 @@ public class UriBuilderService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private PresignedPutObjectRequest builsUploadUrl(String documentType, String keyName, String contentType) {
+    private PresignedPutObjectRequest builsUploadUrl(String documentType, String keyName, String contentType, Map<String, String> secret) {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
         PresignedPutObjectRequest response = null;
+
         try {
             S3Presigner presigner = getS3Presigner();
-            response = signBucket(presigner, bucketName, keyName, contentType);
-
+            response = signBucket(presigner, bucketName, keyName, contentType,secret);
         } catch (AmazonServiceException ase) {
             log.error(" Errore AMAZON AmazonServiceException", ase);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException ");
@@ -207,14 +244,14 @@ public class UriBuilderService {
                           .build();
     }
 
-    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType) {
+    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType, Map<String, String> secret) {
 
-        PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName).key(keyName).contentType(contenType).build();
+        PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName).key(keyName).contentType(contenType).metadata(secret).build();
         PutObjectPresignRequest presignRequest =
-                PutObjectPresignRequest.builder().signatureDuration(Duration.ofMinutes(10)).putObjectRequest(objectRequest).build();
+                PutObjectPresignRequest.builder()
+                        .signatureDuration(Duration.ofMinutes(10)).putObjectRequest(objectRequest).build();
 
         PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(presignRequest);
-
         return presignedRequest;
 
     }
@@ -231,11 +268,11 @@ public class UriBuilderService {
                     List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
                     return documentClientCall.getdocument(fileKey)
-                            .onErrorResume(DocumentkeyNotPresentException.class,
+                            .onErrorResume(DocumentKeyNotPresentException.class,
                                     throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey)))
 
                              .map((documentResponse) -> {
-                                if (!canRead.contains(documentResponse.getDocument().getDocumentType().getValue())) {
+                                if (!canRead.contains(documentResponse.getDocument().getDocumentType().getTipoDocumento())) {
                                     throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                             "Client : " + xPagopaSafestorageCxId +
                                                     " not has privilege for read document type " +
@@ -267,7 +304,7 @@ public class UriBuilderService {
         downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
         downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
-        downloadResponse.setDocumentType(doc.getDocumentType().getValue());
+        downloadResponse.setDocumentType(doc.getDocumentType().getTipoDocumento());
 
         downloadResponse.setKey(fileKey);
         downloadResponse.setRetentionUntil(new Date());
@@ -336,5 +373,13 @@ public class UriBuilderService {
         fdinfo.setUrl(theUrl);
         return fdinfo;
 
+    }
+
+    private String generateSecret() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[256];
+        random.nextBytes(bytes);
+        Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+        return encoder.encodeToString(bytes);
     }
 }

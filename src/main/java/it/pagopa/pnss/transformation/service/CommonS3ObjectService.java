@@ -38,8 +38,8 @@ public abstract class CommonS3ObjectService {
     
     public S3AsyncClient getS3AsynchClient() {
     	S3AsyncClientBuilder s3Client = S3AsyncClient.builder()
-    			.region(Region.of(awsConfigurationProperties.regionCode()))
-    			.credentialsProvider(ProfileCredentialsProvider.create());
+    			.region(Region.of(awsConfigurationProperties.regionCode()));
+    			//.credentialsProvider(ProfileCredentialsProvider.create());
     	if (testAwsS3Endpoint != null) {
     		s3Client.endpointOverride(URI.create(testAwsS3Endpoint));
     	}

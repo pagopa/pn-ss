@@ -1,15 +1,12 @@
 package it.pagopa.pnss.uribuilder;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
-import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
-import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.exception.DocumentkeyNotPresentException;
-import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import lombok.extern.slf4j.Slf4j;
+import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
+import static it.pagopa.pnss.common.Constant.PN_AAR;
+import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+
+import java.time.Duration;
+import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -22,12 +19,19 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
+
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
+import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
+import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-import java.util.List;
-
-import static it.pagopa.pnss.common.Constant.*;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
@@ -71,14 +75,17 @@ public class UriBulderServiceDownloadTest {
 
 
     @Test
-    public void testUrlGenerato(){
+    void testUrlGenerato(){
 
         String docId = "1111-aaaa";
 
         mockUserConfiguration(List.of(PN_AAR));
+        
+        DocumentType dt = new DocumentType();
+        dt.setTipoDocumento(PN_AAR);
 
         Document d = new Document();
-        d.setDocumentType(Document.DocumentTypeEnum.AAR);
+        d.setDocumentType(dt);
         d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
@@ -93,13 +100,16 @@ public class UriBulderServiceDownloadTest {
 
 
     @Test
-    public void testFileTrovatoBasketHot(){
+    void testFileTrovatoBasketHot(){
         String docId = "1111-aaaa";
 
         mockUserConfiguration(List.of(PN_AAR));
+        
+        DocumentType dt = new DocumentType();
+        dt.setTipoDocumento(PN_AAR);
 
         Document d = new Document();
-        d.setDocumentType(Document.DocumentTypeEnum.AAR);
+        d.setDocumentType(dt);
         d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
@@ -116,13 +126,15 @@ public class UriBulderServiceDownloadTest {
     }
 
     @Test
-    public void testFileTrovatoBasketCold(){
+    void testFileTrovatoBasketCold(){
         String docId = "1111-aaaa";
         mockUserConfiguration(List.of(PN_AAR));
 
+        DocumentType dt = new DocumentType();
+        dt.setTipoDocumento(PN_AAR);
 
         Document d = new Document();
-        d.setDocumentType(Document.DocumentTypeEnum.AAR);
+        d.setDocumentType(dt);
         d.setDocumentState(Document.DocumentStateEnum.FREEZED);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
         mockGetDocument(d, docId);
@@ -137,21 +149,21 @@ public class UriBulderServiceDownloadTest {
     }
 
     @Test
-    public void testFileNonTrovato(){
+    void testFileNonTrovato(){
 
         String docId = "1111-aaaa";
 
         mockUserConfiguration(List.of(PN_AAR));
 
         mockGetDocument(null, docId);
-        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentkeyNotPresentException("keyFile")));
+        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
         fileDownloadTestCall( docId).expectStatus()
                 .isNotFound();
 
     }
 
     @Test
-    public void testIdClienteNonTrovatoDownload(){
+    void testIdClienteNonTrovatoDownload(){
         Mockito.doThrow(new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "User Not Found : ")).when(userConfigurationClientCall).getUser(Mockito.any());
         String docId = "1111-aaaa";
@@ -161,13 +173,16 @@ public class UriBulderServiceDownloadTest {
     }
 
     @Test
-    public void testIdClienteNoPermessiDownload(){
+    void testIdClienteNoPermessiDownload(){
         String docId = "1111-aaaa";
 
         mockUserConfiguration(List.of(PN_NOTIFICATION_ATTACHMENTS));
+        
+        DocumentType dt = new DocumentType();
+        dt.setTipoDocumento(PN_AAR);
 
         Document d = new Document();
-        d.setDocumentType(Document.DocumentTypeEnum.AAR);
+        d.setDocumentType(dt);
 
         mockGetDocument(d, docId);
 

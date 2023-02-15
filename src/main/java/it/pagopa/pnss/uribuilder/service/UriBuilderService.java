@@ -270,7 +270,7 @@ public class UriBuilderService {
     }
 
 
-    public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId) {
+    public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId,Boolean metadataOnly) {
         // chiamare l'api di  GestoreRepositori per recupero dati
         //todo
 
@@ -296,7 +296,7 @@ public class UriBuilderService {
                              }).doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
 
                 }).map(doc -> {
-                    return  getFileDownloadResponse(fileKey, doc);
+                    return  getFileDownloadResponse(fileKey, doc,metadataOnly);
                 }).doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "));
 
 
@@ -308,7 +308,7 @@ public class UriBuilderService {
     }
 
     @NotNull
-    private FileDownloadResponse getFileDownloadResponse(String fileKey, Document doc) {
+    private FileDownloadResponse getFileDownloadResponse(String fileKey, Document doc,Boolean metadataOnly) {
         FileDownloadResponse downloadResponse = new FileDownloadResponse();
 
         BigDecimal contentLength = doc.getContentLenght();

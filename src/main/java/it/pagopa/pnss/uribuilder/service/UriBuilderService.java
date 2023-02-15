@@ -53,9 +53,10 @@ public class UriBuilderService {
     @Autowired
     private BucketName bucketName;
 
-    public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall) {
+    public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
+        this.docTypesClientCall = docTypesClientCall;
     }
 
     Map<String, String> mapDocumentTypeToBucket;
@@ -188,8 +189,8 @@ public class UriBuilderService {
         String storageType = "";
         try {
             S3Presigner presigner = getS3Presigner();
-            if(docTypesClientCall.getdocTypes(documentType).getBody() != null) {
-                List<Map<String, CurrentStatus>> statuses = docTypesClientCall.getdocTypes(documentType).getBody().getStatuses();
+            if(docTypesClientCall.getdocTypes(documentType).block().getDocType().getStatuses() != null) {
+                List<Map<String, CurrentStatus>> statuses = docTypesClientCall.getdocTypes(documentType).block().getDocType().getStatuses();
                 Optional<Map<String, CurrentStatus>> status = statuses.stream()
                         .filter(s -> s.containsKey(documentState))
                         .findFirst();

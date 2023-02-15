@@ -1,11 +1,9 @@
 package it.pagopa.pnss.uribuilder;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
+import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
@@ -60,8 +58,8 @@ public class UriBulderUploadTest {
     @Autowired
     private WebTestClient webClient;
 
-
-
+    @MockBean
+    DocTypesClientCall docTypesClientCall;
     @MockBean
     UserConfigurationClientCall userConfigurationClientCall;
 
@@ -107,6 +105,13 @@ public class UriBulderUploadTest {
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
+        DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
+        DocumentType documentType = new DocumentType();
+        documentType.setTipoDocumento(DocumentType.TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS);
+        documentTypeResponse.setDocType(documentType);
+
+        Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
+        Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
 
 
         Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
@@ -174,6 +179,14 @@ public class UriBulderUploadTest {
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
         Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
+
+        DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
+        DocumentType documentType = new DocumentType();
+        documentType.setTipoDocumento(DocumentType.TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS);
+        documentTypeResponse.setDocType(documentType);
+
+        Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
+        Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
 
         DocumentResponse docResp = new DocumentResponse();
         Document document = new Document();

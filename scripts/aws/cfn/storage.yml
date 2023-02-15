@@ -332,3 +332,7 @@ Outputs:
   PnSsSNSNameStagingBucket:
     Description: 'Nome SNS Topic per notifiche SS Staging Bucket'
     Value: !GetAtt PnSsSNSStagingBucket.TopicName
+
+  PnSsGestoreBucketLambdaName:
+    Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
+    Value: 'pn-safe-storage-gestore-bucket-lambda'

@@ -10,8 +10,6 @@ import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
 import static it.pagopa.pnss.common.Constant.listaStatus;
 import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
 import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
-import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
-import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_STAGE_NAME;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -31,7 +29,6 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
 import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.rest.v1.dto.*;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
@@ -44,11 +41,7 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
@@ -62,15 +55,8 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
-import javax.annotation.PostConstruct;
-import java.math.BigDecimal;
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.util.*;
-
-import static it.pagopa.pnss.common.Constant.*;
-import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
-import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_STAGE_NAME;
 
 @Service
 @Slf4j
@@ -232,7 +218,7 @@ public class UriBuilderService {
                     log.error(" Errore Lo stato non corrisponde");
                 }
             }
-            response = signBucket(presigner, bucketName, keyName, contentType,secret);
+            response = signBucket(presigner, bucketName, keyName, contentType,secret, storageType);
         } catch (AmazonServiceException ase) {
             log.error(" Errore AMAZON AmazonServiceException", ase);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException ");
@@ -257,12 +243,18 @@ public class UriBuilderService {
                 .build();
     }
 
-    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType, Map<String, String> secret) {
+    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType, Map<String, String> secret, String storageType) {
 
-        PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName).key(keyName).contentType(contenType).metadata(secret).build();
+        PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName)
+                .key(keyName).contentType(contenType)
+                .metadata(secret)
+                .tagging(storageType)
+                .build();
         PutObjectPresignRequest presignRequest =
                 PutObjectPresignRequest.builder()
-                        .signatureDuration(Duration.ofMinutes(10)).putObjectRequest(objectRequest).build();
+                        .signatureDuration(Duration.ofMinutes(10))
+                        .putObjectRequest(objectRequest)
+                        .build();
 
         PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(presignRequest);
         return presignedRequest;

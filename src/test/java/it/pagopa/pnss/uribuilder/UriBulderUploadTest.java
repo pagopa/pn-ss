@@ -55,6 +55,8 @@ public class UriBulderUploadTest {
 
     @Value("${file.upload.api.url}")
     String urlPath;
+
+
     @Autowired
     private WebTestClient webClient;
 

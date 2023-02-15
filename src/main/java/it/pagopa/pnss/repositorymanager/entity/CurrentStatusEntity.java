@@ -13,5 +13,6 @@ public class CurrentStatusEntity {
 
     private String storage;
     private List<String> allowedStatusTransitions;
+    private String technicalState;
 
 }

@@ -135,7 +135,7 @@ public class UriBuilderService {
                        }).onErrorResume(DocumentKeyNotPresentException.class, e -> {
 
                     	   DocumentType documentTypeDto = new DocumentType();
-                    	   documentTypeDto.setTipoDocumento(documentType);
+                    	   documentTypeDto.setTipoDocumento(DocumentType.TipoDocumentoEnum.valueOf(documentType));
 
                            Document documentRepositoryDto = new Document();
                            documentRepositoryDto.setContentType(contentType);

@@ -24,6 +24,11 @@ Parameters:
   #   Type: String
   #   Description: 'Where to send CDC'
 
+  PnSsGestoreBucketLambdaName:
+    Type: String
+    Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
+    Default: 'pn-safe-storage-gestore-bucket-lambda'
+
 Resources:
   # NullResource:
   #     Type: AWS::CloudFormation::WaitConditionHandle
@@ -145,9 +150,20 @@ Resources:
       #  LogFilePrefix: 'String'
       #MetricsConfigurations:
       #  MetricsConfigurations
-      NotificationConfiguration:
-        EventBridgeConfiguration:
-          EventBridgeEnabled: true
+      # NotificationConfiguration:
+      #   LambdaConfigurations:
+      #     - Event: 's3:ObjectCreated:*'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaName}'
+      #     - Event: 's3:ObjectRemoved:Delete'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaName}'
+      #     - Event: 's3:ObjectRestore:*'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaName}'
+      #     - Event: 's3:LifecycleExpiration:Delete'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaName}'
+      #     - Event: 's3:LifecycleTransition'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaName}'
+          # - Event: 's3:Replication'
+          #   Function: !GetAtt PnSsGestoreBucket.Arn
       #ObjectLockConfiguration:
       #  ObjectLockEnabled: 'String'
       #ObjectLockEnabled: false

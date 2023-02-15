@@ -91,7 +91,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentTypeResponse'
-
+  
   '/safestorage/internal/v1/doctypes':
     post:
       operationId: insertDocType

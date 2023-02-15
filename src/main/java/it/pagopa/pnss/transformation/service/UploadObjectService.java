@@ -1,5 +1,7 @@
 package it.pagopa.pnss.transformation.service;
 
+import it.pagopa.pnss.configurationproperties.BucketName;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -16,12 +18,15 @@ import static it.pagopa.pnss.common.Constant.STORAGETYPE;
 public class UploadObjectService  extends  CommonS3ObjectService {
 
 
-    @Value("${S3.bucket.hot.name}")
-    public  String bucketHot;
+//    @Value("${S3.bucket.hot.name}")
+//    public  String bucketHot;
+
+    @Autowired
+    private BucketName bucketName;
     public PutObjectResponse execute(String key, byte[] fileSigned){
         S3Client s3 = getS3Client();
         PutObjectRequest objectRequest = PutObjectRequest.builder()
-                .bucket(bucketHot)
+                .bucket(bucketName.ssHotName())
                 .key(key)
                 .tagging(STORAGETYPE) //Da verificare storageType
                 .build();

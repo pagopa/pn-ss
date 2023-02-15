@@ -22,9 +22,9 @@ import org.testcontainers.utility.DockerImageName;
 
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import it.pagopa.pnss.repositoryManager.entity.DocTypeEntity;
-import it.pagopa.pnss.repositoryManager.entity.DocumentEntity;
-import it.pagopa.pnss.repositoryManager.entity.UserConfigurationEntity;
+import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
+import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
+import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.exception.DynamoDbInitTableCreationException;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.internal.waiters.ResponseOrException;

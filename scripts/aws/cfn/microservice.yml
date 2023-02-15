@@ -182,6 +182,10 @@ Resources:
               - 'dynamodb:Describe*'
               - 'dynamodb:Scan'
               - 'dynamodb:List*'
+              - 'dynamodb:Batch*'
+              - 'dynamodb:PartiQL*'
+              - 'dynamodb:Update*'
+              - 'dynamodb:Put*'
             Resource:
               - !Sub '${PnSsTableArnAnagraficaClient}'
               - !Sub '${PnSsTableArnTipologieDocumenti}'
@@ -192,15 +196,24 @@ Resources:
               - 's3:GetBucket*'
               - 's3:GetObject*'
               - 's3:*MultipartUpload*'
+              - 's3:*LifecycleConfiguration'
+              - 's3:*Replication*'
+              - 's3:Replicate*'
+              - 's3:PutBucket*'
+              - 's3:PutObject*'
+              - 's3:RestoreObject'
             Resource:
-              - !Sub '${PnSsStagingBucketArn}'
               - !Sub '${PnSsBucketArn}'
-
+              - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
+              - !Sub '${PnSsStagingBucketArn}'
+              - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
           - Effect: Allow
             Action:
               - 'sqs:ReceiveMessage'
               - 'sqs:DeleteMessage'
               - 'sqs:PurgeQueue'
+              - 'sqs:Get*'
+              - 'sqs:List*'
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
 
@@ -212,8 +225,10 @@ Resources:
       PolicyDocument: 
         Statement: 
           - Action: 
-              - "SQS:SendMessage" 
-              - "SQS:ReceiveMessage"
+              - 'SQS:SendMessage'
+              - 'SQS:ReceiveMessage'
+              - 'SQS:DeleteMessage'
+              - 'SQS:ChangeMessageVisibility'
             Effect: "Allow"
             Resource: !Sub ${PnSsQueueArnStagingBucket}
             Principal:  

@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
@@ -45,6 +46,9 @@ public class DocTypesServiceImpl implements DocTypesService {
     
     private List<DocumentType> convert(List<DocTypeEntity> listEntity) {
     	List<DocumentType> listDto = new ArrayList<>();
+    	if (listEntity == null || listEntity.isEmpty()) {
+    		return listDto;
+    	}
     	listEntity.forEach(entity -> {
     		listDto.add(objectMapper.convertValue(entity, DocumentType.class));
     	});

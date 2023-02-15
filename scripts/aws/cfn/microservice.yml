@@ -135,6 +135,10 @@ Parameters:
   PnSsGestoreBucketLambdaName:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
+
+  PresignedUrlMinutesLifespan:
+    Type: String
+    Description: 'Minuti di validità dei pre-signed url prima di scadere'
   
 
 Resources:

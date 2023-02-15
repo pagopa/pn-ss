@@ -1,7 +1,11 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
@@ -9,7 +13,6 @@ import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -50,10 +53,10 @@ public class DocumentServiceImpl implements DocumentService {
         log.info("insertDocument() : IN : documentInput : {}", documentInput);
 
         if (documentInput == null) {
-            throw new RepositoryManagerException("document is null");
+            throw new RepositoryManagerException("Document is null");
         }
         if (documentInput.getDocumentKey() == null || documentInput.getDocumentKey().isBlank()) {
-            throw new RepositoryManagerException("document Id is null");
+            throw new RepositoryManagerException("Document Key is null");
         }
 
         DocumentEntity documentEntityInput = objectMapper.convertValue(documentInput, DocumentEntity.class);
@@ -74,22 +77,33 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Mono<Document> patchDocument(String documentKey, Document documentInput) {
-        log.info("patchDocument() : IN : documentKey : {} , documentInput {}", documentKey, documentInput);
-        DocumentEntity documentEntityInput = objectMapper.convertValue(documentInput, DocumentEntity.class);
-
+    public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges) {
+        log.info("patchDocument() : IN : documentKey : {} , documentChanges {}", documentKey, documentChanges);
+        
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
                    .map(documentEntityStored -> {
+                	   if (documentChanges == null) {
+                		   return documentEntityStored;
+                	   }
                        log.info("patchDocument() : documentEntityStored : {}", documentEntityStored);
-                       // aggiorno solo lo stato
-                       if (documentEntityInput.getDocumentState() != null) {
-                           documentEntityStored.setDocumentState(documentEntityInput.getDocumentState());
+                       if (documentChanges.getDocumentState() != null) {
+                           documentEntityStored.setDocumentState(Document.DocumentStateEnum.fromValue(documentChanges.getDocumentState().getValue()));
+                       }
+                       if (documentChanges.getRetentionUntil() != null && documentChanges.getRetentionUntil().isBlank()) {
+                    	   documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
+                       }
+                       if (documentChanges.getCheckSum() != null) {
+                    	   documentEntityStored.setCheckSum(documentChanges.getCheckSum().getValue());
+                       }
+                       if (documentChanges.getContentLenght() != null) {
+                    	   documentEntityStored.setContentLenght(documentChanges.getContentLenght());
                        }
                        log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
                        return documentEntityStored;
                    })
+                   .doOnError(IllegalArgumentException.class, throwable -> log.error(throwable.getMessage()))
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
     }

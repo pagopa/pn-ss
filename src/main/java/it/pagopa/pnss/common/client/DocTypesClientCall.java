@@ -1,11 +1,9 @@
 package it.pagopa.pnss.common.client;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import org.springframework.http.ResponseEntity;
 
-
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import reactor.core.publisher.Mono;
 
 public interface DocTypesClientCall {
 

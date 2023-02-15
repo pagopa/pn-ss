@@ -1,9 +1,41 @@
 package it.pagopa.pnss.uribuilder.service;
 
+import static it.pagopa.pnss.common.Constant.EU_CENTRAL_1;
+import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
+import static it.pagopa.pnss.common.Constant.PN_AAR;
+import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+import static it.pagopa.pnss.common.Constant.listaStatus;
+import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
+import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_STAGE_NAME;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.PostConstruct;
+
+import org.jetbrains.annotations.NotNull;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
+
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.rest.v1.dto.*;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
+import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
+import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
@@ -96,12 +128,15 @@ public class UriBuilderService {
                        return documentClientCall.getdocument(keyName).doOnNext(document -> {
                            throw new DocumentkeyPresentException(keyName);
                        }).onErrorResume(DocumentKeyNotPresentException.class, e -> {
+                    	   
+                    	   DocumentType documentTypeDto = new DocumentType();
+                    	   documentTypeDto.setTipoDocumento(documentType);
 
                            Document documentRepositoryDto = new Document();
                            documentRepositoryDto.setContentType(contentType);
                            documentRepositoryDto.setDocumentKey(keyName);
                            documentRepositoryDto.setDocumentState(Document.DocumentStateEnum.BOOKED);
-                           documentRepositoryDto.setDocumentType(retrieveDocType(documentType));
+                           documentRepositoryDto.setDocumentType(documentTypeDto);
                            return documentClientCall.postdocument(documentRepositoryDto);
                        });
                    })
@@ -149,25 +184,25 @@ public class UriBuilderService {
         return Mono.just(true);
     }
 
-    private Document.DocumentTypeEnum retrieveDocType(String documentType) {
-        if (documentType.equals(PN_DOWNTIME_LEGAL_FACTS)) {
-            //return Document.DocumentTypeEnum.PN_DOWNTIME_LEGAL_FACTS
-        }
-        if (documentType.equals(PN_NOTIFICATION_ATTACHMENTS)) {
-            return Document.DocumentTypeEnum.NOTIFICATION_ATTACHMENTS;
-        }
-        if (documentType.equals(PN_AAR)) {
-            return Document.DocumentTypeEnum.AAR;
-        }
-        if (documentType.equals(PN_LEGAL_FACTS)) {
-            return Document.DocumentTypeEnum.LEGAL_FACTS;
-        }
-        if (documentType.equals(PN_EXTERNAL_LEGAL_FACTS)) {
-            return Document.DocumentTypeEnum.EXTERNAL_LEGAL_FACTS;
-        }
-        return null;
-
-    }
+//    private Document.DocumentTypeEnum retrieveDocType(String documentType) {
+//        if (documentType.equals(PN_DOWNTIME_LEGAL_FACTS)) {
+//            //return Document.DocumentTypeEnum.PN_DOWNTIME_LEGAL_FACTS
+//        }
+//        if (documentType.equals(PN_NOTIFICATION_ATTACHMENTS)) {
+//            return Document.DocumentTypeEnum.NOTIFICATION_ATTACHMENTS;
+//        }
+//        if (documentType.equals(PN_AAR)) {
+//            return Document.DocumentTypeEnum.AAR;
+//        }
+//        if (documentType.equals(PN_LEGAL_FACTS)) {
+//            return Document.DocumentTypeEnum.LEGAL_FACTS;
+//        }
+//        if (documentType.equals(PN_EXTERNAL_LEGAL_FACTS)) {
+//            return Document.DocumentTypeEnum.EXTERNAL_LEGAL_FACTS;
+//        }
+//        return null;
+//
+//    }
 
 
     private FileCreationResponse.UploadMethodEnum extractUploadMethod(SdkHttpMethod method) {
@@ -237,7 +272,7 @@ public class UriBuilderService {
                                     throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey)))
 
                              .map((documentResponse) -> {
-                                if (!canRead.contains(documentResponse.getDocument().getDocumentType().getValue())) {
+                                if (!canRead.contains(documentResponse.getDocument().getDocumentType().getTipoDocumento())) {
                                     throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                             "Client : " + xPagopaSafestorageCxId +
                                                     " not has privilege for read document type " +
@@ -269,7 +304,7 @@ public class UriBuilderService {
         downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
         downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
-        downloadResponse.setDocumentType(doc.getDocumentType().getValue());
+        downloadResponse.setDocumentType(doc.getDocumentType().getTipoDocumento());
 
         downloadResponse.setKey(fileKey);
         downloadResponse.setRetentionUntil(new Date());

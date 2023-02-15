@@ -1,7 +1,11 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationChanges;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
@@ -9,7 +13,6 @@ import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -51,10 +54,10 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
         log.info("insertUserConfiguration() : IN : userConfigurationInput : {}", userConfigurationInput);
 
         if (userConfigurationInput == null) {
-            throw new RepositoryManagerException("userConfiguration is null");
+            throw new RepositoryManagerException("UserConfiguration is null");
         }
         if (userConfigurationInput.getName() == null || userConfigurationInput.getName().isBlank()) {
-            throw new RepositoryManagerException("userConfiguration Id is null");
+            throw new RepositoryManagerException("UserConfiguration Name is null");
         }
 
         UserConfigurationEntity userConfigurationEntity = objectMapper.convertValue(userConfigurationInput, UserConfigurationEntity.class);
@@ -77,32 +80,26 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
     }
 
     @Override
-    public Mono<UserConfiguration> patchUserConfiguration(String name, UserConfiguration userConfigurationInput) {
-        log.info("patchUserConfiguration() : IN : name : {} , userConfigurationInput {}", name, userConfigurationInput);
-
-        UserConfigurationEntity userConfigurationEntityInput =
-                objectMapper.convertValue(userConfigurationInput, UserConfigurationEntity.class);
+    public Mono<UserConfiguration> patchUserConfiguration(String name, UserConfigurationChanges userConfigurationChanges) {
+        log.info("patchUserConfiguration() : IN : name : {} , userConfigurationChanges {}", name, userConfigurationChanges);
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
                    .map(entityStored -> {
-                       if (entityStored.getCanCreate() != null && !entityStored.getCanCreate().isEmpty() &&
-                           userConfigurationEntityInput.getCanCreate() != null && !userConfigurationEntityInput.getCanCreate().isEmpty()) {
-                           userConfigurationEntityInput.getCanCreate().forEach(can -> {
-                               if (!entityStored.getCanCreate().contains(can)) {
-                                   entityStored.getCanCreate().add(can);
-                               }
-                           });
-                       }
-                       if (entityStored.getCanRead() != null && !entityStored.getCanRead().isEmpty() &&
-                           userConfigurationEntityInput.getCanRead() != null && !userConfigurationEntityInput.getCanRead().isEmpty()) {
-                           userConfigurationEntityInput.getCanRead().forEach(can -> {
-                               if (!entityStored.getCanRead().contains(can)) {
-                                   entityStored.getCanRead().add(can);
-                               }
-                           });
-                       }
+                	   log.info("patchUserConfiguration() : userConfigurationEntity begore patch : {}", entityStored);
+                	   if (userConfigurationChanges.getCanCreate() != null && !userConfigurationChanges.getCanCreate().isEmpty()) {
+                		   entityStored.setCanCreate(userConfigurationChanges.getCanCreate());
+                	   }
+                	   if (userConfigurationChanges.getCanRead() != null && !userConfigurationChanges.getCanRead().isEmpty()) {
+                		   entityStored.setCanRead(userConfigurationChanges.getCanRead());
+                	   }
+                	   if (userConfigurationChanges.getApiKey() != null && !userConfigurationChanges.getApiKey().isBlank()) {
+                		   entityStored.setApiKey(userConfigurationChanges.getApiKey());
+                	   }
+                	   if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
+                		   entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
+                	   }
                        log.info("patchUserConfiguration() : userConfigurationEntity for patch : {}", entityStored);
                        return entityStored;
                    })

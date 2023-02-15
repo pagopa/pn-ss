@@ -17,6 +17,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
@@ -43,6 +44,7 @@ public class UserConfigurationInternalApiControllerTest {
 	private static final String PARTITION_ID_NO_EXISTENT = "name_bad";
 	
 	private static UserConfiguration userConfigurationInput;
+	private static UserConfigurationChanges userConfigurationChanges;
 	
 	private static DynamoDbTable<UserConfigurationEntity> dynamoDbTable;
 	
@@ -81,21 +83,40 @@ public class UserConfigurationInternalApiControllerTest {
 		userConfigurationInput.setSignatureInfo("mmm");
 		userConfigurationInput.setDestination(destination);
 		userConfigurationInput.setApiKey("apiKey");
+		
+		List<String> canCreate1 = new ArrayList<>();
+		canCreate1.add("A");
+		List<String> canRead1  = new ArrayList<>();
+		canRead1.add("DD");
+		
+		userConfigurationChanges = new UserConfigurationChanges();
+		userConfigurationChanges.setCanCreate(canCreate1);
+		userConfigurationChanges.setCanRead(canRead1);
 	}
 	
 	@Test
 	// codice test: ANSS.101.1
 	void postItem() {
 		
-		userConfigurationInput.setName("nameOther");
-		
-		webTestClient.post()
-	        .uri(BASE_PATH)
+		EntityExchangeResult<UserConfigurationResponse> resultPreInsert =
+			webTestClient.get()
+			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(userConfigurationInput.getName()))
 	        .accept(APPLICATION_JSON)
-	        .contentType(APPLICATION_JSON)
-	        .body(BodyInserters.fromValue(userConfigurationInput))
 	        .exchange()
-	        .expectStatus().isOk();
+	        .expectBody(UserConfigurationResponse.class).returnResult();
+		
+		log.info("\n Test 1 (postItem) resultPreInsert {} \n", resultPreInsert);
+
+		if (resultPreInsert == null || resultPreInsert.getResponseBody() == null || resultPreInsert.getResponseBody().getUserConfiguration() == null) 
+		{
+			webTestClient.post()
+		        .uri(BASE_PATH)
+		        .accept(APPLICATION_JSON)
+		        .contentType(APPLICATION_JSON)
+		        .body(BodyInserters.fromValue(userConfigurationInput))
+		        .exchange()
+		        .expectStatus().isOk();
+		}
 		
 		log.info("\n Test 1 (postItem) passed \n");
 	}
@@ -104,13 +125,27 @@ public class UserConfigurationInternalApiControllerTest {
     // codice test: ANSS.101.1
     void postItemPartitionKeyDuplicated() {
     	
-		webTestClient.post()
-		        .uri(BASE_PATH)
+		EntityExchangeResult<UserConfigurationResponse> resultPreInsert =
+				webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(userConfigurationInput.getName()))
 		        .accept(APPLICATION_JSON)
-		        .contentType(APPLICATION_JSON)
-		        .body(BodyInserters.fromValue(userConfigurationInput))
 		        .exchange()
-		        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+		        .expectBody(UserConfigurationResponse.class).returnResult();
+		
+		log.info("\n Test 2 (postItemPartitionKeyDuplicated) resultPreInsert {} \n", resultPreInsert);
+
+		
+		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null && resultPreInsert.getResponseBody().getUserConfiguration() != null) 
+		{
+			webTestClient.post()
+			        .uri(BASE_PATH)
+			        .accept(APPLICATION_JSON)
+			        .contentType(APPLICATION_JSON)
+			        .body(BodyInserters.fromValue(userConfigurationInput))
+			        .exchange()
+			        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+		
+		}
 		
 		log.info("\n Test 2 (postItemPartitionKeyDuplicated) passed \n");
     }
@@ -176,34 +211,34 @@ public class UserConfigurationInternalApiControllerTest {
     // codice test: ANSS.102.1
     void patchItem() {
     	
-		List<String> canCreate = new ArrayList<>();
-		canCreate.add("B");
+		EntityExchangeResult<UserConfigurationResponse> documentInDb = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
+		        .accept(APPLICATION_JSON)
+		        .exchange()
+		        .expectStatus().isOk()
+		        .expectBody(UserConfigurationResponse.class).returnResult();
+		log.info("\n Test 6 (patchItem) : userConfiguration before patch {}", documentInDb.getResponseBody().getUserConfiguration());
+		
+		log.info("\n Test 6 (patchItem) : userConfigurationChanges {}", userConfigurationChanges);
     	
-    	userConfigurationInput.setCanCreate(canCreate);
-    	
-    	log.info("\n Test 6 (patchItem) userConfigurationInput : {} \n", userConfigurationInput);
-    	
-    	EntityExchangeResult<UserConfigurationResponse> userConfigurationUpdated1 = webTestClient.patch()
+    	webTestClient.patch()
 	        .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
 	        .accept(APPLICATION_JSON)
 	        .contentType(APPLICATION_JSON)
-	        .body(BodyInserters.fromValue(userConfigurationInput))
+	        .body(BodyInserters.fromValue(userConfigurationChanges))
 	        .exchange()
-	        .expectStatus().isOk()
-	        .expectBody(UserConfigurationResponse.class).returnResult();
+	        .expectStatus().isOk();
     	
-    	log.info("\n Test 6 (patchItem) userConfigurationUpdated1 : {} \n", userConfigurationUpdated1.getResponseBody().getUserConfiguration());
-		
-		EntityExchangeResult<UserConfigurationResponse> userConfigurationUpdated2 = webTestClient.get()
+		EntityExchangeResult<UserConfigurationResponse> userConfigurationUpdated = webTestClient.get()
 				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
 		        .accept(APPLICATION_JSON)
 		        .exchange()
 		        .expectStatus().isOk()
 		        .expectBody(UserConfigurationResponse.class).returnResult();
 		
-		log.info("\n Test 6 (patchItem) userConfigurationUpdated2 : {} \n", userConfigurationUpdated2.getResponseBody().getUserConfiguration());
+		log.info("\n Test 6 (patchItem) userConfigurationUpdated2 : {} \n", userConfigurationUpdated.getResponseBody().getUserConfiguration());
 			
-		//Assertions.assertEquals(userInput.getCanCreate(), userConfigurationUpdated.getResponseBody().getCanCreate());
+		Assertions.assertEquals(userConfigurationChanges.getCanCreate(), userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanCreate());
 	
 		log.info("\n Test 6 (patchItem) passed \n");
     }

@@ -1,4 +1,5 @@
 {
   "Parameters": {
+    "PnSsGestoreBucketLambdaName":"pn-safe-storage-gestore-bucket-lambda"
   }
 }

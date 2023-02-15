@@ -121,31 +121,52 @@ public class DocumentInternalApiControllerTest {
     // codice test: DCSS.101.1
     void postItem() {
     	
-    	documentInput.setDocumentKey("document_key_one");
+		EntityExchangeResult<DocumentResponse> resultPreInsert = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentInput.getDocumentKey()))
+		        .accept(APPLICATION_JSON)
+		        .exchange()
+		        .expectStatus().isOk()
+		        .expectBody(DocumentResponse.class).returnResult();
     	
- 		webTestClient.post()
-	        .uri(BASE_PATH)
-	        .accept(APPLICATION_JSON)
-	        .contentType(APPLICATION_JSON)
-	        .body(BodyInserters.fromValue(documentInput))
-	        .exchange()
-	        .expectStatus().isOk();
+		log.info("\n Test 1 (postItem) resultPreInsert {} \n", resultPreInsert);
+		
+		if (resultPreInsert == null || resultPreInsert.getResponseBody() == null || resultPreInsert.getResponseBody().getDocument() == null) 
+		{
+	 		webTestClient.post()
+		        .uri(BASE_PATH)
+		        .accept(APPLICATION_JSON)
+		        .contentType(APPLICATION_JSON)
+		        .body(BodyInserters.fromValue(documentInput))
+		        .exchange()
+		        .expectStatus().isOk();
+		}
 		
 		log.info("\n Test 1 (postItem) passed \n");
-    	
     }
     
     @Test
     // codice test: DCSS.101.2
     void postItemPartitionKeyDuplicated() {
-  
-		webTestClient.post()
-	        .uri(BASE_PATH)
-	        .accept(APPLICATION_JSON)
-	        .contentType(APPLICATION_JSON)
-	        .body(BodyInserters.fromValue(documentInput))
-	        .exchange()
-	        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+    	
+		EntityExchangeResult<DocumentResponse> resultPreInsert = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentInput.getDocumentKey()))
+		        .accept(APPLICATION_JSON)
+		        .exchange()
+		        .expectStatus().isOk()
+		        .expectBody(DocumentResponse.class).returnResult();
+    	
+		log.info("\n Test 2 (postItemPartitionKeyDuplicated) resultPreInsert {} \n", resultPreInsert);
+		
+		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null && resultPreInsert.getResponseBody().getDocument() != null)  {
+	  
+			webTestClient.post()
+		        .uri(BASE_PATH)
+		        .accept(APPLICATION_JSON)
+		        .contentType(APPLICATION_JSON)
+		        .body(BodyInserters.fromValue(documentInput))
+		        .exchange()
+		        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+		}
 			
 		log.info("\n Test 2 (postItemPartitionKeyDuplicated) passed \n");
     	

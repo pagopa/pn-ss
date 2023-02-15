@@ -1,5 +1,8 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -9,7 +12,6 @@ import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationRequest;
@@ -45,6 +47,19 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
 		return sb.toString();
 	}
 	
+	private List<LifecycleRule> filter(List<LifecycleRule> listIn) {
+		List<LifecycleRule> listOut = new ArrayList<>();
+		if (listIn == null || listIn.isEmpty()) {
+			return listOut;
+		}
+		listIn.forEach(rule -> {
+			if (rule.filter() != null && rule.filter().and() != null && rule.filter().and().hasTags()) {
+				listOut.add(rule);
+			}
+		});
+		return listOut;
+	}
+	
 	private LifecycleRuleDTO getLifecycleRuleDTO(LifecycleRule rule) {
 		log.info("getLifecycleRuleDTO() : START");
 		LifecycleRuleDTO dto = new LifecycleRuleDTO();
@@ -61,6 +76,18 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
 		dto.setTransitionDays(rule.hasTransitions() ? formatInYearsDays(rule.transitions().get(0).days()) : dto.getExpirationDays());
 		log.info("getLifecycleRuleDTO() : dto : {}", dto);
 		return dto;
+	}
+	
+	private List<LifecycleRuleDTO> convert(List<LifecycleRule> listIn) {
+		log.info("convert() : START");
+		List<LifecycleRuleDTO> listOut = new ArrayList<>();
+		if (listIn == null || listIn.isEmpty()) {
+			return listOut;
+		}
+		listIn.forEach(rule -> {
+			listOut.add(getLifecycleRuleDTO(rule));
+		});
+		return listOut;
 	}
 	
 	private GetBucketLifecycleConfigurationResponse getAsynchLifecycleConfigurationResponse() {
@@ -80,7 +107,8 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
 		}
 	}
 	
-	public Flux<LifecycleRuleDTO> getLifecycleConfiguration() {
+	public Mono<List<LifecycleRuleDTO> > getLifecycleConfiguration() {
+//	public Flux<LifecycleRuleDTO> getLifecycleConfiguration() {
 		log.info("getLifecycleConfiguration() : START");
 		
 		GetBucketLifecycleConfigurationResponse response = getAsynchLifecycleConfigurationResponse();
@@ -88,12 +116,19 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
 			throw new BucketException("No Rules founded");
 		}
 		
-		return Flux.fromIterable(response.rules())
-				.filter(rule -> rule.filter() != null && rule.filter().and() != null && rule.filter().and().hasTags())
-				.map(this::getLifecycleRuleDTO)
-				.onErrorResume(throwable -> {
-					log.error("getLifecycleConfiguration() : error",throwable);
-					return Mono.error(new BucketException(throwable.getMessage()));
-				});
+//		 Flux.fromIterable(response.rules())
+//				.filter(rule -> rule.filter() != null && rule.filter().and() != null && rule.filter().and().hasTags())
+//				.map(this::getLifecycleRuleDTO)
+//				.onErrorResume(throwable -> {
+//					log.error("getLifecycleConfiguration() : error",throwable);
+//					return Mono.error(new BucketException(throwable.getMessage()));
+//				});
+		 
+		 return Mono.just(filter(response.rules()))
+			.map(this::convert)
+			.onErrorResume(throwable -> {
+				log.error("getLifecycleConfiguration() : error",throwable);
+				return Mono.error(new BucketException(throwable.getMessage()));
+			});
 	}
 }

@@ -171,6 +171,8 @@ public class DocTypeInternalApiControllerTest {
 					.accept(APPLICATION_JSON)
 					.exchange()
 					.expectBody(DocumentTypeResponse.class).returnResult();
+		
+		log.info("\n Test 2 (postItemDuplicatedKey) resultPreInsert {} \n", resultPreInsert);
 
 		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null && resultPreInsert.getResponseBody().getDocType() != null) 
 		{

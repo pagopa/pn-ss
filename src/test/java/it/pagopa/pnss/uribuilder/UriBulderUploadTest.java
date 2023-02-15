@@ -36,9 +36,12 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.Random;
 
 import static it.pagopa.pnss.common.Constant.*;
 
@@ -85,8 +88,6 @@ public class UriBulderUploadTest {
     private String getUploadFileEndpoint(String requestIdx) {
         return urlPath;
     }
-
-
 
 
     @Test
@@ -301,7 +302,7 @@ public class UriBulderUploadTest {
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
         fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isBadRequest();
+                .isForbidden();
     }
 
 }

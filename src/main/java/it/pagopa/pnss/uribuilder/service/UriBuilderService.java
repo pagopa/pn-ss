@@ -135,7 +135,7 @@ public class UriBuilderService {
                        }).onErrorResume(DocumentKeyNotPresentException.class, e -> {
 
                     	   DocumentType documentTypeDto = new DocumentType();
-                    	   documentTypeDto.setTipoDocumento(DocumentType.TipoDocumentoEnum.valueOf(documentType));
+                    	   documentTypeDto.setTipoDocumento(documentType);
 
                            Document documentRepositoryDto = new Document();
                            documentRepositoryDto.setContentType(contentType);
@@ -225,12 +225,9 @@ public class UriBuilderService {
         try {
             S3Presigner presigner = getS3Presigner();
             if(docTypesClientCall.getdocTypes(documentType).block().getDocType().getStatuses() != null) {
-                List<Map<String, CurrentStatus>> statuses = docTypesClientCall.getdocTypes(documentType).block().getDocType().getStatuses();
-                Optional<Map<String, CurrentStatus>> status = statuses.stream()
-                        .filter(s -> s.containsKey(documentState))
-                        .findFirst();
-                if (status.isPresent()) {
-                    storageType = status.get().get(documentState).getStorage();
+               Map<String, CurrentStatus> statuses = docTypesClientCall.getdocTypes(documentType).block().getDocType().getStatuses();
+                if (statuses.containsKey(documentType)) {
+                    storageType = statuses.get(documentState).getStorage();
                 } else {
                     log.error(" Errore Lo stato non corrisponde");
                 }
@@ -320,7 +317,7 @@ public class UriBuilderService {
         downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
         downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
-        downloadResponse.setDocumentType(doc.getDocumentType().getValue());
+        downloadResponse.setDocumentType(doc.getDocumentType().getTipoDocumento());
 
         downloadResponse.setKey(fileKey);
         downloadResponse.setRetentionUntil(new Date());

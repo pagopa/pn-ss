@@ -107,7 +107,7 @@ public class UriBulderUploadTest {
 
         DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
         DocumentType documentType = new DocumentType();
-        documentType.setTipoDocumento(DocumentType.TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS);
+        documentType.setTipoDocumento(PN_LEGAL_FACTS);
         documentTypeResponse.setDocType(documentType);
 
         Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
@@ -182,7 +182,7 @@ public class UriBulderUploadTest {
 
         DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
         DocumentType documentType = new DocumentType();
-        documentType.setTipoDocumento(DocumentType.TipoDocumentoEnum.NOTIFICATION_ATTACHMENTS);
+        documentType.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
         documentTypeResponse.setDocType(documentType);
 
         Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);

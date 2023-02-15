@@ -3,6 +3,7 @@ package it.pagopa.pnss.repositorymanager.service.impl;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
@@ -50,15 +51,14 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         if (docType.getStatuses() != null &&  !docType.getStatuses().isEmpty()) {
         	Map<String, DocumentTypeConfigurationStatuses> statuses = new HashMap<>();
         	dtc.setStatuses(statuses);
-	        docType.getStatuses().forEach(status -> {
-	        	status.keySet().forEach(key -> {
-	        		CurrentStatus dtCurrentStatus = status.get(key);
-	        		DocumentTypeConfigurationStatuses dtcStatues = new DocumentTypeConfigurationStatuses();
-	        		dtcStatues.setStorage(dtCurrentStatus.getStorage());
-	        		dtcStatues.setAllowedStatusTransitions(dtCurrentStatus.getAllowedStatusTransitions());
-	        		dtc.getStatuses().put(key, dtcStatues);
-	        	});
-	        });
+        	Set<String> keySet =  docType.getStatuses().keySet();
+        	keySet.forEach(key -> {
+        		CurrentStatus dtCurrentStatus = docType.getStatuses().get(key);
+        		DocumentTypeConfigurationStatuses dtcStatues = new DocumentTypeConfigurationStatuses();
+        		dtcStatues.setStorage(dtCurrentStatus.getStorage());
+        		dtcStatues.setAllowedStatusTransitions(dtCurrentStatus.getAllowedStatusTransitions());
+        		dtc.getStatuses().put(key, dtcStatues);
+        	});
         }
         dtc.setInformationClassification(
                 docType.getInformationClassification() != null ? ConfidentialityLevel.fromValue(docType.getInformationClassification()

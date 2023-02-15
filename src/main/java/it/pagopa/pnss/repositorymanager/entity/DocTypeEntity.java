@@ -1,7 +1,6 @@
 package it.pagopa.pnss.repositorymanager.entity;
 
 
-import java.util.List;
 import java.util.Map;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConvertedEnum;
@@ -25,7 +24,7 @@ public class DocTypeEntity {
 	private String tipoDocumento;
 	private ChecksumEnum checksum;
 	private String initialStatus;
-	private List<Map<String, CurrentStatusEntity>> statuses;
+	private Map<String, CurrentStatusEntity> statuses;
 	@Getter(AccessLevel.NONE)
 	private InformationClassificationEnum informationClassification;
 	private Boolean digitalSignature;

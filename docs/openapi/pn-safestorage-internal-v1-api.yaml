@@ -312,9 +312,8 @@ components:
         initialStatus:
           type: string
         statuses:
-          type: array
-          items:
-            additionalProperties:
+          type: object
+          additionalProperties:
               $ref: '#/components/schemas/CurrentStatus'
         informationClassification:
           description: >-
@@ -332,10 +331,10 @@ components:
     CurrentStatus:
       type: object
       properties:
-        storage:
-          $ref: '#/components/schemas/Storage'
         allowedStatusTransitions:
           $ref: '#/components/schemas/AllowedStatusTransitions'
+        storage:
+          $ref: '#/components/schemas/Storage'
     Storage:
       type: string
     AllowedStatusTransitions:

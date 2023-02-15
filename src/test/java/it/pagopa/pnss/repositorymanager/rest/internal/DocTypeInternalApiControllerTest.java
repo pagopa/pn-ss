@@ -73,49 +73,43 @@ public class DocTypeInternalApiControllerTest {
     @BeforeEach
 	public void createDocumentType() {
     	log.info("execute createDocumentType() : START");
+    	
+		List<String> allowedStatusTransitions1 = new ArrayList<>();
+		allowedStatusTransitions1.add("ATTACHED");
 		
-		List<String> allowedStatusTransitions = new ArrayList<>();
-		allowedStatusTransitions.add("ATTACHED");
-
-		CurrentStatus currentStatus = new CurrentStatus();
-		currentStatus.setStorage("PN_LEGAL_FACTS");
-		currentStatus.setAllowedStatusTransitions(allowedStatusTransitions);
+		CurrentStatus currentStatus1 = new CurrentStatus();
+		currentStatus1.setStorage("PN_LEGAL_FACTS");
+		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
 		
-		Map<String, CurrentStatus> status = new HashMap<>();
-		status.put("SAVED",currentStatus);
-		
-		List<Map<String, CurrentStatus>> statuses = new ArrayList<>();
-		statuses.add(status);
+		Map<String, CurrentStatus> statuses1 = new HashMap<>();
+		statuses1.put("SAVED",currentStatus1);
 
     	docTypesInsertInput = new DocumentType();
     	docTypesInsertInput.setTipoDocumento(PARTITION_ID_INSERT_LEGAL_FACTS);
     	docTypesInsertInput.setChecksum(ChecksumEnum.SHA256); 
     	docTypesInsertInput.setInitialStatus("SAVED");
-    	docTypesInsertInput.setStatuses(statuses);
+    	docTypesInsertInput.setStatuses(statuses1);
     	docTypesInsertInput.setInformationClassification(InformationClassificationEnum.HC);
     	docTypesInsertInput.setDigitalSignature(true);
     	docTypesInsertInput.setTimeStamped(TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesInsertInput : {}", docTypesInsertInput);
 		
-		List<String> allowedStatusTransitions1 = new ArrayList<>();
-		allowedStatusTransitions1.add("ATTACHED");
-
-		CurrentStatus currentStatus1 = new CurrentStatus();
-		currentStatus1.setStorage("PN_NOTIFICATION_ATTACHMENTS");
-		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions);
+		List<String> allowedStatusTransitions2 = new ArrayList<>();
+		allowedStatusTransitions2.add("ATTACHED");
 		
-		Map<String, CurrentStatus> status1 = new HashMap<>();
-		status1.put("PRELOADED",currentStatus);
+		CurrentStatus currentStatus2 = new CurrentStatus();
+		currentStatus2.setStorage("PN_NOTIFICATION_ATTACHMENTS");
+		currentStatus2.setAllowedStatusTransitions(allowedStatusTransitions1);
 		
-		List<Map<String, CurrentStatus>> statuses1 = new ArrayList<>();
-		statuses1.add(status1);
-    	
+		Map<String, CurrentStatus> statuses2 = new HashMap<>();
+		statuses2.put("PRELOADED",currentStatus1);
+		
     	docTypesUpdateDeleteInput = new DocumentType();
 		docTypesUpdateDeleteInput.setTipoDocumento(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
-		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.SHA256); // ok
+		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.SHA256);
 		docTypesUpdateDeleteInput.setInitialStatus("PRELOADED");
-		docTypesUpdateDeleteInput.setStatuses(statuses1);
-		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.HC); // ok
+		docTypesUpdateDeleteInput.setStatuses(statuses2);
+		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.HC);
 		docTypesUpdateDeleteInput.setDigitalSignature(true);
 		docTypesUpdateDeleteInput.setTimeStamped(TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesUpdateDeleteInput : {}", docTypesUpdateDeleteInput);

@@ -82,24 +82,21 @@ public class DocumentInternalApiControllerTest {
 	public void createDocument() {
     	log.info("execute createDocument()");
     	
-		List<String> allowedStatusTransitions = new ArrayList<>();
-		allowedStatusTransitions.add("ATTACHED");
-
-		CurrentStatus currentStatus = new CurrentStatus();
-		currentStatus.setStorage("PN_LEGAL_FACTS");
-		currentStatus.setAllowedStatusTransitions(allowedStatusTransitions);
+		List<String> allowedStatusTransitions1 = new ArrayList<>();
+		allowedStatusTransitions1.add("ATTACHED");
 		
-		Map<String, CurrentStatus> status = new HashMap<>();
-		status.put("SAVED",currentStatus);
+		CurrentStatus currentStatus1 = new CurrentStatus();
+		currentStatus1.setStorage("PN_LEGAL_FACTS");
+		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
 		
-		List<Map<String, CurrentStatus>> statuses = new ArrayList<>();
-		statuses.add(status);
-    	
+		Map<String, CurrentStatus> statuses1 = new HashMap<>();
+		statuses1.put("SAVED",currentStatus1);
+	
 		DocumentType docTypes = new DocumentType();
     	docTypes.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
     	docTypes.setChecksum(ChecksumEnum.SHA256); 
     	docTypes.setInitialStatus("SAVED");
-    	docTypes.setStatuses(statuses);
+    	docTypes.setStatuses(statuses1);
     	docTypes.setInformationClassification(InformationClassificationEnum.HC);
     	docTypes.setDigitalSignature(true);
     	docTypes.setTimeStamped(TimeStampedEnum.STANDARD);

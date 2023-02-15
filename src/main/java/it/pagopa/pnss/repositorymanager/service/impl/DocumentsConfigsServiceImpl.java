@@ -2,6 +2,7 @@ package it.pagopa.pnss.repositorymanager.service.impl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,7 +42,7 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         this.storageConfigurationsService = storageConfigurationsService;
     }
 
-    private DocumentTypeConfiguration getDocumentTypeConfiguration(DocumentType docType) {
+    private DocumentTypeConfiguration convertDocumentTypeConfiguration(DocumentType docType) {
         if (docType == null) {
             throw new RepositoryManagerException("DocType is null: can't convert in DocumentTypeConfiguration");
         }
@@ -68,8 +69,14 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         dtc.setChecksum(docType.getChecksum() != null ? ChecksumEnum.fromValue(docType.getChecksum().getValue()) : null);
         return dtc;
     }
+    
+    private List<DocumentTypeConfiguration> convertDocumentTypeConfigurationList(List<DocumentType> listDocTypeDto) {
+    	List<DocumentTypeConfiguration> list = new ArrayList<>();
+    	listDocTypeDto.forEach(docTypeDto -> list.add(convertDocumentTypeConfiguration(docTypeDto)));
+    	return list;
+    }
 
-    private StorageConfiguration getStorageConfiguration(LifecycleRuleDTO lifecycleRule) {
+    private StorageConfiguration convertStorageConfiguration(LifecycleRuleDTO lifecycleRule) {
         if (lifecycleRule == null) {
             throw new BucketException("LifecycleRule is null: can't convert in StorageConfiguration");
         }
@@ -79,6 +86,12 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         sc.setHotPeriod(lifecycleRule.getTransitionDays());
         return sc;
     }
+    
+    private List<StorageConfiguration> convert(List<LifecycleRuleDTO> listLifecycleRuleDto) {
+    	List<StorageConfiguration> list = new ArrayList<>();
+    	listLifecycleRuleDto.forEach(lifecycleRule -> list.add(convertStorageConfiguration(lifecycleRule)));
+    	return list;
+    }
 
     @Override
     public Mono<DocumentTypesConfigurations> getDocumentsConfigs() {
@@ -86,13 +99,13 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         DocumentTypesConfigurations dtc = new DocumentTypesConfigurations();
         dtc.setDocumentsTypes(new ArrayList<>());
         dtc.setStorageConfigurations(new ArrayList<>());
-        
-        return storageConfigurationsService.getLifecycleConfiguration().doOnNext(lifecycleRuleDTO -> {
-            log.info("getDocumentsConfigs() : elem lifecycleRule {}", lifecycleRuleDTO);
-            dtc.getStorageConfigurations().add(getStorageConfiguration(lifecycleRuleDTO));
-        }).flatMap(lifecycleRule -> docTypesService.getAllDocumentType()).doOnNext(documentType -> {
-            log.info("getDocumentsConfigs() : elem docType {}", documentType);
-            dtc.getDocumentsTypes().add(getDocumentTypeConfiguration(documentType));
+
+        return storageConfigurationsService.getLifecycleConfiguration().doOnNext(lifecycleRuleList -> {
+            log.info("getDocumentsConfigs() : elem lifecycleRuleList {}", lifecycleRuleList);
+            dtc.setStorageConfigurations(convert(lifecycleRuleList));
+        }).flatMap(lifecycleRule -> docTypesService.getAllDocumentType()).doOnNext(documentTypeList -> {
+            log.info("getDocumentsConfigs() : elem documentTypeList {}", documentTypeList);
+            dtc.setDocumentsTypes(convertDocumentTypeConfigurationList(documentTypeList));
         }).then(Mono.just(dtc));
 
         // NOTA: docTypesService.getAllDocumentType() potrebbe resituire una lista vuota

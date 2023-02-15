@@ -1,7 +1,11 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
@@ -12,7 +16,6 @@ import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -27,6 +30,7 @@ public class DocTypesServiceImpl implements DocTypesService {
     private final ObjectMapper objectMapper;
 
     private final DynamoDbAsyncTable<DocTypeEntity> docTypeEntityDynamoDbAsyncTable;
+    
 
     public DocTypesServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
@@ -39,6 +43,17 @@ public class DocTypesServiceImpl implements DocTypesService {
         log.error("getErrorIdDocTypeNotFoundException() : docType with typeId \"{}\" not found", typeId);
         return Mono.error(new DocumentTypeNotPresentException(typeId));
     }
+    
+    private List<DocumentType> convert(List<DocTypeEntity> listEntity) {
+    	List<DocumentType> listDto = new ArrayList<>();
+    	if (listEntity == null || listEntity.isEmpty()) {
+    		return listDto;
+    	}
+    	listEntity.forEach(entity -> {
+    		listDto.add(objectMapper.convertValue(entity, DocumentType.class));
+    	});
+    	return listDto;
+    }
 
     @Override
     public Mono<DocumentType> getDocType(String typeId) {
@@ -50,12 +65,19 @@ public class DocTypesServiceImpl implements DocTypesService {
     }
 
     @Override
-    public Flux<DocumentType> getAllDocumentType() {
+//    public Flux<DocumentType> getAllDocumentType() {
+    public Mono<List<DocumentType>> getAllDocumentType() {
         log.info("getAllDocumentType() : START");
+        
+//        return Mono.from(docTypeEntityDynamoDbAsyncTable.scan())
+//                .map(Page::items)
+//                .flatMapMany(Flux::fromIterable)
+//                .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
+        
         return Mono.from(docTypeEntityDynamoDbAsyncTable.scan())
-                   .map(Page::items)
-                   .flatMapMany(Flux::fromIterable)
-                   .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
+        		   .map(Page::items)
+        		   .switchIfEmpty(Mono.empty())
+        		   .map(this::convert);
     }
 
     @Override

@@ -236,6 +236,62 @@ Resources:
               AWS: 
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
 
+  PnSsGestoreBucketRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [!Sub 'PnSsGestoreBucketLambdaName', '-role-name']]
+      Description: 'Ruolo della Lambda che implementa la funzionalità del Gestore Bucket'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        # - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action:
+          - 'sts:AssumeRole'
 
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['',['/pn-safestorage/', !Ref PnSsGestoreBucket]]
+      RetentionInDays: 30
+            
+  PnSsGestoreBucket:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: 'Pn SafeStorage Gestore Bucket'
+      Handler: index.lambda_handler
+      MemorySize: 256
+      Runtime: python3.8
+      Role: !GetAtt PnSsGestoreBucketRole.Arn
+      Timeout: 240
+      Environment:
+        Variables:
+          EnvEntry1: 'TemporaryEnvVar'
+      Code:
+        ZipFile: |
+            import os
+            import boto3
+            import botocore
+            import logging
+            logger = logging.getLogger()
+            logger.setLevel(logging.INFO)
+            #logger.setLevel(logging.DEBUG)
+            # Env variables from CFN
+            envvar = os.environ.get('EnvEntry1')
+            def lambda_handler(event, context):
+                print(event)
+
+  PnSsGestoreBucketNotificationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt PnSsGestoreBucket.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Ref PnSsBucketArn
 
               

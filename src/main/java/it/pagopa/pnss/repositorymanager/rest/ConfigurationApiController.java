@@ -1,6 +1,9 @@
 package it.pagopa.pnss.repositorymanager.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pn.template.rest.v1.api.CfgApi;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
@@ -8,8 +11,11 @@ import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
+import it.pagopa.pnss.repositorymanager.rest.internal.DocTypeInternalApiController;
 import it.pagopa.pnss.repositorymanager.service.DocumentsConfigsService;
 import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,6 +24,7 @@ import reactor.core.publisher.Mono;
 
 
 @RestController
+@Slf4j
 public class ConfigurationApiController implements CfgApi {
 
     private final UserConfigurationService userConfigurationService;
@@ -30,7 +37,7 @@ public class ConfigurationApiController implements CfgApi {
         this.documentsConfigsService = documentsConfigsService;
         this.objectMapper = objectMapper;
     }
-
+    
     private Mono<ResponseEntity<DocumentTypesConfigurations>> getDocumentTypesConfigurationsErrorResponse(Throwable throwable) {
         DocumentTypesConfigurations response = new DocumentTypesConfigurations();
         if (throwable instanceof DocumentTypeNotPresentException) {
@@ -38,6 +45,8 @@ public class ConfigurationApiController implements CfgApi {
         } else if (throwable instanceof BucketException) {
             return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response));
         } else {
+        	log.info("getErrorResponse() : other");
+        	log.error("errore",throwable);
             return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response));
         }
     }

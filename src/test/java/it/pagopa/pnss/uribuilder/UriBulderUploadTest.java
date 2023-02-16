@@ -1,19 +1,17 @@
 package it.pagopa.pnss.uribuilder;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.*;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
-import it.pagopa.pnss.common.client.DocTypesClientCall;
-import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-
-import it.pagopa.pnss.uribuilder.service.UriBuilderService;
-import lombok.extern.slf4j.Slf4j;
-
+import static it.pagopa.pnss.common.Constant.IMAGE_TIFF;
+import static it.pagopa.pnss.common.Constant.PN_AAR;
+import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+import static it.pagopa.pnss.common.Constant.PRELOADED;
 import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,20 +26,27 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.server.ResponseStatusException;
+
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
+import it.pagopa.pnss.common.client.DocTypesClientCall;
+import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.uribuilder.service.UriBuilderService;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
-
-import java.security.SecureRandom;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Random;
-
-import static it.pagopa.pnss.common.Constant.*;
 
 
 @SpringBootTestWebEnv
@@ -50,12 +55,12 @@ import static it.pagopa.pnss.common.Constant.*;
 public class UriBulderUploadTest {
 
 
-
-    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
+	@Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
+	private String X_PAGOPA_SAFESTORAGE_CX_ID;
+//    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
 
     @Value("${file.upload.api.url}")
     String urlPath;
-
 
     @Autowired
     private WebTestClient webClient;
@@ -64,10 +69,8 @@ public class UriBulderUploadTest {
     DocTypesClientCall docTypesClientCall;
     @MockBean
     UserConfigurationClientCall userConfigurationClientCall;
-
     @MockBean
     DocumentClientCall documentClientCall;
-    private static final String ID_CLIENT_HEADER = "x-pagopa-safestorage-cx-id";
 
 
     private WebTestClient.ResponseSpec fileUploadTestCall(BodyInserter<FileCreationRequest, ReactiveHttpOutputMessage> bodyInserter,
@@ -91,7 +94,7 @@ public class UriBulderUploadTest {
 
 
     @Test
-    public void testUrlGenStatusPre() throws Exception {
+    void testUrlGenStatusPre() throws Exception {
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
@@ -153,7 +156,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    public void testStatoNonConsentito_PN_NOTIFICATION_ATTACHMENTS(){
+    void testStatoNonConsentito_PN_NOTIFICATION_ATTACHMENTS(){
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
@@ -163,7 +166,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    public void testUrlGenerato() throws InterruptedException {
+    void testUrlGenerato() throws InterruptedException {
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
@@ -224,7 +227,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    public void testStatoNonConsentito_PN_AAR(){
+    void testStatoNonConsentito_PN_AAR(){
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
@@ -236,7 +239,7 @@ public class UriBulderUploadTest {
 
 
     @Test
-    public void testErroreInserimentoContentType(){
+    void testErroreInserimentoContentType(){
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType("VALUE_FAULT");
         fcr.setDocumentType(PN_AAR);
@@ -246,7 +249,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    public void testErroreInserimentoDocumentType(){
+    void testErroreInserimentoDocumentType(){
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType("VALUE_FAULT");
@@ -256,7 +259,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    public void testErroreInserimentoStatus(){
+    void testErroreInserimentoStatus(){
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
@@ -267,7 +270,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    public void testContetTypeParamObbligatorio(){
+    void testContetTypeParamObbligatorio(){
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
@@ -277,7 +280,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    public void testDocumentTypeParamObbligatorio(){
+    void testDocumentTypeParamObbligatorio(){
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
@@ -287,7 +290,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    public void testIdClienteNonTrovatoUpload(){
+    void testIdClienteNonTrovatoUpload(){
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
@@ -303,7 +306,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    public void testIdClienteNoPermessiUpload(){
+    void testIdClienteNoPermessiUpload(){
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);

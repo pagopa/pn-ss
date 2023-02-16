@@ -21,6 +21,7 @@ import java.util.Map;
 import javax.annotation.PostConstruct;
 
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -62,6 +63,8 @@ import java.util.*;
 @Slf4j
 public class UriBuilderService {
 
+    @Value("${uri.builder.presigned.url.duration.minutes}")
+    String duration;
 
     UserConfigurationClientCall userConfigurationClientCall;
     DocumentClientCall documentClientCall;
@@ -268,9 +271,10 @@ public class UriBuilderService {
                 .metadata(secret)
                 //.tagging(storageType)
                 .build();
+        log.info("signbucket {}", duration);
         PutObjectPresignRequest presignRequest =
                 PutObjectPresignRequest.builder()
-                        .signatureDuration(Duration.ofMinutes(10))
+                        .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
                         .putObjectRequest(objectRequest)
                         .build();
 
@@ -385,7 +389,7 @@ public class UriBuilderService {
         log.info("FINE  CREAZIONE OGGETTO  GetObjectRequest");
         log.info("INIZIO  CREAZIONE OGGETTO  GetObjectPresignRequest");
         GetObjectPresignRequest getObjectPresignRequest =
-                GetObjectPresignRequest.builder().signatureDuration(Duration.ofMinutes(60)).getObjectRequest(getObjectRequest).build();
+                GetObjectPresignRequest.builder().signatureDuration(Duration.ofMinutes(Long.parseLong(duration))).getObjectRequest(getObjectRequest).build();
         log.info("FINE  CREAZIONE OGGETTO  GetObjectPresignRequest");
 
         log.info("INIZIO  RECUPERO URL ");

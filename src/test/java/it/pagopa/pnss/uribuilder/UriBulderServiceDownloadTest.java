@@ -52,13 +52,14 @@ public class UriBulderServiceDownloadTest {
     @MockBean
     DocumentClientCall documentClientCall;
     private WebTestClient.ResponseSpec fileDownloadTestCall(
-                          String requestIdx) {
+                          String requestIdx,Boolean metadataOnly) {
         this.webClient.mutate()
                 .responseTimeout(Duration.ofMillis(30000))
                 .build();
         return this.webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path(urlDownload)
+                        .queryParam("metadataOnly",metadataOnly)
                         //... building a URI
                         .build(requestIdx))
                 .header(X_PAGOPA_SAFESTORAGE_CX_ID, "CLIENT_ID_123")
@@ -90,13 +91,53 @@ public class UriBulderServiceDownloadTest {
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
 
-
         mockGetDocument(d, docId);
 
-        fileDownloadTestCall(docId).expectStatus()
+        fileDownloadTestCall(docId,false).expectStatus()
                 .isOk();
     }
 
+    @Test
+    void testUrlGeneratoConMetaDataTrue(){
+
+        String docId = "1111-aaaa";
+
+        mockUserConfiguration(List.of(PN_AAR));
+
+        DocumentType dt = new DocumentType();
+        dt.setTipoDocumento(PN_AAR);
+
+        Document d = new Document();
+        d.setDocumentType(dt);
+        d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
+        d.setCheckSum(Document.CheckSumEnum.SHA256);
+
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCall(docId,true).expectStatus()
+                .isOk();
+    }
+
+    @Test
+    void testUrlGeneratoConMetaDataNull(){
+
+        String docId = "1111-aaaa";
+
+        mockUserConfiguration(List.of(PN_AAR));
+
+        DocumentType dt = new DocumentType();
+        dt.setTipoDocumento(PN_AAR);
+
+        Document d = new Document();
+        d.setDocumentType(dt);
+        d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
+        d.setCheckSum(Document.CheckSumEnum.SHA256);
+
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCall(docId,null).expectStatus()
+                .isOk();
+    }
 
 
     @Test
@@ -117,7 +158,7 @@ public class UriBulderServiceDownloadTest {
 
 
         //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
-        fileDownloadTestCall( docId).expectStatus()
+        fileDownloadTestCall( docId,null).expectStatus()
                 .isOk().expectBody(FileDownloadResponse.class).value(response ->{
                     Assertions.assertThat(!response.getChecksum().isEmpty());
                     Assertions.assertThat(StringUtils.isNotEmpty(response.getDownload().getUrl()));
@@ -138,9 +179,8 @@ public class UriBulderServiceDownloadTest {
         d.setDocumentState(Document.DocumentStateEnum.FREEZED);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
         mockGetDocument(d, docId);
-
         //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
-        fileDownloadTestCall( docId).expectStatus()
+        fileDownloadTestCall( docId,false).expectStatus()
                 .isOk().expectBody(FileDownloadResponse.class).value(response ->{
                     Assertions.assertThat(!response.getChecksum().isEmpty());
                     Assertions.assertThat(!response.getDownload().getRetryAfter().equals(MAX_RECOVER_COLD));
@@ -154,20 +194,20 @@ public class UriBulderServiceDownloadTest {
         String docId = "1111-aaaa";
 
         mockUserConfiguration(List.of(PN_AAR));
-
         mockGetDocument(null, docId);
         Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
-        fileDownloadTestCall( docId).expectStatus()
+        fileDownloadTestCall( docId,null).expectStatus()
                 .isNotFound();
 
     }
 
     @Test
     void testIdClienteNonTrovatoDownload(){
+
         Mockito.doThrow(new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "User Not Found : ")).when(userConfigurationClientCall).getUser(Mockito.any());
         String docId = "1111-aaaa";
-        fileDownloadTestCall( docId).expectStatus()
+        fileDownloadTestCall( docId,null).expectStatus()
                 .isNotFound();
 
     }
@@ -185,8 +225,7 @@ public class UriBulderServiceDownloadTest {
         d.setDocumentType(dt);
 
         mockGetDocument(d, docId);
-
-        fileDownloadTestCall(docId).expectStatus()
+        fileDownloadTestCall(docId,false).expectStatus()
                 .isBadRequest();
     }
 

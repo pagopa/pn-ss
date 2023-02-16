@@ -1,5 +1,6 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
+import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -66,7 +67,12 @@ public class DocumentInternalApiController implements DocumentInternalApi {
             return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
         } else if (throwable instanceof RepositoryManagerException) {
         	return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
-        } else {
+        }
+        else if(throwable instanceof DocumentTypeNotPresentException){
+            String errorMsg = "Document type invalide";
+            return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMsg);
+        }
+        else {
         	log.info("getErrorResponse() : other");
         	log.error("errore",throwable);
         	return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);

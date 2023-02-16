@@ -86,7 +86,7 @@ public class UriBulderServiceDownloadTest {
         dt.setTipoDocumento(PN_AAR);
 
         Document d = new Document();
-        d.setDocumentType(dt);
+        d.setDocumentType(dt.getTipoDocumento());
         d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
@@ -108,7 +108,7 @@ public class UriBulderServiceDownloadTest {
         dt.setTipoDocumento(PN_AAR);
 
         Document d = new Document();
-        d.setDocumentType(dt);
+        d.setDocumentType(dt.getTipoDocumento());
         d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
@@ -129,7 +129,7 @@ public class UriBulderServiceDownloadTest {
         dt.setTipoDocumento(PN_AAR);
 
         Document d = new Document();
-        d.setDocumentType(dt);
+        d.setDocumentType(dt.getTipoDocumento());
         d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
@@ -150,7 +150,7 @@ public class UriBulderServiceDownloadTest {
         dt.setTipoDocumento(PN_AAR);
 
         Document d = new Document();
-        d.setDocumentType(dt);
+        d.setDocumentType(dt.getTipoDocumento());
         d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
@@ -175,7 +175,7 @@ public class UriBulderServiceDownloadTest {
         dt.setTipoDocumento(PN_AAR);
 
         Document d = new Document();
-        d.setDocumentType(dt);
+        d.setDocumentType(dt.getTipoDocumento());
         d.setDocumentState(Document.DocumentStateEnum.FREEZED);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
         mockGetDocument(d, docId);
@@ -222,7 +222,7 @@ public class UriBulderServiceDownloadTest {
         dt.setTipoDocumento(PN_AAR);
 
         Document d = new Document();
-        d.setDocumentType(dt);
+        d.setDocumentType(dt.getTipoDocumento());
 
         mockGetDocument(d, docId);
         fileDownloadTestCall(docId,false).expectStatus()

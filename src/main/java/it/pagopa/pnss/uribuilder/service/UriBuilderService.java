@@ -130,7 +130,7 @@ public class UriBuilderService {
                            documentRepositoryDto.setContentType(contentType);
                            documentRepositoryDto.setDocumentKey(keyName);
                            documentRepositoryDto.setDocumentState(Document.DocumentStateEnum.BOOKED);
-                           documentRepositoryDto.setDocumentType(documentTypeDto);
+                           documentRepositoryDto.setDocumentType(documentTypeDto.getTipoDocumento());
                            return documentClientCall.postdocument(documentRepositoryDto);
                        });
                    })
@@ -299,7 +299,9 @@ public class UriBuilderService {
                                     throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key Not Found : " + fileKey)))
 
                              .map((documentResponse) -> {
-                                if (!canRead.contains(documentResponse.getDocument().getDocumentType().getTipoDocumento())) {
+                                if (!canRead.contains(documentResponse.getDocument().getDocumentType()
+//                                        .getTipoDocumento()
+                                )) {
                                     throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                             "Client : " + xPagopaSafestorageCxId +
                                                     " not has privilege for read document type " +
@@ -331,7 +333,7 @@ public class UriBuilderService {
         downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
         downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
-        downloadResponse.setDocumentType(doc.getDocumentType().getTipoDocumento());
+        downloadResponse.setDocumentType(doc.getDocumentType());
 
         downloadResponse.setKey(fileKey);
         downloadResponse.setRetentionUntil(new Date());

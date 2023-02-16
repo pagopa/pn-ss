@@ -1,5 +1,6 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,8 +28,11 @@ public class DocumentServiceImpl implements DocumentService {
 
     private final DynamoDbAsyncTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
 
+    private final DocTypesService docTypesService;
+
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
+                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService) {
+        this.docTypesService = docTypesService;
         this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
                                                                                   TableSchema.fromBean(DocumentEntity.class));
         this.objectMapper = objectMapper;
@@ -59,20 +63,26 @@ public class DocumentServiceImpl implements DocumentService {
             throw new RepositoryManagerException("Document Key is null");
         }
 
+            String key = documentInput.getDocumentType();
+
+
         DocumentEntity documentEntityInput = objectMapper.convertValue(documentInput, DocumentEntity.class);
 
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
-                                                                                    .partitionValue(documentInput.getDocumentKey())
-                                                                                    .build()))
+        return docTypesService.getDocType(key).
+                flatMap(documentType ->  Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
+                        .partitionValue(documentInput.getDocumentKey())
+                        .build())))
                    .handle((documentFounded, sink) -> {
                        if (documentFounded != null) {
                            log.error("insertDocument() : document founded : {}", documentFounded);
                            sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
                        }
-                   })
+                   }
+                   )
                    .doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
-                   .switchIfEmpty(Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
-                           documentEntityInput))))
+                   .switchIfEmpty(Mono.just(documentInput))
+                   .flatMap(o -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
+                        documentEntityInput))))
                    .thenReturn(documentInput);
     }
 

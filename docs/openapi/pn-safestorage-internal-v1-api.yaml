@@ -375,7 +375,7 @@ components:
         contentType:
           type: string
         documentType:
-          $ref: '#/components/schemas/DocumentType'
+          type: string
     DocumentResponse:
       type: object
       properties:

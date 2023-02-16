@@ -108,7 +108,7 @@ public class DocumentInternalApiControllerTest {
     	documentInput.setRetentionUntil("2032-04-12T12:32:04.000Z");
     	documentInput.setCheckSum(CheckSumEnum.MD5);
 		documentInput.setContentType("xxxxx");
-		documentInput.setDocumentType(docTypes);
+//		documentInput.setDocumentType(docTypes);
 		documentInput.setContentLenght(new BigDecimal(100));
 		log.info("execute createDocument() : documentInput : {}", documentInput);
 		
@@ -157,7 +157,7 @@ public class DocumentInternalApiControllerTest {
     	
 		log.info("\n Test 2 (postItemPartitionKeyDuplicated) resultPreInsert {} \n", resultPreInsert);
 		
-		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null && resultPreInsert.getResponseBody().getDocument() != null)  {
+		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null && resultPreInsert.getResponseBody().getDocument().getDocumentType() != null)  {
 	  
 			webTestClient.post()
 		        .uri(BASE_PATH)

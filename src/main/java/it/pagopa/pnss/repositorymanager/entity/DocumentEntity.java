@@ -24,7 +24,7 @@ public class DocumentEntity {
 	private String checkSum; // modificabile
 	private BigDecimal contentLenght; // modificabile
 	private String contentType; 
-	private DocTypeEntity documentType;
+	private String documentType;
 	
 	@DynamoDbPartitionKey
 	public String getDocumentKey() {

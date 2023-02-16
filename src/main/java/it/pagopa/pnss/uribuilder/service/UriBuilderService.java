@@ -142,6 +142,19 @@ public class UriBuilderService {
                                                                          xPagopaSafestorageCxId);
                                    }))
                    .map(document -> {
+
+                       /*Mono<FileCreationResponse> resp = builsUploadUrl(documentType, document.getDocument().getDocumentState(), document.getDocument().getDocumentKey(), contentType, metadata)
+                               .map(presignedRequest -> {
+                                   String myURL = presignedRequest.url().toString();
+                                   FileCreationResponse response = new FileCreationResponse();
+                                   response.setKey(document.getDocument().getDocumentKey());
+                                   response.setSecret(secret.toString());
+                                   response.setUploadUrl(myURL);
+                                   response.setUploadMethod(extractUploadMethod(presignedRequest.httpRequest().method()));
+                                   return response;
+                               })
+                               .flatMap(Mono::just);*/
+
                        PresignedPutObjectRequest presignedRequest =
                                builsUploadUrl(documentType, document.getDocument().getDocumentState(),document.getDocument().getDocumentKey(), contentType,metadata);
                        String myURL = presignedRequest.url().toString();
@@ -155,7 +168,7 @@ public class UriBuilderService {
 
                        return response;
                    })
-                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "));
+                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "));
     }
 
     private Mono<Boolean> validationField(String contentType, String documentType, String status) {
@@ -210,9 +223,10 @@ public class UriBuilderService {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
         PresignedPutObjectRequest response = null;
-        String storageType = "";
+        S3Presigner presigner = getS3Presigner();
+        /*String storageType = "";
         try {
-            S3Presigner presigner = getS3Presigner();
+
             if(docTypesClientCall.getdocTypes(documentType).block().getDocType().getStatuses() != null) {
                Map<String, CurrentStatus> statuses = docTypesClientCall.getdocTypes(documentType).block().getDocType().getStatuses();
                 if (statuses.containsKey(documentType)) {
@@ -220,8 +234,12 @@ public class UriBuilderService {
                 } else {
                     log.error(" Errore Lo stato non corrisponde");
                 }
-            }
-            response = signBucket(presigner, bucketName, keyName, contentType,secret, storageType);
+            }*/
+            //response = signBucket(presigner, bucketName, keyName, contentType,secret, storageType);
+        try {
+
+            response = signBucket(presigner, bucketName, keyName, contentType, secret);
+
         } catch (AmazonServiceException ase) {
             log.error(" Errore AMAZON AmazonServiceException", ase);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException ");
@@ -246,12 +264,12 @@ public class UriBuilderService {
                 .build();
     }
 
-    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType, Map<String, String> secret, String storageType) {
+    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType, Map<String, String> secret) {
 
         PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName)
                 .key(keyName).contentType(contenType)
                 .metadata(secret)
-                .tagging(storageType)
+                //.tagging(storageType)
                 .build();
         log.info("signbucket {}", duration);
         PutObjectPresignRequest presignRequest =

@@ -308,7 +308,7 @@ public class UriBuilderService {
     }
 
     @NotNull
-    private FileDownloadResponse getFileDownloadResponse(String fileKey, Document doc,Boolean metadataOnly) {
+    private FileDownloadResponse getFileDownloadResponse(String fileKey, Document doc, Boolean metadataOnly) {
         FileDownloadResponse downloadResponse = new FileDownloadResponse();
 
         BigDecimal contentLength = doc.getContentLenght();
@@ -323,9 +323,11 @@ public class UriBuilderService {
         downloadResponse.setRetentionUntil(new Date());
         downloadResponse.setVersionId(null);
 
-        downloadResponse.setDownload(createFileDownloadInfo(fileKey,
-        downloadResponse.getDocumentStatus(),
-        downloadResponse.getDocumentType()));
+        if(Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) {
+            downloadResponse.setDownload(createFileDownloadInfo(fileKey,
+                    downloadResponse.getDocumentStatus(),
+                    downloadResponse.getDocumentType()));
+        }
         return downloadResponse;
     }
 

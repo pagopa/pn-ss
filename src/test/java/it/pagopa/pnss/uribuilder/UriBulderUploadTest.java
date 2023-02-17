@@ -64,6 +64,8 @@ public class UriBulderUploadTest {
     DocTypesClientCall docTypesClientCall;
     @MockBean
     UserConfigurationClientCall userConfigurationClientCall;
+    @Autowired
+    private UriBuilderService uriBuilderService;
 
     @MockBean
     DocumentClientCall documentClientCall;
@@ -128,7 +130,7 @@ public class UriBulderUploadTest {
         WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
         FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult = responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
         FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-        S3Presigner presigner =  UriBuilderService.getS3Presigner();
+        S3Presigner presigner =  uriBuilderService.getS3Presigner();
 
 
 
@@ -200,7 +202,7 @@ public class UriBulderUploadTest {
         WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
         FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult = responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
         FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-        S3Presigner presigner =  UriBuilderService.getS3Presigner();
+        S3Presigner presigner =  uriBuilderService.getS3Presigner();
 
 
 

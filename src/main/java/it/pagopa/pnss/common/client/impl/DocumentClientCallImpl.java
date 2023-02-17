@@ -54,12 +54,12 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     }
 
     @Override
-    public ResponseEntity<Document> patchdocument(String keyFile, Document document) throws IdClientNotFoundException {
+    public Mono<DocumentResponse> patchdocument(String keyFile, Document document) throws IdClientNotFoundException {
         return getWebClient().patch()
                 .uri(String.format(anagraficaDocumentiClientEndpoint, document.getDocumentKey()))
                 .bodyValue(document)
                 .retrieve()
-                .bodyToMono(ResponseEntity.class).block();
+                .bodyToMono(DocumentResponse.class);
     }
 
     @Override

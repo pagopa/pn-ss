@@ -9,6 +9,7 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -56,6 +57,9 @@ public class UriBuilderService {
 
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
+
+    @Autowired
+    private AwsConfigurationProperties awsConfigurationProperties;
 
     UserConfigurationClientCall userConfigurationClientCall;
     DocumentClientCall documentClientCall;
@@ -247,10 +251,9 @@ public class UriBuilderService {
 
     }
 
-    public static S3Presigner getS3Presigner() {
+    public S3Presigner getS3Presigner() {
         ProfileCredentialsProvider credentialsProvider = ProfileCredentialsProvider.create();
-        Region region = EU_CENTRAL_1;
-        return S3Presigner.builder().region(region)
+        return S3Presigner.builder().region(Region.of(awsConfigurationProperties.regionCode()))
                 //.credentialsProvider(credentialsProvider)
                 .build();
     }

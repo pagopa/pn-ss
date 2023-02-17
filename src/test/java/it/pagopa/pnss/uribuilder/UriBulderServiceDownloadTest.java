@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +39,16 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class UriBulderServiceDownloadTest {
 
-    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
+	@Value("${header.x-api-key:#{null}}")
+	private String xApiKey;
+	@Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
+	private String X_PAGOPA_SAFESTORAGE_CX_ID;
+//    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
+	
+	private static final String xApiKeyValue = "apiKey_value";
+	private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
+	
+	private static UserConfigurationResponse userConfig;
 
     @Value("${file.download.api.url}")
     public  String urlDownload;
@@ -62,12 +72,31 @@ public class UriBulderServiceDownloadTest {
                         .queryParam("metadataOnly",metadataOnly)
                         //... building a URI
                         .build(requestIdx))
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, "CLIENT_ID_123")
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
+                .header(xApiKey,xApiKeyValue)
                 .header(HttpHeaders.ACCEPT, "application/json")
                 .attribute("metadataOnly",false)
                 .exchange();
 
 
+    }
+    
+    @BeforeEach
+    private void createUserConfiguration() {
+    	
+    	log.info("createUserConfiguration() : START");
+        
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        
+        userConfig = new UserConfigurationResponse();
+        userConfig.setUserConfiguration(userConfiguration);
+        
+        Mono<UserConfigurationResponse> userConfigurationResponse = Mono.just(userConfig)  ;
+        Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
+        
+        log.info("createUserConfiguration() : END");
     }
 
     private String getDownloadFileEndpoint() {
@@ -77,7 +106,7 @@ public class UriBulderServiceDownloadTest {
 
     @Test
     void testUrlGenerato(){
-
+    	
         String docId = "1111-aaaa";
 
         mockUserConfiguration(List.of(PN_AAR));

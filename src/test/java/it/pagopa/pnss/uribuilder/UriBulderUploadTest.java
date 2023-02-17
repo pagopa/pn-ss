@@ -53,14 +53,18 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 @AutoConfigureWebTestClient
 @Slf4j
 public class UriBulderUploadTest {
-
-
+	
+	@Value("${header.x-api-key:#{null}}")
+	private String xApiKey;
 	@Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
 	private String X_PAGOPA_SAFESTORAGE_CX_ID;
 //    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
+	
+	private static final String xApiKeyValue = "apiKey_value";
+	private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
 
     @Value("${file.upload.api.url}")
-    String urlPath;
+    private String urlPath;
 
     @Autowired
     private WebTestClient webClient;
@@ -84,7 +88,8 @@ public class UriBulderUploadTest {
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(bodyInserter)
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, "CLIENT_ID_123")
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
+                .header(xApiKey,xApiKeyValue)
                 .exchange();
     }
 
@@ -104,6 +109,8 @@ public class UriBulderUploadTest {
 
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
         userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
         userConfig.setUserConfiguration(userConfiguration);
 
@@ -157,6 +164,17 @@ public class UriBulderUploadTest {
 
     @Test
     void testStatoNonConsentito_PN_NOTIFICATION_ATTACHMENTS(){
+    	
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
+        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+    	
+    	
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
@@ -177,6 +195,8 @@ public class UriBulderUploadTest {
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
 
         UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
         userConfiguration.setCanCreate(List.of(PN_AAR));
         userConfig.setUserConfiguration(userConfiguration);
 
@@ -228,6 +248,16 @@ public class UriBulderUploadTest {
 
     @Test
     void testStatoNonConsentito_PN_AAR(){
+    	
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
+        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
@@ -240,6 +270,16 @@ public class UriBulderUploadTest {
 
     @Test
     void testErroreInserimentoContentType(){
+    	
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
+        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType("VALUE_FAULT");
         fcr.setDocumentType(PN_AAR);
@@ -250,6 +290,16 @@ public class UriBulderUploadTest {
 
     @Test
     void testErroreInserimentoDocumentType(){
+    	
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
+        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType("VALUE_FAULT");
@@ -260,6 +310,16 @@ public class UriBulderUploadTest {
 
     @Test
     void testErroreInserimentoStatus(){
+    	
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
+        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
@@ -271,6 +331,16 @@ public class UriBulderUploadTest {
 
     @Test
     void testContetTypeParamObbligatorio(){
+    	
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
+        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
@@ -281,6 +351,16 @@ public class UriBulderUploadTest {
 
     @Test
     void testDocumentTypeParamObbligatorio(){
+    	
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
+        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
@@ -291,6 +371,7 @@ public class UriBulderUploadTest {
 
     @Test
     void testIdClienteNonTrovatoUpload(){
+    	
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
@@ -313,6 +394,8 @@ public class UriBulderUploadTest {
         fcr.setStatus("");
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
         userConfiguration.setCanCreate(new ArrayList<>());
         userConfig.setUserConfiguration(userConfiguration);
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;

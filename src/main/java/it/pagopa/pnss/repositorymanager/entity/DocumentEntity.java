@@ -18,6 +18,7 @@ public class DocumentEntity {
 	@Getter(AccessLevel.NONE)
 	private String documentKey;
 	private DocumentStateEnum documentState; // ok -> togliere stati // modificabile
+	private String documentLogicalState;
 	// private String retentionPeriod; ko 
 	// retentionUntil (ok): timestamp scadenza documento (info calcolata in fase di creazione e variazione di stato, con dipendenza dal tag)
 	private String retentionUntil; // modificabile

@@ -360,6 +360,8 @@ components:
         documentState:
           type: string
           enum: ['BOOKED','STAGED','AVAILABLE','FREEZED','ATTACHED','DELETED']
+        documentLogicalState:
+          type: string
         retentionUntil:
           description: >-
             data di scadenza del file

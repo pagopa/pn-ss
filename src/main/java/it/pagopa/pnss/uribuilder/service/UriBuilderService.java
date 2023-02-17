@@ -333,7 +333,10 @@ public class UriBuilderService {
         downloadResponse.setChecksum(doc.getCheckSum() !=null ? doc.getCheckSum().getValue():null);
         downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
-        downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
+        // NOTA: deve essere restituito lo satto logico, piuttosto che lo stato tecnico
+        //downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
+        downloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
+        log.info("getFileDownloadResponse() : documentState {} : documentLogicalState {}", doc.getDocumentState(), doc.getDocumentLogicalState());
         downloadResponse.setDocumentType(doc.getDocumentType().getTipoDocumento());
 
         downloadResponse.setKey(fileKey);

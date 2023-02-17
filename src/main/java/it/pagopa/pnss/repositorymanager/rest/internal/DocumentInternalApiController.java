@@ -58,7 +58,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
             String errorMsg = documentKey == null ? 
             		"Document already present" : 
             		String.format("Document with id %s already present", documentKey);
-            return buildErrorResponse(HttpStatus.FORBIDDEN, errorMsg);
+            return buildErrorResponse(HttpStatus.CONFLICT, errorMsg);
         } else if (throwable instanceof DocumentKeyNotPresentException) {
             String errorMsg = documentKey == null ? 
             		"Document not found" : 

@@ -149,7 +149,7 @@ public class UserConfigurationInternalApiControllerTest {
 			        .contentType(APPLICATION_JSON)
 			        .body(BodyInserters.fromValue(userConfigurationInput))
 			        .exchange()
-			        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+			        .expectStatus().isEqualTo(HttpStatus.CONFLICT);
 		
 		}
 		

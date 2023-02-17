@@ -359,6 +359,8 @@ components:
           type: string
         documentState:
           type: string
+        documentLogicalState:
+          type: string
         retentionUntil:
           description: >-
             data di scadenza del file

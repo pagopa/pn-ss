@@ -108,7 +108,7 @@ public class DocumentServiceImpl implements DocumentService {
                 	   }
                        log.info("patchDocument() : documentEntityStored : {}", documentEntityStored);
                        if (documentChanges.getDocumentState() != null) {
-                           documentEntityStored.setDocumentState(Document.DocumentStateEnum.fromValue(documentChanges.getDocumentState().getValue()));
+                           documentEntityStored.setDocumentState(documentChanges.getDocumentState());
                        }
                        if (documentChanges.getRetentionUntil() != null && documentChanges.getRetentionUntil().isBlank()) {
                     	   documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());

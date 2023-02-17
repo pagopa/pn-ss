@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
 
+import static it.pagopa.pnss.common.Constant.STAGED;
 import static it.pagopa.pnss.common.QueueNameConstant.MAXIMUM_LISTENING_TIME;
 
 
@@ -83,7 +84,7 @@ public class OrchestratorSignDocument {
         byte[] fileSigned = signReturnV2.getBinaryoutput();
         PutObjectResponse putObjectResponse=  uploadObjectService.execute(key,fileSigned);
 
-        doc.setDocumentState(Document.DocumentStateEnum.STAGED);
+        doc.setDocumentState(STAGED);
         documentClientCall.updatedocument(doc);
 
     }

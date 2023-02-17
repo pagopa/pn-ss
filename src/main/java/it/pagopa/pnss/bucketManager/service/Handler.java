@@ -17,14 +17,12 @@ import javax.imageio.ImageIO;
 
 import com.amazonaws.services.lambda.runtime.events.models.s3.S3EventNotification;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
 import it.pagopa.pnss.bucketManager.exception.EventNameNotFoundException;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.impl.DocumentClientCallImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -42,35 +40,29 @@ import com.google.gson.GsonBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /*
-@Service
-public class Handler implements RequestHandler<S3Event, Mono<DocumentResponse>> {
+
+public class Handler implements RequestHandler<S3Event, String> {
 
 
 
-    DocumentClientCallImpl client;
-
-    public Handler(DocumentClientCallImpl client) {
-        this.client = client;
-    }*/
-/*
+    DocumentClientCallImpl client = new DocumentClientCallImpl();
 
     @Override
-    public Mono<DocumentResponse> handleRequest(S3Event s3Event, Context context) {
-        Mono<DocumentResponse> result = null;
+    public String handleRequest(S3Event s3Event, Context context) {
+        String result = "";
         try {
             for(S3EventNotificationRecord s3record : s3Event.getRecords()){
                 String eventName = s3record.getEventName();
                 S3EventNotification.S3Entity eventEntity = s3record.getS3();
                 if (eventName.equals("ObjectCreated:*") || eventName.equals("ObjectRestore:Completed")) {
                     result = availableObject(eventEntity);
-                }*/
-/* else if (eventName.equals("LifecycleTransition") || eventName.equals("ObjectRestore:Delete")) {
+                } else if (eventName.equals("LifecycleTransition") || eventName.equals("ObjectRestore:Delete")) {
                     result = freezedObject(eventEntity);
                 } else if (eventName.equals("LifecycleExpiration:Delete") || eventName.equals("ObjectRemoved:Delete")) {
                     result = deletedObject(eventEntity);
-                }*//*
-
+                }
             }
 
         } catch (Exception e) {
@@ -83,16 +75,15 @@ public class Handler implements RequestHandler<S3Event, Mono<DocumentResponse>> 
 
 
 
-    public Mono<DocumentResponse> availableObject(S3EventNotification.S3Entity eventEntity){
+    public String availableObject(S3EventNotification.S3Entity eventEntity){
         Document document = new Document();
         document.setDocumentKey(eventEntity.getObject().getKey());
         document.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
-        Mono<DocumentResponse> response = client.patchdocument(eventEntity.getObject().getKey(), document);
-        return response;
+        ResponseEntity<Document> response = client.patchdocument(eventEntity.getObject().getKey(), document);
+        return String.valueOf(response.getStatusCodeValue());
     }
 
-    */
-/*public String freezedObject(S3EventNotification.S3Entity eventEntity) {
+    public String freezedObject(S3EventNotification.S3Entity eventEntity) {
         Document document = new Document();
         document.setDocumentKey(eventEntity.getObject().getKey());
         document.setDocumentState(Document.DocumentStateEnum.FREEZED);
@@ -106,7 +97,6 @@ public class Handler implements RequestHandler<S3Event, Mono<DocumentResponse>> 
         document.setDocumentState(Document.DocumentStateEnum.DELETED);
         ResponseEntity<Document> response = client.patchdocument(eventEntity.getObject().getKey(), document);
         return String.valueOf(response.getStatusCodeValue());
-    }*//*
-
+    }
 
 }*/

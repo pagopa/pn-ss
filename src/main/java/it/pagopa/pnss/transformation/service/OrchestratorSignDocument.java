@@ -29,13 +29,17 @@ public class OrchestratorSignDocument {
     SignServiceSoap signServiceSoap;
     UploadObjectService uploadObjectService;
     DownloadObjectService downloadObjectService;
+
+    DeleteObjectService deleteObjectService;
     DocumentClientCall documentClientCall;
 
-    public OrchestratorSignDocument(SignServiceSoap signServiceSoap, UploadObjectService uploadObjectService, DownloadObjectService downloadObjectService, DocumentClientCall documentClientCall) {
+    public OrchestratorSignDocument(SignServiceSoap signServiceSoap, UploadObjectService uploadObjectService, DownloadObjectService downloadObjectService, DocumentClientCall documentClientCall,DeleteObjectService deleteObjectService) {
         this.signServiceSoap = signServiceSoap;
         this.uploadObjectService = uploadObjectService;
         this.downloadObjectService = downloadObjectService;
         this.documentClientCall = documentClientCall;
+        this.deleteObjectService = deleteObjectService;
+
     }
 
 
@@ -48,6 +52,11 @@ public class OrchestratorSignDocument {
                         ResponseBytes<GetObjectResponse> objectResponse = downloadObjectService.execute(key);
                         byte[] fileInput = objectResponse.asByteArray();
                         Document doc = documentResponse.getDocument();
+
+                        if (doc.getDocumentType().getDigitalSignature()){
+                            return Mono.empty();
+                        }
+
                         String contentType = doc.getContentType();
                         SignReturnV2 signReturnV2 = null;
                         try {
@@ -67,8 +76,9 @@ public class OrchestratorSignDocument {
                         byte[] fileSigned = signReturnV2.getBinaryoutput();
                         PutObjectResponse putObjectResponse = uploadObjectService.execute(key, fileSigned);
 
-                        doc.setDocumentState(Document.DocumentStateEnum.STAGED);
+                        doc.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
                         documentClientCall.updatedocument(doc);
+                        deleteObjectService.execute(key);
                     }catch (NoSuchBucketException nsbe){
                         throw new S3BucketException.BucketNotPresentException(nsbe.getMessage());
                     }catch (NoSuchKeyException nske){

@@ -1,5 +1,7 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,8 +29,11 @@ public class DocumentServiceImpl implements DocumentService {
 
     private final DynamoDbAsyncTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
 
+    private final DocTypesService docTypesService;
+
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
+                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService) {
+        this.docTypesService = docTypesService;
         this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
                                                                                   TableSchema.fromBean(DocumentEntity.class));
         this.objectMapper = objectMapper;
@@ -49,17 +54,17 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Mono<Document> insertDocument(Document documentInput) {
+    public Mono<Document> insertDocument(DocumentInput documentInput) {
         log.info("insertDocument() : IN : documentInput : {}", documentInput);
-
+        Document resp = new Document();
         if (documentInput == null) {
             throw new RepositoryManagerException("Document is null");
         }
         if (documentInput.getDocumentKey() == null || documentInput.getDocumentKey().isBlank()) {
             throw new RepositoryManagerException("Document Key is null");
         }
+        String key = documentInput.getDocumentType();
 
-        DocumentEntity documentEntityInput = objectMapper.convertValue(documentInput, DocumentEntity.class);
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
                                                                                     .partitionValue(documentInput.getDocumentKey())
@@ -70,10 +75,24 @@ public class DocumentServiceImpl implements DocumentService {
                            sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
                        }
                    })
-                   .doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
-                   .switchIfEmpty(Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
-                           documentEntityInput))))
-                   .thenReturn(documentInput);
+                .flatMap(o -> docTypesService.getDocType(key))
+                .flatMap(o -> {
+                    Document docImp = new Document();
+                    docImp.setDocumentType(o);
+                    docImp.setDocumentKey(documentInput.getDocumentKey());
+                       docImp.setDocumentState(objectMapper.convertValue(documentInput.getDocumentState(),Document.DocumentStateEnum.class));
+                       docImp.setCheckSum(objectMapper.convertValue(documentInput.getCheckSum(),Document.CheckSumEnum.class));
+                    docImp.setRetentionUntil(documentInput.getRetentionUntil());
+                    docImp.setContentLenght(documentInput.getContentLenght());
+                    docImp.setContentType(documentInput.getContentType());
+
+
+                    DocumentEntity documentEntityInput = objectMapper.convertValue(docImp, DocumentEntity.class);
+
+                    return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
+                            documentEntityInput)));
+                })
+                .thenReturn(resp);
     }
 
     @Override

@@ -1,9 +1,5 @@
 package it.pagopa.pnss.uribuilder;
 
-import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
-import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
-
 import java.time.Duration;
 import java.util.List;
 
@@ -32,6 +28,8 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+
+import static it.pagopa.pnss.common.Constant.*;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
@@ -87,7 +85,7 @@ public class UriBulderServiceDownloadTest {
 
         Document d = new Document();
         d.setDocumentType(dt);
-        d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
+        d.setDocumentState(AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
 
@@ -109,7 +107,7 @@ public class UriBulderServiceDownloadTest {
 
         Document d = new Document();
         d.setDocumentType(dt);
-        d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
+        d.setDocumentState(AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
         mockGetDocument(d, docId);
@@ -130,7 +128,7 @@ public class UriBulderServiceDownloadTest {
 
         Document d = new Document();
         d.setDocumentType(dt);
-        d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
+        d.setDocumentState(AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
         mockGetDocument(d, docId);
@@ -151,7 +149,7 @@ public class UriBulderServiceDownloadTest {
 
         Document d = new Document();
         d.setDocumentType(dt);
-        d.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
+        d.setDocumentState(AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
         mockGetDocument(d, docId);
@@ -176,7 +174,7 @@ public class UriBulderServiceDownloadTest {
 
         Document d = new Document();
         d.setDocumentType(dt);
-        d.setDocumentState(Document.DocumentStateEnum.FREEZED);
+        d.setDocumentState(FREEZED);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
         mockGetDocument(d, docId);
         //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());

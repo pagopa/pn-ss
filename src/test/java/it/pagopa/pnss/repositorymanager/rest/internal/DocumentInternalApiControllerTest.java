@@ -1,5 +1,7 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
+import static it.pagopa.pnss.common.Constant.ATTACHED;
+import static it.pagopa.pnss.common.Constant.FREEZED;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.math.BigDecimal;
@@ -22,7 +24,6 @@ import org.springframework.web.reactive.function.BodyInserters;
 import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.CheckSumEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentStateEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
@@ -104,7 +105,7 @@ public class DocumentInternalApiControllerTest {
 		
     	documentInput = new Document();
     	documentInput.setDocumentKey(PARTITION_ID_DEFAULT);
-    	documentInput.setDocumentState(DocumentStateEnum.FREEZED);
+    	documentInput.setDocumentState(FREEZED);
     	documentInput.setRetentionUntil("2032-04-12T12:32:04.000Z");
     	documentInput.setCheckSum(CheckSumEnum.MD5);
 		documentInput.setContentType("xxxxx");
@@ -113,7 +114,7 @@ public class DocumentInternalApiControllerTest {
 		log.info("execute createDocument() : documentInput : {}", documentInput);
 		
 		documentChanges = new DocumentChanges();
-		documentChanges.setDocumentState(DocumentChanges.DocumentStateEnum.ATTACHED);
+		documentChanges.setDocumentState(ATTACHED);
 		documentChanges.setContentLenght(new BigDecimal(50));
 	}
     	

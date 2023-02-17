@@ -359,7 +359,6 @@ components:
           type: string
         documentState:
           type: string
-          enum: ['BOOKED','STAGED','AVAILABLE','FREEZED','ATTACHED','DELETED']
         retentionUntil:
           description: >-
             data di scadenza del file
@@ -388,7 +387,6 @@ components:
       properties:
         documentState:
           type: string
-          enum: ['BOOKED','STAGED','AVAILABLE','FREEZED','ATTACHED','DELETED']
         retentionUntil:
           description: >-
             data di scadenza del file

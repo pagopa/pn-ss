@@ -41,6 +41,7 @@ import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/*
 
 public class Handler implements RequestHandler<S3Event, String> {
 
@@ -98,4 +99,4 @@ public class Handler implements RequestHandler<S3Event, String> {
         return String.valueOf(response.getStatusCodeValue());
     }
 
-}
+}*/

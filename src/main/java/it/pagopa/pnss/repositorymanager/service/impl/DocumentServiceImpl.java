@@ -64,31 +64,29 @@ public class DocumentServiceImpl implements DocumentService {
             throw new RepositoryManagerException("Document Key is null");
         }
         String key = documentInput.getDocumentType();
-
-
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
-                                                                                    .partitionValue(documentInput.getDocumentKey())
-                                                                                    .build()))
-                   .handle((documentFounded, sink) -> {
-                       if (documentFounded != null) {
-                           log.error("insertDocument() : document founded : {}", documentFounded);
-                           sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
-                       }
-                   })
+                        .partitionValue(documentInput.getDocumentKey())
+                        .build()))
+                .handle((documentFounded, sink) -> {
+                            if (documentFounded != null) {
+                                log.error("insertDocument() : document founded : {}", documentFounded);
+                                sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
+                            }
+                        }
+                )
+                .doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
+                .switchIfEmpty(Mono.just(documentInput))
                 .flatMap(o -> docTypesService.getDocType(key))
                 .flatMap(o -> {
-                    Document docImp = new Document();
-                    docImp.setDocumentType(o);
-                    docImp.setDocumentKey(documentInput.getDocumentKey());
-                       docImp.setDocumentState(objectMapper.convertValue(documentInput.getDocumentState(),Document.DocumentStateEnum.class));
-                       docImp.setCheckSum(objectMapper.convertValue(documentInput.getCheckSum(),Document.CheckSumEnum.class));
-                    docImp.setRetentionUntil(documentInput.getRetentionUntil());
-                    docImp.setContentLenght(documentInput.getContentLenght());
-                    docImp.setContentType(documentInput.getContentType());
-
-
-                    DocumentEntity documentEntityInput = objectMapper.convertValue(docImp, DocumentEntity.class);
-
+                    resp.setDocumentType(o);
+                    resp.setDocumentKey(documentInput.getDocumentKey());
+                    resp.setDocumentState(documentInput.getDocumentState());
+                    resp.setCheckSum(objectMapper.convertValue(documentInput.getCheckSum(),Document.CheckSumEnum.class));
+                    resp.setRetentionUntil(documentInput.getRetentionUntil());
+                    resp.setContentLenght(documentInput.getContentLenght());
+                    resp.setContentType(documentInput.getContentType());
+                    resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
+                    DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
                     return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
                             documentEntityInput)));
                 })

@@ -93,6 +93,7 @@ public class ConfigurationApiController implements CfgApi {
      * <li>name: il nome del sistema upstream (client).</li>
      * <li>canCreate: tipi di documento che il client può caricare.</li>
      * <li>canRead: tipi di documento che il client può leggere.</li>
+     * <li>canModifyStatus: tipi di documento che il client può modificare.</li>
      * <li>signatureInfo: informazioni necessarie per firmare digitalmente, per conto del client, i file caricati.</li>
      * <li>destination: informazioni necessarie a notificare eventi al client.</li>
      * </ul>

@@ -53,13 +53,13 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 @AutoConfigureWebTestClient
 @Slf4j
 public class UriBulderUploadTest {
-	
+
 	@Value("${header.x-api-key:#{null}}")
 	private String xApiKey;
 	@Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
 	private String X_PAGOPA_SAFESTORAGE_CX_ID;
 //    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
-	
+
 	private static final String xApiKeyValue = "apiKey_value";
 	private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
 
@@ -73,6 +73,9 @@ public class UriBulderUploadTest {
     DocTypesClientCall docTypesClientCall;
     @MockBean
     UserConfigurationClientCall userConfigurationClientCall;
+    @Autowired
+    private UriBuilderService uriBuilderService;
+
     @MockBean
     DocumentClientCall documentClientCall;
 
@@ -138,7 +141,7 @@ public class UriBulderUploadTest {
         WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
         FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult = responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
         FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-        S3Presigner presigner =  UriBuilderService.getS3Presigner();
+        S3Presigner presigner =  uriBuilderService.getS3Presigner();
 
 
 
@@ -164,7 +167,7 @@ public class UriBulderUploadTest {
 
     @Test
     void testStatoNonConsentito_PN_NOTIFICATION_ATTACHMENTS(){
-    	
+
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(xPagoPaSafestorageCxIdValue);
@@ -173,8 +176,8 @@ public class UriBulderUploadTest {
 
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-    	
-    	
+
+
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
@@ -223,7 +226,7 @@ public class UriBulderUploadTest {
         WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
         FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult = responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
         FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-        S3Presigner presigner =  UriBuilderService.getS3Presigner();
+        S3Presigner presigner =  uriBuilderService.getS3Presigner();
 
 
 
@@ -248,7 +251,7 @@ public class UriBulderUploadTest {
 
     @Test
     void testStatoNonConsentito_PN_AAR(){
-    	
+
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(xPagoPaSafestorageCxIdValue);
@@ -257,7 +260,7 @@ public class UriBulderUploadTest {
 
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-        
+
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
@@ -270,7 +273,7 @@ public class UriBulderUploadTest {
 
     @Test
     void testErroreInserimentoContentType(){
-    	
+
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(xPagoPaSafestorageCxIdValue);
@@ -279,7 +282,7 @@ public class UriBulderUploadTest {
 
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-        
+
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType("VALUE_FAULT");
         fcr.setDocumentType(PN_AAR);
@@ -290,7 +293,7 @@ public class UriBulderUploadTest {
 
     @Test
     void testErroreInserimentoDocumentType(){
-    	
+
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(xPagoPaSafestorageCxIdValue);
@@ -299,7 +302,7 @@ public class UriBulderUploadTest {
 
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-        
+
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType("VALUE_FAULT");
@@ -310,7 +313,7 @@ public class UriBulderUploadTest {
 
     @Test
     void testErroreInserimentoStatus(){
-    	
+
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(xPagoPaSafestorageCxIdValue);
@@ -319,7 +322,7 @@ public class UriBulderUploadTest {
 
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-        
+
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
@@ -331,7 +334,7 @@ public class UriBulderUploadTest {
 
     @Test
     void testContetTypeParamObbligatorio(){
-    	
+
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(xPagoPaSafestorageCxIdValue);
@@ -340,7 +343,7 @@ public class UriBulderUploadTest {
 
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-        
+
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
@@ -351,7 +354,7 @@ public class UriBulderUploadTest {
 
     @Test
     void testDocumentTypeParamObbligatorio(){
-    	
+
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(xPagoPaSafestorageCxIdValue);
@@ -360,7 +363,7 @@ public class UriBulderUploadTest {
 
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-        
+
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
@@ -371,7 +374,7 @@ public class UriBulderUploadTest {
 
     @Test
     void testIdClienteNonTrovatoUpload(){
-    	
+
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);

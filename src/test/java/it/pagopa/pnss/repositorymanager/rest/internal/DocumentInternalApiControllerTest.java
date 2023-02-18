@@ -1,5 +1,7 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
+import static it.pagopa.pnss.common.Constant.ATTACHED;
+import static it.pagopa.pnss.common.Constant.FREEZED;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.math.BigDecimal;
@@ -8,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,16 +22,10 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document.CheckSumEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentStateEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -54,7 +51,7 @@ public class DocumentInternalApiControllerTest {
 	private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
 	private static final String PARTITION_ID_NO_EXISTENT = "documentKey_bad";
 	
-	private static Document documentInput;
+	private static DocumentInput documentInput;
 	private static DocumentChanges documentChanges;
 	
 	private static DynamoDbTable<DocumentEntity> dynamoDbTable;
@@ -102,18 +99,18 @@ public class DocumentInternalApiControllerTest {
     	docTypes.setTimeStamped(TimeStampedEnum.STANDARD);
 		log.info("execute createDocument() : docType : {}", docTypes);
 		
-    	documentInput = new Document();
+    	documentInput = new DocumentInput();
     	documentInput.setDocumentKey(PARTITION_ID_DEFAULT);
-    	documentInput.setDocumentState(DocumentStateEnum.FREEZED);
+    	documentInput.setDocumentState(FREEZED);
     	documentInput.setRetentionUntil("2032-04-12T12:32:04.000Z");
-    	documentInput.setCheckSum(CheckSumEnum.MD5);
+    	documentInput.setCheckSum(DocumentInput.CheckSumEnum.MD5);
 		documentInput.setContentType("xxxxx");
-		documentInput.setDocumentType(docTypes);
+		documentInput.setDocumentType("PN_NOTIFICATION_ATTACHMENTS");
 		documentInput.setContentLenght(new BigDecimal(100));
 		log.info("execute createDocument() : documentInput : {}", documentInput);
 		
 		documentChanges = new DocumentChanges();
-		documentChanges.setDocumentState(DocumentChanges.DocumentStateEnum.ATTACHED);
+		documentChanges.setDocumentState(ATTACHED);
 		documentChanges.setContentLenght(new BigDecimal(50));
 	}
     	

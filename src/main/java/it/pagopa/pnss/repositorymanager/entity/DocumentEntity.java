@@ -2,7 +2,7 @@ package it.pagopa.pnss.repositorymanager.entity;
 
 import java.math.BigDecimal;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.Document.DocumentStateEnum;
+
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -17,7 +17,8 @@ public class DocumentEntity {
 
 	@Getter(AccessLevel.NONE)
 	private String documentKey;
-	private DocumentStateEnum documentState; // ok -> togliere stati // modificabile
+	private String documentState; // ok -> togliere stati // modificabile
+	private String documentLogicalState;
 	// private String retentionPeriod; ko 
 	// retentionUntil (ok): timestamp scadenza documento (info calcolata in fase di creazione e variazione di stato, con dipendenza dal tag)
 	private String retentionUntil; // modificabile

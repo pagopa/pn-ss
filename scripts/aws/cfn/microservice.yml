@@ -122,10 +122,6 @@ Parameters:
   PnSsDLQueueNameStagingBucket:
     Type: String
     Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
-
-  PnSsSNSNameStagingBucket:
-    Type: String
-    Description: 'Nome SNS Topic per notifiche SS Staging Bucket'
   
   PnSsManagedPolicyName:
     Type: String
@@ -227,7 +223,23 @@ Resources:
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
 
-  PnSsQueuePolicyStagingBucket:
+  PnSsQueuePolicyStagingBucketPut:
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !Sub '${PnSsQueueUrlStagingBucket}'
+      PolicyDocument:
+        Statement: 
+          - Action: 
+              - 'sqs:SendMessage'
+              - 'sqs:ChangeMessageVisibility'
+            Effect: "Allow"
+            Resource: !Sub ${PnSsQueueArnStagingBucket}
+            Principal:  
+              Service: 
+                - "events.amazonaws.com"
+
+  PnSsQueuePolicyStagingBucketRead:
     Type: AWS::SQS::QueuePolicy
     Properties: 
       Queues: 
@@ -235,10 +247,9 @@ Resources:
       PolicyDocument: 
         Statement: 
           - Action: 
-              - 'SQS:SendMessage'
-              - 'SQS:ReceiveMessage'
-              - 'SQS:DeleteMessage'
-              - 'SQS:ChangeMessageVisibility'
+              - 'sqs:ReceiveMessage'
+              - 'sqs:DeleteMessage'
+              - 'sqs:ChangeMessageVisibility'
             Effect: "Allow"
             Resource: !Sub ${PnSsQueueArnStagingBucket}
             Principal:  

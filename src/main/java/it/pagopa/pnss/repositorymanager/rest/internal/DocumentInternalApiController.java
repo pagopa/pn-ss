@@ -1,5 +1,8 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.*;
+import it.pagopa.pn.template.internal.rest.v1.dto.Error;
+import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -7,10 +10,6 @@ import org.springframework.web.server.ServerWebExchange;
 
 import feign.Logger;
 import it.pagopa.pn.template.internal.rest.v1.api.DocumentInternalApi;
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
@@ -66,7 +65,12 @@ public class DocumentInternalApiController implements DocumentInternalApi {
             return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
         } else if (throwable instanceof RepositoryManagerException) {
         	return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
-        } else {
+        }
+        else if(throwable instanceof DocumentTypeNotPresentException) {
+            String errorMsg = "Document type invalide";
+            return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMsg);
+        }
+        else {
         	log.info("getErrorResponse() : other");
         	log.error("errore",throwable);
         	return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
@@ -83,7 +87,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
     }
 
     @Override
-    public Mono<ResponseEntity<DocumentResponse>> insertDocument(Mono<Document> document, final ServerWebExchange exchange) {
+    public Mono<ResponseEntity<DocumentResponse>> insertDocument(Mono<DocumentInput> document, final ServerWebExchange exchange) {
 
         return document.flatMap(documentService::insertDocument)
                        .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))

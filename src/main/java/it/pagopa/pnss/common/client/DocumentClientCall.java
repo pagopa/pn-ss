@@ -12,6 +12,6 @@ public interface DocumentClientCall {
     Mono<DocumentResponse> getdocument(String keyFile) throws IdClientNotFoundException;
     Mono<DocumentResponse> postdocument(Document Document) throws IdClientNotFoundException;
     ResponseEntity<Document> updatedocument( Document document) throws IdClientNotFoundException;
-    ResponseEntity<Document> patchdocument( String keyFile, Document document) throws IdClientNotFoundException;
+    Mono<DocumentResponse> patchdocument( String keyFile, Document document) throws IdClientNotFoundException;
     ResponseEntity<Document> deletedocument(String keyFile) throws IdClientNotFoundException;
 }

@@ -1,16 +1,5 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.EU_CENTRAL_1;
-import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
-import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
-import static it.pagopa.pnss.common.Constant.listaStatus;
-import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
-import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
-
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Date;
@@ -20,6 +9,7 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -59,12 +49,17 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import java.security.SecureRandom;
 import java.util.*;
 
+import static it.pagopa.pnss.common.Constant.*;
+
 @Service
 @Slf4j
 public class UriBuilderService {
 
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
+
+    @Autowired
+    private AwsConfigurationProperties awsConfigurationProperties;
 
     UserConfigurationClientCall userConfigurationClientCall;
     DocumentClientCall documentClientCall;
@@ -129,7 +124,7 @@ public class UriBuilderService {
                            Document documentRepositoryDto = new Document();
                            documentRepositoryDto.setContentType(contentType);
                            documentRepositoryDto.setDocumentKey(keyName);
-                           documentRepositoryDto.setDocumentState(Document.DocumentStateEnum.BOOKED);
+                           documentRepositoryDto.setDocumentState(status);
                            documentRepositoryDto.setDocumentType(documentTypeDto);
                            return documentClientCall.postdocument(documentRepositoryDto);
                        });
@@ -156,7 +151,7 @@ public class UriBuilderService {
                                .flatMap(Mono::just);*/
 
                        PresignedPutObjectRequest presignedRequest =
-                               builsUploadUrl(documentType, document.getDocument().getDocumentState(),document.getDocument().getDocumentKey(), contentType,metadata);
+                               builsUploadUrl(documentType,document.getDocument().getDocumentKey(), contentType,metadata);
                        String myURL = presignedRequest.url().toString();
                        FileCreationResponse response = new FileCreationResponse();
                        response.setKey(document.getDocument().getDocumentKey());
@@ -219,7 +214,7 @@ public class UriBuilderService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private PresignedPutObjectRequest builsUploadUrl(String documentType, Document.DocumentStateEnum documentState, String keyName, String contentType, Map<String, String> secret) {
+    private PresignedPutObjectRequest builsUploadUrl(String documentType, String keyName, String contentType, Map<String, String> secret) {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
         PresignedPutObjectRequest response = null;
@@ -256,10 +251,9 @@ public class UriBuilderService {
 
     }
 
-    public static S3Presigner getS3Presigner() {
+    public S3Presigner getS3Presigner() {
         ProfileCredentialsProvider credentialsProvider = ProfileCredentialsProvider.create();
-        Region region = EU_CENTRAL_1;
-        return S3Presigner.builder().region(region)
+        return S3Presigner.builder().region(Region.of(awsConfigurationProperties.regionCode()))
                 //.credentialsProvider(credentialsProvider)
                 .build();
     }
@@ -330,7 +324,14 @@ public class UriBuilderService {
         downloadResponse.setChecksum(doc.getCheckSum() !=null ? doc.getCheckSum().getValue():null);
         downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
-        downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
+        // NOTA: deve essere restituito lo satto logico, piuttosto che lo stato tecnico
+        //downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
+        if(doc.getDocumentLogicalState() != null){
+            downloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
+        } else {
+            downloadResponse.setDocumentStatus("");
+        }
+        log.info("getFileDownloadResponse() : documentState {} : documentLogicalState {}", doc.getDocumentState(), doc.getDocumentLogicalState());
         downloadResponse.setDocumentType(doc.getDocumentType().getTipoDocumento());
 
         downloadResponse.setKey(fileKey);
@@ -355,7 +356,7 @@ public class UriBuilderService {
             S3Presigner presigner = getS3Presigner();
             String bucketName = mapDocumentTypeToBucket.get(documentType);
             log.info("INIZIO RECUPERO URL DOWLOAND ");
-            if (!Document.DocumentStateEnum.FREEZED.getValue().equals(status)) {
+            if (!status.equals(FREEZED)) {
                 fileDOwnloadInfo = getPresignedUrl(presigner, bucketName, fileKey);
             } else {
                 fileDOwnloadInfo = recoverDocumentFromBucket(presigner, bucketName, fileKey);

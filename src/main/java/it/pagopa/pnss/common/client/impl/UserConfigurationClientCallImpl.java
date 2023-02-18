@@ -30,7 +30,7 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
                 .onStatus(HttpStatus.BAD_REQUEST::equals,clientResponse -> Mono.error(new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Invalid User : " + xPagopaSafestorageCxId)))
                 .onStatus(HttpStatus.NOT_FOUND::equals,clientResponse -> Mono.error(new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "User Not Found : " + xPagopaSafestorageCxId)))
+                        HttpStatus.FORBIDDEN, "User Not Found : " + xPagopaSafestorageCxId)))
                 .bodyToMono(UserConfigurationResponse.class);
     }
 

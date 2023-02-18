@@ -1,3 +1,4 @@
+/*
 package it.pagopa.pnss.bucketManager.service;
 
 import java.awt.Color;
@@ -40,6 +41,7 @@ import com.google.gson.GsonBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+*/
 
 /*
 

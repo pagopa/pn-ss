@@ -86,6 +86,7 @@ public class UriBulderServiceDownloadTest {
         Document d = new Document();
         d.setDocumentType(dt);
         d.setDocumentState(AVAILABLE);
+        d.setDocumentLogicalState(AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
 
@@ -129,6 +130,7 @@ public class UriBulderServiceDownloadTest {
         Document d = new Document();
         d.setDocumentType(dt);
         d.setDocumentState(AVAILABLE);
+        d.setDocumentLogicalState(AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
         mockGetDocument(d, docId);
@@ -150,6 +152,7 @@ public class UriBulderServiceDownloadTest {
         Document d = new Document();
         d.setDocumentType(dt);
         d.setDocumentState(AVAILABLE);
+        d.setDocumentLogicalState(AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
 
         mockGetDocument(d, docId);
@@ -175,6 +178,7 @@ public class UriBulderServiceDownloadTest {
         Document d = new Document();
         d.setDocumentType(dt);
         d.setDocumentState(FREEZED);
+        d.setDocumentLogicalState(AVAILABLE);
         d.setCheckSum(Document.CheckSumEnum.SHA256);
         mockGetDocument(d, docId);
         //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());

@@ -223,7 +223,7 @@ Resources:
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
 
-  PnSsQueuePolicyStagingBucketPut:
+  PnSsQueuePolicyStagingBucket:
     Type: AWS::SQS::QueuePolicy
     Properties: 
       Queues: 
@@ -238,14 +238,6 @@ Resources:
             Principal:  
               Service: 
                 - "events.amazonaws.com"
-
-  PnSsQueuePolicyStagingBucketRead:
-    Type: AWS::SQS::QueuePolicy
-    Properties: 
-      Queues: 
-        - !Sub '${PnSsQueueUrlStagingBucket}' 
-      PolicyDocument: 
-        Statement: 
           - Action: 
               - 'sqs:ReceiveMessage'
               - 'sqs:DeleteMessage'

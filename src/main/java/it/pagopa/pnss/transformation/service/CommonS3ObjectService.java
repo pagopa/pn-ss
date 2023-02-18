@@ -12,6 +12,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
 
 @Service
 public abstract class CommonS3ObjectService {
@@ -31,9 +32,13 @@ public abstract class CommonS3ObjectService {
 //    }
     
     public S3Client getS3Client(){
-    	return S3Client.builder()
-    			.region(Region.of(awsConfigurationProperties.regionCode()))
-    			.build();
+		S3ClientBuilder s3ClientBuilder = S3Client.builder()
+				.region(Region.of(awsConfigurationProperties.regionCode()));
+		if (testAwsS3Endpoint != null) {
+			s3ClientBuilder.endpointOverride(URI.create(testAwsS3Endpoint));
+		}
+
+		return s3ClientBuilder.build();
     }
     
     public S3AsyncClient getS3AsynchClient() {

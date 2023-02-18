@@ -11,8 +11,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.nio.ByteBuffer;
 
-import static it.pagopa.pnss.common.Constant.*;
-
 @Service
 public class UploadObjectService  extends  CommonS3ObjectService {
 
@@ -27,7 +25,6 @@ public class UploadObjectService  extends  CommonS3ObjectService {
         PutObjectRequest objectRequest = PutObjectRequest.builder()
                 .bucket(bucketName.ssHotName())
                 .key(key)
-                //.tagging(STORAGETYPE+ PN_LEGAL_FACTS) //Da verificare storageType
                 .build();
 
         PutObjectResponse putObjectResponse = s3.putObject(objectRequest, RequestBody.fromBytes(fileSigned));

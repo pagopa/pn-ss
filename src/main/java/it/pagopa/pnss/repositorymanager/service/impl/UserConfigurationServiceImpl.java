@@ -65,10 +65,16 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder()
                                                                                              .partitionValue(userConfigurationInput.getName())
                                                                                              .build()))
-                   .flatMap(foundedClientConfiguration -> Mono.error(new ItemAlreadyPresent(userConfigurationInput.getApiKey())))
-                   .doOnError(ItemAlreadyPresent.class, throwable -> log.info(throwable.getMessage()))
-                   .switchIfEmpty(Mono.just(userConfigurationInput))
-                   .flatMap(unused -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
+                   .handle((userConfigurationFounded, sink) -> {
+                       if (userConfigurationFounded != null) {
+                           log.error("insertUserConfiguration() : userConfiguration founded : {}", userConfigurationFounded);
+                           sink.error(new ItemAlreadyPresent(userConfigurationFounded.getApiKey()));
+                       }
+                   })
+                   .doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
+                   // Puts a single item in the mapped table.
+                   // If the table contains an item with the same primary key, it will be replaced with this item.
+                   .switchIfEmpty(Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
                            userConfigurationEntity))))
                    .thenReturn(userConfigurationInput);
     }
@@ -88,9 +94,6 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                 	   if (userConfigurationChanges.getCanRead() != null && !userConfigurationChanges.getCanRead().isEmpty()) {
                 		   entityStored.setCanRead(userConfigurationChanges.getCanRead());
                 	   }
-                       if (userConfigurationChanges.getCanModifyStatus() != null && !userConfigurationChanges.getCanModifyStatus().isEmpty()) {
-                           entityStored.setCanModifyStatus(userConfigurationChanges.getCanModifyStatus());
-                       }
                 	   if (userConfigurationChanges.getApiKey() != null && !userConfigurationChanges.getApiKey().isBlank()) {
                 		   entityStored.setApiKey(userConfigurationChanges.getApiKey());
                 	   }

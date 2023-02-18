@@ -64,10 +64,14 @@ public class DocumentServiceImpl implements DocumentService {
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
                                                                                     .partitionValue(documentInput.getDocumentKey())
                                                                                     .build()))
-                   .flatMap(foundedDocument -> Mono.error(new ItemAlreadyPresent(documentInput.getDocumentKey())))
-                   .doOnError(ItemAlreadyPresent.class, throwable -> log.info(throwable.getMessage()))
-                   .switchIfEmpty(Mono.just(documentInput))
-                   .flatMap(unused -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
+                   .handle((documentFounded, sink) -> {
+                       if (documentFounded != null) {
+                           log.error("insertDocument() : document founded : {}", documentFounded);
+                           sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
+                       }
+                   })
+                   .doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
+                   .switchIfEmpty(Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
                            documentEntityInput))))
                    .thenReturn(documentInput);
     }

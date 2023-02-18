@@ -18,7 +18,6 @@ public class UserConfigurationEntity {
 	private String name; // ok
 	private List<String> canCreate; // ok
 	private List<String> canRead; // ok
-	private List<String> canModifyStatus; // ok
 	/** __DA DEFINIRE__ configurazioni necessarie per la firma digitale */
 	private String signatureInfo; // da verificare il tipo
 	private UserConfigurationDestinationEntity destination;  // ok

@@ -38,7 +38,6 @@ public class UserConfigurationInternalApiControllerTest {
 	
 	private static final String BASE_PATH = "/safestorage/internal/v1/userConfigurations";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{name}", BASE_PATH);
-	
 	private static final String PARTITION_ID_ENTITY = "key";
 //	private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
 	private static final String PARTITION_ID_NO_EXISTENT = "name_bad";

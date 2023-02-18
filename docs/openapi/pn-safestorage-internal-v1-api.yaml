@@ -91,7 +91,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentTypeResponse'
-  
+
   '/safestorage/internal/v1/doctypes':
     post:
       operationId: insertDocType
@@ -178,7 +178,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Document'
+              $ref: '#/components/schemas/DocumentInput'
       responses:
         '404':
           description: Not configured
@@ -377,11 +377,23 @@ components:
           type: string
         documentType:
           $ref: '#/components/schemas/DocumentType'
+    DocumentInput:
+      allOf:
+        - $ref: '#/components/schemas/Document'
+        - type: object
+          properties:
+            documentType:
+              type: string
     DocumentResponse:
       type: object
       properties:
         document:
-          $ref: '#/components/schemas/Document'
+          allOf:
+            - $ref: '#/components/schemas/Document'
+            - type: object
+              properties:
+                documentType:
+                  $ref: '#/components/schemas/DocumentType'
         error:
           $ref: '#/components/schemas/Error'
     DocumentChanges:

@@ -72,6 +72,8 @@ public class UserConfigurationInternalApiControllerTest {
 		canCreate.add("A");
 		List<String> canRead  = new ArrayList<>();
 		canRead.add("DD");
+		List<String> canModifyStatus = new ArrayList<>();
+		canModifyStatus.add("ModifyStatus");
 		UserConfigurationDestination destination = new UserConfigurationDestination(); 
 		destination.setSqsUrl("URL");
 		
@@ -79,6 +81,7 @@ public class UserConfigurationInternalApiControllerTest {
 		userConfigurationInput.setName(PARTITION_ID_ENTITY);
 		userConfigurationInput.setCanCreate(canCreate);
 		userConfigurationInput.setCanRead(canRead);
+		userConfigurationInput.setCanModifyStatus(canModifyStatus);
 		userConfigurationInput.setSignatureInfo("mmm");
 		userConfigurationInput.setDestination(destination);
 		userConfigurationInput.setApiKey("apiKey");
@@ -87,10 +90,13 @@ public class UserConfigurationInternalApiControllerTest {
 		canCreate1.add("A");
 		List<String> canRead1  = new ArrayList<>();
 		canRead1.add("DD");
+		List<String> canModifyStatus1  = new ArrayList<>();
+		canModifyStatus1.add("ModifyStatus");
 		
 		userConfigurationChanges = new UserConfigurationChanges();
 		userConfigurationChanges.setCanCreate(canCreate1);
 		userConfigurationChanges.setCanRead(canRead1);
+		userConfigurationChanges.setCanModifyStatus(canModifyStatus1);
 	}
 	
 	@Test
@@ -142,7 +148,7 @@ public class UserConfigurationInternalApiControllerTest {
 			        .contentType(APPLICATION_JSON)
 			        .body(BodyInserters.fromValue(userConfigurationInput))
 			        .exchange()
-			        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+			        .expectStatus().isEqualTo(HttpStatus.CONFLICT);
 		
 		}
 		

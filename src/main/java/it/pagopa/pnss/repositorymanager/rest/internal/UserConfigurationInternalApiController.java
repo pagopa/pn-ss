@@ -54,7 +54,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 			String errorMsg = name == null ? 
 					"UserConfiguration already present" : 
 					String.format("UserConfiguration with name %s already present", name);
-			return buildErrorResponse(HttpStatus.FORBIDDEN, errorMsg);
+			return buildErrorResponse(HttpStatus.CONFLICT, errorMsg);
 		}
 		else if (throwable instanceof IdClientNotFoundException) {
 			String errorMsg = name == null ? 

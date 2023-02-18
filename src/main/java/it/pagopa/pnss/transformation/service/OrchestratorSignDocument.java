@@ -76,7 +76,7 @@ public class OrchestratorSignDocument {
                         byte[] fileSigned = signReturnV2.getBinaryoutput();
                         PutObjectResponse putObjectResponse = uploadObjectService.execute(key, fileSigned);
 
-                        doc.setDocumentState(Document.DocumentStateEnum.AVAILABLE);
+                        doc.setDocumentState(Constant.AVAILABLE);
                         documentClientCall.updatedocument(doc);
                         deleteObjectService.execute(key);
                     }catch (NoSuchBucketException nsbe){

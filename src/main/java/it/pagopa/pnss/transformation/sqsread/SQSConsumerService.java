@@ -22,8 +22,6 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 
 
-import static it.pagopa.pnss.common.QueueNameConstant.SIGN_QUEUE_NAME;
-
 
 @Component
 @Slf4j

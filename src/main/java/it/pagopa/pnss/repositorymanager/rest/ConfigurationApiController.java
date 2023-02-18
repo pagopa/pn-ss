@@ -1,9 +1,6 @@
 package it.pagopa.pnss.repositorymanager.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pn.template.rest.v1.api.CfgApi;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
@@ -11,11 +8,9 @@ import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
-import it.pagopa.pnss.repositorymanager.rest.internal.DocTypeInternalApiController;
 import it.pagopa.pnss.repositorymanager.service.DocumentsConfigsService;
 import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -78,6 +73,7 @@ public class ConfigurationApiController implements CfgApi {
      * <li>name: il nome del sistema upstream (client).</li>
      * <li>canCreate: tipi di documento che il client può caricare.</li>
      * <li>canRead: tipi di documento che il client può leggere.</li>
+     * <li>canModifyStatus: tipi di documento che il client può modificare.</li>
      * <li>signatureInfo: informazioni necessarie per firmare digitalmente, per conto del client, i file caricati.</li>
      * <li>destination: informazioni necessarie a notificare eventi al client.</li>
      * </ul>

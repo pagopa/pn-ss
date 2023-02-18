@@ -91,7 +91,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentTypeResponse'
-  
+
   '/safestorage/internal/v1/doctypes':
     post:
       operationId: insertDocType
@@ -104,8 +104,8 @@ paths:
             schema:
               $ref: '#/components/schemas/DocumentType'
       responses:
-        '403':
-          description: Forbidden
+        '409':
+          description: Conflict
         '200':
           description: OK
           content:
@@ -416,7 +416,12 @@ components:
           type: array
           items:
             type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+          description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
+        canModifyStatus:
+          type: array
+          items:
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
         signatureInfo:
           type: string
         destination:
@@ -445,7 +450,12 @@ components:
           type: array
           items:
             type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+          description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
+        canModifyStatus:
+          type: array
+          items:
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
         apiKey:
           type: string
         signatureInfo:

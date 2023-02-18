@@ -5,6 +5,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.S3BucketException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.transformation.model.Detail;
 import it.pagopa.pnss.transformation.model.Oggetto;
 import it.pagopa.pnss.transformation.model.S3ObjectCreated;
 import it.pagopa.pnss.transformation.service.DownloadObjectService;
@@ -48,7 +49,8 @@ public class ReadFromBucketNoPresentTest {
         S3ObjectCreated s3obj = new S3ObjectCreated();
         Oggetto oggetto = new Oggetto();
         oggetto.setKey("111-DDD");
-        s3obj.setObject(oggetto);
+        s3obj.setDetailObject(new Detail());
+        s3obj.getDetailObject().setObject(oggetto);
 
         //Mockito.doReturn(Mono.error(new DocumentkeyNotPresentException("keyFile"))).when(documentClientCall).getdocument(Mockito.any());
 

@@ -2,12 +2,14 @@ package it.pagopa.pnss.transformation.services;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.S3BucketException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.transformation.model.Detail;
 import it.pagopa.pnss.transformation.model.Oggetto;
 import it.pagopa.pnss.transformation.model.S3ObjectCreated;
 import it.pagopa.pnss.transformation.service.DownloadObjectService;
@@ -64,7 +66,8 @@ public class OrchestratorSignDocumentTest {
         S3ObjectCreated s3obj = new S3ObjectCreated();
         Oggetto oggetto = new Oggetto();
         oggetto.setKey("111-DDD");
-        s3obj.setObject(oggetto);
+        s3obj.setDetailObject(new Detail());
+        s3obj.getDetailObject().setObject(oggetto);
 
 
         Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
@@ -83,7 +86,8 @@ public class OrchestratorSignDocumentTest {
         S3ObjectCreated s3obj = new S3ObjectCreated();
         Oggetto oggetto = new Oggetto();
         oggetto.setKey("111-DDD");
-        s3obj.setObject(oggetto);
+        s3obj.setDetailObject(new Detail());
+        s3obj.getDetailObject().setObject(oggetto);
 
         addFileToBucket("111-DDD");
         ResponseBytes<GetObjectResponse> resp = downloadObjectService.execute("111-DDD");
@@ -98,7 +102,9 @@ public class OrchestratorSignDocumentTest {
         S3ObjectCreated s3obj = new S3ObjectCreated();
         Oggetto oggetto = new Oggetto();
         oggetto.setKey("222-DDD");
-        s3obj.setObject(oggetto);
+        s3obj.setDetailObject(new Detail());
+        s3obj.getDetailObject().setObject(oggetto);
+
 
 
         DocumentResponse docResp = new DocumentResponse();
@@ -125,6 +131,9 @@ public class OrchestratorSignDocumentTest {
 
             DocumentResponse docResp = new DocumentResponse();
             Document doc =new Document();
+            DocumentType documentType = new DocumentType();
+            documentType.setDigitalSignature(true);
+            doc.setDocumentType(documentType);
             doc.setContentType(APPLICATION_PDF);
             docResp.setDocument(doc);
             Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).getdocument(Mockito.any());

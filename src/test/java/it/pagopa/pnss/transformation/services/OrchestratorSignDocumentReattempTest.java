@@ -2,6 +2,7 @@ package it.pagopa.pnss.transformation.services;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -65,6 +66,9 @@ public class OrchestratorSignDocumentReattempTest {
         DocumentResponse docResp = new DocumentResponse();
         Document doc =new Document();
         doc.setContentType(APPLICATION_PDF);
+        DocumentType documentType = new DocumentType();
+        documentType.setDigitalSignature(true);
+        doc.setDocumentType(documentType);
         docResp.setDocument(doc);
         Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).getdocument(Mockito.any());
         addFileToBucket("666-DDD");

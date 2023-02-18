@@ -53,7 +53,7 @@ public class OrchestratorSignDocument {
                         byte[] fileInput = objectResponse.asByteArray();
                         Document doc = documentResponse.getDocument();
 
-                        if (doc.getDocumentType().getDigitalSignature()){
+                        if (!doc.getDocumentType().getDigitalSignature()){
                             return Mono.empty();
                         }
 

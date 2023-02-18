@@ -20,7 +20,7 @@ public class DeleteObjectService extends  CommonS3ObjectService {
         S3Client s3Client = getS3Client();
 
         DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                .bucket(bucketName.ssHotName())
+                .bucket(bucketName.ssStageName())
                 .key(keyName)
                 .build();
 

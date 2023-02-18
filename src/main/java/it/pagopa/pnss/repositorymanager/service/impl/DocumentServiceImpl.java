@@ -108,6 +108,13 @@ public class DocumentServiceImpl implements DocumentService {
                        if (documentChanges.getDocumentState() != null) {
                            documentEntityStored.setDocumentState(documentChanges.getDocumentState());
                        }
+                       if(documentChanges.getDocumentState().equalsIgnoreCase("available")) {
+                            if(documentEntityStored.getDocumentType().getTipoDocumento().equalsIgnoreCase("PN_NOTIFICATION_ATTACHMENTS")) {
+                                documentEntityStored.setDocumentLogicalState("PRELOADED");
+                            } else {
+                                documentEntityStored.setDocumentLogicalState("SAVED");
+                            }
+                       }
                        if (documentChanges.getRetentionUntil() != null && documentChanges.getRetentionUntil().isBlank()) {
                     	   documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
                        }

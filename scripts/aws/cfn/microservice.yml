@@ -143,7 +143,7 @@ Parameters:
 
 Resources:
 
-  # PN-TemplateBeMs microservice
+  # pn-safe-storage microservice
   SafeStorageMicroservice:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -175,7 +175,33 @@ Resources:
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         # HealthCheckPath: 
-  
+    
+  # pn-safe-storage microservice public API (WEB) exposed with API-GW
+  PnSsMicroserviceWebAPI:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/api-gw-expose-service.yaml"
+      Parameters:
+        MicroServiceUniqueName: !Sub '${ProjectName}-safe-storage'
+        IntendedUsage: WEB
+        DnsName: !Ref WebApiDnsName
+        ProjectName: !Ref ProjectName
+        ServiceApiPath: 'safestorage'
+        NetworkLoadBalancerLink: !Ref NetworkLoadBalancerLink
+        ApplicationLoadBalancerDomain: !Ref ApplicationLoadBalancerDomain
+        AlarmSNSTopicArn: !Ref AlarmSNSTopicArn
+        # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn  
+
+  PnSsMicroserviceWebAPIWaf:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/api-gw-waf-acl.yaml"
+      Parameters:
+        WAFName: !Sub '${ProjectName}-safe-storage-web'
+        IntendedUsage: WEB
+        APIGatewayARNs: !GetAtt PnSsMicroserviceWebAPI.Outputs.APIGatewayARN
+        Limit: 6000
+
   PnSsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -262,7 +288,7 @@ Resources:
           Action:
           - 'sts:AssumeRole'
 
-  LogGroup:
+  PnSsGestoreBucketLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Join ['',['/pn-safestorage/', !Ref PnSsGestoreBucket]]
@@ -303,5 +329,6 @@ Resources:
       Principal: s3.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Ref PnSsBucketArn
+
 
               

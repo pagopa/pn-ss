@@ -326,7 +326,11 @@ public class UriBuilderService {
         downloadResponse.setContentType(doc.getContentType());
         // NOTA: deve essere restituito lo satto logico, piuttosto che lo stato tecnico
         //downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
-        downloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
+        if(doc.getDocumentLogicalState() != null){
+            downloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
+        } else {
+            downloadResponse.setDocumentStatus("");
+        }
         log.info("getFileDownloadResponse() : documentState {} : documentLogicalState {}", doc.getDocumentState(), doc.getDocumentLogicalState());
         downloadResponse.setDocumentType(doc.getDocumentType().getTipoDocumento());
 

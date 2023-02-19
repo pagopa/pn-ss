@@ -67,8 +67,14 @@ public class DocumentServiceImpl implements DocumentService {
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
                         .partitionValue(documentInput.getDocumentKey())
                         .build()))
-        		.flatMap(foundedDocument -> Mono.error(new ItemAlreadyPresent(documentInput.getDocumentKey())))
-                .doOnError(ItemAlreadyPresent.class, throwable -> log.info(throwable.getMessage()))
+                .handle((documentFounded, sink) -> {
+                            if (documentFounded != null) {
+                                log.error("insertDocument() : document founded : {}", documentFounded);
+                                sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
+                            }
+                        }
+                )
+                .doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
                 .switchIfEmpty(Mono.just(documentInput))
                 .flatMap(o -> docTypesService.getDocType(key))
                 .flatMap(o -> {
@@ -101,13 +107,6 @@ public class DocumentServiceImpl implements DocumentService {
                        log.info("patchDocument() : documentEntityStored : {}", documentEntityStored);
                        if (documentChanges.getDocumentState() != null) {
                            documentEntityStored.setDocumentState(documentChanges.getDocumentState());
-                       }
-                       if(documentChanges.getDocumentState().equalsIgnoreCase("available")) {
-                            if(documentEntityStored.getDocumentType().getTipoDocumento().equalsIgnoreCase("PN_NOTIFICATION_ATTACHMENTS")) {
-                                documentEntityStored.setDocumentLogicalState("PRELOADED");
-                            } else {
-                                documentEntityStored.setDocumentLogicalState("SAVED");
-                            }
                        }
                        if (documentChanges.getRetentionUntil() != null && documentChanges.getRetentionUntil().isBlank()) {
                     	   documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());

@@ -1,5 +1,6 @@
 package it.pagopa.pnss.uribuilder.rest;
 
+import it.pagopa.pnss.common.service.HeadersChecker;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import it.pagopa.pn.template.rest.v1.api.FileUploadApi;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
@@ -16,10 +17,12 @@ import reactor.core.publisher.Mono;
 public class FileUploadApiController implements FileUploadApi {
 
     UriBuilderService uriBuilderService;
+    HeadersChecker headersChecker;
 
     @Autowired
-    public FileUploadApiController(UriBuilderService uriBuilderService) {
+    public FileUploadApiController(UriBuilderService uriBuilderService, HeadersChecker headersChecker) {
         this.uriBuilderService = uriBuilderService;
+        this.headersChecker = headersChecker;
     }
 
 
@@ -27,9 +30,10 @@ public class FileUploadApiController implements FileUploadApi {
     public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId,
                                                                  Mono<FileCreationRequest> fileCreationRequest,
                                                                  final ServerWebExchange exchange) {
-
-        return fileCreationRequest.flatMap(request -> uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId, request))
-                                  .map(ResponseEntity::ok);
-
+    	
+        return headersChecker.checkIdentity(exchange)
+        		.flatMap(unused -> fileCreationRequest)
+        		.flatMap(request -> uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId, request))
+                .map(ResponseEntity::ok);
     }
 }

@@ -162,7 +162,7 @@ public class DocumentInternalApiControllerTest {
 		        .contentType(APPLICATION_JSON)
 		        .body(BodyInserters.fromValue(documentInput))
 		        .exchange()
-		        .expectStatus().isEqualTo(HttpStatus.CONFLICT);
+		        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
 		}
 			
 		log.info("\n Test 2 (postItemPartitionKeyDuplicated) passed \n");

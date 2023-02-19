@@ -4,27 +4,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Detail {
     private String version;
-    Bucket bucket;
-    Oggetto object;
+    Bucket BucketObject;
+    Object ObjectObject;
     @JsonProperty("request-id")
     private String requestId;
     private String requester;
     @JsonProperty("source-ip-address")
     private String sourceIpAddress;
     private String reason;
-
-    public Detail(String version, Bucket bucket, Oggetto object, String requestId, String requester, String sourceIpAddress, String reason) {
-        this.version = version;
-        this.bucket = bucket;
-        this.object = object;
-        this.requestId = requestId;
-        this.requester = requester;
-        this.sourceIpAddress = sourceIpAddress;
-        this.reason = reason;
-    }
-
-    public Detail() {
-    }
 
     public String getVersion() {
         return version;
@@ -34,20 +21,20 @@ public class Detail {
         this.version = version;
     }
 
-    public Bucket getBucket() {
-        return bucket;
+    public Bucket getBucketObject() {
+        return BucketObject;
     }
 
-    public void setBucket(Bucket bucket) {
-        this.bucket = bucket;
+    public void setBucketObject(Bucket bucketObject) {
+        BucketObject = bucketObject;
     }
 
-    public Oggetto getObject() {
-        return object;
+    public Object getObjectObject() {
+        return ObjectObject;
     }
 
-    public void setObject(Oggetto object) {
-        this.object = object;
+    public void setObjectObject(Object objectObject) {
+        ObjectObject = objectObject;
     }
 
     public String getRequestId() {

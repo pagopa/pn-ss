@@ -36,7 +36,6 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
     }
 
     private Mono<UserConfigurationEntity> getErrorIdClientNotFoundException(String name) {
-        log.error("getErrorIdClientNotFoundException() : userConfiguration with name \"{}\" not found", name);
         return Mono.error(new IdClientNotFoundException(name));
     }
 
@@ -65,10 +64,16 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder()
                                                                                              .partitionValue(userConfigurationInput.getName())
                                                                                              .build()))
-                .flatMap(foundedClientConfiguration -> Mono.error(new ItemAlreadyPresent(userConfigurationInput.getApiKey())))
-                .doOnError(ItemAlreadyPresent.class, throwable -> log.info(throwable.getMessage()))
-                .switchIfEmpty(Mono.just(userConfigurationInput))
-                .flatMap(unused -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
+                   .handle((userConfigurationFounded, sink) -> {
+                       if (userConfigurationFounded != null) {
+                           log.error("insertUserConfiguration() : userConfiguration founded : {}", userConfigurationFounded);
+                           sink.error(new ItemAlreadyPresent(userConfigurationFounded.getApiKey()));
+                       }
+                   })
+                   .doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
+                   // Puts a single item in the mapped table.
+                   // If the table contains an item with the same primary key, it will be replaced with this item.
+                   .switchIfEmpty(Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
                            userConfigurationEntity))))
                    .thenReturn(userConfigurationInput);
     }
@@ -81,22 +86,19 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
                    .map(entityStored -> {
-                	   log.info("patchUserConfiguration() : userConfigurationEntity begore patch : {}", entityStored);
-                	   if (userConfigurationChanges.getCanCreate() != null && !userConfigurationChanges.getCanCreate().isEmpty()) {
-                		   entityStored.setCanCreate(userConfigurationChanges.getCanCreate());
-                	   }
-                	   if (userConfigurationChanges.getCanRead() != null && !userConfigurationChanges.getCanRead().isEmpty()) {
-                		   entityStored.setCanRead(userConfigurationChanges.getCanRead());
-                	   }
-                       if (userConfigurationChanges.getCanModifyStatus() != null && !userConfigurationChanges.getCanModifyStatus().isEmpty()) {
-                           entityStored.setCanModifyStatus(userConfigurationChanges.getCanModifyStatus());
+                       log.info("patchUserConfiguration() : userConfigurationEntity begore patch : {}", entityStored);
+                       if (userConfigurationChanges.getCanCreate() != null && !userConfigurationChanges.getCanCreate().isEmpty()) {
+                           entityStored.setCanCreate(userConfigurationChanges.getCanCreate());
                        }
-                	   if (userConfigurationChanges.getApiKey() != null && !userConfigurationChanges.getApiKey().isBlank()) {
-                		   entityStored.setApiKey(userConfigurationChanges.getApiKey());
-                	   }
-                	   if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
-                		   entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
-                	   }
+                       if (userConfigurationChanges.getCanRead() != null && !userConfigurationChanges.getCanRead().isEmpty()) {
+                           entityStored.setCanRead(userConfigurationChanges.getCanRead());
+                       }
+                       if (userConfigurationChanges.getApiKey() != null && !userConfigurationChanges.getApiKey().isBlank()) {
+                           entityStored.setApiKey(userConfigurationChanges.getApiKey());
+                       }
+                       if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
+                           entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
+                       }
                        log.info("patchUserConfiguration() : userConfigurationEntity for patch : {}", entityStored);
                        return entityStored;
                    })

@@ -2,10 +2,12 @@ package it.pagopa.pnss.common.client.impl;
 
 import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+
+import static org.springframework.http.HttpStatus.FORBIDDEN;
 
 @Service
 public class DocumentClientCallImpl extends CommonBaseClient implements DocumentClientCall {
@@ -36,11 +40,12 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     }
 
     @Override
-    public Mono<DocumentResponse> postdocument(Document document) throws IdClientNotFoundException {
+    public Mono<DocumentResponse> postDocument(DocumentInput document) throws IdClientNotFoundException {
         return getWebClient().post()
                 .uri(anagraficaDocumentiClientEndpointpost)
                 .bodyValue(document)
                 .retrieve()
+                .onStatus(FORBIDDEN::equals, clientResponse -> Mono.error(new DocumentkeyPresentException(document.getDocumentKey())))
                 .bodyToMono(DocumentResponse.class);
     }
 

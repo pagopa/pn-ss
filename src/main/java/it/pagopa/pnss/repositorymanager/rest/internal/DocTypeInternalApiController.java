@@ -53,7 +53,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
         	String errorMsg = typeId == null ? 
         			"DocType already present" : 
         			String.format("DocType with id %s already present", typeId);
-        	return buildErrorResponse(HttpStatus.CONFLICT, errorMsg);
+        	return buildErrorResponse(HttpStatus.FORBIDDEN, errorMsg);
         } else if (throwable instanceof DocumentTypeNotPresentException) {
             String errorMsg = typeId == null ? 
             		"Document type not found" : 

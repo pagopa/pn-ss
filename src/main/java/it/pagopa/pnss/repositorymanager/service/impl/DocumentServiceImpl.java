@@ -112,7 +112,7 @@ public class DocumentServiceImpl implements DocumentService {
                     	   documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
                        }
                        if (documentChanges.getCheckSum() != null) {
-                    	   documentEntityStored.setCheckSum(documentChanges.getCheckSum().getValue());
+                    	   documentEntityStored.setCheckSum(documentChanges.getCheckSum());
                        }
                        if (documentChanges.getContentLenght() != null) {
                     	   documentEntityStored.setContentLenght(documentChanges.getContentLenght());

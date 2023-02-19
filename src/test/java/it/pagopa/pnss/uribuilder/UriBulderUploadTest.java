@@ -7,11 +7,15 @@ import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
 import static it.pagopa.pnss.common.Constant.PRELOADED;
 import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,12 +31,6 @@ import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.server.ResponseStatusException;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
@@ -54,14 +52,15 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 @Slf4j
 public class UriBulderUploadTest {
 
-	@Value("${header.x-api-key:#{null}}")
-	private String xApiKey;
-	@Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
-	private String X_PAGOPA_SAFESTORAGE_CX_ID;
+    @Value("${header.x-api-key:#{null}}")
+    private String xApiKey;
+    @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
+    private String X_PAGOPA_SAFESTORAGE_CX_ID;
 //    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
 
-	private static final String xApiKeyValue = "apiKey_value";
-	private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
+    private static final String xApiKeyValue = "apiKey_value";
+    private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
+    private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey"));
 
     @Value("${file.upload.api.url}")
     private String urlPath;
@@ -82,18 +81,16 @@ public class UriBulderUploadTest {
 
     private WebTestClient.ResponseSpec fileUploadTestCall(BodyInserter<FileCreationRequest, ReactiveHttpOutputMessage> bodyInserter,
                                                           String requestIdx) {
-        this.webClient.mutate()
-                .responseTimeout(Duration.ofMillis(30000))
-                .build();
+        this.webClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
 
         return this.webClient.post()
-                .uri(getUploadFileEndpoint(requestIdx))
-                .accept(MediaType.APPLICATION_JSON)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(bodyInserter)
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
-                .header(xApiKey,xApiKeyValue)
-                .exchange();
+                             .uri(getUploadFileEndpoint(requestIdx))
+                             .accept(MediaType.APPLICATION_JSON)
+                             .contentType(MediaType.APPLICATION_JSON)
+                             .body(bodyInserter)
+                             .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
+                             .header(xApiKey, xApiKeyValue)
+                             .exchange();
     }
 
     private String getUploadFileEndpoint(String requestIdx) {
@@ -117,7 +114,7 @@ public class UriBulderUploadTest {
         userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
         userConfig.setUserConfiguration(userConfiguration);
 
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
         DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
@@ -135,29 +132,24 @@ public class UriBulderUploadTest {
         Document document = new Document();
         document.setDocumentKey("keyFile");
         docResp.setDocument(document);
-        Mono<DocumentResponse>  respDoc =  Mono.just(docResp);
-        Mockito.doReturn(respDoc).when(documentClientCall).postdocument(Mockito.any());
+        Mono<DocumentResponse> respDoc = Mono.just(docResp);
+        Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
 
         WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
-        FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult = responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
+        FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
+                responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
         FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-        S3Presigner presigner =  uriBuilderService.getS3Presigner();
+        S3Presigner presigner = uriBuilderService.getS3Presigner();
 
 
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(BUCKET_HOT_NAME).key(resp.getKey()).build();
 
-
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(BUCKET_HOT_NAME)
-                .key(resp.getKey())
-                .build();
-
-        GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofMinutes(60))
-                .getObjectRequest(getObjectRequest)
-                .build();
+        GetObjectPresignRequest getObjectPresignRequest =
+                GetObjectPresignRequest.builder().signatureDuration(Duration.ofMinutes(60)).getObjectRequest(getObjectRequest).build();
 
         PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(getObjectPresignRequest);
-        assertThat(presignedGetObjectRequest.url().toString()).startsWith("https://s3.eu-central-1.amazonaws.com/PnSsBucketName/"+resp.getKey());
+        assertThat(presignedGetObjectRequest.url().toString()).startsWith(
+                "https://s3.eu-central-1.amazonaws.com/PnSsBucketName/" + resp.getKey());
         assertThat(presignedGetObjectRequest.isBrowserExecutable()).isTrue();
         assertThat(presignedGetObjectRequest.signedHeaders().get("host")).containsExactly("s3.eu-central-1.amazonaws.com");
         assertThat(presignedGetObjectRequest.signedPayload()).isEmpty();
@@ -166,7 +158,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    void testStatoNonConsentito_PN_NOTIFICATION_ATTACHMENTS(){
+    void testStatoNonConsentito_PN_NOTIFICATION_ATTACHMENTS() {
 
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
@@ -174,16 +166,15 @@ public class UriBulderUploadTest {
         userConfiguration.setApiKey(xApiKeyValue);
         userConfig.setUserConfiguration(userConfiguration);
 
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
 
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
         fcr.setStatus("ATTACHED");
-        fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isBadRequest();
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
     }
 
     @Test
@@ -203,7 +194,7 @@ public class UriBulderUploadTest {
         userConfiguration.setCanCreate(List.of(PN_AAR));
         userConfig.setUserConfiguration(userConfiguration);
 
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
         Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
@@ -220,29 +211,24 @@ public class UriBulderUploadTest {
         Document document = new Document();
         document.setDocumentKey("keyFile");
         docResp.setDocument(document);
-        Mono<DocumentResponse>  respDoc =  Mono.just(docResp);
-        Mockito.doReturn(respDoc).when(documentClientCall).postdocument(Mockito.any());
+        Mono<DocumentResponse> respDoc = Mono.just(docResp);
+        Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
 
         WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
-        FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult = responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
+        FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
+                responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
         FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-        S3Presigner presigner =  uriBuilderService.getS3Presigner();
+        S3Presigner presigner = uriBuilderService.getS3Presigner();
 
 
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(BUCKET_HOT_NAME).key(resp.getKey()).build();
 
-
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(BUCKET_HOT_NAME)
-                .key(resp.getKey())
-                .build();
-
-        GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofMinutes(60))
-                .getObjectRequest(getObjectRequest)
-                .build();
+        GetObjectPresignRequest getObjectPresignRequest =
+                GetObjectPresignRequest.builder().signatureDuration(Duration.ofMinutes(60)).getObjectRequest(getObjectRequest).build();
 
         PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(getObjectPresignRequest);
-        assertThat(presignedGetObjectRequest.url().toString()).startsWith("https://s3.eu-central-1.amazonaws.com/PnSsBucketName/"+resp.getKey());
+        assertThat(presignedGetObjectRequest.url().toString()).startsWith(
+                "https://s3.eu-central-1.amazonaws.com/PnSsBucketName/" + resp.getKey());
         assertThat(presignedGetObjectRequest.isBrowserExecutable()).isTrue();
         assertThat(presignedGetObjectRequest.signedHeaders().get("host")).containsExactly("s3.eu-central-1.amazonaws.com");
         assertThat(presignedGetObjectRequest.signedPayload()).isEmpty();
@@ -250,7 +236,7 @@ public class UriBulderUploadTest {
     }
 
     @Test
-    void testStatoNonConsentito_PN_AAR(){
+    void testStatoNonConsentito_PN_AAR() {
 
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
@@ -258,21 +244,19 @@ public class UriBulderUploadTest {
         userConfiguration.setApiKey(xApiKeyValue);
         userConfig.setUserConfiguration(userConfiguration);
 
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus(PRELOADED);
-        fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isBadRequest();
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
     }
 
 
-
     @Test
-    void testErroreInserimentoContentType(){
+    void testErroreInserimentoContentType() {
 
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
@@ -280,19 +264,18 @@ public class UriBulderUploadTest {
         userConfiguration.setApiKey(xApiKeyValue);
         userConfig.setUserConfiguration(userConfiguration);
 
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType("VALUE_FAULT");
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus(PRELOADED);
-         fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isBadRequest();
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
     }
 
     @Test
-    void testErroreInserimentoDocumentType(){
+    void testErroreInserimentoDocumentType() {
 
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
@@ -300,19 +283,18 @@ public class UriBulderUploadTest {
         userConfiguration.setApiKey(xApiKeyValue);
         userConfig.setUserConfiguration(userConfiguration);
 
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType("VALUE_FAULT");
         fcr.setStatus(PRELOADED);
-         fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isBadRequest();
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
     }
 
     @Test
-    void testErroreInserimentoStatus(){
+    void testErroreInserimentoStatus() {
 
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
@@ -320,20 +302,19 @@ public class UriBulderUploadTest {
         userConfiguration.setApiKey(xApiKeyValue);
         userConfig.setUserConfiguration(userConfiguration);
 
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
 
-        fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isBadRequest();
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
     }
 
     @Test
-    void testContetTypeParamObbligatorio(){
+    void testContetTypeParamObbligatorio() {
 
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
@@ -341,19 +322,18 @@ public class UriBulderUploadTest {
         userConfiguration.setApiKey(xApiKeyValue);
         userConfig.setUserConfiguration(userConfiguration);
 
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
 
-        fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isBadRequest();
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
     }
 
     @Test
-    void testDocumentTypeParamObbligatorio(){
+    void testDocumentTypeParamObbligatorio() {
 
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
@@ -361,36 +341,35 @@ public class UriBulderUploadTest {
         userConfiguration.setApiKey(xApiKeyValue);
         userConfig.setUserConfiguration(userConfiguration);
 
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
 
-        fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isBadRequest();
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
     }
 
     @Test
-    void testIdClienteNonTrovatoUpload(){
+    void testIdClienteNonTrovatoUpload() {
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("");
 
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.empty()  ;
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.empty();
 
-        Mockito.doThrow(new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "User Not Found : ")).when(userConfigurationClientCall).getUser(Mockito.any());
+        Mockito.doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found : "))
+               .when(userConfigurationClientCall)
+               .getUser(Mockito.any());
 
-        fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isNotFound();
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isNotFound();
     }
 
     @Test
-    void testIdClienteNoPermessiUpload(){
+    void testIdClienteNoPermessiUpload() {
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_AAR);
@@ -401,12 +380,11 @@ public class UriBulderUploadTest {
         userConfiguration.setApiKey(xApiKeyValue);
         userConfiguration.setCanCreate(new ArrayList<>());
         userConfig.setUserConfiguration(userConfiguration);
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
 
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
 
-        fileUploadTestCall(BodyInserters.fromValue(fcr),X_PAGOPA_SAFESTORAGE_CX_ID) .expectStatus()
-                .isForbidden();
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isForbidden();
     }
 
 }

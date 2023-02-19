@@ -36,7 +36,6 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
     }
 
     private Mono<UserConfigurationEntity> getErrorIdClientNotFoundException(String name) {
-        log.error("getErrorIdClientNotFoundException() : userConfiguration with name \"{}\" not found", name);
         return Mono.error(new IdClientNotFoundException(name));
     }
 
@@ -87,19 +86,19 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
                    .map(entityStored -> {
-                	   log.info("patchUserConfiguration() : userConfigurationEntity begore patch : {}", entityStored);
-                	   if (userConfigurationChanges.getCanCreate() != null && !userConfigurationChanges.getCanCreate().isEmpty()) {
-                		   entityStored.setCanCreate(userConfigurationChanges.getCanCreate());
-                	   }
-                	   if (userConfigurationChanges.getCanRead() != null && !userConfigurationChanges.getCanRead().isEmpty()) {
-                		   entityStored.setCanRead(userConfigurationChanges.getCanRead());
-                	   }
-                	   if (userConfigurationChanges.getApiKey() != null && !userConfigurationChanges.getApiKey().isBlank()) {
-                		   entityStored.setApiKey(userConfigurationChanges.getApiKey());
-                	   }
-                	   if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
-                		   entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
-                	   }
+                       log.info("patchUserConfiguration() : userConfigurationEntity begore patch : {}", entityStored);
+                       if (userConfigurationChanges.getCanCreate() != null && !userConfigurationChanges.getCanCreate().isEmpty()) {
+                           entityStored.setCanCreate(userConfigurationChanges.getCanCreate());
+                       }
+                       if (userConfigurationChanges.getCanRead() != null && !userConfigurationChanges.getCanRead().isEmpty()) {
+                           entityStored.setCanRead(userConfigurationChanges.getCanRead());
+                       }
+                       if (userConfigurationChanges.getApiKey() != null && !userConfigurationChanges.getApiKey().isBlank()) {
+                           entityStored.setApiKey(userConfigurationChanges.getApiKey());
+                       }
+                       if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
+                           entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
+                       }
                        log.info("patchUserConfiguration() : userConfigurationEntity for patch : {}", entityStored);
                        return entityStored;
                    })

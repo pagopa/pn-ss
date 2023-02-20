@@ -220,7 +220,7 @@ public class UriBuilderService {
                                                     if (!canRead.contains(documentResponse.getDocument()
                                                                                           .getDocumentType()
                                                                                           .getTipoDocumento())) {
-                                                        throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                        throw (new ResponseStatusException(HttpStatus.FORBIDDEN,
                                                                                            "Client : " + xPagopaSafestorageCxId +
                                                                                            " not has privilege for read document type " +
                                                                                            documentResponse.getDocument()

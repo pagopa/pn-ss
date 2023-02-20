@@ -229,7 +229,7 @@ class UriBuilderServiceDownloadTest {
 
 
         mockGetDocument(d, docId);
-        fileDownloadTestCall(docId, false).expectStatus().isBadRequest();
+        fileDownloadTestCall(docId, false).expectStatus().isForbidden();
     }
 
 

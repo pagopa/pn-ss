@@ -106,7 +106,7 @@ public class UriBuilderService {
                    .then(documentClientCall.postDocument(new DocumentInput().contentType(contentType)
                                                                             .documentKey(GenerateRandoKeyFile.getInstance()
                                                                                                              .createKeyName(documentType))
-                                                                            .documentState(status)
+                                                                            .documentState(BOOKED)
                                                                             .documentType(documentType))
                                            .retryWhen(Retry.max(10)
                                                            .filter(DocumentkeyPresentException.class::isInstance)
@@ -227,7 +227,7 @@ public class UriBuilderService {
                                                     if (!canRead.contains(documentResponse.getDocument()
                                                                                           .getDocumentType()
                                                                                           .getTipoDocumento())) {
-                                                        throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                        throw (new ResponseStatusException(HttpStatus.FORBIDDEN,
                                                                                            "Client : " + xPagopaSafestorageCxId +
                                                                                            " not has privilege for read document type " +
                                                                                            documentResponse.getDocument()

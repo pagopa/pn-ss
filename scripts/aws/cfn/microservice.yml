@@ -231,17 +231,7 @@ Resources:
       PolicyDocument:
         Statement: 
           - Action: 
-              - 'sqs:SendMessage'
-              - 'sqs:ChangeMessageVisibility'
-            Effect: "Allow"
-            Resource: !Sub ${PnSsQueueArnStagingBucket}
-            Principal:  
-              Service: 
-                - "events.amazonaws.com"
-          - Action: 
-              - 'sqs:ReceiveMessage'
-              - 'sqs:DeleteMessage'
-              - 'sqs:ChangeMessageVisibility'
+              - 'SQS:*'
             Effect: "Allow"
             Resource: !Sub ${PnSsQueueArnStagingBucket}
             Principal:  

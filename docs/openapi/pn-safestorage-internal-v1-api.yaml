@@ -104,8 +104,8 @@ paths:
             schema:
               $ref: '#/components/schemas/DocumentType'
       responses:
-        '409':
-          description: Conflict
+        '403':
+          description: Forbidden
         '200':
           description: OK
           content:
@@ -462,12 +462,7 @@ components:
           type: array
           items:
             type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
-        canModifyStatus:
-          type: array
-          items:
-            type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
+          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
         apiKey:
           type: string
         signatureInfo:

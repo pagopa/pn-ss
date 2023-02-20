@@ -1,11 +1,12 @@
 package it.pagopa.pnss.uribuilder;
 
-import java.time.Duration;
-import java.util.List;
-
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
-import org.apache.commons.lang3.StringUtils;
-import org.assertj.core.api.Assertions;
+import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,26 +17,33 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
-
-import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
-import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+import java.util.List;
+
 import static it.pagopa.pnss.common.Constant.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @Slf4j
-public class UriBulderServiceDownloadTest {
+class UriBuilderServiceDownloadTest {
 
-    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
+    @Value("${header.x-api-key:#{null}}")
+    private String xApiKey;
+    @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
+    private String X_PAGOPA_SAFESTORAGE_CX_ID;
+
+    private static final String X_API_KEY_VALUE = "apiKey_value";
+    private static final String X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE = "CLIENT_ID_123";
+
+    private static final UserConfigurationResponse USER_CONFIGURATION_RESPONSE =
+            new UserConfigurationResponse().userConfiguration(new UserConfiguration().apiKey(X_API_KEY_VALUE));
 
     @Value("${file.download.api.url}")
-    public  String urlDownload;
+    public String urlDownload;
 
     @Autowired
     private WebTestClient webClient;
@@ -45,23 +53,38 @@ public class UriBulderServiceDownloadTest {
 
     @MockBean
     DocumentClientCall documentClientCall;
-    private WebTestClient.ResponseSpec fileDownloadTestCall(
-                          String requestIdx,Boolean metadataOnly) {
-        this.webClient.mutate()
-                .responseTimeout(Duration.ofMillis(30000))
-                .build();
+
+    private WebTestClient.ResponseSpec fileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
+        this.webClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         return this.webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path(urlDownload)
-                        .queryParam("metadataOnly",metadataOnly)
-                        //... building a URI
-                        .build(requestIdx))
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, "CLIENT_ID_123")
-                .header(HttpHeaders.ACCEPT, "application/json")
-                .attribute("metadataOnly",false)
-                .exchange();
+                             .uri(uriBuilder -> uriBuilder.path(urlDownload).queryParam("metadataOnly", metadataOnly)
+                                                          //... building a URI
+                                                          .build(requestIdx))
+                             .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                             .header(xApiKey, X_API_KEY_VALUE)
+                             .header(HttpHeaders.ACCEPT, "application/json")
+                             .attribute("metadataOnly", false)
+                             .exchange();
 
 
+    }
+
+    @BeforeEach
+    private void createUserConfiguration() {
+
+        log.info("createUserConfiguration() : START");
+
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+        userConfiguration.setApiKey(X_API_KEY_VALUE);
+
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationResponse = Mono.just(userConfig);
+        Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
+
+        log.info("createUserConfiguration() : END");
     }
 
     private String getDownloadFileEndpoint() {
@@ -70,28 +93,25 @@ public class UriBulderServiceDownloadTest {
 
 
     @Test
-    void testUrlGenerato(){
+    void testUrlGenerato() {
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
 
         String docId = "1111-aaaa";
-
         mockUserConfiguration(List.of(PN_AAR));
-
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
         d.setDocumentState(AVAILABLE);
         d.setCheckSum(DocumentInput.CheckSumEnum.SHA256);
 
-
         mockGetDocument(d, docId);
 
-        fileDownloadTestCall(docId,true).expectStatus()
-                .isOk();
+        fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
 
     @Test
-    void testUrlGeneratoConMetaDataTrue(){
-
+    void testUrlGeneratoConMetaDataTrue() {
         String docId = "1111-aaaa";
 
         mockUserConfiguration(List.of(PN_AAR));
@@ -104,17 +124,16 @@ public class UriBulderServiceDownloadTest {
 
         mockGetDocument(d, docId);
 
-        fileDownloadTestCall(docId,true).expectStatus()
-                .isOk();
+        fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
 
     @Test
-    void testUrlGeneratoConMetaDataNull(){
+    void testUrlGeneratoConMetaDataNull() {
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
 
         String docId = "1111-aaaa";
 
         mockUserConfiguration(List.of(PN_AAR));
-
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
@@ -123,8 +142,7 @@ public class UriBulderServiceDownloadTest {
 
         mockGetDocument(d, docId);
 
-        fileDownloadTestCall(docId,true).expectStatus()
-                .isOk();
+        fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
 
 
@@ -174,32 +192,34 @@ public class UriBulderServiceDownloadTest {
 //    }
 
     @Test
-    void testFileNonTrovato(){
+    void testFileNonTrovato() {
 
         String docId = "1111-aaaa";
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
         mockUserConfiguration(List.of(PN_AAR));
         mockGetDocument(d, docId);
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
         Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
-        fileDownloadTestCall( docId,null).expectStatus()
-                .isNotFound();
+        fileDownloadTestCall(docId, null).expectStatus().isNotFound();
 
     }
 
     @Test
-    void testIdClienteNonTrovatoDownload(){
+    void testIdClienteNonTrovatoDownload() {
 
-        Mockito.doThrow(new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "User Not Found : ")).when(userConfigurationClientCall).getUser(Mockito.any());
+        Mockito.doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found : "))
+               .when(userConfigurationClientCall)
+               .getUser(Mockito.any());
         String docId = "1111-aaaa";
-        fileDownloadTestCall( docId,null).expectStatus()
-                .isNotFound();
+        fileDownloadTestCall(docId, null).expectStatus().isNotFound();
 
     }
 
     @Test
-    void testIdClienteNoPermessiDownload(){
+    void testIdClienteNoPermessiDownload() {
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
         String docId = "1111-aaaa";
 
         mockUserConfiguration(List.of(PN_NOTIFICATION_ATTACHMENTS));
@@ -209,13 +229,12 @@ public class UriBulderServiceDownloadTest {
 
 
         mockGetDocument(d, docId);
-        fileDownloadTestCall(docId,false).expectStatus()
-                .isBadRequest();
+        fileDownloadTestCall(docId, false).expectStatus().isForbidden();
     }
 
 
     private void mockGetDocument(DocumentInput d, String docId) {
-        DocumentResponse documentResponse= new DocumentResponse();
+        DocumentResponse documentResponse = new DocumentResponse();
         Document doc = new Document();
         DocumentType type = new DocumentType();
         type.setTipoDocumento(d.getDocumentType());
@@ -226,13 +245,7 @@ public class UriBulderServiceDownloadTest {
     }
 
     private void mockUserConfiguration(List<String> permessi) {
-        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-        UserConfiguration userConfiguration = new UserConfiguration();
-        userConfiguration.setCanRead(permessi);
-        userConfig.setUserConfiguration(userConfiguration);
-        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig)  ;
-
-        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().canRead(
+                permessi).apiKey(X_API_KEY_VALUE))));
     }
-
 }

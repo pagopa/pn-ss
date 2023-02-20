@@ -102,7 +102,7 @@ public class UriBuilderService {
                    .then(documentClientCall.postDocument(new DocumentInput().contentType(contentType)
                                                                             .documentKey(GenerateRandoKeyFile.getInstance()
                                                                                                              .createKeyName(documentType))
-                                                                            .documentState(status)
+                                                                            .documentState(BOOKED)
                                                                             .documentType(documentType))
                                            .retryWhen(Retry.max(10)
                                                            .filter(DocumentkeyPresentException.class::isInstance)

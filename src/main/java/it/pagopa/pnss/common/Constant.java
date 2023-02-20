@@ -24,6 +24,8 @@ public class Constant {
     public static final String STORAGETYPE = "storageType=";
     public static final String SAVED ="SAVED";
 
+    public static final String BOOKED ="BOOKED";
+
     public static final String FREEZED = "FREEZED";
 
     public static final String AVAILABLE = "AVAILABLE";

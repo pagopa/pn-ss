@@ -12,7 +12,6 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.dto.IdentityCheckResponse;
 import it.pagopa.pnss.common.client.exception.HeaderCheckException;
 import it.pagopa.pnss.common.client.exception.HeaderNotFoundException;
-import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.client.exception.IdentityCheckFailException;
 import it.pagopa.pnss.common.service.HeadersChecker;
 import lombok.extern.slf4j.Slf4j;
@@ -34,15 +33,15 @@ public class HeadersCheckerImpl implements HeadersChecker {
 		this.userConfigurationClientCall = userConfigurationClientCall;
 	}
 	
-	private Mono<IdentityCheckResponse> checkIdentity(String valueForXApiKey, String valueForxPagopaSafestorageCxId, UserConfigurationResponse ucResponse) {
+	private Mono<IdentityCheckResponse> checkIdentity(String valueForXApiKey, UserConfigurationResponse ucResponse) {
 		if (ucResponse.getError() != null 
 				&& ( (ucResponse.getError().getCode() != null && !ucResponse.getError().getCode().isBlank()) 
 						|| (ucResponse.getError().getDescription() != null && !ucResponse.getError().getDescription().isBlank()))) {
-			return Mono.error(new IdClientNotFoundException(valueForxPagopaSafestorageCxId));
+			return Mono.error(new HeaderCheckException("Client unknown", xPagopaSafestorageCxId));
 		}
 		if (ucResponse.getUserConfiguration() == null || (ucResponse.getUserConfiguration() != null && 
 				(ucResponse.getUserConfiguration().getApiKey() == null || ucResponse.getUserConfiguration().getApiKey().isEmpty()))) {
-			return Mono.error(new IdClientNotFoundException(valueForxPagopaSafestorageCxId));
+			return Mono.error(new HeaderCheckException("Client unknown", xPagopaSafestorageCxId));
 		}
 		String clientApiKey = ucResponse.getUserConfiguration().getApiKey();
 		log.info("checkIdentity() : clientApiKey {}", clientApiKey);
@@ -58,8 +57,10 @@ public class HeadersCheckerImpl implements HeadersChecker {
 		
 		if (exchange == null || xApiKey == null || xPagopaSafestorageCxId == null) {
 			log.error("checkIdentity(): Header not found");
-			throw new HeaderCheckException("Header not found");
+			return Mono.error(new HeaderCheckException("Header/s not founded"));
 		}
+		log.info("checkIdentity() : headers {} {}", xApiKey, xPagopaSafestorageCxId);
+		
 		List<String> xApiKeyList = exchange.getRequest().getHeaders().get(xApiKey);
 		List<String> xPagopaSafestorageCxIdList = exchange.getRequest().getHeaders().get(xPagopaSafestorageCxId);
 		log.info("checkIdentity() : xApiKeyList {} : xPagopaSafestorageCxIdList {}", xApiKeyList, xPagopaSafestorageCxIdList);
@@ -72,11 +73,11 @@ public class HeadersCheckerImpl implements HeadersChecker {
 		
 		String valueForXApiKey = xApiKeyList.get(0);
 		String valueForxPagopaSafestorageCxId = xPagopaSafestorageCxIdList.get(0);
-		log.info("checkIdentity() : valueForXApiKey {} : valueForxPagopaSafestorageCxId {}", valueForXApiKey, valueForxPagopaSafestorageCxId);
+		log.info("checkIdentity() : valueForXApiKey '{}' : valueForxPagopaSafestorageCxId '{}'", valueForXApiKey, valueForxPagopaSafestorageCxId);
 		
 		return userConfigurationClientCall.getUser(valueForxPagopaSafestorageCxId)
-				.flatMap(client -> checkIdentity(valueForXApiKey, valueForxPagopaSafestorageCxId, client))
-				.onErrorResume(WebClientResponseException.class, error -> Mono.error(new IdClientNotFoundException(valueForxPagopaSafestorageCxId)));
+				.flatMap(client -> checkIdentity(valueForXApiKey, client))
+				.onErrorResume(WebClientResponseException.class, error -> Mono.error(new HeaderCheckException(xPagopaSafestorageCxId, "Header not valid")));
 	}
 
 }

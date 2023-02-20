@@ -48,11 +48,11 @@ public class ConfigurationApiController implements CfgApi {
         if (throwable instanceof DocumentTypeNotPresentException 
         		|| throwable instanceof IdClientNotFoundException) {
             return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(null));
-        } else if (throwable instanceof BucketException
+        } else if (throwable instanceof BucketException) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null));
+        } else if (throwable instanceof IdentityCheckFailException
         		|| throwable instanceof HeaderNotFoundException
         		|| throwable instanceof HeaderCheckException) {
-            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null));
-        } else if (throwable instanceof IdentityCheckFailException) {
         	return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(null));
         }
     	log.info("getErrorResponse() : other");
@@ -65,11 +65,11 @@ public class ConfigurationApiController implements CfgApi {
     	
         if (throwable instanceof IdClientNotFoundException) {
             return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(null));
-        } else if (throwable instanceof RepositoryManagerException 
+        } else if (throwable instanceof RepositoryManagerException) {
+        	return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null));
+        } else if (throwable instanceof IdentityCheckFailException
         		|| throwable instanceof HeaderNotFoundException
         		|| throwable instanceof HeaderCheckException) {
-        	return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null));
-        } else if (throwable instanceof IdentityCheckFailException) {
         	return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(null));
         }
        	log.info("getErrorResponse() : other");

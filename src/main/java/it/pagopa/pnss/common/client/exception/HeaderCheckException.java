@@ -8,8 +8,8 @@ public class HeaderCheckException extends RuntimeException {
         super(msg);
     }
 	
-	public HeaderCheckException(String msg, String...headers) {
-        super(String.format("Headers '%s':  %s", headers, msg));
+	public HeaderCheckException(String header, String msg) {
+        super(String.format("Header '%s':  %s", header, msg));
     }
 
 }

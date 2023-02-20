@@ -432,7 +432,7 @@ components:
         canModifyStatus:
           type: array
           items:
-            type: string
+            type: string  
           description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
         signatureInfo:
           type: string

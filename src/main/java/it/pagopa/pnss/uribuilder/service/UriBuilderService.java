@@ -12,6 +12,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
+import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import lombok.extern.slf4j.Slf4j;
@@ -86,6 +87,9 @@ public class UriBuilderService {
 
         return Mono.fromCallable(() -> validationField(contentType, documentType, status))
                    .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
+                   .onErrorResume(IdClientNotFoundException.class,
+                                  throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                                                      "Invalid User : " + xPagopaSafestorageCxId)))
                    .handle((userConfiguration, synchronousSink) -> {
                        if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
                            synchronousSink.error((new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -205,7 +209,10 @@ public class UriBuilderService {
         //todo
 
         return Mono.fromCallable(() -> validationFieldCreateUri(fileKey, xPagopaSafestorageCxId))
-                   .flatMap(voidMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
+                   .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
+                   .onErrorResume(IdClientNotFoundException.class,
+                                  throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                                                      "Invalid User : " + xPagopaSafestorageCxId)))
                    .doOnSuccess(o -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
                    .flatMap(userConfigurationResponse -> {
                        List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
@@ -216,7 +223,7 @@ public class UriBuilderService {
                                                                                                                    "Document key Not " +
                                                                                                                    "Found : " + fileKey)))
 
-                                                .map((documentResponse) -> {
+                                                .map(documentResponse -> {
                                                     if (!canRead.contains(documentResponse.getDocument()
                                                                                           .getDocumentType()
                                                                                           .getTipoDocumento())) {
@@ -230,12 +237,9 @@ public class UriBuilderService {
                                                     return documentResponse.getDocument();
                                                 })
                                                 .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
-
                    })
                    .map(doc -> getFileDownloadResponse(fileKey, doc, metadataOnly))
                    .doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "));
-
-
     }
 
     @NotNull

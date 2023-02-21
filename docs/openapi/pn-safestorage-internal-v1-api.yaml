@@ -40,12 +40,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentTypeResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: DocumentType with id _PN_TEST_ not found
         '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentTypeResponse'
+              example:
+                docType:
+                  tipoDocumento: PN_NOTIFICATION_ATTACHMENTS
+                  checksum: SHA256
+                  initialStatus: PRELOADED
+                  statuses:
+                    PRELOADED:
+                      allowedStatusTransitions: [ATTACHED]
+                      storage: PN_TEMPORARY_DOCUMENT
+                      technicalState: available
+                    ATTACHED:
+                      allowedStatusTransitions: []
+                      storage: PN_NOTIFIED_DOCUMENTS
+                      technicalState: attached
+                  informationClassification: C
+                  digitalSignature: false
+                  timeStamped: NONE
     put:
       operationId: updateDocType
       summary: Aggiorna una tipologia di documento.
@@ -308,6 +330,7 @@ components:
             codice di verifica del corretto caricamento del file
             https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
           type: string
+          enum: [ 'MD5', 'SHA256']
         initialStatus:
           type: string
         statuses:
@@ -366,10 +389,8 @@ components:
           type: string
         checkSum:
           description:
-            codice di verifica del corretto caricamento del file
-            https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
+            valore ottenuto dal calcolo della chiave hashing dell’oggetto 
           type: string
-          enum: [ 'MD5', 'SHA256']
         contentLenght:
           type: number
         contentType:
@@ -406,7 +427,7 @@ components:
           type: string
         checkSum:
           description:
-            codice di verifica del corretto caricamento del file
+            valore ottenuto dal calcolo della chiave hashing dell’oggetto 
           type: string
         contentLenght:
           type: number

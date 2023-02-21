@@ -244,7 +244,7 @@ public class UriBuilderService {
 
         BigDecimal contentLength = doc.getContentLenght();
 
-        downloadResponse.setChecksum(doc.getCheckSum() != null ? doc.getCheckSum().getValue() : null);
+        downloadResponse.setChecksum(doc.getCheckSum() != null ? doc.getCheckSum() : null);
         downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
         // NOTA: deve essere restituito lo satto logico, piuttosto che lo stato tecnico

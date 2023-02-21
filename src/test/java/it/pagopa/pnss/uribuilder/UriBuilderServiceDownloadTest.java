@@ -53,6 +53,8 @@ class UriBuilderServiceDownloadTest {
 
     @MockBean
     DocumentClientCall documentClientCall;
+    
+    private static final String CHECKSUM = "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
 
     private WebTestClient.ResponseSpec fileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
         this.webClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
@@ -103,7 +105,7 @@ class UriBuilderServiceDownloadTest {
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
         d.setDocumentState(AVAILABLE);
-        d.setCheckSum(DocumentInput.CheckSumEnum.SHA256);
+        d.setCheckSum(CHECKSUM);
 
         mockGetDocument(d, docId);
 
@@ -120,7 +122,7 @@ class UriBuilderServiceDownloadTest {
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
         d.setDocumentState(AVAILABLE);
-        d.setCheckSum(DocumentInput.CheckSumEnum.SHA256);
+        d.setCheckSum(CHECKSUM);
 
         mockGetDocument(d, docId);
 
@@ -138,7 +140,7 @@ class UriBuilderServiceDownloadTest {
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
         d.setDocumentState(AVAILABLE);
-        d.setCheckSum(DocumentInput.CheckSumEnum.SHA256);
+        d.setCheckSum(CHECKSUM);
 
         mockGetDocument(d, docId);
 

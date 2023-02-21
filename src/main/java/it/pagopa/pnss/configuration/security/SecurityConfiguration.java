@@ -56,8 +56,8 @@ public class SecurityConfiguration {
                                                                          .onErrorResume(IdClientNotFoundException.class,
                                                                                         throwable -> Mono.error(new ResponseStatusException(
                                                                                                 FORBIDDEN,
-                                                                                                "Invalid User" + " : " +
-                                                                                                xPagopaSafestorageCxId)))
+                                                                                                String.format("Invalid %s header",
+                                                                                                              xPagopaSafestorageCxId))))
                                                                          .flatMap(userConfigurationResponse -> {
                                                                              if (userConfigurationResponse.getUserConfiguration()
                                                                                                           .getApiKey()
@@ -65,7 +65,10 @@ public class SecurityConfiguration {
                                                                                  return Mono.just(new KeyAuthenticationToken(apiKey,
                                                                                                                              pagopaSafestorageCxId));
                                                                              } else {
-                                                                                 return Mono.error(new ResponseStatusException(FORBIDDEN, "Invalid x-api-key"));
+                                                                                 return Mono.error(new ResponseStatusException(FORBIDDEN,
+                                                                                                                               String.format(
+                                                                                                                                       "Invalid %s header",
+                                                                                                                                       xApiKey)));
                                                                              }
                                                                          });
                                    } else {

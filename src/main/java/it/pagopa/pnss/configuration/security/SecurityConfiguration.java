@@ -14,7 +14,6 @@ import org.springframework.security.web.server.authentication.ServerAuthenticati
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHENTICATION;
 
@@ -56,7 +55,7 @@ public class SecurityConfiguration {
                                        return userConfigurationClientCall.getUser(pagopaSafestorageCxId)
                                                                          .onErrorResume(IdClientNotFoundException.class,
                                                                                         throwable -> Mono.error(new ResponseStatusException(
-                                                                                                BAD_REQUEST,
+                                                                                                FORBIDDEN,
                                                                                                 "Invalid User" + " : " +
                                                                                                 xPagopaSafestorageCxId)))
                                                                          .flatMap(userConfigurationResponse -> {

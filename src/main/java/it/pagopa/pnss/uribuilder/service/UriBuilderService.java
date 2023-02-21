@@ -12,7 +12,6 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
-import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import lombok.extern.slf4j.Slf4j;
@@ -87,9 +86,6 @@ public class UriBuilderService {
 
         return Mono.fromCallable(() -> validationField(contentType, documentType, status))
                    .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
-                   .onErrorResume(IdClientNotFoundException.class,
-                                  throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                                                      "Invalid User : " + xPagopaSafestorageCxId)))
                    .handle((userConfiguration, synchronousSink) -> {
                        if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
                            synchronousSink.error((new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -186,33 +182,23 @@ public class UriBuilderService {
         return S3Presigner.builder().region(Region.of(awsConfigurationProperties.regionCode())).build();
     }
 
-    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType, Map<String,
+    private PresignedPutObjectRequest signBucket(S3Presigner s3Presigner, String bucketName, String keyName, String contenType, Map<String,
             String> secret) {
 
         PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName).key(keyName).contentType(contenType).metadata(secret)
                                                          //.tagging(storageType)
                                                          .build();
-        log.info("signbucket {}", duration);
-        PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+        log.info("sign bucket {}", duration);
+        PutObjectPresignRequest preSignRequest = PutObjectPresignRequest.builder()
                                                                         .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
                                                                         .putObjectRequest(objectRequest)
                                                                         .build();
-
-        PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(presignRequest);
-        return presignedRequest;
-
+        return s3Presigner.presignPutObject(preSignRequest);
     }
 
-
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly) {
-        // chiamare l'api di  GestoreRepositori per recupero dati
-        //todo
-
         return Mono.fromCallable(() -> validationFieldCreateUri(fileKey, xPagopaSafestorageCxId))
                    .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
-                   .onErrorResume(IdClientNotFoundException.class,
-                                  throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                                                      "Invalid User : " + xPagopaSafestorageCxId)))
                    .doOnSuccess(o -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
                    .flatMap(userConfigurationResponse -> {
                        List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();

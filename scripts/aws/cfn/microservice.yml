@@ -122,10 +122,6 @@ Parameters:
   PnSsDLQueueNameStagingBucket:
     Type: String
     Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
-
-  PnSsSNSNameStagingBucket:
-    Type: String
-    Description: 'Nome SNS Topic per notifiche SS Staging Bucket'
   
   PnSsManagedPolicyName:
     Type: String
@@ -155,7 +151,7 @@ Resources:
         AlarmSNSTopicArn: !Ref AlarmSNSTopicArn
         ContainerImageURI: !Sub '${ContainerImageUri}'
         ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'
-        ContainerEnvEntry2: !Sub 'StateMachineBaseUrl=${ApplicationLoadBalancerDomain}'
+        ContainerEnvEntry2: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry3: !Sub 'PnSsBucketName=${PnSsBucketName}'
         ContainerEnvEntry4: !Sub 'PnSsBucketArn=${PnSsBucketArn}'
         ContainerEnvEntry5: !Sub 'PnSsStagingBucketName=${PnSsStagingBucketName}'
@@ -257,14 +253,11 @@ Resources:
     Type: AWS::SQS::QueuePolicy
     Properties: 
       Queues: 
-        - !Sub '${PnSsQueueUrlStagingBucket}' 
-      PolicyDocument: 
+        - !Sub '${PnSsQueueUrlStagingBucket}'
+      PolicyDocument:
         Statement: 
           - Action: 
-              - 'SQS:SendMessage'
-              - 'SQS:ReceiveMessage'
-              - 'SQS:DeleteMessage'
-              - 'SQS:ChangeMessageVisibility'
+              - 'SQS:*'
             Effect: "Allow"
             Resource: !Sub ${PnSsQueueArnStagingBucket}
             Principal:  

@@ -9,18 +9,24 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
+import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
@@ -32,6 +38,21 @@ public class ConfigurationApiControllerTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
+	
+	@Value("${header.x-api-key:#{null}}")
+	private String xApiKey;
+	@Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
+	private String xPagopaSafestorageCxId;
+	
+	private final String userConfigurationName =  "userClient2";
+	private final String userConfigurationApiKey = "sortedKey2";
+	private final String xApiKeyValue = userConfigurationApiKey;
+	private final String xPagopaSafestorageCxIdValue = userConfigurationName;
+	
+	private static Mono<UserConfigurationResponse> userConfigurationResponse;
+	
+    @MockBean
+    UserConfigurationClientCall userConfigurationClientCall;
 	
 //	private static final String BASE_URL_CONFIGURATIONS_DOC_TYPE = "/safe-storage/v1/configurations/documents-types";
 	
@@ -70,8 +91,6 @@ public class ConfigurationApiControllerTest {
 		canCreate.add("A");
 		List<String> canRead  = new ArrayList<>();
 		canRead.add("DD");
-		List<String> canModifyStatus = new ArrayList<>();
-		canModifyStatus.add("ModifyStatus");
 		UserConfigurationDestination destination = new UserConfigurationDestination(); 
 		destination.setSqsUrl("URL");
 		
@@ -79,10 +98,18 @@ public class ConfigurationApiControllerTest {
 		userConfigurationInput.setName(PARTITION_ID_DEFAULT_USER_CONF);
 		userConfigurationInput.setCanCreate(canCreate);
 		userConfigurationInput.setCanRead(canRead);
-		userConfigurationInput.setCanModifyStatus(canModifyStatus);
 		userConfigurationInput.setSignatureInfo("mmm");
 		userConfigurationInput.setDestination(destination);
 		userConfigurationInput.setApiKey("apiKey");
+		
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(userConfigurationName);
+        userConfiguration.setApiKey(userConfigurationApiKey);
+        
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        userConfig.setUserConfiguration(userConfiguration);
+        
+        userConfigurationResponse = Mono.just(userConfig)  ;
 	}
 	
 //	private DocumentType getDocumentType(String name) {
@@ -207,9 +234,15 @@ public class ConfigurationApiControllerTest {
 	@Test
 	void getCurrentClientConfig() {
 		
+		log.info("\n Test 2 (getCurrentClientConfig) START \n");
+
+        Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
+		
 		EntityExchangeResult<it.pagopa.pn.template.rest.v1.dto.UserConfiguration> userConfigurationInserted = webTestClient.get()
 			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_CONFIGURATIONS_USER_CONF_WITH_PARAM).build(PARTITION_ID_DEFAULT_USER_CONF))
 	        .accept(APPLICATION_JSON)
+	        .header(xApiKey,xApiKeyValue)
+	        .header(xPagopaSafestorageCxId,xPagopaSafestorageCxIdValue)
 	        .exchange()
 	        .expectStatus().isOk()
 	        .expectBody(it.pagopa.pn.template.rest.v1.dto.UserConfiguration.class).returnResult();
@@ -220,32 +253,42 @@ public class ConfigurationApiControllerTest {
 	    Assertions.assertEquals(userConfigurationInput.getName(), userConfigurationInserted.getResponseBody().getName());
 	    
 	    log.info("\n Test 2 (getCurrentClientConfig) test passed \n");
-		
 	}
 	
 	@Test
-	void getCurrentClientConfigNoExistentKey() {		
+	void getCurrentClientConfigNoExistentKey() {
+		
+		log.info("\n Test 3 (getCurrentClientConfigNoExistentKey) START \n");
+		
+        Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
+		
 		webTestClient.get()
 			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_CONFIGURATIONS_USER_CONF_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT_USER_CONF))
 	        .accept(APPLICATION_JSON)
+	        .header(xApiKey,xApiKeyValue)
+	        .header(xPagopaSafestorageCxId,xPagopaSafestorageCxIdValue)
 	        .exchange()
-	        .expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
+	        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
 	    
 	    log.info("\n Test 3 (getCurrentClientConfigNoExistentKey) test passed \n");
-		
 	}
 	
 	@Test
 	void getCurrentClientIncorrectParameter() {
+		
+		log.info("\n Test 4 (getCurrentClientIncorrectParameter) START \n");
+		
+		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 				
 		webTestClient.get()
 			.uri(BASE_PATH_CONFIGURATIONS_USER_CONF)
 			.accept(APPLICATION_JSON)
+	        .header(xApiKey,xApiKeyValue)
+	        .header(xPagopaSafestorageCxId,xPagopaSafestorageCxIdValue)
 			.exchange()
 			.expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
 	    
-	    log.info("\n Test 3 (getCurrentClientIncorrectParameter) test passed \n");
-		
+	    log.info("\n Test 4 (getCurrentClientIncorrectParameter) test passed \n");
 	}
 	
 

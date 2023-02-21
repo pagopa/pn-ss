@@ -20,7 +20,6 @@ import org.springframework.web.reactive.function.BodyInserters;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
@@ -86,7 +85,7 @@ public class DocTypeInternalApiControllerTest {
 
     	docTypesInsertInput = new DocumentType();
     	docTypesInsertInput.setTipoDocumento(PARTITION_ID_INSERT_LEGAL_FACTS);
-    	docTypesInsertInput.setChecksum(ChecksumEnum.SHA256); 
+    	docTypesInsertInput.setChecksum("SHA256");
     	docTypesInsertInput.setInitialStatus("SAVED");
     	docTypesInsertInput.setStatuses(statuses1);
     	docTypesInsertInput.setInformationClassification(InformationClassificationEnum.HC);
@@ -94,19 +93,12 @@ public class DocTypeInternalApiControllerTest {
     	docTypesInsertInput.setTimeStamped(TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesInsertInput : {}", docTypesInsertInput);
 		
-		List<String> allowedStatusTransitions2 = new ArrayList<>();
-		allowedStatusTransitions2.add("ATTACHED");
-		
-		CurrentStatus currentStatus2 = new CurrentStatus();
-		currentStatus2.setStorage("PN_NOTIFICATION_ATTACHMENTS");
-		currentStatus2.setAllowedStatusTransitions(allowedStatusTransitions1);
-		
 		Map<String, CurrentStatus> statuses2 = new HashMap<>();
 		statuses2.put("PRELOADED",currentStatus1);
 		
     	docTypesUpdateDeleteInput = new DocumentType();
 		docTypesUpdateDeleteInput.setTipoDocumento(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
-		docTypesUpdateDeleteInput.setChecksum(ChecksumEnum.SHA256);
+		docTypesUpdateDeleteInput.setChecksum("SHA256");
 		docTypesUpdateDeleteInput.setInitialStatus("PRELOADED");
 		docTypesUpdateDeleteInput.setStatuses(statuses2);
 		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.HC);
@@ -182,7 +174,7 @@ public class DocTypeInternalApiControllerTest {
 						 .contentType(APPLICATION_JSON)
 						 .body(BodyInserters.fromValue(docTypesInsertInput))
 						 .exchange()
-			        .expectStatus().isEqualTo(HttpStatus.CONFLICT);
+			        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
 		}
 
 		log.info("\n Test 2 (postItemDuplicatedKey) passed \n");

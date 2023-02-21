@@ -104,8 +104,8 @@ paths:
             schema:
               $ref: '#/components/schemas/DocumentType'
       responses:
-        '409':
-          description: Conflict
+        '403':
+          description: Forbidden
         '200':
           description: OK
           content:
@@ -178,7 +178,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Document'
+              $ref: '#/components/schemas/DocumentInput'
       responses:
         '404':
           description: Not configured
@@ -308,7 +308,6 @@ components:
             codice di verifica del corretto caricamento del file
             https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
           type: string
-          enum: [ 'MD5', 'SHA256']
         initialStatus:
           type: string
         statuses:
@@ -377,11 +376,23 @@ components:
           type: string
         documentType:
           $ref: '#/components/schemas/DocumentType'
+    DocumentInput:
+      allOf:
+        - $ref: '#/components/schemas/Document'
+        - type: object
+          properties:
+            documentType:
+              type: string
     DocumentResponse:
       type: object
       properties:
         document:
-          $ref: '#/components/schemas/Document'
+          allOf:
+            - $ref: '#/components/schemas/Document'
+            - type: object
+              properties:
+                documentType:
+                  $ref: '#/components/schemas/DocumentType'
         error:
           $ref: '#/components/schemas/Error'
     DocumentChanges:
@@ -397,7 +408,6 @@ components:
           description:
             codice di verifica del corretto caricamento del file
           type: string
-          enum: [ 'MD5', 'SHA256']
         contentLenght:
           type: number
     UserConfiguration:
@@ -416,12 +426,7 @@ components:
           type: array
           items:
             type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
-        canModifyStatus:
-          type: array
-          items:
-            type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
+          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
         signatureInfo:
           type: string
         destination:
@@ -450,12 +455,7 @@ components:
           type: array
           items:
             type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
-        canModifyStatus:
-          type: array
-          items:
-            type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
+          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
         apiKey:
           type: string
         signatureInfo:

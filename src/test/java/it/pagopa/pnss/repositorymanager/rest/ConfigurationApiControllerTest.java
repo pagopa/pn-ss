@@ -268,7 +268,7 @@ public class ConfigurationApiControllerTest {
 	        .header(xApiKey,xApiKeyValue)
 	        .header(xPagopaSafestorageCxId,xPagopaSafestorageCxIdValue)
 	        .exchange()
-	        .expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
+	        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
 	    
 	    log.info("\n Test 3 (getCurrentClientConfigNoExistentKey) test passed \n");
 	}

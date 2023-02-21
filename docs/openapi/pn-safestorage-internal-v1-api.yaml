@@ -225,6 +225,8 @@ paths:
                 error: Forbidden
                 message: Invalid x-api-key
                 requestId: cdf95798-11
+        '409':
+          description: Conflict
         '200':
           description: OK
           content:
@@ -754,7 +756,12 @@ components:
           type: array
           items:
             type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+          description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
+        canModifyStatus:
+          type: array
+          items:
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
         signatureInfo:
           type: string
         destination:
@@ -783,7 +790,12 @@ components:
           type: array
           items:
             type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+          description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
+        canModifyStatus:
+          type: array
+          items:
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
         apiKey:
           type: string
         signatureInfo:

@@ -174,7 +174,7 @@ public class DocTypeInternalApiControllerTest {
 						 .contentType(APPLICATION_JSON)
 						 .body(BodyInserters.fromValue(docTypesInsertInput))
 						 .exchange()
-			        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+			        .expectStatus().isEqualTo(HttpStatus.CONFLICT);
 		}
 
 		log.info("\n Test 2 (postItemDuplicatedKey) passed \n");

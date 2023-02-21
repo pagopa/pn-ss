@@ -14,7 +14,6 @@ import org.springframework.security.web.server.authentication.ServerAuthenticati
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHENTICATION;
 
@@ -56,9 +55,9 @@ public class SecurityConfiguration {
                                        return userConfigurationClientCall.getUser(pagopaSafestorageCxId)
                                                                          .onErrorResume(IdClientNotFoundException.class,
                                                                                         throwable -> Mono.error(new ResponseStatusException(
-                                                                                                BAD_REQUEST,
-                                                                                                "Invalid User" + " : " +
-                                                                                                xPagopaSafestorageCxId)))
+                                                                                                FORBIDDEN,
+                                                                                                String.format("Invalid %s header",
+                                                                                                              xPagopaSafestorageCxId))))
                                                                          .flatMap(userConfigurationResponse -> {
                                                                              if (userConfigurationResponse.getUserConfiguration()
                                                                                                           .getApiKey()
@@ -66,7 +65,10 @@ public class SecurityConfiguration {
                                                                                  return Mono.just(new KeyAuthenticationToken(apiKey,
                                                                                                                              pagopaSafestorageCxId));
                                                                              } else {
-                                                                                 return Mono.error(new ResponseStatusException(FORBIDDEN, "Invalid x-api-key"));
+                                                                                 return Mono.error(new ResponseStatusException(FORBIDDEN,
+                                                                                                                               String.format(
+                                                                                                                                       "Invalid %s header",
+                                                                                                                                       xApiKey)));
                                                                              }
                                                                          });
                                    } else {

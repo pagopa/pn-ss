@@ -26,21 +26,21 @@ public class SignServiceSoap extends CommonArubaService {
     }
 
     public SignReturnV2 singnPdfDocument(byte[] pdfFile, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
-           SignRequestV2 signRequestV2 = new SignRequestV2();
-           signRequestV2.setCertID(certId);
-           signRequestV2.setIdentity(createIdentity(null));
-           signRequestV2.setRequiredmark(marcatura);
-           signRequestV2.setBinaryinput(pdfFile);
-           signRequestV2.setTransport(TypeTransport.BYNARYNET);
+        SignRequestV2 signRequestV2 = new SignRequestV2();
+        signRequestV2.setCertID(certId);
+        signRequestV2.setIdentity(createIdentity(null));
+        signRequestV2.setRequiredmark(marcatura);
+        signRequestV2.setBinaryinput(pdfFile);
+        signRequestV2.setTransport(TypeTransport.BYNARYNET);
 
 
 
-           logCallAruba(signRequestV2);
+        logCallAruba(signRequestV2);
 
-           ArubaSignService service = createArubaService(arubaUrlWsdl).getArubaSignServicePort();
-           SignReturnV2 signReturnV2 = service.pdfsignatureV2(signRequestV2,null ,null,null ,null,null);
-           return  signReturnV2;
-       }
+        ArubaSignService service = createArubaService(arubaUrlWsdl).getArubaSignServicePort();
+        SignReturnV2 signReturnV2 = service.pdfsignatureV2(signRequestV2,null ,null,null ,null,null);
+        return  signReturnV2;
+    }
 
 
 

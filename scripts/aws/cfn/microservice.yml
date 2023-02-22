@@ -258,7 +258,9 @@ Resources:
             Principal:  
               AWS: 
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
-
+              Service:
+                - 'events.amazonaws.com'
+           
   PnSsGestoreBucketRole:
     Type: AWS::IAM::Role
     Properties:

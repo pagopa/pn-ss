@@ -245,8 +245,7 @@ Resources:
       RoleName: !Join [ '', [!Sub 'PnSsGestoreBucketLambdaName', '-role-name']]
       Description: 'Ruolo della Lambda che implementa la funzionalità del Gestore Bucket'
       ManagedPolicyArns:
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
-        # - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -255,39 +254,24 @@ Resources:
             Service: lambda.amazonaws.com
           Action:
           - 'sts:AssumeRole'
-
-  LogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Join ['',['/pn-safestorage/', !Ref PnSsGestoreBucket]]
-      RetentionInDays: 30
-            
-  PnSsGestoreBucket:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Ref PnSsGestoreBucketLambdaName
-      Description: 'Pn SafeStorage Gestore Bucket'
-      Handler: index.lambda_handler
-      MemorySize: 256
-      Runtime: python3.8
-      Role: !GetAtt PnSsGestoreBucketRole.Arn
-      Timeout: 240
-      Environment:
-        Variables:
-          EnvEntry1: 'TemporaryEnvVar'
-      Code:
-        ZipFile: |
-            import os
-            import boto3
-            import botocore
-            import logging
-            logger = logging.getLogger()
-            logger.setLevel(logging.INFO)
-            #logger.setLevel(logging.DEBUG)
-            # Env variables from CFN
-            envvar = os.environ.get('EnvEntry1')
-            def lambda_handler(event, context):
-                print(event)
+      Policies:
+        - PolicyName: 'PnSsGestoreBucketInlinePolicy'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              - Sid: 'GeneralBucketPolicy'
+                Effect: 'Allow'
+                Action: 
+                  - 's3:List*'
+                  - 's3:GetBucket*'
+                  - 's3:Put*'
+                  - 's3:Describe*'
+                  - 's3:Get*'
+                  - 's3:*MultipartUpload*'
+                  - 's3:*Tag*'
+                Resource:
+                  - !Sub '${PnSsStagingBucketArn}'
+                  - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
 
   PnSsGestoreBucketNotificationPermission:
     Type: AWS::Lambda::Permission
@@ -298,4 +282,192 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Ref PnSsBucketArn
 
+  PnSsGestoreBucket:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref PnSsGestoreBucketLambdaName
+      Description: 'Pn SafeStorage Gestore Bucket'
+      Handler: index.handler
+      MemorySize: 512
+      Runtime: nodejs16.x
+      Role: !GetAtt PnSsGestoreBucketRole.Arn
+      Timeout: 240
+      Environment:
+        Variables:
+          HOSTNAME: !Ref ApplicationLoadBalancerDomain
+      Code:
+        ZipFile: |
+          "use strict";
+          const https = require("https");
+          const AWS = require("aws-sdk");
+          const s3 = new AWS.S3();
+          const HOSTNAME = process.env.HOST_NAME || "localhost";
+
+          var jsonDocument = {
+            documentKey: "",
+            documentState: "",
+            checkSum: "",
+            contentLenght: 0,
+          };
+          /**
+          * Event Handler
+          *
+          * @param {*} event
+          * @returns
+          */
+          exports.handler = async (event) => {
+            console.log(event);
+            var bucketName;
+
+            var params = {
+              Bucket: "",
+              Key: "",
+            };
+            //event.Records.forEach((record) => {
+            bucketName = event.Records[0].s3.bucket.name;
+            jsonDocument.documentKey = event.Records[0].s3.object.key;
+            jsonDocument.contentLenght = event.Records[0].s3.object.size;
+
+            switch (event.Records[0].eventName) {
+              case "ObjectCreated:*":
+                jsonDocument.documentState = "AVAILABLE";
+                break;
+              case "ObjectRestore:Completed":
+                jsonDocument.documentState = "AVAILABLE";
+                break;
+              case "LifecycleTransition":
+                jsonDocument.documentState = "FREEZED";
+                break;
+              case "ObjectRestore:Delete":
+                jsonDocument.documentState = "FREEZED";
+                break;
+              case "LifecycleExpiration:Delete":
+                jsonDocument.documentState = "DELETED";
+                break;
+              case "ObjectRemoved:Delete":
+                jsonDocument.documentState = "DELETED";
+                break;
+              case "ObjectCreated:Copy":
+                jsonDocument.documentState = "AVAILABLE";
+                break;
+
+              default:
               
+                const response = {
+                  statusCode: 200,
+                };
+              return response;
+            }
+
+            console.log(jsonDocument);
+            params.Bucket = bucketName;
+            params.Key = jsonDocument.documentKey;
+
+            const { Body } = await s3.getObject(params).promise();
+
+            console.log(Body);
+            var doc = await getDocumentFromDB(jsonDocument.documentKey);
+            console.log(doc);
+
+            jsonDocument.checkSum = hashDocument(Body, doc.documentType);
+
+            const res = await updateDynamo(jsonDocument);
+            console.log(res);
+
+            console.log("############## EXIT  ####################");
+
+            const response = {
+              statusCode: 200,
+            };
+
+            return response;
+          };
+
+          /**
+          * Do a request with options not provided.
+          *
+          * @param {Object} options
+          * @param {Object} data
+          * @return {Promise} a promise of request
+          */
+          function getDocumentFromDB(docKey) {
+            const options = {
+              method: "GET",
+              hostname: HOSTNAME,
+              path: "/safestorage/internal/v1/documents/" + docKey,
+              headers: {
+                "Content-Type": "application/json",
+              },
+            };
+            return new Promise((resolve, reject) => {
+              const req = https.request(options, (res) => {
+                // res.setEncoding("utf8");
+                let responseBody = "";
+
+                res.on("data", (chunk) => {
+                  responseBody += chunk;
+                });
+
+                res.on("end", () => {
+                  resolve(JSON.parse(responseBody));
+                });
+              });
+
+              req.on("error", (err) => {
+                console.error(err);
+                reject(err);
+              });
+
+              // req.write(data);
+              req.end();
+            });
+          }
+
+          var crypto = require("crypto");
+
+          const hashDocument = (document, docType) => {
+            var hash;
+            if (docType == "PN_AAR") {
+              hash = crypto.createHash("md5").update(document).digest("hex");
+            } else {
+              hash = crypto.createHash("sha256").update(document).digest("hex");
+            }
+
+            return hash;
+          };
+
+          /**
+          * TO DO
+          */
+          function updateDynamo(data) {
+            const options = {
+              method: "PATCH",
+              hostname: HOSTNAME,
+              path: "/safestorage/internal/v1/documents/" + data.documentKey,
+              headers: {
+                "Content-Type": "application/json",
+              },
+            };
+            return new Promise((resolve, reject) => {
+              const req = https.request(options, (res) => {
+                // res.setEncoding("utf8");
+                let responseBody = "";
+
+                res.on("data", (chunk) => {
+                  responseBody += chunk;
+                });
+
+                res.on("end", () => {
+                  resolve(JSON.parse(responseBody));
+                });
+              });
+
+              req.on("error", (err) => {
+                console.error(err);
+                reject(err);
+              });
+
+              req.write(data);
+              req.end();
+            });
+          }

@@ -1,12 +1,15 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.*;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
-import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import lombok.extern.slf4j.Slf4j;
+import static it.pagopa.pnss.common.Constant.ATTACHED;
+import static it.pagopa.pnss.common.Constant.FREEZED;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,19 +20,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
+
+import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
+import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static it.pagopa.pnss.common.Constant.ATTACHED;
-import static it.pagopa.pnss.common.Constant.FREEZED;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
@@ -47,6 +52,7 @@ public class DocumentInternalApiControllerTest {
     private static final String PARTITION_ID_ENTITY = "documentKeyEnt";
     private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
     private static final String PARTITION_ID_NO_EXISTENT = "documentKey_bad";
+    private static final String CHECKSUM= "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
 
     private static DocumentInput documentInput;
     private static DocumentChanges documentChanges;
@@ -86,7 +92,7 @@ public class DocumentInternalApiControllerTest {
 
         DocumentType docTypes = new DocumentType();
         docTypes.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
-        docTypes.setChecksum("SHA256");
+        docTypes.setChecksum(DocumentType.ChecksumEnum.SHA256);
         docTypes.setInitialStatus("SAVED");
         docTypes.setStatuses(statuses1);
         docTypes.setInformationClassification(InformationClassificationEnum.HC);
@@ -98,7 +104,7 @@ public class DocumentInternalApiControllerTest {
         documentInput.setDocumentKey(PARTITION_ID_DEFAULT);
         documentInput.setDocumentState(FREEZED);
         documentInput.setRetentionUntil("2032-04-12T12:32:04.000Z");
-        documentInput.setCheckSum(DocumentInput.CheckSumEnum.MD5);
+        documentInput.setCheckSum(CHECKSUM);
         documentInput.setContentType("xxxxx");
         documentInput.setDocumentType("PN_NOTIFICATION_ATTACHMENTS");
         documentInput.setContentLenght(new BigDecimal(100));
@@ -166,7 +172,7 @@ public class DocumentInternalApiControllerTest {
                          .body(BodyInserters.fromValue(documentInput))
                          .exchange()
                          .expectStatus()
-                         .isEqualTo(HttpStatus.FORBIDDEN);
+                         .isEqualTo(HttpStatus.CONFLICT);
         }
 
         log.info("\n Test 2 (postItemPartitionKeyDuplicated) passed \n");

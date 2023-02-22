@@ -85,7 +85,7 @@ public class DocTypeInternalApiControllerTest {
 
     	docTypesInsertInput = new DocumentType();
     	docTypesInsertInput.setTipoDocumento(PARTITION_ID_INSERT_LEGAL_FACTS);
-    	docTypesInsertInput.setChecksum("SHA256");
+    	docTypesInsertInput.setChecksum(DocumentType.ChecksumEnum.SHA256);
     	docTypesInsertInput.setInitialStatus("SAVED");
     	docTypesInsertInput.setStatuses(statuses1);
     	docTypesInsertInput.setInformationClassification(InformationClassificationEnum.HC);
@@ -98,7 +98,7 @@ public class DocTypeInternalApiControllerTest {
 		
     	docTypesUpdateDeleteInput = new DocumentType();
 		docTypesUpdateDeleteInput.setTipoDocumento(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
-		docTypesUpdateDeleteInput.setChecksum("SHA256");
+		docTypesUpdateDeleteInput.setChecksum(DocumentType.ChecksumEnum.SHA256);
 		docTypesUpdateDeleteInput.setInitialStatus("PRELOADED");
 		docTypesUpdateDeleteInput.setStatuses(statuses2);
 		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.HC);
@@ -174,7 +174,7 @@ public class DocTypeInternalApiControllerTest {
 						 .contentType(APPLICATION_JSON)
 						 .body(BodyInserters.fromValue(docTypesInsertInput))
 						 .exchange()
-			        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+			        .expectStatus().isEqualTo(HttpStatus.CONFLICT);
 		}
 
 		log.info("\n Test 2 (postItemDuplicatedKey) passed \n");

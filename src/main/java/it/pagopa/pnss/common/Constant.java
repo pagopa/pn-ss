@@ -36,4 +36,7 @@ public class Constant {
     public static final List<String> listaStatus =  Arrays.asList(PRELOADED, ATTACHED);
 
     public static final Region EU_CENTRAL_1 = Region.EU_CENTRAL_1;
+
+    public static final String technicalStatus_attached="attached";
+    public static final String technicalStatus_available="available";
 }

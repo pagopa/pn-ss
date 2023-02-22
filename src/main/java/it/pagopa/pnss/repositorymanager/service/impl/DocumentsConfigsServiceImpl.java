@@ -66,7 +66,7 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
                                                                                                        .getValue()) : null);
         dtc.setDigitalSignature(docType.getDigitalSignature());
         dtc.setTimestamped(docType.getTimeStamped() != null ? TimestampedEnum.fromValue(docType.getTimeStamped().getValue()) : null);
-        dtc.setChecksum(docType.getChecksum() != null ? ChecksumEnum.fromValue(docType.getChecksum()) : null);
+        dtc.setChecksum(docType.getChecksum() != null ? ChecksumEnum.fromValue(docType.getChecksum().getValue()) : null);
         return dtc;
     }
 

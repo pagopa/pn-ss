@@ -16,6 +16,6 @@ public interface DocTypesClientCall {
 
     ResponseEntity<DocumentType> updatedocTypes(DocumentType docTypes) throws IdClientNotFoundException;
 
-    ResponseEntity<DocumentType> deletedocTypes( String checksum) throws IdClientNotFoundException;
+    ResponseEntity<DocumentType> deletedocTypes(String tipoDocumento) throws IdClientNotFoundException;
 
 }

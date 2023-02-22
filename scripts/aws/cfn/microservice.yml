@@ -226,7 +226,7 @@ Resources:
             Action:
               - 'kms:*'
             Resource:
-              - *
+              - '*'
 
   PnSsStagingBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -238,10 +238,7 @@ Resources:
           - Action:
               - 's3:*'
             Effect: Allow
-            Resource: !Join
-              - ''
-              - - !Sub PnSsStagingBucketArn
-                - /*
+            Resource: !Join [ '', [ !Sub 'PnSsStagingBucketArn' , '/*']]
             Principal:  
               AWS: 
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]] 

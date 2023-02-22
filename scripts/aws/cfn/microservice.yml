@@ -231,14 +231,14 @@ Resources:
   PnSsStagingBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Sub PnSsStagingBucketName
+      Bucket: !Sub ${PnSsStagingBucketName}
       PolicyDocument:
         Version: 2012-10-17
         Statement:
           - Action:
               - 's3:*'
             Effect: Allow
-            Resource: !Join [ '', [ !Sub 'PnSsStagingBucketArn' , '/*']]
+            Resource: !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
             Principal:  
               AWS: 
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]] 

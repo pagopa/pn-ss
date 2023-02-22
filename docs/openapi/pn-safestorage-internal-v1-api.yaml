@@ -34,18 +34,60 @@ paths:
       parameters:
         - $ref: '#/components/parameters/typeId'
       responses:
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/doctypes/_PN_TEST_
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '404':
           description: Not Found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentTypeResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: DocumentType with id _PN_TEST_ not found
         '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentTypeResponse'
+              example:
+                docType:
+                  tipoDocumento: PN_NOTIFICATION_ATTACHMENTS
+                  checksum: SHA256
+                  initialStatus: PRELOADED
+                  statuses:
+                    PRELOADED:
+                      allowedStatusTransitions: [ATTACHED]
+                      storage: PN_TEMPORARY_DOCUMENT
+                      technicalState: available
+                    ATTACHED:
+                      allowedStatusTransitions: []
+                      storage: PN_NOTIFIED_DOCUMENTS
+                      technicalState: attached
+                  informationClassification: C
+                  digitalSignature: false
+                  timeStamped: NONE
     put:
       operationId: updateDocType
       summary: Aggiorna una tipologia di documento.
@@ -59,12 +101,37 @@ paths:
             schema:
               $ref: '#/components/schemas/DocumentType'
       responses:
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/doctypes/_PN_TEST_
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '404':
           description: Not Found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentTypeResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: DocumentType with id _PN_TEST_ not found                
         '200':
           description: OK
           content:
@@ -79,12 +146,37 @@ paths:
       parameters:
         - $ref: '#/components/parameters/typeId'
       responses:
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/doctypes/_PN_TEST_
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '404':
           description: Not Found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentTypeResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: DocumentType with id _PN_TEST_ not found   
         '200':
           description: OK
           content:
@@ -104,8 +196,37 @@ paths:
             schema:
               $ref: '#/components/schemas/DocumentType'
       responses:
+        '400':
+          description: >-
+            #### Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTypeResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: The attribute tipoDocumento is null
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
         '403':
-          description: Forbidden
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safe-storage/v1/configurations/documents-types
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
+        '409':
+          description: Conflict
         '200':
           description: OK
           content:
@@ -122,8 +243,37 @@ paths:
       parameters:
         - $ref: '#/components/parameters/documentKey'
       responses:
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/documents/DOCUMENT_TEST
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '404':
-          description: Not configured
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: Document with id DOCUMENT_TEST not found
         '200':
           description: OK
           content:
@@ -143,8 +293,37 @@ paths:
             schema:
               $ref: '#/components/schemas/DocumentChanges'
       responses:
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/documents/DOCUMENT_TEST
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '404':
-          description: Not configured
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: Document with id DOCUMENT_TEST not found                
         '200':
           description: OK
           content:
@@ -159,8 +338,37 @@ paths:
       parameters:
         - $ref: '#/components/parameters/documentKey'
       responses:
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/documents/DOCUMENT_TEST
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '404':
-          description: Not configured
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: Document with id DOCUMENT_TEST not found                
         '200':
           description: OK
           content:
@@ -180,8 +388,26 @@ paths:
             schema:
               $ref: '#/components/schemas/DocumentInput'
       responses:
-        '404':
-          description: Not configured
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/documents
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '200':
           description: OK
           content:
@@ -198,8 +424,37 @@ paths:
       parameters:
         - $ref: '#/components/parameters/name'
       responses:
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/userConfigurations/TEST_CLIENT
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '404':
-          description: Not configured
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: Client id CLIENT_TEST not found
         '200':
           description: OK
           content:
@@ -219,8 +474,37 @@ paths:
             schema:
               $ref: '#/components/schemas/UserConfigurationChanges'
       responses:
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/userConfigurations/TEST_CLIENT
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '404':
-          description: Not configured
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: Client id CLIENT_TEST not found
         '200':
           description: OK
           content:
@@ -235,8 +519,37 @@ paths:
       parameters:
         - $ref: '#/components/parameters/name'
       responses:
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/userConfigurations/TEST_CLIENT
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '404':
-          description: Not configured
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+              example:
+                docType: null
+                error:
+                  code: null
+                  description: Client id CLIENT_TEST not found
         '200':
           description: OK
           content:
@@ -256,8 +569,26 @@ paths:
             schema:
               $ref: '#/components/schemas/UserConfiguration'
       responses:
-        '404':
-          description: Not configured
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/userConfigurations/TEST_CLIENT
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
         '200':
           description: OK
           content:
@@ -367,10 +698,8 @@ components:
           type: string
         checkSum:
           description:
-            codice di verifica del corretto caricamento del file
-            https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
+            valore ottenuto dal calcolo della chiave hashing dell’oggetto 
           type: string
-          enum: [ 'MD5', 'SHA256']
         contentLenght:
           type: number
         contentType:
@@ -407,9 +736,8 @@ components:
           type: string
         checkSum:
           description:
-            codice di verifica del corretto caricamento del file
+            valore ottenuto dal calcolo della chiave hashing dell’oggetto 
           type: string
-          enum: [ 'MD5', 'SHA256']
         contentLenght:
           type: number
     UserConfiguration:
@@ -428,7 +756,12 @@ components:
           type: array
           items:
             type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+          description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
+        canModifyStatus:
+          type: array
+          items:
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
         signatureInfo:
           type: string
         destination:
@@ -457,7 +790,12 @@ components:
           type: array
           items:
             type: string
-          description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+          description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
+        canModifyStatus:
+          type: array
+          items:
+            type: string
+          description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
         apiKey:
           type: string
         signatureInfo:

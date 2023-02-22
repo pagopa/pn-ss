@@ -49,17 +49,17 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
         dtc.setName(docType.getTipoDocumento() != null ? docType.getTipoDocumento() : null);
         dtc.setInitialStatus(docType.getInitialStatus());
-        if (docType.getStatuses() != null &&  !docType.getStatuses().isEmpty()) {
-        	Map<String, DocumentTypeConfigurationStatuses> statuses = new HashMap<>();
-        	dtc.setStatuses(statuses);
-        	Set<String> keySet =  docType.getStatuses().keySet();
-        	keySet.forEach(key -> {
-        		CurrentStatus dtCurrentStatus = docType.getStatuses().get(key);
-        		DocumentTypeConfigurationStatuses dtcStatues = new DocumentTypeConfigurationStatuses();
-        		dtcStatues.setStorage(dtCurrentStatus.getStorage());
-        		dtcStatues.setAllowedStatusTransitions(dtCurrentStatus.getAllowedStatusTransitions());
-        		dtc.getStatuses().put(key, dtcStatues);
-        	});
+        if (docType.getStatuses() != null && !docType.getStatuses().isEmpty()) {
+            Map<String, DocumentTypeConfigurationStatuses> statuses = new HashMap<>();
+            dtc.setStatuses(statuses);
+            Set<String> keySet = docType.getStatuses().keySet();
+            keySet.forEach(key -> {
+                CurrentStatus dtCurrentStatus = docType.getStatuses().get(key);
+                DocumentTypeConfigurationStatuses dtcStatues = new DocumentTypeConfigurationStatuses();
+                dtcStatues.setStorage(dtCurrentStatus.getStorage());
+                dtcStatues.setAllowedStatusTransitions(dtCurrentStatus.getAllowedStatusTransitions());
+                dtc.getStatuses().put(key, dtcStatues);
+            });
         }
         dtc.setInformationClassification(
                 docType.getInformationClassification() != null ? ConfidentialityLevel.fromValue(docType.getInformationClassification()
@@ -69,11 +69,11 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         dtc.setChecksum(docType.getChecksum() != null ? ChecksumEnum.fromValue(docType.getChecksum().getValue()) : null);
         return dtc;
     }
-    
+
     private List<DocumentTypeConfiguration> convertDocumentTypeConfigurationList(List<DocumentType> listDocTypeDto) {
-    	List<DocumentTypeConfiguration> list = new ArrayList<>();
-    	listDocTypeDto.forEach(docTypeDto -> list.add(convertDocumentTypeConfiguration(docTypeDto)));
-    	return list;
+        List<DocumentTypeConfiguration> list = new ArrayList<>();
+        listDocTypeDto.forEach(docTypeDto -> list.add(convertDocumentTypeConfiguration(docTypeDto)));
+        return list;
     }
 
     private StorageConfiguration convertStorageConfiguration(LifecycleRuleDTO lifecycleRule) {
@@ -86,11 +86,11 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         sc.setHotPeriod(lifecycleRule.getTransitionDays());
         return sc;
     }
-    
+
     private List<StorageConfiguration> convert(List<LifecycleRuleDTO> listLifecycleRuleDto) {
-    	List<StorageConfiguration> list = new ArrayList<>();
-    	listLifecycleRuleDto.forEach(lifecycleRule -> list.add(convertStorageConfiguration(lifecycleRule)));
-    	return list;
+        List<StorageConfiguration> list = new ArrayList<>();
+        listLifecycleRuleDto.forEach(lifecycleRule -> list.add(convertStorageConfiguration(lifecycleRule)));
+        return list;
     }
 
     @Override
@@ -107,14 +107,5 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
             log.info("getDocumentsConfigs() : elem documentTypeList {}", documentTypeList);
             dtc.setDocumentsTypes(convertDocumentTypeConfigurationList(documentTypeList));
         }).then(Mono.just(dtc));
-
-        // NOTA: docTypesService.getAllDocumentType() potrebbe resituire una lista vuota
-//        return docTypesService.getAllDocumentType().doOnNext(documentType -> {
-//            log.info("getDocumentsConfigs() : elem docType {}", documentType);
-//            dtc.getDocumentsTypes().add(getDocumentTypeConfiguration(documentType));
-//        }).flatMap(documentType -> storageConfigurationsService.getLifecycleConfiguration()).doOnNext(lifecycleRuleDTO -> {
-//            log.info("getDocumentsConfigs() : elem lifecycleRule {}", lifecycleRuleDTO);
-//            dtc.getStorageConfigurations().add(getStorageConfiguration(lifecycleRuleDTO));
-//        }).then(Mono.just(dtc));
     }
 }

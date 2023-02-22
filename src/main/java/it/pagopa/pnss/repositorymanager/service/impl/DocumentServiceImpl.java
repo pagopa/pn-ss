@@ -81,7 +81,7 @@ public class DocumentServiceImpl implements DocumentService {
                     resp.setDocumentType(o);
                     resp.setDocumentKey(documentInput.getDocumentKey());
                     resp.setDocumentState(documentInput.getDocumentState());
-                    resp.setCheckSum(objectMapper.convertValue(documentInput.getCheckSum(),Document.CheckSumEnum.class));
+                    resp.setCheckSum(documentInput.getCheckSum());
                     resp.setRetentionUntil(documentInput.getRetentionUntil());
                     resp.setContentLenght(documentInput.getContentLenght());
                     resp.setContentType(documentInput.getContentType());
@@ -112,7 +112,7 @@ public class DocumentServiceImpl implements DocumentService {
                     	   documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
                        }
                        if (documentChanges.getCheckSum() != null) {
-                    	   documentEntityStored.setCheckSum(documentChanges.getCheckSum().getValue());
+                    	   documentEntityStored.setCheckSum(documentChanges.getCheckSum());
                        }
                        if (documentChanges.getContentLenght() != null) {
                     	   documentEntityStored.setContentLenght(documentChanges.getContentLenght());

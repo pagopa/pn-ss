@@ -91,6 +91,8 @@ public class ConfigurationApiControllerTest {
 		canCreate.add("A");
 		List<String> canRead  = new ArrayList<>();
 		canRead.add("DD");
+		List<String> canModifyStatus = new ArrayList<>();
+		canModifyStatus.add("ModifyStatus");
 		UserConfigurationDestination destination = new UserConfigurationDestination(); 
 		destination.setSqsUrl("URL");
 		
@@ -98,6 +100,7 @@ public class ConfigurationApiControllerTest {
 		userConfigurationInput.setName(PARTITION_ID_DEFAULT_USER_CONF);
 		userConfigurationInput.setCanCreate(canCreate);
 		userConfigurationInput.setCanRead(canRead);
+		userConfigurationInput.setCanModifyStatus(canModifyStatus);
 		userConfigurationInput.setSignatureInfo("mmm");
 		userConfigurationInput.setDestination(destination);
 		userConfigurationInput.setApiKey("apiKey");
@@ -268,7 +271,7 @@ public class ConfigurationApiControllerTest {
 	        .header(xApiKey,xApiKeyValue)
 	        .header(xPagopaSafestorageCxId,xPagopaSafestorageCxIdValue)
 	        .exchange()
-	        .expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
+	        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
 	    
 	    log.info("\n Test 3 (getCurrentClientConfigNoExistentKey) test passed \n");
 	}

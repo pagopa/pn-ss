@@ -182,30 +182,23 @@ public class UriBuilderService {
         return S3Presigner.builder().region(Region.of(awsConfigurationProperties.regionCode())).build();
     }
 
-    private PresignedPutObjectRequest signBucket(S3Presigner presigner, String bucketName, String keyName, String contenType, Map<String,
+    private PresignedPutObjectRequest signBucket(S3Presigner s3Presigner, String bucketName, String keyName, String contenType, Map<String,
             String> secret) {
 
         PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName).key(keyName).contentType(contenType).metadata(secret)
                                                          //.tagging(storageType)
                                                          .build();
-        log.info("signbucket {}", duration);
-        PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+        log.info("sign bucket {}", duration);
+        PutObjectPresignRequest preSignRequest = PutObjectPresignRequest.builder()
                                                                         .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
                                                                         .putObjectRequest(objectRequest)
                                                                         .build();
-
-        PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(presignRequest);
-        return presignedRequest;
-
+        return s3Presigner.presignPutObject(preSignRequest);
     }
 
-
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly) {
-        // chiamare l'api di  GestoreRepositori per recupero dati
-        //todo
-
         return Mono.fromCallable(() -> validationFieldCreateUri(fileKey, xPagopaSafestorageCxId))
-                   .flatMap(voidMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
+                   .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
                    .doOnSuccess(o -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
                    .flatMap(userConfigurationResponse -> {
                        List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
@@ -216,7 +209,7 @@ public class UriBuilderService {
                                                                                                                    "Document key Not " +
                                                                                                                    "Found : " + fileKey)))
 
-                                                .map((documentResponse) -> {
+                                                .map(documentResponse -> {
                                                     if (!canRead.contains(documentResponse.getDocument()
                                                                                           .getDocumentType()
                                                                                           .getTipoDocumento())) {
@@ -230,12 +223,9 @@ public class UriBuilderService {
                                                     return documentResponse.getDocument();
                                                 })
                                                 .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
-
                    })
                    .map(doc -> getFileDownloadResponse(fileKey, doc, metadataOnly))
                    .doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "));
-
-
     }
 
     @NotNull
@@ -244,7 +234,7 @@ public class UriBuilderService {
 
         BigDecimal contentLength = doc.getContentLenght();
 
-        downloadResponse.setChecksum(doc.getCheckSum() != null ? doc.getCheckSum().getValue() : null);
+        downloadResponse.setChecksum(doc.getCheckSum() != null ? doc.getCheckSum() : null);
         downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
         // NOTA: deve essere restituito lo satto logico, piuttosto che lo stato tecnico

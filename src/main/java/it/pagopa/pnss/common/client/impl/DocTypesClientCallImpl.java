@@ -41,7 +41,7 @@ public class DocTypesClientCallImpl extends CommonBaseClient implements DocTypes
     }
 
     @Override
-    public ResponseEntity<DocumentType> deletedocTypes(String checksum) throws IdClientNotFoundException {
+    public ResponseEntity<DocumentType> deletedocTypes(String tipoDocumento) throws IdClientNotFoundException {
         return null;
     }
 

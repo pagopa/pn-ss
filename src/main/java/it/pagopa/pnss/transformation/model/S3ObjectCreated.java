@@ -2,9 +2,10 @@ package it.pagopa.pnss.transformation.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class S3ObjectCreated {
+public class S3ObjectCreated implements Serializable {
 
     private String version;
     private String id;
@@ -15,14 +16,25 @@ public class S3ObjectCreated {
     private String time;
     private String region;
     ArrayList< String > resources ;
-    Detail DetailObject;
-    Oggetto object;
-    @JsonProperty("request-id")
-    String requestId;
-    String requester;
-    @JsonProperty("source-ip-address")
-    String sourceIpAddress;
-    String reason;
+
+    @JsonProperty("detail")
+    Detail detailObject;
+
+
+    public S3ObjectCreated(String version, String id, String detailtype, String source, String account, String time, String region, ArrayList<String> resources, Detail detailObject) {
+        this.version = version;
+        this.id = id;
+        this.detailtype = detailtype;
+        this.source = source;
+        this.account = account;
+        this.time = time;
+        this.region = region;
+        this.resources = resources;
+        this.detailObject = detailObject;
+    }
+
+    public S3ObjectCreated() {
+    }
 
     public String getVersion() {
         return version;
@@ -89,50 +101,25 @@ public class S3ObjectCreated {
     }
 
     public Detail getDetailObject() {
-        return DetailObject;
+        return detailObject;
     }
 
     public void setDetailObject(Detail detailObject) {
-        DetailObject = detailObject;
+        this.detailObject = detailObject;
     }
 
-    public Oggetto getObject() {
-        return object;
-    }
-
-    public void setObject(Oggetto object) {
-        this.object = object;
-    }
-
-    public String getRequestId() {
-        return requestId;
-    }
-
-    public void setRequestId(String requestId) {
-        this.requestId = requestId;
-    }
-
-    public String getRequester() {
-        return requester;
-    }
-
-    public void setRequester(String requester) {
-        this.requester = requester;
-    }
-
-    public String getSourceIpAddress() {
-        return sourceIpAddress;
-    }
-
-    public void setSourceIpAddress(String sourceIpAddress) {
-        this.sourceIpAddress = sourceIpAddress;
-    }
-
-    public String getReason() {
-        return reason;
-    }
-
-    public void setReason(String reason) {
-        this.reason = reason;
+    @Override
+    public String toString() {
+        return "S3ObjectCreated{" +
+                "version='" + version + '\'' +
+                ", id='" + id + '\'' +
+                ", detailtype='" + detailtype + '\'' +
+                ", source='" + source + '\'' +
+                ", account='" + account + '\'' +
+                ", time='" + time + '\'' +
+                ", region='" + region + '\'' +
+                ", resources=" + resources +
+                ", detailObject=" + detailObject +
+                '}';
     }
 }

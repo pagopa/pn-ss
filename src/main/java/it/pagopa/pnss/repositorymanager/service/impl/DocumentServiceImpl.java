@@ -1,6 +1,7 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import org.springframework.stereotype.Service;
 
@@ -107,6 +108,20 @@ public class DocumentServiceImpl implements DocumentService {
                        log.info("patchDocument() : documentEntityStored : {}", documentEntityStored);
                        if (documentChanges.getDocumentState() != null) {
                            documentEntityStored.setDocumentState(documentChanges.getDocumentState());
+                       }
+                       if(documentChanges.getDocumentState().equalsIgnoreCase("available")) {
+                           if(documentEntityStored.getDocumentType().getTipoDocumento().equalsIgnoreCase("PN_NOTIFICATION_ATTACHMENTS")) {
+                               documentEntityStored.setDocumentLogicalState("PRELOADED");
+                           } else {
+                               documentEntityStored.setDocumentLogicalState("SAVED");
+                           }
+                       }
+                       if(documentChanges.getDocumentState().equalsIgnoreCase("attached")) {
+                           if(documentEntityStored.getDocumentType().getTipoDocumento().equalsIgnoreCase("PN_NOTIFICATION_ATTACHMENTS")) {
+                               documentEntityStored.setDocumentLogicalState("ATTACHED");
+                           } else {
+                               throw new IllegalDocumentStateException("Document State inserted is invalid for present document type");
+                           }
                        }
                        if (documentChanges.getRetentionUntil() != null && documentChanges.getRetentionUntil().isBlank()) {
                     	   documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());

@@ -1,7 +1,6 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
-import static it.pagopa.pnss.common.Constant.ATTACHED;
-import static it.pagopa.pnss.common.Constant.FREEZED;
+import static it.pagopa.pnss.common.Constant.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.math.BigDecimal;
@@ -10,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,11 +21,6 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
@@ -47,14 +42,15 @@ public class DocumentInternalApiControllerTest {
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
 
-    private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_LEGAL_FACTS";
+//    private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_LEGAL_FACTS";
+    private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_NOTIFICATION_ATTACHMENTS";
 
     private static final String PARTITION_ID_ENTITY = "documentKeyEnt";
     private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
     private static final String PARTITION_ID_NO_EXISTENT = "documentKey_bad";
     private static final String CHECKSUM= "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
 
-    private static DocumentInput documentInput;
+    private static Document document;
     private static DocumentChanges documentChanges;
 
     private static DynamoDbTable<DocumentEntity> dynamoDbTable;
@@ -81,17 +77,17 @@ public class DocumentInternalApiControllerTest {
         log.info("execute createDocument()");
 
         List<String> allowedStatusTransitions1 = new ArrayList<>();
-        allowedStatusTransitions1.add("ATTACHED");
+        allowedStatusTransitions1.add("AVAILABLE");
 
         CurrentStatus currentStatus1 = new CurrentStatus();
-        currentStatus1.setStorage("PN_LEGAL_FACTS");
+        currentStatus1.setStorage("PN_NOTIFICATION_ATTACHMENTS");
         currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
 
         Map<String, CurrentStatus> statuses1 = new HashMap<>();
-        statuses1.put("SAVED", currentStatus1);
+        statuses1.put("PRELOADED", currentStatus1);
 
         DocumentType docTypes = new DocumentType();
-        docTypes.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
+        docTypes.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
         docTypes.setChecksum(DocumentType.ChecksumEnum.SHA256);
         docTypes.setInitialStatus("SAVED");
         docTypes.setStatuses(statuses1);
@@ -100,18 +96,20 @@ public class DocumentInternalApiControllerTest {
         docTypes.setTimeStamped(TimeStampedEnum.STANDARD);
         log.info("execute createDocument() : docType : {}", docTypes);
 
-        documentInput = new DocumentInput();
-        documentInput.setDocumentKey(PARTITION_ID_DEFAULT);
-        documentInput.setDocumentState(FREEZED);
-        documentInput.setRetentionUntil("2032-04-12T12:32:04.000Z");
-        documentInput.setCheckSum(CHECKSUM);
-        documentInput.setContentType("xxxxx");
-        documentInput.setDocumentType("PN_NOTIFICATION_ATTACHMENTS");
-        documentInput.setContentLenght(new BigDecimal(100));
-        log.info("execute createDocument() : documentInput : {}", documentInput);
+        document = new Document();
+        document.setDocumentKey(PARTITION_ID_DEFAULT);
+        document.setDocumentState(FREEZED);
+        document.setRetentionUntil("2032-04-12T12:32:04.000Z");
+        document.setCheckSum(CHECKSUM);
+        document.setContentType("xxxxx");
+        document.setDocumentType(docTypes);
+        document.setContentLenght(new BigDecimal(100));
+        log.info("execute createDocument() : documentInput : {}", document);
 
         documentChanges = new DocumentChanges();
-        documentChanges.setDocumentState(ATTACHED);
+        documentChanges.setDocumentState(AVAILABLE);
+        documentChanges.setRetentionUntil("");
+        documentChanges.setCheckSum("");
         documentChanges.setContentLenght(new BigDecimal(50));
     }
 
@@ -121,7 +119,7 @@ public class DocumentInternalApiControllerTest {
 
         EntityExchangeResult<DocumentResponse> resultPreInsert = webTestClient.get()
                                                                               .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM)
-                                                                                                           .build(documentInput.getDocumentKey()))
+                                                                                                           .build(document.getDocumentKey()))
                                                                               .accept(APPLICATION_JSON)
                                                                               .exchange()
                                                                               .expectStatus()
@@ -137,7 +135,7 @@ public class DocumentInternalApiControllerTest {
                          .uri(BASE_PATH)
                          .accept(APPLICATION_JSON)
                          .contentType(APPLICATION_JSON)
-                         .body(BodyInserters.fromValue(documentInput))
+                         .body(BodyInserters.fromValue(document))
                          .exchange()
                          .expectStatus()
                          .isOk();
@@ -152,7 +150,7 @@ public class DocumentInternalApiControllerTest {
 
         EntityExchangeResult<DocumentResponse> resultPreInsert = webTestClient.get()
                                                                               .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM)
-                                                                                                           .build(documentInput.getDocumentKey()))
+                                                                                                           .build(document.getDocumentKey()))
                                                                               .accept(APPLICATION_JSON)
                                                                               .exchange()
                                                                               .expectStatus()
@@ -169,7 +167,7 @@ public class DocumentInternalApiControllerTest {
                          .uri(BASE_PATH)
                          .accept(APPLICATION_JSON)
                          .contentType(APPLICATION_JSON)
-                         .body(BodyInserters.fromValue(documentInput))
+                         .body(BodyInserters.fromValue(document))
                          .exchange()
                          .expectStatus()
                          .isEqualTo(HttpStatus.CONFLICT);
@@ -183,13 +181,13 @@ public class DocumentInternalApiControllerTest {
         // codice test: DCSS.101.2
     void postItemIncorrectParameter() {
 
-        documentInput.setDocumentKey(null);
+        document.setDocumentKey(null);
 
         webTestClient.post()
                      .uri(BASE_PATH)
                      .accept(APPLICATION_JSON)
                      .contentType(APPLICATION_JSON)
-                     .body(BodyInserters.fromValue(documentInput))
+                     .body(BodyInserters.fromValue(document))
                      .exchange()
                      .expectStatus()
                      .isEqualTo(HttpStatus.BAD_REQUEST);
@@ -245,7 +243,7 @@ public class DocumentInternalApiControllerTest {
 
         EntityExchangeResult<DocumentResponse> documentInDb = webTestClient.get()
                                                                            .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM)
-                                                                                                        .build(PARTITION_ID_DEFAULT))
+                                                                                                        .build(document.getDocumentKey()))
                                                                            .accept(APPLICATION_JSON)
                                                                            .exchange()
                                                                            .expectStatus()
@@ -290,7 +288,7 @@ public class DocumentInternalApiControllerTest {
                      .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
                      .accept(APPLICATION_JSON)
                      .contentType(APPLICATION_JSON)
-                     .body(BodyInserters.fromValue(documentInput))
+                     .body(BodyInserters.fromValue(document))
                      .exchange()
                      .expectStatus()
                      .isEqualTo(HttpStatus.NOT_FOUND);
@@ -307,7 +305,7 @@ public class DocumentInternalApiControllerTest {
                      .uri(BASE_PATH)
                      .accept(APPLICATION_JSON)
                      .contentType(APPLICATION_JSON)
-                     .body(BodyInserters.fromValue(documentInput))
+                     .body(BodyInserters.fromValue(document))
                      .exchange()
                      .expectStatus()
                      .isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);

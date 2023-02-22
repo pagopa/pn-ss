@@ -222,6 +222,29 @@ Resources:
               - 'sqs:List*'
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
+          - Effect: Allow
+            Action:
+              - 'kms:*'
+            Resource:
+              - *
+
+  PnSsStagingBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Sub PnSsStagingBucketName
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 's3:*'
+            Effect: Allow
+            Resource: !Join
+              - ''
+              - - !Sub PnSsStagingBucketArn
+                - /*
+            Principal:  
+              AWS: 
+                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]] 
 
   PnSsQueuePolicyStagingBucket:
     Type: AWS::SQS::QueuePolicy

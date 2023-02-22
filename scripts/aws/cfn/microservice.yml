@@ -171,33 +171,7 @@ Resources:
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         # HealthCheckPath: 
-    
-  # # pn-safe-storage microservice public API (WEB) exposed with API-GW
-  # PnSsMicroserviceWebAPI:
-  #   Type: AWS::CloudFormation::Stack
-  #   Properties:
-  #     TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/api-gw-expose-service.yaml"
-  #     Parameters:
-  #       MicroServiceUniqueName: !Sub '${ProjectName}-safe-storage'
-  #       IntendedUsage: WEB
-  #       DnsName: !Ref WebApiDnsName
-  #       ProjectName: !Ref ProjectName
-  #       ServiceApiPath: 'safestorage'
-  #       NetworkLoadBalancerLink: !Ref NetworkLoadBalancerLink
-  #       ApplicationLoadBalancerDomain: !Ref ApplicationLoadBalancerDomain
-  #       AlarmSNSTopicArn: !Ref AlarmSNSTopicArn
-  #       # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn  
-
-  # PnSsMicroserviceWebAPIWaf:
-  #   Type: AWS::CloudFormation::Stack
-  #   Properties:
-  #     TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/api-gw-waf-acl.yaml"
-  #     Parameters:
-  #       WAFName: !Sub '${ProjectName}-safe-storage-web'
-  #       IntendedUsage: WEB
-  #       APIGatewayARNs: !GetAtt PnSsMicroserviceWebAPI.Outputs.APIGatewayARN
-  #       Limit: 6000
-
+  
   PnSsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -271,8 +245,7 @@ Resources:
       RoleName: !Join [ '', [!Sub 'PnSsGestoreBucketLambdaName', '-role-name']]
       Description: 'Ruolo della Lambda che implementa la funzionalità del Gestore Bucket'
       ManagedPolicyArns:
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
-        # - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -281,7 +254,25 @@ Resources:
             Service: lambda.amazonaws.com
           Action:
           - 'sts:AssumeRole'
-           
+      Policies:
+        - PolicyName: 'PnSsGestoreBucketInlinePolicy'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              - Sid: 'GeneralBucketPolicy'
+                Effect: 'Allow'
+                Action: 
+                  - 's3:List*'
+                  - 's3:GetBucket*'
+                  - 's3:Put*'
+                  - 's3:Describe*'
+                  - 's3:Get*'
+                  - 's3:*MultipartUpload*'
+                  - 's3:*Tag*'
+                Resource:
+                  - !Sub '${PnSsStagingBucketArn}'
+                  - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
+
   PnSsGestoreBucketNotificationPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -297,7 +288,7 @@ Resources:
       FunctionName: !Ref PnSsGestoreBucketLambdaName
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
-      MemorySize: 256
+      MemorySize: 512
       Runtime: nodejs16.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240
@@ -306,163 +297,177 @@ Resources:
           HOSTNAME: !Ref ApplicationLoadBalancerDomain
       Code:
         ZipFile: |
-            'use strict';
-            const https = require('https');
-            const AWS = require('aws-sdk')
-            const s3 = new AWS.S3()
-            const HOSTNAME = process.env.HOST_NAME || "localhost";
+          "use strict";
+          const https = require("https");
+          const AWS = require("aws-sdk");
+          const s3 = new AWS.S3();
+          const HOSTNAME = process.env.HOST_NAME || "localhost";
 
-            var jsonDocument = {
-              documentKey: "",
-              documentState: "",
-              checkSum: "",
-              contentLenght: 0
-            }
-            /**
-            * Event Handler
-            * 
-            * @param {*} event 
-            * @returns 
-            */
-            exports.handler = async (event) => {
-              var bucketName;
+          var jsonDocument = {
+            documentKey: "",
+            documentState: "",
+            checkSum: "",
+            contentLenght: 0,
+          };
+          /**
+          * Event Handler
+          *
+          * @param {*} event
+          * @returns
+          */
+          exports.handler = async (event) => {
+            console.log(event);
+            var bucketName;
 
-              var params = {
-                Bucket: "",
-                Key: ""
-              };
-              console.log(event.Records[0].s3)
-              event.Records.forEach(record => {
-                bucketName = record.s3.bucket.name;
-                jsonDocument.documentKey = record.s3.object.key;
-                jsonDocument.contentLenght = record.s3.object.size;
+            var params = {
+              Bucket: "",
+              Key: "",
+            };
+            //event.Records.forEach((record) => {
+            bucketName = event.Records[0].s3.bucket.name;
+            jsonDocument.documentKey = event.Records[0].s3.object.key;
+            jsonDocument.contentLenght = event.Records[0].s3.object.size;
 
-                if (record.eventName == "ObjectCreated:*" || record.eventName == "ObjectRestore:Completed") {
-                  jsonDocument.documentState = "AVAILABLE";
-                }
-                if (record.eventName == "LifecycleTransition" || record.eventName == "ObjectRestore:Delete") {
-                  jsonDocument.documentState = "FREEZED";
-                }
-                if (record.eventName == "LifecycleExpiration:Delete" || record.eventName == "ObjectRemoved:Delete") {
-                  jsonDocument.documentState = "DELETED";
-                }
+            switch (event.Records[0].eventName) {
+              case "ObjectCreated:*":
+                jsonDocument.documentState = "AVAILABLE";
+                break;
+              case "ObjectRestore:Completed":
+                jsonDocument.documentState = "AVAILABLE";
+                break;
+              case "LifecycleTransition":
+                jsonDocument.documentState = "FREEZED";
+                break;
+              case "ObjectRestore:Delete":
+                jsonDocument.documentState = "FREEZED";
+                break;
+              case "LifecycleExpiration:Delete":
+                jsonDocument.documentState = "DELETED";
+                break;
+              case "ObjectRemoved:Delete":
+                jsonDocument.documentState = "DELETED";
+                break;
+              case "ObjectCreated:Copy":
+                jsonDocument.documentState = "AVAILABLE";
+                break;
 
-                params.Bucket = bucketName;
-                params.Key = jsonDocument.documentKey;
-                // Get S3 file from source and transfer to target.
-                
-                console.log("##################################")
-                s3.getObject(params, (err, data) => {
-                  if (err) {
-                    console.error(err);
-                  } else {
-                    var doc = getDocumentFromDB(jsonDocument.documentKey);
-                    console.log(doc)
-                    
-                    jsonDocument.checkSum = hashDocument(data.Body, doc.documentType);
-                    
-                    const res = updateDynamo(jsonDocument);
-                    console.log(res)
-                  } 
-                })
-              });
-              console.log("############## EXIT  ####################")
-
-              const response = {
-                statusCode: 200
-              };
-
-              return response;
-
-            }
-            /**
-            * Do a request with options not provided.
-            *
-            * @param {Object} options
-            * @param {Object} data
-            * @return {Promise} a promise of request
-            */
-            function getDocumentFromDB(docKey) {
-              const options = {
-                method: "GET",
-                hostname: HOSTNAME,
-                path: "/safestorage/internal/v1/documents/" + docKey,
-                headers: {
-                  'Content-Type': 'application/json',
-                }
-              }
-              return new Promise((resolve, reject) => {
-                const req = https.request(options, (res) => {
-                  // res.setEncoding("utf8");
-                  let responseBody = "";
-
-                  res.on("data", (chunk) => {
-                    responseBody += chunk;
-                  });
-
-                  res.on("end", () => {
-                    resolve(JSON.parse(responseBody));
-                  });
-                });
-
-                req.on("error", (err) => {
-                  console.error(err)
-                  reject(err);
-                });
-
-                // req.write(data);
-                req.end();
-              });
-            }
-
-            var crypto = require('crypto');
-
-
-            const hashDocument = (document, docType) => {
-              var hash;
-              if (docType == "PN_AAR") {
-                hash = crypto.createHash('md5').update(document).digest('hex');
-              } else {
-                hash = crypto.createHash('sha256').update(document).digest('hex');
-              }
-
-              return hash;
-            }
-
-            /**
-            * TO DO
-            */
-            function updateDynamo(data) {
-              const options = {
-                method: "PATCH",
-                hostname: HOSTNAME,
-                path: "/safestorage/internal/v1/documents/" + data.documentKey,
-                headers: {
-                  'Content-Type': 'application/json',
-                }
-              }
-              return new Promise((resolve, reject) => {
-                const req = https.request(options, (res) => {
-                  // res.setEncoding("utf8");
-                  let responseBody = "";
-
-                  res.on("data", (chunk) => {
-                    responseBody += chunk;
-                  });
-
-                  res.on("end", () => {
-                    resolve(JSON.parse(responseBody));
-                  });
-                });
-
-                req.on("error", (err) => {
-                  console.error(err)
-                  reject(err);
-                });
-
-                req.write(data);
-                req.end();
-              });
-            }
-
+              default:
               
+                const response = {
+                  statusCode: 200,
+                };
+              return response;
+            }
+
+            console.log(jsonDocument);
+            params.Bucket = bucketName;
+            params.Key = jsonDocument.documentKey;
+
+            const { Body } = await s3.getObject(params).promise();
+
+            console.log(Body);
+            var doc = await getDocumentFromDB(jsonDocument.documentKey);
+            console.log(doc);
+
+            jsonDocument.checkSum = hashDocument(Body, doc.documentType);
+
+            const res = await updateDynamo(jsonDocument);
+            console.log(res);
+
+            console.log("############## EXIT  ####################");
+
+            const response = {
+              statusCode: 200,
+            };
+
+            return response;
+          };
+
+          /**
+          * Do a request with options not provided.
+          *
+          * @param {Object} options
+          * @param {Object} data
+          * @return {Promise} a promise of request
+          */
+          function getDocumentFromDB(docKey) {
+            const options = {
+              method: "GET",
+              hostname: HOSTNAME,
+              path: "/safestorage/internal/v1/documents/" + docKey,
+              headers: {
+                "Content-Type": "application/json",
+              },
+            };
+            return new Promise((resolve, reject) => {
+              const req = https.request(options, (res) => {
+                // res.setEncoding("utf8");
+                let responseBody = "";
+
+                res.on("data", (chunk) => {
+                  responseBody += chunk;
+                });
+
+                res.on("end", () => {
+                  resolve(JSON.parse(responseBody));
+                });
+              });
+
+              req.on("error", (err) => {
+                console.error(err);
+                reject(err);
+              });
+
+              // req.write(data);
+              req.end();
+            });
+          }
+
+          var crypto = require("crypto");
+
+          const hashDocument = (document, docType) => {
+            var hash;
+            if (docType == "PN_AAR") {
+              hash = crypto.createHash("md5").update(document).digest("hex");
+            } else {
+              hash = crypto.createHash("sha256").update(document).digest("hex");
+            }
+
+            return hash;
+          };
+
+          /**
+          * TO DO
+          */
+          function updateDynamo(data) {
+            const options = {
+              method: "PATCH",
+              hostname: HOSTNAME,
+              path: "/safestorage/internal/v1/documents/" + data.documentKey,
+              headers: {
+                "Content-Type": "application/json",
+              },
+            };
+            return new Promise((resolve, reject) => {
+              const req = https.request(options, (res) => {
+                // res.setEncoding("utf8");
+                let responseBody = "";
+
+                res.on("data", (chunk) => {
+                  responseBody += chunk;
+                });
+
+                res.on("end", () => {
+                  resolve(JSON.parse(responseBody));
+                });
+              });
+
+              req.on("error", (err) => {
+                console.error(err);
+                reject(err);
+              });
+
+              req.write(data);
+              req.end();
+            });
+          }

@@ -2,6 +2,7 @@ package it.pagopa.pnss.common.client.impl;
 
 import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
@@ -59,9 +60,9 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     }
 
     @Override
-    public Mono<DocumentResponse> patchdocument(String keyFile, Document document) throws IdClientNotFoundException {
+    public Mono<DocumentResponse> patchdocument(String keyFile, DocumentChanges document) throws IdClientNotFoundException {
         return getWebClient().patch()
-                .uri(String.format(anagraficaDocumentiClientEndpoint, document.getDocumentKey()))
+                .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                 .bodyValue(document)
                 .retrieve()
                 .bodyToMono(DocumentResponse.class);

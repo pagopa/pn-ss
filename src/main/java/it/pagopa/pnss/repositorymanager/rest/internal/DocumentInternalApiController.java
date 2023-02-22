@@ -3,6 +3,7 @@ package it.pagopa.pnss.repositorymanager.rest.internal;
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
+import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -63,7 +64,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
             		"Document not found" : 
             		String.format("Document with id %s not found", documentKey);
             return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
-        } else if (throwable instanceof RepositoryManagerException) {
+        } else if (throwable instanceof RepositoryManagerException || throwable instanceof IllegalDocumentStateException) {
         	return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
         }
         else if(throwable instanceof DocumentTypeNotPresentException) {

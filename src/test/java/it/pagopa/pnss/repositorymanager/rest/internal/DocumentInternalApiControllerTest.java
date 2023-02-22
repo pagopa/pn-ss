@@ -1,7 +1,6 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
-import static it.pagopa.pnss.common.Constant.ATTACHED;
-import static it.pagopa.pnss.common.Constant.FREEZED;
+import static it.pagopa.pnss.common.Constant.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.math.BigDecimal;
@@ -10,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.*;
+import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,11 +22,6 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
@@ -47,7 +43,7 @@ public class DocumentInternalApiControllerTest {
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
 
-    private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_LEGAL_FACTS";
+    private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_NOTIFICATION_ATTACHMENTS";
 
     private static final String PARTITION_ID_ENTITY = "documentKeyEnt";
     private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
@@ -61,8 +57,14 @@ public class DocumentInternalApiControllerTest {
 
     private static void insertDocumentEntity(String documentKey) {
         log.info("execute insertDocumentEntity()");
+
+        DocTypeEntity docTypeEntity = new DocTypeEntity();
+        docTypeEntity.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
+        log.info("execute insertDocumentEntity() : docTypeEntity : {}", docTypeEntity);
+
         var documentEntity = new DocumentEntity();
         documentEntity.setDocumentKey(documentKey);
+        documentEntity.setDocumentType(docTypeEntity);
         dynamoDbTable.putItem(builder -> builder.item(documentEntity));
     }
 
@@ -81,17 +83,17 @@ public class DocumentInternalApiControllerTest {
         log.info("execute createDocument()");
 
         List<String> allowedStatusTransitions1 = new ArrayList<>();
-        allowedStatusTransitions1.add("ATTACHED");
+        allowedStatusTransitions1.add("AVAILABLE");
 
         CurrentStatus currentStatus1 = new CurrentStatus();
-        currentStatus1.setStorage("PN_LEGAL_FACTS");
+        currentStatus1.setStorage("PN_NOTIFICATION_ATTACHMENTS");
         currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
 
         Map<String, CurrentStatus> statuses1 = new HashMap<>();
-        statuses1.put("SAVED", currentStatus1);
+        statuses1.put("PRELOADED", currentStatus1);
 
         DocumentType docTypes = new DocumentType();
-        docTypes.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
+        docTypes.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
         docTypes.setChecksum(DocumentType.ChecksumEnum.SHA256);
         docTypes.setInitialStatus("SAVED");
         docTypes.setStatuses(statuses1);
@@ -111,7 +113,7 @@ public class DocumentInternalApiControllerTest {
         log.info("execute createDocument() : documentInput : {}", documentInput);
 
         documentChanges = new DocumentChanges();
-        documentChanges.setDocumentState(ATTACHED);
+        documentChanges.setDocumentState(AVAILABLE);
         documentChanges.setContentLenght(new BigDecimal(50));
     }
 
@@ -245,7 +247,7 @@ public class DocumentInternalApiControllerTest {
 
         EntityExchangeResult<DocumentResponse> documentInDb = webTestClient.get()
                                                                            .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM)
-                                                                                                        .build(PARTITION_ID_DEFAULT))
+                                                                                                        .build(documentInput.getDocumentKey()))
                                                                            .accept(APPLICATION_JSON)
                                                                            .exchange()
                                                                            .expectStatus()

@@ -2,6 +2,7 @@ package it.pagopa.pnss.transformation.service;
 
 import io.awspring.cloud.messaging.listener.Acknowledgment;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pnss.common.Constant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 
@@ -84,8 +85,9 @@ public class OrchestratorSignDocument {
         byte[] fileSigned = signReturnV2.getBinaryoutput();
         PutObjectResponse putObjectResponse=  uploadObjectService.execute(key,fileSigned);
 
-        doc.setDocumentState(STAGED);
-        documentClientCall.updatedocument(doc);
+        DocumentChanges documentChanges = new DocumentChanges();
+        documentChanges.setDocumentState(STAGED);
+        documentClientCall.patchdocument(key, documentChanges);
 
     }
 }

@@ -12,13 +12,14 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
 
 @Service
 public abstract class CommonS3ObjectService {
-	
+
 	@Value("${test.aws.s3.endpoint:#{null}}")
 	private String testAwsS3Endpoint;
-	
+
 	@Autowired
 	private AwsConfigurationProperties awsConfigurationProperties;
 
@@ -29,20 +30,24 @@ public abstract class CommonS3ObjectService {
 //                .build();
 //        return s3Client;
 //    }
-    
-    public S3Client getS3Client(){
-    	return S3Client.builder()
-    			.region(Region.of(awsConfigurationProperties.regionCode()))
-    			.build();
-    }
-    
-    public S3AsyncClient getS3AsynchClient() {
-    	S3AsyncClientBuilder s3Client = S3AsyncClient.builder()
-    			.region(Region.of(awsConfigurationProperties.regionCode()));
-    			//.credentialsProvider(ProfileCredentialsProvider.create());
-    	if (testAwsS3Endpoint != null) {
-    		s3Client.endpointOverride(URI.create(testAwsS3Endpoint));
-    	}
-    	return s3Client.build();
-    }
+
+	public S3Client getS3Client(){
+		S3ClientBuilder s3ClientBuilder = S3Client.builder()
+				.region(Region.of(awsConfigurationProperties.regionCode()));
+		if (testAwsS3Endpoint != null) {
+			s3ClientBuilder.endpointOverride(URI.create(testAwsS3Endpoint));
+		}
+
+		return s3ClientBuilder.build();
+	}
+
+	public S3AsyncClient getS3AsynchClient() {
+		S3AsyncClientBuilder s3Client = S3AsyncClient.builder()
+				.region(Region.of(awsConfigurationProperties.regionCode()));
+		//.credentialsProvider(ProfileCredentialsProvider.create());
+		if (testAwsS3Endpoint != null) {
+			s3Client.endpointOverride(URI.create(testAwsS3Endpoint));
+		}
+		return s3Client.build();
+	}
 }

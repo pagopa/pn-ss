@@ -2,6 +2,7 @@ package it.pagopa.pnss.transformation.service;
 
 import io.awspring.cloud.messaging.listener.Acknowledgment;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pnss.common.Constant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 
@@ -75,9 +76,10 @@ public class OrchestratorSignDocument {
                         }
                         byte[] fileSigned = signReturnV2.getBinaryoutput();
                         PutObjectResponse putObjectResponse = uploadObjectService.execute(key, fileSigned);
+                        DocumentChanges docChanges = new DocumentChanges();
+                        docChanges.setDocumentState(Constant.AVAILABLE);
 
-                        doc.setDocumentState(Constant.AVAILABLE);
-                        documentClientCall.updatedocument(doc);
+                        documentClientCall.patchdocument(key,docChanges);
                         deleteObjectService.execute(key);
                     }catch (NoSuchBucketException nsbe){
                         throw new S3BucketException.BucketNotPresentException(nsbe.getMessage());

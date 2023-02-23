@@ -1,6 +1,7 @@
 package it.pagopa.pnss.transformation.service;
 
 import it.pagopa.pnss.configurationproperties.BucketName;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -16,11 +17,12 @@ public class DeleteObjectService extends  CommonS3ObjectService {
 
     @Autowired
     private BucketName bucketName;
-    public DeleteObjectResponse execute(String keyName){
-        S3Client s3Client = getS3Client();
+    public DeleteObjectResponse execute(String keyName, String bucketNameFromS3){
+       S3Client s3Client = getS3Client();
+       String bucket =bucketNameFromS3;
 
-        DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                .bucket(bucketName.ssHotName())
+       DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                .bucket(bucket)
                 .key(keyName)
                 .build();
 

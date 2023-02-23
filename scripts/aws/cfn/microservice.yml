@@ -340,7 +340,9 @@ Resources:
           exports.handler = async (event) => {
             console.log(event);
             var bucketName;
-
+            console.log("Buket Name: " + event.Records[0].s3.object.name);
+            console.log("Object Key: " + event.Records[0].s3.object.key);
+            console.log("Object Size: " + event.Records[0].s3.object.size);
             var params = {
               Bucket: "",
               Key: "",
@@ -348,11 +350,20 @@ Resources:
             //event.Records.forEach((record) => {
             bucketName = event.Records[0].s3.bucket.name;
             jsonDocument.documentKey = event.Records[0].s3.object.key;
-            jsonDocument.contentLenght = event.Records[0].s3.object.size;
-
             switch (event.Records[0].eventName) {
               case "ObjectCreated:*":
+                break;
+              case "ObjectCreated:Put":
+                jsonDocument.contentLenght = event.Records[0].s3.object.size;
                 jsonDocument.documentState = "AVAILABLE";
+                params.Bucket = bucketName;
+                params.Key = jsonDocument.documentKey;
+                const { Body } = await s3.getObject(params).promise();
+                console.log(Body);
+                var doc = await getDocumentFromDB(jsonDocument.documentKey);
+                console.log(doc);
+                jsonDocument.checkSum = hashDocument(Body, doc.documentType);
+                console.log(jsonDocument);
                 break;
               case "ObjectRestore:Completed":
                 jsonDocument.documentState = "AVAILABLE";
@@ -369,42 +380,20 @@ Resources:
               case "ObjectRemoved:Delete":
                 jsonDocument.documentState = "DELETED";
                 break;
-              case "ObjectCreated:Copy":
-                jsonDocument.documentState = "AVAILABLE";
-                break;
-
               default:
-              
                 const response = {
                   statusCode: 200,
                 };
               return response;
             }
-
-            console.log(jsonDocument);
-            params.Bucket = bucketName;
-            params.Key = jsonDocument.documentKey;
-
-            const { Body } = await s3.getObject(params).promise();
-
-            console.log(Body);
-            var doc = await getDocumentFromDB(jsonDocument.documentKey);
-            console.log(doc);
-
-            jsonDocument.checkSum = hashDocument(Body, doc.documentType);
-
             const res = await updateDynamo(jsonDocument);
             console.log(res);
-
             console.log("############## EXIT  ####################");
-
             const response = {
               statusCode: 200,
             };
-
             return response;
           };
-
           /**
           * Do a request with options not provided.
           *

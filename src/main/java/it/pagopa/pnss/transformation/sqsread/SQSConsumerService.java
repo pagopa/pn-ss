@@ -56,10 +56,11 @@ public class SQSConsumerService {
             return ;
         }
         String key = s3ObjectCreated.getDetailObject().getObject().getKey();
+        String bucketName = s3ObjectCreated.getDetailObject().getBucket().getName();
         log.info("Ricevuto messaggio "+s3ObjectCreated.toString());
 
         try {
-            orchestrator.incomingMessageFlow(key).block();
+            orchestrator.incomingMessageFlow(key, bucketName).block();
 
         }catch(ArubaSignExceptionLimitCall arubaEx){
             log.error("Impossible connect wit aruba for key "+arubaEx.getMessage(),arubaEx);

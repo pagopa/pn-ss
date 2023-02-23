@@ -3,6 +3,7 @@ package it.pagopa.pnss.transformation.service;
 import io.awspring.cloud.messaging.listener.Acknowledgment;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.common.Constant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 
@@ -50,16 +51,16 @@ public class OrchestratorSignDocument {
     }
 
 
-    public Mono<Void> incomingMessageFlow(String key) {
+    public Mono<Void> incomingMessageFlow(String key, String bucketName) {
         log.info("chiamo la document con keyname :"+key);
         return Mono.fromCallable(() -> validationField())
                 .flatMap(voidMono -> documentClientCall.getdocument(key))
-                .map(documentResponse -> {
+                .flatMap(documentResponse -> {
                     try {
-                        ResponseBytes<GetObjectResponse> objectResponse = downloadObjectService.execute(key);
+                        ResponseBytes<GetObjectResponse> objectResponse = downloadObjectService.execute(key,bucketName);
                         byte[] fileInput = objectResponse.asByteArray();
                         Document doc = documentResponse.getDocument();
-
+                        doc.setDocumentType(new DocumentType());doc.getDocumentType().setDigitalSignature(true);
                         if (!doc.getDocumentType().getDigitalSignature()){
                             return Mono.empty();
                         }
@@ -99,21 +100,33 @@ public class OrchestratorSignDocument {
                         										 .build();
                         //***
                         										 
+
+                        log.info("\n--- ARUBA RESPONSE "+
+                                 "\n--- ARUBA RETURN CODE : "+signReturnV2.getReturnCode()+
+                                 "\n--- ARUBA STATUS      : "+signReturnV2.getStatus()+
+                                 "\n--- ARUBA DESCRIPTION : "+signReturnV2.getDescription());
+                        if (signReturnV2.getStatus().equals("KO")){
+                            throw new ArubaSignException(key);
+                        }
+                        
                         byte[] fileSigned = signReturnV2.getBinaryoutput();
                         
                         PutObjectResponse putObjectResponse = uploadObjectService.execute(key, fileSigned);
                         DocumentChanges docChanges = new DocumentChanges();
                         docChanges.setDocumentState(Constant.AVAILABLE);
 
-                        documentClientCall.patchdocument(key,docChanges);
-                        deleteObjectService.execute(key);
+                        //return documentClientCall.patchdocument(key,docChanges).flatMap(documentResponseInt -> {
+                        deleteObjectService.execute(key,bucketName);
+                        return Mono.empty();
+
+                        //});
                     }catch (NoSuchBucketException nsbe){
                         throw new S3BucketException.BucketNotPresentException(nsbe.getMessage());
                     }catch (NoSuchKeyException nske){
                         throw new S3BucketException.NoSuchKeyException(key);
                     }
 
-                    return Mono.empty();
+
                 })
                 .retryWhen(Retry.max(10)
                         .filter(ArubaSignException.class::isInstance)

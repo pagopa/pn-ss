@@ -135,7 +135,15 @@ Parameters:
   PresignedUrlMinutesLifespan:
     Type: String
     Description: 'Minuti di validità dei pre-signed url prima di scadere'
-  
+
+  PnEcIdentityTimemark:
+    Type: String
+    Description: 'Secret ID for Identity Timemark'
+
+  PnEcIdentitySignature:
+    Type: String
+    Description: 'Secret ID for Identity Signature'
+
 
 Resources:
 
@@ -223,6 +231,14 @@ Resources:
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
           - Effect: Allow
+            Sid: 'ReadFromSecretsManagerFirmaPEC'
+            Action:
+              - 'secrets:DescribeSecret'
+              - 'secrets:GetSecretValue'
+            Resource:
+              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnEcIdentityTimemark , '*']]
+              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnEcIdentitySignature , '*']]
+          - Effect: Allow
             Action:
               - 'kms:*'
             Resource:
@@ -292,8 +308,8 @@ Resources:
                   - 's3:*MultipartUpload*'
                   - 's3:*Tag*'
                 Resource:
-                  - !Sub '${PnSsStagingBucketArn}'
-                  - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
+                  - !Sub '${PnSsBucketArn}'
+                  - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
 
   PnSsGestoreBucketNotificationPermission:
     Type: AWS::Lambda::Permission
@@ -316,14 +332,14 @@ Resources:
       Timeout: 240
       Environment:
         Variables:
-          HOSTNAME: !Ref ApplicationLoadBalancerDomain
+          SafeStorageBaseUrl: !Sub http://${ApplicationLoadBalancerDomain}:8080
       Code:
         ZipFile: |
           "use strict";
-          const https = require("https");
+          const http = require("http");
           const AWS = require("aws-sdk");
           const s3 = new AWS.S3();
-          const HOSTNAME = process.env.HOST_NAME || "localhost";
+          const HOSTNAME = process.env.SafeStorageBaseUrl;
 
           var jsonDocument = {
             documentKey: "",
@@ -340,7 +356,9 @@ Resources:
           exports.handler = async (event) => {
             console.log(event);
             var bucketName;
-
+            console.log("Buket Name: " + event.Records[0].s3.bucket.name);
+            console.log("Object Key: " + event.Records[0].s3.object.key);
+            console.log("Object Size: " + event.Records[0].s3.object.size);
             var params = {
               Bucket: "",
               Key: "",
@@ -348,11 +366,20 @@ Resources:
             //event.Records.forEach((record) => {
             bucketName = event.Records[0].s3.bucket.name;
             jsonDocument.documentKey = event.Records[0].s3.object.key;
-            jsonDocument.contentLenght = event.Records[0].s3.object.size;
-
             switch (event.Records[0].eventName) {
               case "ObjectCreated:*":
+                break;
+              case "ObjectCreated:Put":
+                jsonDocument.contentLenght = event.Records[0].s3.object.size;
                 jsonDocument.documentState = "AVAILABLE";
+                params.Bucket = bucketName;
+                params.Key = jsonDocument.documentKey;
+                const { Body } = await s3.getObject(params).promise();
+                console.log(Body);
+                var doc = await getDocumentFromDB(jsonDocument.documentKey);
+                console.log(doc);
+                jsonDocument.checkSum = hashDocument(Body, doc.documentType);
+                console.log(jsonDocument);
                 break;
               case "ObjectRestore:Completed":
                 jsonDocument.documentState = "AVAILABLE";
@@ -369,42 +396,20 @@ Resources:
               case "ObjectRemoved:Delete":
                 jsonDocument.documentState = "DELETED";
                 break;
-              case "ObjectCreated:Copy":
-                jsonDocument.documentState = "AVAILABLE";
-                break;
-
               default:
-              
                 const response = {
                   statusCode: 200,
                 };
               return response;
             }
-
-            console.log(jsonDocument);
-            params.Bucket = bucketName;
-            params.Key = jsonDocument.documentKey;
-
-            const { Body } = await s3.getObject(params).promise();
-
-            console.log(Body);
-            var doc = await getDocumentFromDB(jsonDocument.documentKey);
-            console.log(doc);
-
-            jsonDocument.checkSum = hashDocument(Body, doc.documentType);
-
             const res = await updateDynamo(jsonDocument);
             console.log(res);
-
             console.log("############## EXIT  ####################");
-
             const response = {
               statusCode: 200,
             };
-
             return response;
           };
-
           /**
           * Do a request with options not provided.
           *
@@ -413,16 +418,17 @@ Resources:
           * @return {Promise} a promise of request
           */
           function getDocumentFromDB(docKey) {
-            const options = {
+            /*const options = {
               method: "GET",
               hostname: HOSTNAME,
               path: "/safestorage/internal/v1/documents/" + docKey,
               headers: {
                 "Content-Type": "application/json",
-              },
-            };
+              }, 
+            }; */
+            const url = HOSTNAME + "/safestorage/internal/v1/documents/" + docKey;
             return new Promise((resolve, reject) => {
-              const req = https.request(options, (res) => {
+              const req = http.get(url, (res) => {
                 // res.setEncoding("utf8");
                 let responseBody = "";
 
@@ -462,16 +468,17 @@ Resources:
           * TO DO
           */
           function updateDynamo(data) {
-            const options = {
+            /*const options = {
               method: "PATCH",
               hostname: HOSTNAME,
               path: "/safestorage/internal/v1/documents/" + data.documentKey,
               headers: {
                 "Content-Type": "application/json",
               },
-            };
+            }; */
+            const url = HOSTNAME + "/safestorage/internal/v1/documents/" + data.documentKey;
             return new Promise((resolve, reject) => {
-              const req = https.request(options, (res) => {
+              const req = http.patch(url, (res) => {
                 // res.setEncoding("utf8");
                 let responseBody = "";
 

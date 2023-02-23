@@ -4,7 +4,7 @@ import java.util.List;
 
 public class QueueNameConstant {
 
-    public static final String SIGN_QUEUE_NAME = "PnSsQueueNameStagingBucket";
+    public static final String SIGN_QUEUE_NAME = "dgs-bing-ss-PnSsQueueStagingBucket-Pja8ntKQxYrs";
 
     public static final String BUCKET_STAGE_NAME = "PnSsStagingBucketName";
     public static final String BUCKET_HOT_NAME = "PnSsBucketName";

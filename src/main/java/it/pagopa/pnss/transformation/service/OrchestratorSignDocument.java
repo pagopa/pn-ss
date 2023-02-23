@@ -44,13 +44,13 @@ public class OrchestratorSignDocument {
     }
 
 
-    public Mono<Void> incomingMessageFlow(String key) {
+    public Mono<Void> incomingMessageFlow(String key, String bucketName) {
         log.info("chiamo la document con keyname :"+key);
         return Mono.fromCallable(() -> validationField())
                 .flatMap(voidMono -> documentClientCall.getdocument(key))
                 .map(documentResponse -> {
                     try {
-                        ResponseBytes<GetObjectResponse> objectResponse = downloadObjectService.execute(key);
+                        ResponseBytes<GetObjectResponse> objectResponse = downloadObjectService.execute(key,bucketName);
                         byte[] fileInput = objectResponse.asByteArray();
                         Document doc = documentResponse.getDocument();
 

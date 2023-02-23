@@ -1,6 +1,7 @@
 package it.pagopa.pnss.transformation.service;
 
 import it.pagopa.pnss.configurationproperties.BucketName;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,14 @@ public class DownloadObjectService extends  CommonS3ObjectService {
     @Autowired
     private BucketName bucketName;
 
-    public ResponseBytes<GetObjectResponse> execute(String key){
+    public ResponseBytes<GetObjectResponse> execute(String key, String bucketNameFromS3){
         S3Client s3 = getS3Client();
+        String bucket = bucketName.ssStageName();
+        if (StringUtils.isNotEmpty(bucketNameFromS3)){
+            bucket =bucketNameFromS3;
+        }
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(bucketName.ssStageName())
+                .bucket(bucket)
                 .key(key)
                 .build();
 

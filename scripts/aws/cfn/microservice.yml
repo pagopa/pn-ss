@@ -332,14 +332,14 @@ Resources:
       Timeout: 240
       Environment:
         Variables:
-          HOSTNAME: !Ref ApplicationLoadBalancerDomain
+          SafeStorageBaseUrl: !Sub http://${ApplicationLoadBalancerDomain}:8080'
       Code:
         ZipFile: |
           "use strict";
           const https = require("https");
           const AWS = require("aws-sdk");
           const s3 = new AWS.S3();
-          const HOSTNAME = process.env.HOST_NAME || "localhost";
+          const HOSTNAME = process.env.SafeStorageBaseUrl || "localhost";
 
           var jsonDocument = {
             documentKey: "",

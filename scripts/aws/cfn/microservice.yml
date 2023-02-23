@@ -308,8 +308,8 @@ Resources:
                   - 's3:*MultipartUpload*'
                   - 's3:*Tag*'
                 Resource:
-                  - !Sub '${PnSsStagingBucketArn}'
-                  - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
+                  - !Sub '${PnSsBucketArn}'
+                  - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
 
   PnSsGestoreBucketNotificationPermission:
     Type: AWS::Lambda::Permission

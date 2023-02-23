@@ -19,15 +19,12 @@ import java.io.InputStreamReader;
 @Service
 public class DownloadObjectService extends  CommonS3ObjectService {
 
-    @Autowired
-    private BucketName bucketName;
+
 
     public ResponseBytes<GetObjectResponse> execute(String key, String bucketNameFromS3){
         S3Client s3 = getS3Client();
-        String bucket = bucketName.ssStageName();
-        if (StringUtils.isNotEmpty(bucketNameFromS3)){
-            bucket =bucketNameFromS3;
-        }
+
+        String bucket =bucketNameFromS3;
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucket)
                 .key(key)

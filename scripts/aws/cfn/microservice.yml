@@ -340,7 +340,7 @@ Resources:
           exports.handler = async (event) => {
             console.log(event);
             var bucketName;
-            console.log("Buket Name: " + event.Records[0].s3.object.name);
+            console.log("Buket Name: " + event.Records[0].s3.bucket.name);
             console.log("Object Key: " + event.Records[0].s3.object.key);
             console.log("Object Size: " + event.Records[0].s3.object.size);
             var params = {

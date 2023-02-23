@@ -330,6 +330,8 @@ Resources:
       Runtime: nodejs16.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240
+      VpcConfig:
+        SubnetIds: !Ref SubnetsIds
       Environment:
         Variables:
           SafeStorageBaseUrl: !Sub http://${ApplicationLoadBalancerDomain}:8080

@@ -14,9 +14,15 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.services.s3.model.DefaultRetention;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectLockConfiguration;
+import software.amazon.awssdk.services.s3.model.ObjectLockEnabled;
+import software.amazon.awssdk.services.s3.model.ObjectLockRetentionMode;
+import software.amazon.awssdk.services.s3.model.ObjectLockRule;
+import software.amazon.awssdk.services.s3.model.PutObjectLockConfigurationRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import javax.xml.bind.JAXBException;
@@ -74,7 +80,27 @@ public class OrchestratorSignDocument {
                         } catch (MalformedURLException e) {
                             throw new ArubaSignException(key);
                         }
+                        
+                        //***
+                        DefaultRetention defaultRetention = DefaultRetention.builder().days(null).mode(ObjectLockRetentionMode.GOVERNANCE).build();
+                        
+                        ObjectLockRule objectLockRule = ObjectLockRule.builder().defaultRetention(defaultRetention).build();
+                        
+                        ObjectLockConfiguration objectLockConfiguration = 
+                        		ObjectLockConfiguration.builder()
+                        			.objectLockEnabled(ObjectLockEnabled.ENABLED)
+                        			.rule(objectLockRule)
+                        			.build();
+                        
+                        PutObjectLockConfigurationRequest objectLockConfigurationRequest = 
+                        		PutObjectLockConfigurationRequest.builder()
+                        										 .bucket("")
+                        										 .objectLockConfiguration(objectLockConfiguration)
+                        										 .build();
+                        //***
+                        										 
                         byte[] fileSigned = signReturnV2.getBinaryoutput();
+                        
                         PutObjectResponse putObjectResponse = uploadObjectService.execute(key, fileSigned);
                         DocumentChanges docChanges = new DocumentChanges();
                         docChanges.setDocumentState(Constant.AVAILABLE);

@@ -54,7 +54,7 @@ public class OrchestratorSignDocument {
                         ResponseBytes<GetObjectResponse> objectResponse = downloadObjectService.execute(key,bucketName);
                         byte[] fileInput = objectResponse.asByteArray();
                         Document doc = documentResponse.getDocument();
-                        doc.setDocumentType(new DocumentType());doc.getDocumentType().setDigitalSignature(true);
+
                         if (!doc.getDocumentType().getDigitalSignature()){
                             return Mono.empty();
                         }

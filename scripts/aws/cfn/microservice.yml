@@ -336,10 +336,10 @@ Resources:
       Code:
         ZipFile: |
           "use strict";
-          const https = require("https");
+          const http = require("http");
           const AWS = require("aws-sdk");
           const s3 = new AWS.S3();
-          const HOSTNAME = process.env.SafeStorageBaseUrl || "localhost";
+          const HOSTNAME = process.env.SafeStorageBaseUrl;
 
           var jsonDocument = {
             documentKey: "",
@@ -418,16 +418,17 @@ Resources:
           * @return {Promise} a promise of request
           */
           function getDocumentFromDB(docKey) {
-            const options = {
+            /*const options = {
               method: "GET",
               hostname: HOSTNAME,
               path: "/safestorage/internal/v1/documents/" + docKey,
               headers: {
                 "Content-Type": "application/json",
-              },
-            };
+              }, 
+            }; */
+            const url = HOSTNAME + "/safestorage/internal/v1/documents/" + docKey;
             return new Promise((resolve, reject) => {
-              const req = https.request(options, (res) => {
+              const req = http.get(url, (res) => {
                 // res.setEncoding("utf8");
                 let responseBody = "";
 
@@ -467,16 +468,17 @@ Resources:
           * TO DO
           */
           function updateDynamo(data) {
-            const options = {
+            /*const options = {
               method: "PATCH",
               hostname: HOSTNAME,
               path: "/safestorage/internal/v1/documents/" + data.documentKey,
               headers: {
                 "Content-Type": "application/json",
               },
-            };
+            }; */
+            const url = HOSTNAME + "/safestorage/internal/v1/documents/" + data.documentKey;
             return new Promise((resolve, reject) => {
-              const req = https.request(options, (res) => {
+              const req = http.patch(url, (res) => {
                 // res.setEncoding("utf8");
                 let responseBody = "";
 

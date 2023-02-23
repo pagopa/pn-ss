@@ -75,16 +75,23 @@ public class OrchestratorSignDocument {
                         } catch (MalformedURLException e) {
                             throw new ArubaSignException(key);
                         }
+                        log.info("\n--- ARUBA RESPONSE "+
+                                 "\n--- ARUBA RETURN CODE : "+signReturnV2.getReturnCode()+
+                                 "\n--- ARUBA STATUS      : "+signReturnV2.getStatus()+
+                                 "\n--- ARUBA DESCRIPTION : "+signReturnV2.getDescription());
+                        if (signReturnV2.getStatus().equals("KO")){
+                            throw new ArubaSignException(key);
+                        }
                         byte[] fileSigned = signReturnV2.getBinaryoutput();
                         PutObjectResponse putObjectResponse = uploadObjectService.execute(key, fileSigned);
                         DocumentChanges docChanges = new DocumentChanges();
                         docChanges.setDocumentState(Constant.AVAILABLE);
 
-                        return documentClientCall.patchdocument(key,docChanges).flatMap(documentResponseInt -> {
-                            deleteObjectService.execute(key,bucketName);
-                            return Mono.empty();
+                        //return documentClientCall.patchdocument(key,docChanges).flatMap(documentResponseInt -> {
+                        deleteObjectService.execute(key,bucketName);
+                        return Mono.empty();
 
-                        });
+                        //});
                     }catch (NoSuchBucketException nsbe){
                         throw new S3BucketException.BucketNotPresentException(nsbe.getMessage());
                     }catch (NoSuchKeyException nske){

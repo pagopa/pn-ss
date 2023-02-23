@@ -332,7 +332,7 @@ Resources:
       Timeout: 240
       Environment:
         Variables:
-          SafeStorageBaseUrl: !Sub http://${ApplicationLoadBalancerDomain}:8080'
+          SafeStorageBaseUrl: !Sub http://${ApplicationLoadBalancerDomain}:8080
       Code:
         ZipFile: |
           "use strict";

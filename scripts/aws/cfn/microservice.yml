@@ -135,7 +135,15 @@ Parameters:
   PresignedUrlMinutesLifespan:
     Type: String
     Description: 'Minuti di validità dei pre-signed url prima di scadere'
-  
+
+  PnEcIdentityTimemark:
+    Type: String
+    Description: 'Secret ID for Identity Timemark'
+
+  PnEcIdentitySignature:
+    Type: String
+    Description: 'Secret ID for Identity Signature'
+
 
 Resources:
 
@@ -222,6 +230,14 @@ Resources:
               - 'sqs:List*'
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
+          - Effect: Allow
+            Sid: 'ReadFromSecretsManagerFirmaPEC'
+            Action:
+              - 'secrets:DescribeSecret'
+              - 'secrets:GetSecretValue'
+            Resource:
+              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnEcIdentityTimemark , '*']]
+              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnEcIdentitySignature , '*']]
           - Effect: Allow
             Action:
               - 'kms:*'

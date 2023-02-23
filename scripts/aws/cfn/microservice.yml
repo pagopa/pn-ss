@@ -326,7 +326,7 @@ Resources:
       FunctionName: !Ref PnSsGestoreBucketLambdaName
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
-      MemorySize: 512
+      MemorySize: 1024
       Runtime: nodejs16.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240

@@ -371,10 +371,10 @@ Resources:
       Environment:
         Variables:
           PnSsHostname: !Ref ApplicationLoadBalancerDomain
-          PnSsGestoreRepositoryPort: !Sub PnSsGestoreRepositoryPort
-          PnSsGestoreRepositoryProtocol: !Sub PnSsGestoreRepositoryProtocol
-          PnSsGestoreRepositoryPathGetDocument: !Sub PnSsGestoreRepositoryPathGetDocument
-          PnSsGestoreRepositoryPathPatchDocument: !Sub PnSsGestoreRepositoryPathPatchDocument
+          PnSsGestoreRepositoryPort: !Ref PnSsGestoreRepositoryPort
+          PnSsGestoreRepositoryProtocol: !Ref PnSsGestoreRepositoryProtocol
+          PnSsGestoreRepositoryPathGetDocument: !Ref PnSsGestoreRepositoryPathGetDocument
+          PnSsGestoreRepositoryPathPatchDocument: !Ref PnSsGestoreRepositoryPathPatchDocument
           PnSsStagingBucketName: !Ref PnSsStagingBucketName
       Code:
         ZipFile: |

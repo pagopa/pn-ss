@@ -422,9 +422,10 @@ Resources:
                   console.log(Body);
                   const doc = await getDocumentFromDB(jsonDocument.documentKey);
                   console.log(doc);
-                  console.log(doc.documentType.checksum);
-                  console.log(JSON.stringify(doc.documentType.checksum));
-                  jsonDocument.checkSum = crypto.createHash(doc.documentType.checksum).update(Body).digest("hex"); 
+                  console.log(doc.document);
+                  console.log(doc.document.documentType.checksum);
+                  console.log(JSON.stringify(doc.document.documentType.checksum));
+                  jsonDocument.checkSum = crypto.createHash(doc.document.documentType.checksum).update(Body).digest("hex"); 
                 }
                 console.log(jsonDocument);
                 break;

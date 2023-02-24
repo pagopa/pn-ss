@@ -494,7 +494,7 @@ Resources:
               method: "PATCH",
               hostname: HOSTNAME,
               port: PORT,
-              path: PATHPATCH + "/" + docKey,
+              path: PATHPATCH + "/" + data.documentKey,
               headers: {
                 "Content-Type": "application/json",
               }, 

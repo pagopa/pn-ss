@@ -23,10 +23,11 @@ public class DocumentEntity {
 	// retentionUntil (ok): timestamp scadenza documento (info calcolata in fase di creazione e variazione di stato, con dipendenza dal tag)
 	private String retentionUntil; // modificabile
 	private String checkSum; // modificabile
+	private String clientShortCode;
 	private BigDecimal contentLenght; // modificabile
 	private String contentType; 
 	private DocTypeEntity documentType;
-	
+
 	@DynamoDbPartitionKey
 	public String getDocumentKey() {
 		return documentKey;

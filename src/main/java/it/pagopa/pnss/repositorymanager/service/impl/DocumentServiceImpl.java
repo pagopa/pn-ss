@@ -87,6 +87,7 @@ public class DocumentServiceImpl implements DocumentService {
                     resp.setContentLenght(documentInput.getContentLenght());
                     resp.setContentType(documentInput.getContentType());
                     resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
+                    resp.setClientShortCode(documentInput.getClientShortCode());
                     DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
                     return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
                             documentEntityInput)));

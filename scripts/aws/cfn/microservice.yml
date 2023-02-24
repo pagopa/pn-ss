@@ -500,7 +500,7 @@ Resources:
               }, 
             };
             return new Promise((resolve, reject) => {
-              const req = http.requesst(options, (res) => {
+              const req = http.request(options, (res) => {
                 let responseBody = "";
                 res.on("data", (chunk) => {
                   responseBody += chunk;

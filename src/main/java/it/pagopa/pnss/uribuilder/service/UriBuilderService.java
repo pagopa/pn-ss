@@ -103,6 +103,7 @@ public class UriBuilderService {
                                                                             .documentKey(GenerateRandoKeyFile.getInstance()
                                                                                                              .createKeyName(documentType))
                                                                             .documentState(BOOKED)
+                                                                            .clientShortCode(xPagopaSafestorageCxId)
                                                                             .documentType(documentType))
                                            .retryWhen(Retry.max(10)
                                                            .filter(DocumentkeyPresentException.class::isInstance)

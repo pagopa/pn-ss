@@ -36,7 +36,7 @@ Parameters:
     Description: 'The name of the ECS cluster where the microservice is going to be deployed'
 
   SubnetsIds:
-    Type: String
+    Type: List<AWS::EC2::Subnet::Id>
     Description: 'subnets ids comma separated list. Where to deploy the microservice'
 
   VpcId:
@@ -331,7 +331,7 @@ Resources:
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240
       VpcConfig:
-        SubnetIds: !Sub SubnetsIds
+        SubnetIds: !Ref SubnetsIds
       Environment:
         Variables:
           SafeStorageBaseUrl: !Sub http://${ApplicationLoadBalancerDomain}:8080

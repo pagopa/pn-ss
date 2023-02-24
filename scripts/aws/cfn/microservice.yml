@@ -331,8 +331,7 @@ Resources:
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240
       VpcConfig:
-        SubnetIds: 
-          - !Ref SubnetsIds
+        SubnetIds: !Sub SubnetsIds
       Environment:
         Variables:
           SafeStorageBaseUrl: !Sub http://${ApplicationLoadBalancerDomain}:8080

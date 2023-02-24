@@ -156,6 +156,10 @@ Parameters:
     Type: String
     Description: 'VPC Subnet ID 3 out of 3'
 
+  PnVPCDefaultSecurityGroup:
+    Type: String
+    Description: 'VPC Subnet ID 3 out of 3'
+
 Resources:
 
   # PN-TemplateBeMs microservice
@@ -346,6 +350,8 @@ Resources:
           - !Ref PnVPCSubnetId1
           - !Ref PnVPCSubnetId2
           - !Ref PnVPCSubnetId3
+        SecurityGroupIds:
+          - !Ref PnVPCDefaultSecurityGroup
       Environment:
         Variables:
           SafeStorageBaseUrl: !Sub http://${ApplicationLoadBalancerDomain}:8080

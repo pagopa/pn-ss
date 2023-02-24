@@ -420,8 +420,10 @@ Resources:
                   params.Key = jsonDocument.documentKey;
                   const { Body } = await s3.getObject(params).promise();
                   console.log(Body);
-                  let doc = await getDocumentFromDB(jsonDocument.documentKey);
+                  const doc = await getDocumentFromDB(jsonDocument.documentKey);
                   console.log(doc);
+                  console.log(doc.documentType.checksum);
+                  console.log(JSON.stringify(doc.documentType.checksum));
                   jsonDocument.checkSum = crypto.createHash(doc.documentType.checksum).update(Body).digest("hex"); 
                 }
                 console.log(jsonDocument);

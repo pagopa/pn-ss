@@ -12,6 +12,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
+import it.pagopa.pnss.common.retention.RetentionService;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,9 @@ import static java.util.Map.entry;
 @Service
 @Slf4j
 public class UriBuilderService {
+	
+	@Value("${object.lock.retention.mode}")
+	private String objectLockRetentionMode;
 
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
@@ -55,13 +59,17 @@ public class UriBuilderService {
 
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
+    
+    private final RetentionService retentionService;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName) {
+                             AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName,
+                             RetentionService retentionService) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.awsConfigurationProperties = awsConfigurationProperties;
         this.bucketName = bucketName;
+        this.retentionService = retentionService;
     }
 
     private Map<String, String> mapDocumentTypeToBucket;
@@ -115,7 +123,11 @@ public class UriBuilderService {
                    .map(insertedDocument -> {
 
                        PresignedPutObjectRequest presignedPutObjectRequest =
-                               builsUploadUrl(documentType, insertedDocument.getDocument().getDocumentKey(), contentType, metadata);
+                               builsUploadUrl(documentType, 
+                            		   		  insertedDocument.getDocument().getDocumentState(), 
+                            		   		  insertedDocument.getDocument().getDocumentKey(), 
+                            		   		  contentType, 
+                            		   		  metadata);
                        String myURL = presignedPutObjectRequest.url().toString();
                        FileCreationResponse response = new FileCreationResponse();
                        response.setKey(insertedDocument.getDocument().getDocumentKey());
@@ -156,14 +168,15 @@ public class UriBuilderService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private PresignedPutObjectRequest builsUploadUrl(String documentType, String keyName, String contentType, Map<String, String> secret) {
+    private PresignedPutObjectRequest builsUploadUrl(String documentType, String documentState, String keyName, String contentType, Map<String, String> secret) {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
         PresignedPutObjectRequest response;
         S3Presigner presigner = getS3Presigner();
-
+        
+        
         try {
-            response = signBucket(presigner, bucketName, keyName, contentType, secret);
+            response = signBucket(presigner, bucketName, keyName, documentState, documentType, contentType, secret);
         } catch (AmazonServiceException ase) {
             log.error(" Errore AMAZON AmazonServiceException", ase);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException ");
@@ -182,12 +195,13 @@ public class UriBuilderService {
         return S3Presigner.builder().region(Region.of(awsConfigurationProperties.regionCode())).build();
     }
 
-    private PresignedPutObjectRequest signBucket(S3Presigner s3Presigner, String bucketName, String keyName, String contenType, Map<String,
-            String> secret) {
-
-        PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName).key(keyName).contentType(contenType).metadata(secret)
-                                                         //.tagging(storageType)
-                                                         .build();
+    private PresignedPutObjectRequest signBucket(S3Presigner s3Presigner, String bucketName, 
+    		String keyName, String documentState, String documentType,
+    		String contenType, Map<String,String> secret) {
+    	
+        PutObjectRequest objectRequest = retentionService.getPutObjectForPresignRequest(
+        		bucketName,keyName,contenType,secret,keyName,documentState,documentType);
+        
         log.info("sign bucket {}", duration);
         PutObjectPresignRequest preSignRequest = PutObjectPresignRequest.builder()
                                                                         .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))

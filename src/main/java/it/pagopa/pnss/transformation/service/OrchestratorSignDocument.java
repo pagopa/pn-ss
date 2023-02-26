@@ -1,33 +1,29 @@
 package it.pagopa.pnss.transformation.service;
 
-import io.awspring.cloud.messaging.listener.Acknowledgment;
+import java.net.MalformedURLException;
+
+import javax.xml.bind.JAXBException;
+
+import org.springframework.stereotype.Service;
+
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.common.Constant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
-
-import it.pagopa.pnss.common.client.exception.*;
+import it.pagopa.pnss.common.client.exception.ArubaSignException;
+import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
+import it.pagopa.pnss.common.client.exception.S3BucketException;
 import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
 import it.pagopa.pnss.transformation.wsdl.TypeOfTransportNotImplemented_Exception;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import software.amazon.awssdk.core.ResponseBytes;
-import software.amazon.awssdk.services.s3.model.DefaultRetention;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.ObjectLockConfiguration;
-import software.amazon.awssdk.services.s3.model.ObjectLockEnabled;
-import software.amazon.awssdk.services.s3.model.ObjectLockRetentionMode;
-import software.amazon.awssdk.services.s3.model.ObjectLockRule;
-import software.amazon.awssdk.services.s3.model.PutObjectLockConfigurationRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-
-import javax.xml.bind.JAXBException;
-import java.net.MalformedURLException;
 
 
 @Service
@@ -60,7 +56,8 @@ public class OrchestratorSignDocument {
                         ResponseBytes<GetObjectResponse> objectResponse = downloadObjectService.execute(key,bucketName);
                         byte[] fileInput = objectResponse.asByteArray();
                         Document doc = documentResponse.getDocument();
-                        doc.setDocumentType(new DocumentType());doc.getDocumentType().setDigitalSignature(true);
+                        //doc.setDocumentType(new DocumentType());
+                        doc.getDocumentType().setDigitalSignature(true);
                         if (!doc.getDocumentType().getDigitalSignature()){
                             return Mono.empty();
                         }
@@ -81,26 +78,6 @@ public class OrchestratorSignDocument {
                         } catch (MalformedURLException e) {
                             throw new ArubaSignException(key);
                         }
-                        
-                        //***
-                        DefaultRetention defaultRetention = DefaultRetention.builder().days(null).mode(ObjectLockRetentionMode.GOVERNANCE).build();
-                        
-                        ObjectLockRule objectLockRule = ObjectLockRule.builder().defaultRetention(defaultRetention).build();
-                        
-                        ObjectLockConfiguration objectLockConfiguration = 
-                        		ObjectLockConfiguration.builder()
-                        			.objectLockEnabled(ObjectLockEnabled.ENABLED)
-                        			.rule(objectLockRule)
-                        			.build();
-                        
-                        PutObjectLockConfigurationRequest objectLockConfigurationRequest = 
-                        		PutObjectLockConfigurationRequest.builder()
-                        										 .bucket("")
-                        										 .objectLockConfiguration(objectLockConfiguration)
-                        										 .build();
-                        //***
-                        										 
-
                         log.info("\n--- ARUBA RESPONSE "+
                                  "\n--- ARUBA RETURN CODE : "+signReturnV2.getReturnCode()+
                                  "\n--- ARUBA STATUS      : "+signReturnV2.getStatus()+
@@ -108,10 +85,9 @@ public class OrchestratorSignDocument {
                         if (signReturnV2.getStatus().equals("KO")){
                             throw new ArubaSignException(key);
                         }
-                        
                         byte[] fileSigned = signReturnV2.getBinaryoutput();
-                        
-                        PutObjectResponse putObjectResponse = uploadObjectService.execute(key, fileSigned);
+                        PutObjectResponse putObjectResponse = uploadObjectService.execute(key, fileSigned, 
+                        		documentResponse.getDocument().getDocumentState(), documentResponse.getDocument().getDocumentType());
                         DocumentChanges docChanges = new DocumentChanges();
                         docChanges.setDocumentState(Constant.AVAILABLE);
 

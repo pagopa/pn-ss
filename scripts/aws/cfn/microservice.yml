@@ -513,7 +513,7 @@ Resources:
                 console.error(err);
                 reject(err);
               });
-              req.write(data);
+              req.write(JSON.stringify(data));
               req.end();
             });
           }

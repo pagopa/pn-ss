@@ -131,7 +131,7 @@ paths:
                 docType: null
                 error:
                   code: null
-                  description: DocumentType with id _PN_TEST_ not found                
+                  description: DocumentType with id _PN_TEST_ not found
         '200':
           description: OK
           content:
@@ -176,7 +176,7 @@ paths:
                 docType: null
                 error:
                   code: null
-                  description: DocumentType with id _PN_TEST_ not found   
+                  description: DocumentType with id _PN_TEST_ not found
         '200':
           description: OK
           content:
@@ -323,7 +323,7 @@ paths:
                 docType: null
                 error:
                   code: null
-                  description: Document with id DOCUMENT_TEST not found                
+                  description: Document with id DOCUMENT_TEST not found
         '200':
           description: OK
           content:
@@ -368,7 +368,7 @@ paths:
                 docType: null
                 error:
                   code: null
-                  description: Document with id DOCUMENT_TEST not found                
+                  description: Document with id DOCUMENT_TEST not found
         '200':
           description: OK
           content:
@@ -692,13 +692,15 @@ components:
           type: string
         documentLogicalState:
           type: string
+        clientShortCode:
+          type: string
         retentionUntil:
           description: >-
             data di scadenza del file
           type: string
         checkSum:
           description:
-            valore ottenuto dal calcolo della chiave hashing dell’oggetto 
+            valore ottenuto dal calcolo della chiave hashing dell’oggetto
           type: string
         contentLenght:
           type: number
@@ -736,7 +738,7 @@ components:
           type: string
         checkSum:
           description:
-            valore ottenuto dal calcolo della chiave hashing dell’oggetto 
+            valore ottenuto dal calcolo della chiave hashing dell’oggetto
           type: string
         contentLenght:
           type: number

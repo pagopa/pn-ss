@@ -105,8 +105,8 @@ public class OrchestratorSignDocumentTest {
     	
     	StorageConfiguration storageConfiguration = new StorageConfiguration();
     	storageConfiguration.setName(storageClassPnTemporaryDocument);
-    	storageConfiguration.setHotPeriod("1d");
-    	storageConfiguration.setRetentionPeriod("1d");
+    	storageConfiguration.setHotPeriod("3d");
+    	storageConfiguration.setRetentionPeriod("3d");
     	
     	List<StorageConfiguration> listStorageConfiguration = new ArrayList<>();
     	listStorageConfiguration.add(storageConfiguration);

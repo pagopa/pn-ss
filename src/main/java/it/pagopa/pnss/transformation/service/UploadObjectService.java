@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 @Service
@@ -32,17 +31,9 @@ public class UploadObjectService  extends  CommonS3ObjectService {
     	S3AsyncClient s3 = getS3AsynchClient();
     	
         log.debug("UploadObjectService.execute() : put ObjectLockConfiguration PRE");
-        return retentionService.getPutObjectLockConfigurationRequest(key, documentState, documentType)
-        	.flatMap( request -> Mono.fromCompletionStage(s3.putObjectLockConfiguration(request)) )
-        	.map( unused -> 
-                PutObjectRequest.builder()
-                        .bucket(bucketName.ssHotName())
-                        .key(key)
-                        .build()
-        	)
+        return retentionService.getPutObjectRequestForObjectInBucket(bucketName.ssHotName(), fileSigned, key, documentState, documentType.getTipoDocumento())
         	.flatMap(objectRequest -> Mono.fromCompletionStage(s3.putObject(objectRequest, AsyncRequestBody.fromBytes(fileSigned)))); 
         
-
 //        PutObjectResponse putObjectResponse = s3.putObject(objectRequest, RequestBody.fromBytes(fileSigned));
 //        return putObjectResponse;
     }

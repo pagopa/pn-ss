@@ -133,25 +133,33 @@ public class UriBuilderService {
                                                                                                  "produrre una chiave per " + "user " +
                                                                                                  xPagopaSafestorageCxId);
                                                            })))
-                   .map(insertedDocument -> {
+                   .flatMap(insertedDocument -> 
 
+                   
 //                       PresignedPutObjectRequest presignedPutObjectRequest =
-//                               buildsUploadUrl(documentType, 
-//                            		   		  insertedDocument.getDocument().getDocumentState(), 
-//                            		   		  insertedDocument.getDocument().getDocumentKey(), 
-//                            		   		  contentType, 
-//                            		   		  metadata);
-//                       
-//                       String myURL = presignedPutObjectRequest.url().toString();
-                       FileCreationResponse response = new FileCreationResponse();
-                       response.setKey(insertedDocument.getDocument().getDocumentKey());
-                       response.setSecret(secret.toString());
+                               buildsUploadUrl(documentType, 
+                            		   		  insertedDocument.getDocument().getDocumentState(), 
+                            		   		  insertedDocument.getDocument().getDocumentKey(), 
+                            		   		  contentType, 
+                            		   		  metadata)
+                               .map(presignedPutObjectRequest -> {
+                                   FileCreationResponse response = new FileCreationResponse();
+                                   response.setKey(insertedDocument.getDocument().getDocumentKey());
+                                   response.setSecret(secret.toString());
+                                   response.setUploadUrl(presignedPutObjectRequest.url().toString());
+                                   response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest().method())); 
+                                   return response;
+                               })
 
-//                       response.setUploadUrl(myURL);
+                       
+//                       FileCreationResponse response = new FileCreationResponse();
+//                       response.setKey(insertedDocument.getDocument().getDocumentKey());
+//                       response.setSecret(secret.toString());
+//                       response.setUploadUrl(presignedPutObjectRequest.url().toString());
 //                       response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest().method()));
-
-                       return response;
-                   })
+//
+//                       return response;
+                   )
                    .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "));
     }
 
@@ -232,7 +240,7 @@ public class UriBuilderService {
     			bucketName, keyName, documentState, documentType, contenType, secret);
     	log.info("signBucket() : sign bucket {}", duration);
     	
-    	return retentionService.getPutObjectForPresignRequest(bucketName,keyName,contenType,secret,keyName,documentState,documentType)
+    	return retentionService.getPutObjectRequestForPresignRequest(bucketName,keyName,contenType,secret,keyName,documentState,documentType)
     		.map(putObjectRequest -> PutObjectPresignRequest.builder()
 										                .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
 										                .putObjectRequest(putObjectRequest)

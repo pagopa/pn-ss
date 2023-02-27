@@ -85,16 +85,9 @@ public class OrchestratorSignDocument {
                             throw new ArubaSignException(key);
                         }
                         byte[] fileSigned = signReturnV2.getBinaryoutput();
-                        PutObjectResponse putObjectResponse = uploadObjectService.execute(key, fileSigned, 
-                        		documentResponse.getDocument().getDocumentState(), documentResponse.getDocument().getDocumentType());
-                        DocumentChanges docChanges = new DocumentChanges();
-                        docChanges.setDocumentState(Constant.AVAILABLE);
+                        
+                        return uploadObjectService.execute(key, fileSigned, documentResponse.getDocument().getDocumentState(), documentResponse.getDocument().getDocumentType());
 
-                        //return documentClientCall.patchdocument(key,docChanges).flatMap(documentResponseInt -> {
-                        deleteObjectService.execute(key,bucketName);
-                        return Mono.empty();
-
-                        //});
                     }catch (NoSuchBucketException nsbe){
                         throw new S3BucketException.BucketNotPresentException(nsbe.getMessage());
                     }catch (NoSuchKeyException nske){
@@ -103,16 +96,19 @@ public class OrchestratorSignDocument {
 
 
                 })
+                .flatMap( response -> {
+                    
+                    DocumentChanges docChanges = new DocumentChanges();
+                    docChanges.setDocumentState(Constant.AVAILABLE);
+                    return deleteObjectService.execute(key,bucketName);
+
+                })
                 .retryWhen(Retry.max(10)
                         .filter(ArubaSignException.class::isInstance)
                         .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
                             throw new ArubaSignExceptionLimitCall(key);
-                        })).then();
-
-
-
-
-
+                        }))
+                .then();
 
         // readDocument from bucket
 

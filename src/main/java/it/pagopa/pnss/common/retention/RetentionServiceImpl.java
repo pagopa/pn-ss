@@ -51,7 +51,7 @@ public class RetentionServiceImpl implements RetentionService {
 		if (retentionPeriod == null || retentionPeriod.isBlank() || retentionPeriod.length() < 2) {
 			throw new RetentionException("Storage Configuration : Retention Period not found");
 		}
-		log.info("getRetentionPeriodInDays() : retentionPeriod '{}'", retentionPeriod);
+		log.debug("getRetentionPeriodInDays() : retentionPeriod '{}'", retentionPeriod);
 		
 		final String dayRef = "d";
 		final String yearRef = "y";
@@ -61,6 +61,7 @@ public class RetentionServiceImpl implements RetentionService {
 					Integer.valueOf(retentionPeriod.substring(0, retentionPeriod.indexOf(yearRef)-1)) : 
 					0;
 			Integer daysValue = 0;
+			log.debug("getRetentionPeriodInDays() : yearsValue {} : daysValue {}", yearsValue, daysValue);
 			if (yearsValue > 0) {
 				daysValue = retentionPeriod.contains(dayRef) ? 
 						Integer.valueOf(
@@ -75,13 +76,13 @@ public class RetentionServiceImpl implements RetentionService {
 						Integer.valueOf(retentionPeriod.substring(0, retentionPeriod.indexOf(dayRef)-1)) : 
 						0;
 			}
-			log.info("getRetentionPeriodInDays() : retentionPeriod '{}' : daysValue {} - before : yearsValue {} - before", 
+			log.debug("getRetentionPeriodInDays() : retentionPeriod '{}' : daysValue {} - before : yearsValue {} - before", 
 					retentionPeriod, daysValue, yearsValue);
 			
 			Integer days = (yearsValue > 0) ? 
 						yearsValue * 365 + daysValue :
 						daysValue;
-			log.info("getRetentionPeriodInDays() : retentionPeriod '{}' : days {} - after", 
+			log.debug("getRetentionPeriodInDays() : retentionPeriod '{}' : days {} - after", 
 					retentionPeriod, days);
 			return days;
 		}
@@ -92,7 +93,7 @@ public class RetentionServiceImpl implements RetentionService {
 	}
 	
 	private Integer getRetentionPeriod(String documentKey, String documentState, String documentType) throws RetentionException {
-		log.info("getDefaultRetention() : START : documentKey '{}' : documentState '{}' : documentType '{}'",
+		log.info("getRetentionPeriod() : START : documentKey '{}' : documentState '{}' : documentType '{}'",
 				documentKey, documentState, documentType);
         
 		if (documentState == null || documentState.isBlank()) {
@@ -108,19 +109,26 @@ public class RetentionServiceImpl implements RetentionService {
 		
 		configurationApiCall.getDocumentsConfigs()
 			.map(response -> {
+					log.debug("getRetentionPeriod() : configurationApiCall.getDocumentsConfigs() : call OK");
+					
 					DocumentTypeConfiguration dtcToRefer = null;
 					for (DocumentTypeConfiguration dtc: response.getDocumentsTypes()) {
+						log.debug("getRetentionPeriod() : document type configuration '{}'", dtc.getName());
 						if (dtc.getName().equalsIgnoreCase(documentType)) {
 							dtcToRefer = dtc;
 						}
 					}
+					log.debug("getRetentionPeriod() : document type configuration ToRefer '{}'", dtcToRefer);
 					if (dtcToRefer == null) {
 						throw new RetentionException(
 								String.format("DocumentTypeConfiguration not found for Document Type '%s' not found for Key '%s'", 
 										documentType, documentKey));
 					}
+					
 					for (StorageConfiguration sc: response.getStorageConfigurations()) {
+						log.debug("getRetentionPeriod() : storage configuration '{}'", sc.getName());
 						if (sc.getName().equals(dtcToRefer.getStatuses().get(documentState).getStorage())) {
+							log.debug("getRetentionPeriod() : storage configuration ToRefer '{}'", sc.getName());
 							return getRetentionPeriodInDays(sc.getRetentionPeriod());
 						}
 					}
@@ -140,7 +148,9 @@ public class RetentionServiceImpl implements RetentionService {
 	
 	private Instant getRetainUntilDate(Integer retentionPeriod) throws RetentionException {
 		try {
-			return Instant.now().plus(Period.ofDays(retentionPeriod));
+			Instant retaintUntilDate = Instant.now().plus(Period.ofDays(retentionPeriod));
+			log.debug("getRetainUntilDate(): retaintUntilDate {}", retaintUntilDate);
+			return retaintUntilDate;
 		}
 		catch (Exception e) {
 			log.error("getRetainUntilDate() : errore", e);
@@ -173,7 +183,9 @@ public class RetentionServiceImpl implements RetentionService {
 	@Override
 	public PutObjectRequest getPutObjectForPresignRequest(String bucketName, String keyName, String contenType, Map<String,String> secret, 
 			String documentKey, String documentState, String documentType) throws RetentionException {
-		log.info("getPutObjectForPresignRequest() : START");
+		log.info("getPutObjectForPresignRequest() : START : bucketName {} : keyName {} : contenType {} : secret {} : documentKey {} : documentState {} : documentType {}", 
+				bucketName, keyName, contenType, secret,
+				documentKey, documentState, documentType);
 		
 		try {
         return PutObjectRequest.builder()

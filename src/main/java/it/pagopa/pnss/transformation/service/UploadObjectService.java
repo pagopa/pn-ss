@@ -30,8 +30,9 @@ public class UploadObjectService  extends  CommonS3ObjectService {
     public PutObjectResponse execute(String key, byte[] fileSigned, String documentState, DocumentType documentType){
         S3Client s3 = getS3Client();
         
+        log.debug("UploadObjectService.execute() : put ObjectLockConfiguration PRE");
         s3.putObjectLockConfiguration(retentionService.getPutObjectLockConfigurationRequest(key, documentState, documentType));
-        log.info("UploadObjectService.execute() : put ObjectLockConfiguration OK");
+        log.debug("UploadObjectService.execute() : put ObjectLockConfiguration OK");
         
         PutObjectRequest objectRequest = PutObjectRequest.builder()
                 .bucket(bucketName.ssHotName())

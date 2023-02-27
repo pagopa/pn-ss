@@ -199,6 +199,8 @@ public class UriBuilderService {
     private PresignedPutObjectRequest signBucket(S3Presigner s3Presigner, String bucketName, 
     		String keyName, String documentState, String documentType,
     		String contenType, Map<String,String> secret) {
+    	log.debug("signBucket() : START : s3Presigner IN : bucketName {} : keyName {} : documentState {} : documentType {} : contenType {} : secret {}",
+    			bucketName, keyName, documentState, documentType, contenType, secret);
     	
         PutObjectRequest objectRequest = retentionService.getPutObjectForPresignRequest(
         		bucketName,keyName,contenType,secret,keyName,documentState,documentType);

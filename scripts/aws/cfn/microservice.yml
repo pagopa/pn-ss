@@ -429,6 +429,9 @@ Resources:
                 }
                 console.log(jsonDocument);
                 break;
+              case "ObjectCreated:Copy":
+                jsonDocument.documentState = "available";
+              break;
               case "ObjectRestore:Completed":
                 jsonDocument.documentState = "available";
                 break;

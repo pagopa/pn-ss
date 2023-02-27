@@ -77,7 +77,7 @@ public class SQSConsumerService {
             throw new RuntimeException("Retention Exception",e);
         }catch(Exception e){
             log.error("Generic Exception  "+e.getMessage());
-            throw new RuntimeException("");
+            throw new RuntimeException(e.getMessage());
         }
 
 

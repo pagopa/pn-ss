@@ -186,26 +186,26 @@ public class OrchestratorSignDocumentTest {
     	
     	log.debug("OrchestratorSignDocumentTest.readFileFromBucketStagingWriteBuckeHot() : decommentare");
     	
-//    	Mockito.doReturn(Mono.just(documentTypesConfigurationsReponse)).when(configurationApiCall).getDocumentsConfigs();
-//		
-//		DocumentType documentType = new DocumentType();
-//		documentType.setTipoDocumento(tipoDocumentoPnNotificationAttachments);
-//		documentType.setDigitalSignature(true);
-//		Document doc = new Document();
-//		doc.setDocumentKey("111-DDD");
-//		doc.setDocumentType(documentType);
-//		doc.setDocumentState(statoDocumentoPreloaded);
-//		doc.setContentType(APPLICATION_PDF);
-//		DocumentResponse docResp = new DocumentResponse();
-//		docResp.setDocument(doc);
-//		
-//		Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).getdocument(Mockito.any());
-//		
-//		addFileToBucket("111-DDD");
-//		
-//		Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).patchdocument(Mockito.any(),Mockito.any());
-//		
-//		assertNull(service.incomingMessageFlow("111-DDD","dgs-bing-ss-pnssstagingbucket-28myu2kp62x9").block());
+    	Mockito.doReturn(Mono.just(documentTypesConfigurationsReponse)).when(configurationApiCall).getDocumentsConfigs();
+		
+		DocumentType documentType = new DocumentType();
+		documentType.setTipoDocumento(tipoDocumentoPnNotificationAttachments);
+		documentType.setDigitalSignature(true);
+		Document doc = new Document();
+		doc.setDocumentKey("111-DDD");
+		doc.setDocumentType(documentType);
+		doc.setDocumentState(statoDocumentoPreloaded);
+		doc.setContentType(APPLICATION_PDF);
+		DocumentResponse docResp = new DocumentResponse();
+		docResp.setDocument(doc);
+		
+		Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).getdocument(Mockito.any());
+		
+		addFileToBucket("111-DDD");
+		
+		Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).patchdocument(Mockito.any(),Mockito.any());
+		
+		assertNull(service.incomingMessageFlow("111-DDD","dgs-bing-ss-pnssstagingbucket-28myu2kp62x9").block());
     }
 
 

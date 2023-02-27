@@ -15,6 +15,7 @@ import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.ObjectLockEnabled;
 import software.amazon.awssdk.services.s3.model.PutObjectLockConfigurationRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -92,7 +93,7 @@ public class RetentionServiceImpl implements RetentionService {
 		}
 	}
 	
-	private Integer getRetentionPeriod(String documentKey, String documentState, String documentType) throws RetentionException {
+	private Mono<Integer> getRetentionPeriod(String documentKey, String documentState, String documentType) throws RetentionException {
 		log.info("getRetentionPeriod() : START : documentKey '{}' : documentState '{}' : documentType '{}'",
 				documentKey, documentState, documentType);
         
@@ -107,7 +108,7 @@ public class RetentionServiceImpl implements RetentionService {
 					documentKey));
 		}
 		
-		configurationApiCall.getDocumentsConfigs()
+		return configurationApiCall.getDocumentsConfigs()
 			.map(response -> {
 					log.debug("getRetentionPeriod() : configurationApiCall.getDocumentsConfigs() : call OK");
 					
@@ -141,9 +142,6 @@ public class RetentionServiceImpl implements RetentionService {
 				throw new RetentionException(e.getMessage());
 			});
 
-		throw new RetentionException(
-				String.format("Storage Configuration not found for Key '%s'", 
-			    documentKey));
 	}
 	
 	private Instant getRetainUntilDate(Integer retentionPeriod) throws RetentionException {
@@ -161,47 +159,47 @@ public class RetentionServiceImpl implements RetentionService {
 
 	
 	@Override
-	public PutObjectLockConfigurationRequest getPutObjectLockConfigurationRequest(String documentKey, 
+	public Mono<PutObjectLockConfigurationRequest> getPutObjectLockConfigurationRequest(String documentKey, 
 			String documentState, DocumentType documentType) throws RetentionException {
 		log.info("getPutObjectLockConfigurationRequest() : START : documentKey '{}' : documentState '{}' : documentType {}",
 				documentKey, documentState, (documentType == null ? "assente" : documentType.getTipoDocumento()));
 		
-       return PutObjectLockConfigurationRequest.builder()
-	    									   .bucket(bucketName.ssHotName())
-	    									   .objectLockConfiguration(
-	    											   objLockConf -> objLockConf.objectLockEnabled(ObjectLockEnabled.ENABLED).rule(
-	    													   rule -> rule.defaultRetention(
-	    															   defaultRetention -> defaultRetention.days(getRetentionPeriod(documentKey, documentState, documentType.getTipoDocumento()))
-	    															   									   .mode(objectLockRetentionMode))
-	    								        					)
-	    								        )
-	    									   .build();
+		return getRetentionPeriod(documentKey, documentState, documentType.getTipoDocumento())
+				.map(retentionPeriod -> 
+					PutObjectLockConfigurationRequest.builder()
+					   .bucket(bucketName.ssHotName())
+					   .objectLockConfiguration(
+							   objLockConf -> objLockConf.objectLockEnabled(ObjectLockEnabled.ENABLED).rule(
+									   rule -> rule.defaultRetention(
+											   defaultRetention -> defaultRetention.days(retentionPeriod)
+											   									   .mode(objectLockRetentionMode))
+				        					)
+				        )
+					.build()
+				);
 	}
 	
 
 	
 	@Override
-	public PutObjectRequest getPutObjectForPresignRequest(String bucketName, String keyName, String contenType, Map<String,String> secret, 
+	public Mono<PutObjectRequest> getPutObjectForPresignRequest(String bucketName, String keyName, String contenType, Map<String,String> secret, 
 			String documentKey, String documentState, String documentType) throws RetentionException {
 		log.info("getPutObjectForPresignRequest() : START : bucketName {} : keyName {} : contenType {} : secret {} : documentKey {} : documentState {} : documentType {}", 
 				bucketName, keyName, contenType, secret,
 				documentKey, documentState, documentType);
 		
-		try {
-        return PutObjectRequest.builder()
+		return getRetentionPeriod(documentKey, documentState, documentType)
+				.map(this::getRetainUntilDate)
+				.map(retainUntilDate -> PutObjectRequest.builder()
 							 .bucket(bucketName)
 							 .key(keyName)
 							 .contentType(contenType)
 							 .metadata(secret)
 			                //.tagging(storageType)
 							 .objectLockMode(objectLockRetentionMode)
-							 .objectLockRetainUntilDate(getRetainUntilDate(getRetentionPeriod(documentKey, documentState, documentType)))
-							 .build();
-		}
-		catch (Exception e) {
-			log.error("getPutObjectForPresignRequest() : errore", e);
-			throw new RetentionException(String.format("PutObjectForPresignRequest : errore %s", e.getMessage()));
-		}
+							 .objectLockRetainUntilDate(retainUntilDate)
+							 .build()
+				);
 	}
 
 }

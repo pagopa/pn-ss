@@ -122,29 +122,29 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_TEMPORARY_DOCUMENT'
           - Id: 'PnSsNotificationAttachment'
-            ExpirationInDays: 120
+            ExpirationInDays: 1
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'
                 Value: 'PN_NOTIFIED_DOCUMENT'
           - Id: 'PnSsAar'
-            ExpirationInDays: 3650
+            ExpirationInDays: 2
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
               - StorageClass: 'DEEP_ARCHIVE'
-                TransitionInDays: 10
+                TransitionInDays: 1
           - Id: 'PnSsLegalFacts'
-            ExpirationInDays: 3650
+            ExpirationInDays: 2
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
               - StorageClass: 'DEEP_ARCHIVE'
-                TransitionInDays: 120
+                TransitionInDays: 1
       #LoggingConfiguration:
       #  DestinationBucketName: 'String'
       #  LogFilePrefix: 'String'

@@ -2,12 +2,14 @@ package it.pagopa.pnss.uribuilder.service;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
+import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
+import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
@@ -50,6 +52,8 @@ public class UriBuilderService {
 
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
+
+    private final DocTypesClientCall docTypesClientCall;
     private final AwsConfigurationProperties awsConfigurationProperties;
     private final BucketName bucketName;
 
@@ -57,9 +61,10 @@ public class UriBuilderService {
     String duration;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName) {
+                             DocTypesClientCall docTypesClientCall, AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
+        this.docTypesClientCall = docTypesClientCall;
         this.awsConfigurationProperties = awsConfigurationProperties;
         this.bucketName = bucketName;
     }
@@ -115,7 +120,7 @@ public class UriBuilderService {
                    .map(insertedDocument -> {
 
                        PresignedPutObjectRequest presignedPutObjectRequest =
-                               builsUploadUrl(documentType, insertedDocument.getDocument().getDocumentKey(), contentType, metadata);
+                               builsUploadUrl(insertedDocument.getDocument().getDocumentState(),documentType, insertedDocument.getDocument().getDocumentKey(), contentType, metadata);
                        String myURL = presignedPutObjectRequest.url().toString();
                        FileCreationResponse response = new FileCreationResponse();
                        response.setKey(insertedDocument.getDocument().getDocumentKey());
@@ -156,14 +161,19 @@ public class UriBuilderService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private PresignedPutObjectRequest builsUploadUrl(String documentType, String keyName, String contentType, Map<String, String> secret) {
+    private PresignedPutObjectRequest builsUploadUrl(String documentState, String documentType, String keyName, String contentType, Map<String, String> secret) {
 
         String bucketName = mapDocumentTypeToBucket.get(documentType);
         PresignedPutObjectRequest response;
         S3Presigner presigner = getS3Presigner();
 
+        Mono<String> storageType = docTypesClientCall.getdocTypes(documentType)
+                .map(documentTypeResponse -> documentTypeResponse.getDocType().getStatuses())
+                .filter(statusMap -> statusMap.containsKey(documentType)).
+                map(filteredStatusMap -> filteredStatusMap.get(documentState).getStorage());
+
         try {
-            response = signBucket(presigner, bucketName, keyName, contentType, secret);
+            response = signBucket(storageType ,presigner, bucketName, keyName, contentType, secret);
         } catch (AmazonServiceException ase) {
             log.error(" Errore AMAZON AmazonServiceException", ase);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException ");
@@ -182,11 +192,11 @@ public class UriBuilderService {
         return S3Presigner.builder().region(Region.of(awsConfigurationProperties.regionCode())).build();
     }
 
-    private PresignedPutObjectRequest signBucket(S3Presigner s3Presigner, String bucketName, String keyName, String contenType, Map<String,
+    private PresignedPutObjectRequest signBucket(Mono<String> storageType, S3Presigner s3Presigner, String bucketName, String keyName, String contenType, Map<String,
             String> secret) {
 
         PutObjectRequest objectRequest = PutObjectRequest.builder().bucket(bucketName).key(keyName).contentType(contenType).metadata(secret)
-                                                         //.tagging(storageType)
+                                                         .tagging(String.valueOf(storageType))
                                                          .build();
         log.info("sign bucket {}", duration);
         PutObjectPresignRequest preSignRequest = PutObjectPresignRequest.builder()

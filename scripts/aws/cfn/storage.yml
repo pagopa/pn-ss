@@ -158,26 +158,26 @@ Resources:
       #  LogFilePrefix: 'String'
       #MetricsConfigurations:
       #  MetricsConfigurations
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: 's3:ObjectCreated:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:ObjectRemoved:Delete'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:ObjectRestore:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:LifecycleExpiration:Delete'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:LifecycleTransition'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          # - Event: 's3:Replication'
+      # NotificationConfiguration:
+      #   LambdaConfigurations:
+      #     - Event: 's3:ObjectCreated:*'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      #     - Event: 's3:ObjectRemoved:Delete'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      #     - Event: 's3:ObjectRestore:*'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      #     - Event: 's3:LifecycleExpiration:Delete'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      #     - Event: 's3:LifecycleTransition'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      #     # - Event: 's3:Replication'
           #   Function: !GetAtt PnSsGestoreBucket.Arn
       ObjectLockConfiguration:
         ObjectLockEnabled: 'Enabled'
         Rule: 
           DefaultRetention: 
             Days: 1
-            Mode: !If [ IsProdEnv , 'GOVERNANCE', 'COMPLIANCE']
+            Mode: !If [ IsProdEnv , 'COMPLIANCE' , 'GOVERNANCE']
             # Years: 
       ObjectLockEnabled: true
       OwnershipControls:

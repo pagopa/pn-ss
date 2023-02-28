@@ -211,6 +211,12 @@ public class UriBuilderService {
                                                                                                                    "Found : " + fileKey)))
 
                                                 .map(documentResponse -> {
+                                                    if (!documentResponse.getDocument().getDocumentState().equalsIgnoreCase(technicalStatus_available)){
+                                                        throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                                "Document : " + documentResponse.getDocument().getDocumentKey() +
+                                                                        " not has a valid state " ));
+                                                    }
+
                                                     if (!canRead.contains(documentResponse.getDocument()
                                                                                           .getDocumentType()
                                                                                           .getTipoDocumento())) {

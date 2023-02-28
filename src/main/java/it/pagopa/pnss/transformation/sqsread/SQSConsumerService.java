@@ -10,6 +10,7 @@ import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.common.client.exception.S3BucketException;
 import it.pagopa.pnss.configurationproperties.QueueName;
 import it.pagopa.pnss.transformation.model.S3ObjectCreated;
@@ -71,9 +72,12 @@ public class SQSConsumerService {
         }catch(NoSuchBucketException bucketError){
             log.error("Error in S3  "+bucketError.getMessage(),bucketError);
             throw new RuntimeException("");
+        }catch(RetentionException e){
+            log.error("Retention Exception {}", e.getMessage(), e);
+            throw new RuntimeException("Retention Exception",e);
         }catch(Exception e){
             log.error("Generic Exception  "+e.getMessage());
-            throw new RuntimeException("");
+            throw new RuntimeException(e.getMessage());
         }
 
 

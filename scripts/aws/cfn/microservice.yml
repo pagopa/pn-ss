@@ -93,7 +93,7 @@ Parameters:
 
   PnSsTableDocumentiStreamArn:
     Type: String
-    Description: 'Nome tabella SS Documenti'
+    Description: 'ARN dello stream relativo alla tabella SS Documenti'
 
   PnSsBucketName:
     Type: String

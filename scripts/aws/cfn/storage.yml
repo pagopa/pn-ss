@@ -177,7 +177,7 @@ Resources:
         Rule: 
           DefaultRetention: 
             Days: 1
-            Mode: !If [ IsProdEnv , 'GOVERNANCE', 'COMPLIANCE']
+            Mode: !If [ IsProdEnv , 'COMPLIANCE' , 'GOVERNANCE']
             # Years: 
       ObjectLockEnabled: true
       OwnershipControls:

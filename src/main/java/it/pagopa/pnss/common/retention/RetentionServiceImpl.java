@@ -10,8 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-
-
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.StorageConfiguration;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
@@ -25,6 +23,12 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 @Slf4j
 public class RetentionServiceImpl implements RetentionService {
 	
+    @Value("${default.internal.x-api-key.value}")
+    private String defaultInteralApiKeyValue;
+
+    @Value("${default.internal.header.x-pagopa-safestorage-cx-id}")
+    private String defaultInternalClientIdValue;
+	
     /*
      * In compliance mode, a protected object version can't be overwritten or deleted by any user, 
      * including the root user in your AWS account. 
@@ -34,9 +38,6 @@ public class RetentionServiceImpl implements RetentionService {
      */
 	@Value("${object.lock.retention.mode}")
 	private String objectLockRetentionMode;
-	
-    @Autowired
-    private BucketName bucketName;
 	
 	private final ConfigurationApiCall configurationApiCall;
 
@@ -94,7 +95,9 @@ public class RetentionServiceImpl implements RetentionService {
 		}
 	}
 	
-	private Mono<Integer> getRetentionPeriod(String documentKey, String documentState, String documentType) throws RetentionException {
+	private Mono<Integer> getRetentionPeriod(
+			String documentKey, String documentState, String documentType,
+			String authPagopaSafestorageCxId, String authApiKey) throws RetentionException {
 		log.info("getRetentionPeriod() : START : documentKey '{}' : documentState '{}' : documentType '{}'",
 				documentKey, documentState, documentType);
         
@@ -109,7 +112,7 @@ public class RetentionServiceImpl implements RetentionService {
 					documentKey));
 		}
 		
-		return configurationApiCall.getDocumentsConfigs()
+		return configurationApiCall.getDocumentsConfigs(authPagopaSafestorageCxId,authApiKey)
 			.map(response -> {
 					log.debug("getRetentionPeriod() : configurationApiCall.getDocumentsConfigs() : call OK");
 					
@@ -181,12 +184,13 @@ public class RetentionServiceImpl implements RetentionService {
 //	}
 	
 	@Override
-	public Mono<PutObjectRequest> getPutObjectRequestForObjectInBucket(String bucketName, byte[] contentBytes, String documentKey, 
+	public Mono<PutObjectRequest> getPutObjectRequestForObjectInBucket(
+			String bucketName, byte[] contentBytes, String documentKey, 
 			String documentState, String documentType) throws RetentionException {
 		log.info("getPutObjectRequestForObjectInBucket() : START : documentKey {} : documentState {} : documentType {}", 
 				documentKey, documentState, documentType);
 		
-		return getRetentionPeriod(documentKey, documentState, documentType)
+		return getRetentionPeriod(documentKey, documentState, documentType, defaultInternalClientIdValue, defaultInteralApiKeyValue)
 				.map(this::getRetainUntilDate)
 				.map(retainUntilDate ->  PutObjectRequest.builder()
                         .bucket(bucketName)
@@ -198,17 +202,19 @@ public class RetentionServiceImpl implements RetentionService {
 	}
 	
 	@Override
-	public Mono<PutObjectRequest> getPutObjectRequestForPresignRequest(String bucketName, String keyName, String contenType, Map<String,String> secret, 
-			String documentKey, String documentState, String documentType) throws RetentionException {
+	public Mono<PutObjectRequest> getPutObjectRequestForPresignRequest(
+			String bucketName, String documentKey, String contenType, Map<String,String> secret, 
+			String documentState, String documentType,
+			String authPagopaSafestorageCxId, String authApiKey) throws RetentionException {
 		log.info("getPutObjectRequestForPresignRequest() : START : bucketName {} : keyName {} : contenType {} : secret {} : documentKey {} : documentState {} : documentType {}", 
-				bucketName, keyName, contenType, secret,
+				bucketName, documentKey, contenType, secret,
 				documentKey, documentState, documentType);
 		
-		return getRetentionPeriod(documentKey, documentState, documentType)
+		return getRetentionPeriod(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
 				.map(this::getRetainUntilDate)
 				.map(retainUntilDate -> PutObjectRequest.builder()
 							 .bucket(bucketName)
-							 .key(keyName)
+							 .key(documentKey)
 							 .contentType(contenType)
 							 .metadata(secret)
 			                //.tagging(storageType)

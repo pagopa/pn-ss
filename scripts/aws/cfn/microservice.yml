@@ -236,10 +236,13 @@ Resources:
               - 'dynamodb:PartiQL*'
               - 'dynamodb:Update*'
               - 'dynamodb:Put*'
+              - 'dynamodb:GetRecords'
+              - 'dynamodb:GetShardIterator'
             Resource:
               - !Sub '${PnSsTableArnAnagraficaClient}'
               - !Sub '${PnSsTableArnTipologieDocumenti}'
               - !Sub '${PnSsTableArnDocumenti}'
+              - !Sub '${PnSsTableDocumentiStreamArn}'
           - Effect: Allow
             Action:
               - 's3:List*'

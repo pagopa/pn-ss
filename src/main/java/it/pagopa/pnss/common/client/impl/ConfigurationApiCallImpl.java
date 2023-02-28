@@ -21,7 +21,7 @@ public class ConfigurationApiCallImpl extends CommonBaseClient implements Config
 	
     public WebClient getWebClient(){
         WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
-        return builder.build();
+        return builder.baseUrl("http://localhost:8080").build();
     }
 
 	@Override

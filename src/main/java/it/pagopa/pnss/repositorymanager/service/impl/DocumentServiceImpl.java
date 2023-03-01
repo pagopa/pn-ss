@@ -159,22 +159,24 @@ public class DocumentServiceImpl implements DocumentService {
                                .build();
                        String storageType;
                        PutObjectTaggingRequest putObjectTaggingRequest;
-                       if(documentEntityStored.getDocumentType().getStatuses().containsKey(documentEntityStored.getDocumentLogicalState())){
-                           storageType =  documentEntityStored.getDocumentType().getStatuses().get(documentEntityStored.getDocumentLogicalState()).getStorage();
-                            putObjectTaggingRequest = PutObjectTaggingRequest.builder()
-                                    .bucket(bucketName.ssHotName())
-                                   .key(documentKey)
-                                   .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
-                                       setTag.key(STORAGETYPE);
-                                       setTag.value(storageType);
-                                   }))
-                                   .build();
-                           CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse = s3.putObjectTagging(putObjectTaggingRequest);
-                           log.info("patchDocument() : Tagging : storageType {}", storageType);
-                       } else {
-                           log.info("patchDocument() : Tagging : storageTypeEmpty");
-                       }
-                       log.info("patchDocument() : end Tagging");
+					   if(documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
+						   if (documentEntityStored.getDocumentType().getStatuses().containsKey(documentEntityStored.getDocumentLogicalState())) {
+							   storageType = documentEntityStored.getDocumentType().getStatuses().get(documentEntityStored.getDocumentLogicalState()).getStorage();
+							   putObjectTaggingRequest = PutObjectTaggingRequest.builder()
+									   .bucket(bucketName.ssHotName())
+									   .key(documentKey)
+									   .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
+										   setTag.key(STORAGETYPE);
+										   setTag.value(storageType);
+									   }))
+									   .build();
+							   CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse = s3.putObjectTagging(putObjectTaggingRequest);
+							   log.info("patchDocument() : Tagging : storageType {}", storageType);
+						   } else {
+							   log.info("patchDocument() : Tagging : storageTypeEmpty");
+						   }
+						   log.info("patchDocument() : end Tagging");
+					   }
                        return documentEntityStored;
                    })
                    .doOnError(IllegalArgumentException.class, throwable -> log.error(throwable.getMessage()))

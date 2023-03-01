@@ -32,13 +32,8 @@ public class FileUploadApiController implements FileUploadApi {
                                                                  Mono<FileCreationRequest> fileCreationRequest,
                                                                  final ServerWebExchange exchange) {
     	
-    	String pagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(pagopaSafestorageCxId);
-    	String apiKeyValue = exchange.getRequest().getHeaders().getFirst(apiKey);
-    	
         return fileCreationRequest.flatMap(request -> uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId, 
-        																						request, 
-        																						pagopaSafestorageCxIdValue, 
-        																						apiKeyValue))
+        																						request))
                                   .map(ResponseEntity::ok);
     }
     

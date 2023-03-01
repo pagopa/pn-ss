@@ -1,43 +1,54 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
-import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
-import it.pagopa.pnss.repositorymanager.service.DocTypesService;
+import java.time.Instant;
+
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import ch.qos.logback.classic.Logger;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.RetentionException;
+import it.pagopa.pnss.common.retention.RetentionService;
+import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
+import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
+import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 
 @Service
 @Slf4j
-public class DocumentServiceImpl implements DocumentService {
+public class DocumentServiceImpl extends CommonS3ObjectService implements DocumentService {
 
 	private final ObjectMapper objectMapper;
-
 	private final DynamoDbAsyncTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
-
 	private final DocTypesService docTypesService;
+	private final RetentionService retentionService;
+	private final BucketName bucketName;
 
 	public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-			RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService) {
+			RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
+			RetentionService retentionService, BucketName bucketName) {
 		this.docTypesService = docTypesService;
 		this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient
 				.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
 		this.objectMapper = objectMapper;
+		this.retentionService = retentionService;
+		this.bucketName = bucketName;
 	}
 
 	private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
@@ -93,9 +104,11 @@ public class DocumentServiceImpl implements DocumentService {
 	}
 
 	@Override
-	public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges) {
+	public Mono<Document> patchDocument(
+			String documentKey, DocumentChanges documentChanges,
+			String authPagopaSafestorageCxId, String authApiKey) {
 		log.info("patchDocument() : IN : documentKey : {} , documentChanges {}", documentKey, documentChanges);
-
+		
 		return Mono
 				.fromCompletionStage(
 						documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
@@ -107,7 +120,9 @@ public class DocumentServiceImpl implements DocumentService {
 					}
 					log.info("patchDocument() : documentEntityStored : {}", documentEntityStored);
 					if (documentChanges.getDocumentState() != null) {
+						// stato tecnico
 						documentEntityStored.setDocumentState(documentChanges.getDocumentState());
+						// stato logico
 						if (documentChanges.getDocumentState().equalsIgnoreCase("available")) {
 							if (documentEntityStored.getDocumentType().getTipoDocumento()
 									.equalsIgnoreCase("PN_NOTIFICATION_ATTACHMENTS")) {
@@ -137,7 +152,14 @@ public class DocumentServiceImpl implements DocumentService {
 					}
 					log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
 					return documentEntityStored;
-				}).doOnError(IllegalArgumentException.class, throwable -> log.error(throwable.getMessage()))
+				})
+				.doOnError(IllegalArgumentException.class, throwable -> log.error(throwable.getMessage()))
+				.flatMap(documentEntityStored -> {
+					log.info("patchDocument() : retention period : PRE");
+					return retentionService.setRetentionPeriodInBucketObjectMetadata(
+																			authPagopaSafestorageCxId, authApiKey, 
+																			documentEntityStored);
+				})
 				.zipWhen(documentUpdated -> Mono
 						.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
 				.map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));

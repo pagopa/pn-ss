@@ -4,6 +4,8 @@ import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,6 +23,12 @@ import reactor.core.publisher.Mono;
 @RestController
 @Slf4j
 public class DocumentInternalApiController implements DocumentInternalApi {
+	
+    @Value("${header.x-api-key}")
+    private String xApiKey;
+
+    @Value("${header.x-pagopa-safestorage-cx-id}")
+    private String xPagopaSafestorageCxId;
 
     private final DocumentService documentService;
 
@@ -98,8 +106,14 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 
     @Override
     public Mono<ResponseEntity<DocumentResponse>> patchDoc(String documentKey, Mono<DocumentChanges> documentChanges, final ServerWebExchange exchange) {
+    	
+    	String xPagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(xPagopaSafestorageCxId);
+    	String xApiKeyValue = exchange.getRequest().getHeaders().getFirst(xApiKey);
 
-        return documentChanges.flatMap(request -> documentService.patchDocument(documentKey, request))
+        return documentChanges.flatMap(request -> documentService.patchDocument(documentKey, 
+        																		request, 
+        																		xPagopaSafestorageCxIdValue, 
+        																		xApiKeyValue))
                        .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
                        .onErrorResume(throwable -> getResponse(documentKey, throwable));
 

@@ -9,7 +9,7 @@ public interface DocumentService {
 	
 	Mono<Document> getDocument(String documentKey);
 	Mono<Document> insertDocument(DocumentInput documentInput);
-	Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges);
+	Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges, String authPagopaSafestorageCxId, String authApiKey);
 	Mono<Document> deleteDocument(String documentKey);
 
 }

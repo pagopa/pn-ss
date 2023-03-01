@@ -7,18 +7,14 @@ import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import org.springframework.stereotype.Service;
 
 public class StreamsRecordProcessorFactory implements IRecordProcessorFactory {
-    private final String tableName;
     private String disponibilitaDOcumentiEventBridge;
-    private final AmazonDynamoDB dynamoDBClient;
 
-    public StreamsRecordProcessorFactory(AmazonDynamoDB dynamoDBClient, String tableName, String disponibilitaDOcumentiEventBridge) {
-        this.tableName = tableName;
-        this.dynamoDBClient = dynamoDBClient;
+    public StreamsRecordProcessorFactory(String disponibilitaDOcumentiEventBridge) {
         this.disponibilitaDOcumentiEventBridge = disponibilitaDOcumentiEventBridge;
     }
 
     @Override
     public IRecordProcessor createProcessor() {
-        return new StreamsRecordProcessor(dynamoDBClient, tableName, disponibilitaDOcumentiEventBridge);
+        return new StreamsRecordProcessor( disponibilitaDOcumentiEventBridge);
     }
 }

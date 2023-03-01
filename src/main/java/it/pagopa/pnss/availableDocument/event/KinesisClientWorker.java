@@ -17,6 +17,7 @@ import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,9 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcess
 @Component
 @Slf4j
 public class KinesisClientWorker  {
+    @Value("${test.event.bridge:#{null}}")
+    private String testEventBridge;
+
     private final AwsConfigs props;
     private static IRecordProcessorFactory recordProcessorFactory;
     private static String table;
@@ -79,6 +83,8 @@ public class KinesisClientWorker  {
         recordProcessorFactory = new StreamsRecordProcessorFactory(amazonDynamoDB, table, disponibilitaDocumentiEventBridge);
         Worker worker  = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory, workerConfig, adapterClient, amazonDynamoDB, cloudWatchClient);
         Thread t = new Thread(worker);
-        t.start();
+        if (testEventBridge==null){
+            t.start();
+        }
     }
 }

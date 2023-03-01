@@ -228,12 +228,27 @@ class UriBuilderServiceDownloadTest {
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
-
+        d.setDocumentState(technicalStatus_available);
 
         mockGetDocument(d, docId);
         fileDownloadTestCall(docId, false).expectStatus().isForbidden();
     }
 
+    @Test
+    void testDocumentNotInStatusAvailable() {
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
+        String docId = "1111-aaaa";
+
+        mockUserConfiguration(List.of(PN_NOTIFICATION_ATTACHMENTS));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(PN_AAR);
+        d.setDocumentState(technicalStatus_attached);
+
+        mockGetDocument(d, docId);
+        fileDownloadTestCall(docId, false).expectStatus().isBadRequest();
+    }
 
     private void mockGetDocument(DocumentInput d, String docId) {
         DocumentResponse documentResponse = new DocumentResponse();
@@ -241,6 +256,7 @@ class UriBuilderServiceDownloadTest {
         DocumentType type = new DocumentType();
         type.setTipoDocumento(d.getDocumentType());
         doc.setDocumentType(type);
+        doc.setDocumentState(d.getDocumentState());
         documentResponse.setDocument(doc);
         Mono<DocumentResponse> docRespEntity = Mono.just(documentResponse);
         Mockito.doReturn(docRespEntity).when(documentClientCall).getdocument(docId);

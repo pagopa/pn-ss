@@ -1,16 +1,6 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.BOOKED;
-import static it.pagopa.pnss.common.Constant.FREEZED;
-import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
-import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
-import static it.pagopa.pnss.common.Constant.listaStatus;
-import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
-import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
+import static it.pagopa.pnss.common.Constant.*;
 import static java.util.Map.entry;
 
 import java.math.BigDecimal;
@@ -283,6 +273,13 @@ public class UriBuilderService {
                                                                                                                    "Found : " + fileKey)))
 
                                                 .map(documentResponse -> {
+                                                    if (documentResponse.getDocument().getDocumentState() == null ||
+                                                        !documentResponse.getDocument().getDocumentState().equalsIgnoreCase(technicalStatus_available)){
+                                                        throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                                "Document : " + documentResponse.getDocument().getDocumentKey() +
+                                                                        " not has a valid state " ));
+                                                    }
+
                                                     if (!canRead.contains(documentResponse.getDocument()
                                                                                           .getDocumentType()
                                                                                           .getTipoDocumento())) {

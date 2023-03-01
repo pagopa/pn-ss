@@ -83,6 +83,8 @@ public class LocalStackTestConfig {
         System.setProperty("aws.region",  localStackContainer.getRegion());
         System.setProperty("aws.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.secret.key", localStackContainer.getSecretKey());
+        System.setProperty("test.event.bridge", "true");
+
 //        System.setProperty("PnSsStagingBucketName","PnSsStagingBucketName");
 
         System.setProperty("PnSsStagingBucketArn","PnSsStagingBucketArn");

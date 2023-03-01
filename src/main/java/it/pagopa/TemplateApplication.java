@@ -22,6 +22,12 @@ import org.springframework.context.annotation.PropertySource;
 // QUEUE
 @PropertySource("classpath:queue/queue.properties")
 
+// EVENT STREAM
+@PropertySource("classpath:eventStream/dynamo-event-stream.properties")
+
+// EVENT BRIDGE
+@PropertySource("classpath:eventBridge/event-bridge-disponibilita-documenti.properties")
+
 public class TemplateApplication {
 
     public static void main(String[] args) {

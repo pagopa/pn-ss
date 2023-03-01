@@ -37,330 +37,260 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 @Slf4j
 public class DocumentInternalApiControllerTest {
 
-    @Autowired
-    private WebTestClient webTestClient;
+	@Autowired
+	private WebTestClient webTestClient;
 
-    private static final String BASE_PATH = "/safestorage/internal/v1/documents";
-    private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
+	private static final String BASE_PATH = "/safestorage/internal/v1/documents";
+	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
 
-    private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_NOTIFICATION_ATTACHMENTS";
+	private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_NOTIFICATION_ATTACHMENTS";
 
-    private static final String PARTITION_ID_ENTITY = "documentKeyEnt";
-    private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
-    private static final String PARTITION_ID_NO_EXISTENT = "documentKey_bad";
-    private static final String CHECKSUM= "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
+	private static final String PARTITION_ID_ENTITY = "documentKeyEnt";
+	private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
+	private static final String PARTITION_ID_NO_EXISTENT = "documentKey_bad";
+	private static final String CHECKSUM = "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
 
-    private static DocumentInput documentInput;
-    private static DocumentChanges documentChanges;
+	private static DocumentInput documentInput;
+	private static DocumentChanges documentChanges;
 
-    private static DynamoDbTable<DocumentEntity> dynamoDbTable;
+	private static DynamoDbTable<DocumentEntity> dynamoDbTable;
 
-    private static void insertDocumentEntity(String documentKey) {
-        log.info("execute insertDocumentEntity()");
+	private static void insertDocumentEntity(String documentKey) {
+		log.info("execute insertDocumentEntity()");
 
-        DocTypeEntity docTypeEntity = new DocTypeEntity();
-        docTypeEntity.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
-        log.info("execute insertDocumentEntity() : docTypeEntity : {}", docTypeEntity);
+		DocTypeEntity docTypeEntity = new DocTypeEntity();
+		docTypeEntity.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
+		log.info("execute insertDocumentEntity() : docTypeEntity : {}", docTypeEntity);
 
-        var documentEntity = new DocumentEntity();
-        documentEntity.setDocumentKey(documentKey);
-        documentEntity.setDocumentType(docTypeEntity);
-        dynamoDbTable.putItem(builder -> builder.item(documentEntity));
-    }
+		var documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(docTypeEntity);
+		dynamoDbTable.putItem(builder -> builder.item(documentEntity));
+	}
 
-    @BeforeAll
-    public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
-        log.info("execute insertDefaultDocument()");
-        dynamoDbTable = dynamoDbEnhancedClient.table(
+	@BeforeAll
+	public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
+			@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+		log.info("execute insertDefaultDocument()");
+		dynamoDbTable = dynamoDbEnhancedClient.table(
 //    			DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
-                gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
-        insertDocumentEntity(PARTITION_ID_ENTITY);
-    }
-
-    @BeforeEach
-    public void createDocument() {
-        log.info("execute createDocument()");
-
-        List<String> allowedStatusTransitions1 = new ArrayList<>();
-        allowedStatusTransitions1.add("AVAILABLE");
-
-        CurrentStatus currentStatus1 = new CurrentStatus();
-        currentStatus1.setStorage("PN_NOTIFICATION_ATTACHMENTS");
-        currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
-
-        Map<String, CurrentStatus> statuses1 = new HashMap<>();
-        statuses1.put("PRELOADED", currentStatus1);
-
-        DocumentType docTypes = new DocumentType();
-        docTypes.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
-        docTypes.setChecksum(DocumentType.ChecksumEnum.SHA256);
-        docTypes.setInitialStatus("SAVED");
-        docTypes.setStatuses(statuses1);
-        docTypes.setInformationClassification(InformationClassificationEnum.HC);
-        docTypes.setDigitalSignature(true);
-        docTypes.setTimeStamped(TimeStampedEnum.STANDARD);
-        log.info("execute createDocument() : docType : {}", docTypes);
-
-        documentInput = new DocumentInput();
-        documentInput.setDocumentKey(PARTITION_ID_DEFAULT);
-        documentInput.setDocumentState(FREEZED);
-        documentInput.setRetentionUntil("2032-04-12T12:32:04.000Z");
-        documentInput.setCheckSum(CHECKSUM);
-        documentInput.setContentType("xxxxx");
-        documentInput.setDocumentType("PN_NOTIFICATION_ATTACHMENTS");
-        documentInput.setContentLenght(new BigDecimal(100));
-        log.info("execute createDocument() : documentInput : {}", documentInput);
-
-        documentChanges = new DocumentChanges();
-        documentChanges.setDocumentState(AVAILABLE);
-        documentChanges.setContentLenght(new BigDecimal(50));
-    }
-
-    @Test
-        // codice test: DCSS.101.1
-    void postItem() {
-
-        EntityExchangeResult<DocumentResponse> resultPreInsert = webTestClient.get()
-                                                                              .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM)
-                                                                                                           .build(documentInput.getDocumentKey()))
-                                                                              .accept(APPLICATION_JSON)
-                                                                              .exchange()
-                                                                              .expectStatus()
-                                                                              .isOk()
-                                                                              .expectBody(DocumentResponse.class)
-                                                                              .returnResult();
-
-        log.info("\n Test 1 (postItem) resultPreInsert {} \n", resultPreInsert);
-
-        if (resultPreInsert == null || resultPreInsert.getResponseBody() == null ||
-            resultPreInsert.getResponseBody().getDocument() == null) {
-            webTestClient.post()
-                         .uri(BASE_PATH)
-                         .accept(APPLICATION_JSON)
-                         .contentType(APPLICATION_JSON)
-                         .body(BodyInserters.fromValue(documentInput))
-                         .exchange()
-                         .expectStatus()
-                         .isOk();
-        }
-
-        log.info("\n Test 1 (postItem) passed \n");
-    }
-
-    @Test
-        // codice test: DCSS.101.2
-    void postItemPartitionKeyDuplicated() {
-
-        EntityExchangeResult<DocumentResponse> resultPreInsert = webTestClient.get()
-                                                                              .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM)
-                                                                                                           .build(documentInput.getDocumentKey()))
-                                                                              .accept(APPLICATION_JSON)
-                                                                              .exchange()
-                                                                              .expectStatus()
-                                                                              .isOk()
-                                                                              .expectBody(DocumentResponse.class)
-                                                                              .returnResult();
-
-        log.info("\n Test 2 (postItemPartitionKeyDuplicated) resultPreInsert {} \n", resultPreInsert);
-
-        if (resultPreInsert != null && resultPreInsert.getResponseBody() != null &&
-            resultPreInsert.getResponseBody().getDocument() != null) {
-
-            webTestClient.post()
-                         .uri(BASE_PATH)
-                         .accept(APPLICATION_JSON)
-                         .contentType(APPLICATION_JSON)
-                         .body(BodyInserters.fromValue(documentInput))
-                         .exchange()
-                         .expectStatus()
-                         .isEqualTo(HttpStatus.CONFLICT);
-        }
-
-        log.info("\n Test 2 (postItemPartitionKeyDuplicated) passed \n");
-
-    }
-
-    @Test
-        // codice test: DCSS.101.2
-    void postItemIncorrectParameter() {
+				gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+		insertDocumentEntity(PARTITION_ID_ENTITY);
+	}
+
+	@BeforeEach
+	public void createDocument() {
+		log.info("execute createDocument()");
 
-        documentInput.setDocumentKey(null);
+		List<String> allowedStatusTransitions1 = new ArrayList<>();
+		allowedStatusTransitions1.add("AVAILABLE");
 
-        webTestClient.post()
-                     .uri(BASE_PATH)
-                     .accept(APPLICATION_JSON)
-                     .contentType(APPLICATION_JSON)
-                     .body(BodyInserters.fromValue(documentInput))
-                     .exchange()
-                     .expectStatus()
-                     .isEqualTo(HttpStatus.BAD_REQUEST);
-
-        log.info("\n Test 2 (postItemIncorrectParameter) passed \n");
-
-    }
-
-    @Test
-        // codice test: DCSS.100.1
-    void getItem() {
-
-        webTestClient.get()
-                     .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
-                     .accept(APPLICATION_JSON)
-                     .exchange()
-                     .expectStatus()
-                     .isOk()
-                     .expectBody(DocumentResponse.class);
-
-        log.info("\n Test 3 (getItem) passed \n");
-
-    }
-
-    @Test
-        // codice test: DCSS.100.2
-    void getItemNoExistentPartitionKey() {
-
-        webTestClient.get()
-                     .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
-                     .accept(APPLICATION_JSON)
-                     .exchange()
-                     .expectStatus()
-                     .isEqualTo(HttpStatus.NOT_FOUND);
-
-        log.info("\n Test 4 (getItemNoExistentPartitionKey) passed \n");
-
-    }
-
-    @Test
-        // codice test: DCSS.100.3
-    void getItemIncorrectParameters() {
-
-        webTestClient.get().uri(BASE_PATH).accept(APPLICATION_JSON).exchange().expectStatus().isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
-
-        log.info("\n Test 5 (getItemIncorrectParameters) passed \n");
+		CurrentStatus currentStatus1 = new CurrentStatus();
+		currentStatus1.setStorage("PN_NOTIFICATION_ATTACHMENTS");
+		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
 
-    }
-
-    @Test
-        // codice test: DCSS.102.1
-    void patchItem() {
-
-        EntityExchangeResult<DocumentResponse> documentInDb = webTestClient.get()
-                                                                           .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM)
-                                                                                                        .build(documentInput.getDocumentKey()))
-                                                                           .accept(APPLICATION_JSON)
-                                                                           .exchange()
-                                                                           .expectStatus()
-                                                                           .isOk()
-                                                                           .expectBody(DocumentResponse.class)
-                                                                           .returnResult();
-        log.info("\n Test 6 (patchItem) : document before {}", documentInDb.getResponseBody().getDocument());
-
-        log.info("\n Test 6 (patchItem) : documentChanges {}", documentChanges);
+		Map<String, CurrentStatus> statuses1 = new HashMap<>();
+		statuses1.put("PRELOADED", currentStatus1);
 
-        webTestClient.patch()
-                     .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
-                     .accept(APPLICATION_JSON)
-                     .contentType(APPLICATION_JSON)
-                     .body(BodyInserters.fromValue(documentChanges))
-                     .exchange()
-                     .expectStatus()
-                     .isOk();
+		DocumentType docTypes = new DocumentType();
+		docTypes.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
+		docTypes.setChecksum(DocumentType.ChecksumEnum.SHA256);
+		docTypes.setInitialStatus("SAVED");
+		docTypes.setStatuses(statuses1);
+		docTypes.setInformationClassification(InformationClassificationEnum.HC);
+		docTypes.setDigitalSignature(true);
+		docTypes.setTimeStamped(TimeStampedEnum.STANDARD);
+		log.info("execute createDocument() : docType : {}", docTypes);
 
-        EntityExchangeResult<DocumentResponse> documentUpdated = webTestClient.get()
-                                                                              .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM)
-                                                                                                           .build(PARTITION_ID_DEFAULT))
-                                                                              .accept(APPLICATION_JSON)
-                                                                              .exchange()
-                                                                              .expectStatus()
-                                                                              .isOk()
-                                                                              .expectBody(DocumentResponse.class)
-                                                                              .returnResult();
+		documentInput = new DocumentInput();
+		documentInput.setDocumentKey(PARTITION_ID_DEFAULT);
+		documentInput.setDocumentState(FREEZED);
+		documentInput.setRetentionUntil("2032-04-12T12:32:04.000Z");
+		documentInput.setCheckSum(CHECKSUM);
+		documentInput.setContentType("xxxxx");
+		documentInput.setDocumentType("PN_NOTIFICATION_ATTACHMENTS");
+		documentInput.setContentLenght(new BigDecimal(100));
+		log.info("execute createDocument() : documentInput : {}", documentInput);
 
-        log.info("\n Test 6 (patchItem) : documentUpdated : {} \n", documentUpdated.getResponseBody().getDocument());
+		documentChanges = new DocumentChanges();
+		documentChanges.setDocumentState(AVAILABLE);
+		documentChanges.setContentLenght(new BigDecimal(50));
+	}
 
-        Assertions.assertEquals(documentChanges.getContentLenght(), documentUpdated.getResponseBody().getDocument().getContentLenght());
+	@Test
+	// codice test: DCSS.101.1
+	void postItem() {
 
-        log.info("\n Test 6 (patchItem) passed \n");
-    }
+		EntityExchangeResult<DocumentResponse> resultPreInsert = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentInput.getDocumentKey()))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+				.returnResult();
 
-    @Test
-        // codice test: DCSS.102.2
-    void patchItemNoExistentKey() {
+		log.info("\n Test 1 (postItem) resultPreInsert {} \n", resultPreInsert);
 
-        webTestClient.patch()
-                     .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
-                     .accept(APPLICATION_JSON)
-                     .contentType(APPLICATION_JSON)
-                     .body(BodyInserters.fromValue(documentInput))
-                     .exchange()
-                     .expectStatus()
-                     .isEqualTo(HttpStatus.NOT_FOUND);
+		if (resultPreInsert == null || resultPreInsert.getResponseBody() == null
+				|| resultPreInsert.getResponseBody().getDocument() == null) {
+			webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
+					.body(BodyInserters.fromValue(documentInput)).exchange().expectStatus().isOk();
+		}
 
-        log.info("\n Test 7 (patchItemNoExistentKey) passed \n");
+		log.info("\n Test 1 (postItem) passed \n");
+	}
 
-    }
+	@Test
+	// codice test: DCSS.101.2
+	void postItemPartitionKeyDuplicated() {
 
-    @Test
-        // codice test: DCSS.102.3
-    void patchItemIncorretcParameters() {
+		EntityExchangeResult<DocumentResponse> resultPreInsert = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentInput.getDocumentKey()))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+				.returnResult();
 
-        webTestClient.patch()
-                     .uri(BASE_PATH)
-                     .accept(APPLICATION_JSON)
-                     .contentType(APPLICATION_JSON)
-                     .body(BodyInserters.fromValue(documentInput))
-                     .exchange()
-                     .expectStatus()
-                     .isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+		log.info("\n Test 2 (postItemPartitionKeyDuplicated) resultPreInsert {} \n", resultPreInsert);
 
-        log.info("\n Test 8 (patchItemIncorretcParameters) passed \n");
+		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null
+				&& resultPreInsert.getResponseBody().getDocument() != null) {
 
-    }
+			webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
+					.body(BodyInserters.fromValue(documentInput)).exchange().expectStatus()
+					.isEqualTo(HttpStatus.CONFLICT);
+		}
 
-    @Test
-        // codice test: DCSS.103.1
-    void deleteItem() {
+		log.info("\n Test 2 (postItemPartitionKeyDuplicated) passed \n");
 
-        EntityExchangeResult<DocumentResponse> result = webTestClient.delete()
-                                                                     .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM)
-                                                                                                  .build(PARTITION_ID_DEFAULT))
-                                                                     .accept(APPLICATION_JSON)
-                                                                     .exchange()
-                                                                     .expectStatus()
-                                                                     .isOk()
-                                                                     .expectBody(DocumentResponse.class)
-                                                                     .returnResult();
+	}
 
-        Assertions.assertEquals(PARTITION_ID_DEFAULT, result.getResponseBody().getDocument().getDocumentKey());
+	@Test
+	// codice test: DCSS.101.2
+	void postItemIncorrectParameter() {
 
-        log.info("\n Test 9 (deleteItem) passed \n");
+		documentInput.setDocumentKey(null);
 
-    }
+		webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(documentInput)).exchange().expectStatus()
+				.isEqualTo(HttpStatus.BAD_REQUEST);
 
-    @Test
-        // codice test: DCSS.103.2
-    void deleteItemNoExistentKey() {
+		log.info("\n Test 2 (postItemIncorrectParameter) passed \n");
 
-        webTestClient.delete()
-                     .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
-                     .accept(APPLICATION_JSON)
-                     .exchange()
-                     .expectStatus()
-                     .isEqualTo(HttpStatus.NOT_FOUND);
+	}
 
-        log.info("\n Test 10 (deleteItemNoExistentKey) passed \n");
+	@Test
+	// codice test: DCSS.100.1
+	void getItem() {
 
-    }
+		webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class);
 
-    @Test
-        // codice test: DCSS.103.3
-    void deleteItemIncorrectParameter() {
+		log.info("\n Test 3 (getItem) passed \n");
 
-        webTestClient.delete().uri(BASE_PATH).accept(APPLICATION_JSON).exchange().expectStatus().isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+	}
 
-        log.info("\n Test 10 (deleteItemIncorrectParameter) passed \n");
+	@Test
+	// codice test: DCSS.100.2
+	void getItemNoExistentPartitionKey() {
 
-    }
+		webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
+
+		log.info("\n Test 4 (getItemNoExistentPartitionKey) passed \n");
+
+	}
+
+	@Test
+	// codice test: DCSS.100.3
+	void getItemIncorrectParameters() {
+
+		webTestClient.get().uri(BASE_PATH).accept(APPLICATION_JSON).exchange().expectStatus()
+				.isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+
+		log.info("\n Test 5 (getItemIncorrectParameters) passed \n");
+
+	}
+
+	@Test
+	// codice test: DCSS.102.1
+	void patchItem() {
+
+		EntityExchangeResult<DocumentResponse> documentInDb = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentInput.getDocumentKey()))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+				.returnResult();
+		log.info("\n Test 6 (patchItem) : document before {}", documentInDb.getResponseBody().getDocument());
+
+		log.info("\n Test 6 (patchItem) : documentChanges {}", documentChanges);
+
+		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
+				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON).body(BodyInserters.fromValue(documentChanges))
+				.exchange().expectStatus().isOk();
+
+		EntityExchangeResult<DocumentResponse> documentUpdated = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+				.returnResult();
+
+		log.info("\n Test 6 (patchItem) : documentUpdated : {} \n", documentUpdated.getResponseBody().getDocument());
+
+		Assertions.assertEquals(documentChanges.getContentLenght(),
+				documentUpdated.getResponseBody().getDocument().getContentLenght());
+
+		log.info("\n Test 6 (patchItem) passed \n");
+	}
+
+	@Test
+	// codice test: DCSS.102.2
+	void patchItemNoExistentKey() {
+
+		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
+				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON).body(BodyInserters.fromValue(documentInput))
+				.exchange().expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
+
+		log.info("\n Test 7 (patchItemNoExistentKey) passed \n");
+
+	}
+
+	@Test
+	// codice test: DCSS.102.3
+	void patchItemIncorretcParameters() {
+
+		webTestClient.patch().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(documentInput)).exchange().expectStatus()
+				.isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+
+		log.info("\n Test 8 (patchItemIncorretcParameters) passed \n");
+
+	}
+
+	@Test
+	// codice test: DCSS.103.1
+	void deleteItem() {
+
+		webTestClient.delete().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isEqualTo(HttpStatus.NO_CONTENT);
+
+		log.info("\n Test 9 (deleteItem) passed \n");
+
+	}
+
+	@Test
+	// codice test: DCSS.103.2
+	void deleteItemNoExistentKey() {
+
+		webTestClient.delete().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
+
+		log.info("\n Test 10 (deleteItemNoExistentKey) passed \n");
+
+	}
+
+	@Test
+	// codice test: DCSS.103.3
+	void deleteItemIncorrectParameter() {
+
+		webTestClient.delete().uri(BASE_PATH).accept(APPLICATION_JSON).exchange().expectStatus()
+				.isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+
+		log.info("\n Test 10 (deleteItemIncorrectParameter) passed \n");
+
+	}
 
 }

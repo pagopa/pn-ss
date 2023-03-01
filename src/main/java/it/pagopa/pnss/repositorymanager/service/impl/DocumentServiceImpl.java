@@ -1,7 +1,10 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.lambda.runtime.events.ConnectEvent;
+import com.amazonaws.services.s3.model.ObjectTagging;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
+import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import org.springframework.stereotype.Service;
@@ -24,9 +27,15 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
+import software.amazon.awssdk.services.s3.model.Tagging;
+
+import java.util.concurrent.CompletableFuture;
+
+import static it.pagopa.pnss.common.Constant.STORAGETYPE;
 
 
 @Service
@@ -35,16 +44,22 @@ public class DocumentServiceImpl implements DocumentService {
 
     private final ObjectMapper objectMapper;
 
+    private final AwsConfigurationProperties awsConfigurationProperties;
+
+    private final BucketName bucketName;
+
     private final DynamoDbAsyncTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
 
     private final DocTypesService docTypesService;
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService) {
+                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService, AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName) {
         this.docTypesService = docTypesService;
+        this.bucketName = bucketName;
         this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
                                                                                   TableSchema.fromBean(DocumentEntity.class));
         this.objectMapper = objectMapper;
+        this.awsConfigurationProperties = awsConfigurationProperties;
     }
 
     private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
@@ -141,8 +156,9 @@ public class DocumentServiceImpl implements DocumentService {
                        }
                        log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
 
-                       Region region = Region.EU_CENTRAL_1;
-                       S3Client s3 = S3Client.builder()
+                       log.info("patchDocument() : start Tagging");
+                       Region region = Region.of(awsConfigurationProperties.regionCode());
+                       S3AsyncClient s3 = S3AsyncClient.builder()
                                .region(region)
                                .build();
                        String storageType;
@@ -150,17 +166,19 @@ public class DocumentServiceImpl implements DocumentService {
                        if(documentEntityStored.getDocumentType().getStatuses().containsKey(documentEntityStored.getDocumentLogicalState())){
                            storageType =  documentEntityStored.getDocumentType().getStatuses().get(documentEntityStored.getDocumentLogicalState()).getStorage();
                             putObjectTaggingRequest = PutObjectTaggingRequest.builder()
+                                    .bucket(bucketName.ssHotName())
                                    .key(documentKey)
-                                   .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> setTag.value(storageType)))
+                                   .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
+                                       setTag.key(STORAGETYPE);
+                                       setTag.value(storageType);
+                                   }))
                                    .build();
+                           CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse = s3.putObjectTagging(putObjectTaggingRequest);
+                           log.info("patchDocument() : Tagging : storageType {}", storageType);
                        } else {
-                            putObjectTaggingRequest = PutObjectTaggingRequest.builder()
-                                   .key(documentKey)
-                                   .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> setTag.value("")))
-                                   .build();
+                           log.info("patchDocument() : Tagging : storageTypeEmpty");
                        }
-                       PutObjectTaggingResponse putObjectTaggingResponse = s3.putObjectTagging(putObjectTaggingRequest);
-
+                       log.info("patchDocument() : end Tagging");
                        return documentEntityStored;
                    })
                    .doOnError(IllegalArgumentException.class, throwable -> log.error(throwable.getMessage()))

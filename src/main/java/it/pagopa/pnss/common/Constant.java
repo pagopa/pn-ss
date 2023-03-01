@@ -21,7 +21,7 @@ public class Constant {
     public static final String PRELOADED = "PRELOADED";
     public static final String ATTACHED = "ATTACHED";
 
-    public static final String STORAGETYPE = "storageType=";
+    public static final String STORAGETYPE = "storageType";
     public static final String SAVED ="SAVED";
 
     public static final String BOOKED ="BOOKED";

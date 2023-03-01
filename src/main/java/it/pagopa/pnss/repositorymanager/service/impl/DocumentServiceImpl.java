@@ -1,5 +1,6 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
+import com.amazonaws.services.s3.AmazonS3Client;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
@@ -21,6 +22,12 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
+
 
 @Service
 @Slf4j
@@ -133,6 +140,27 @@ public class DocumentServiceImpl implements DocumentService {
                     	   documentEntityStored.setContentLenght(documentChanges.getContentLenght());
                        }
                        log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
+
+                       Region region = Region.EU_CENTRAL_1;
+                       S3Client s3 = S3Client.builder()
+                               .region(region)
+                               .build();
+                       String storageType;
+                       PutObjectTaggingRequest putObjectTaggingRequest;
+                       if(documentEntityStored.getDocumentType().getStatuses().containsKey(documentEntityStored.getDocumentLogicalState())){
+                           storageType =  documentEntityStored.getDocumentType().getStatuses().get(documentEntityStored.getDocumentLogicalState()).getStorage();
+                            putObjectTaggingRequest = PutObjectTaggingRequest.builder()
+                                   .key(documentKey)
+                                   .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> setTag.value(storageType)))
+                                   .build();
+                       } else {
+                            putObjectTaggingRequest = PutObjectTaggingRequest.builder()
+                                   .key(documentKey)
+                                   .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> setTag.value("")))
+                                   .build();
+                       }
+                       PutObjectTaggingResponse putObjectTaggingResponse = s3.putObjectTagging(putObjectTaggingRequest);
+
                        return documentEntityStored;
                    })
                    .doOnError(IllegalArgumentException.class, throwable -> log.error(throwable.getMessage()))

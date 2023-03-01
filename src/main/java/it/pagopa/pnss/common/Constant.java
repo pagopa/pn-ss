@@ -38,4 +38,5 @@ public class Constant {
     public static final String technicalStatus_available="available";
 
     public static final String EVEN_BUS_SOURCE_AVAILABLE_DOCUMENT = "AVAILABLE DOCUMENT";
+    public static final String GESTORE_DISPONIBILITA_EVENT_NAME = "GESTORE DISPONIBILITA";
 }

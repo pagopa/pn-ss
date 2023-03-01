@@ -1,18 +1,19 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
-import java.time.Instant;
+import static it.pagopa.pnss.common.Constant.STORAGETYPE;
+
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import ch.qos.logback.classic.Logger;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.common.retention.RetentionService;
+import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
@@ -28,7 +29,11 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
+
 
 @Service
 @Slf4j
@@ -38,16 +43,19 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 	private final DynamoDbAsyncTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
 	private final DocTypesService docTypesService;
 	private final RetentionService retentionService;
+	private final AwsConfigurationProperties awsConfigurationProperties;
 	private final BucketName bucketName;
 
 	public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
 			RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
-			RetentionService retentionService, BucketName bucketName) {
+			RetentionService retentionService, AwsConfigurationProperties awsConfigurationProperties,
+			BucketName bucketName) {
 		this.docTypesService = docTypesService;
 		this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient
 				.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
 		this.objectMapper = objectMapper;
 		this.retentionService = retentionService;
+		this.awsConfigurationProperties = awsConfigurationProperties;
 		this.bucketName = bucketName;
 	}
 
@@ -103,67 +111,84 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 				}).thenReturn(resp);
 	}
 
-	@Override
-	public Mono<Document> patchDocument(
-			String documentKey, DocumentChanges documentChanges,
+    @Override
+    public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges,
 			String authPagopaSafestorageCxId, String authApiKey) {
-		log.info("patchDocument() : IN : documentKey : {} , documentChanges {}", documentKey, documentChanges);
-		
-		return Mono
-				.fromCompletionStage(
-						documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
-				.switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-				.doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
-				.map(documentEntityStored -> {
-					if (documentChanges == null) {
-						return documentEntityStored;
-					}
-					log.info("patchDocument() : documentEntityStored : {}", documentEntityStored);
-					if (documentChanges.getDocumentState() != null) {
-						// stato tecnico
-						documentEntityStored.setDocumentState(documentChanges.getDocumentState());
-						// stato logico
-						if (documentChanges.getDocumentState().equalsIgnoreCase("available")) {
-							if (documentEntityStored.getDocumentType().getTipoDocumento()
-									.equalsIgnoreCase("PN_NOTIFICATION_ATTACHMENTS")) {
-								documentEntityStored.setDocumentLogicalState("PRELOADED");
-							} else {
-								documentEntityStored.setDocumentLogicalState("SAVED");
-							}
-						}
-						if (documentChanges.getDocumentState().equalsIgnoreCase("attached")) {
-							if (documentEntityStored.getDocumentType().getTipoDocumento()
-									.equalsIgnoreCase("PN_NOTIFICATION_ATTACHMENTS")) {
-								documentEntityStored.setDocumentLogicalState("ATTACHED");
-							} else {
-								throw new IllegalDocumentStateException(
-										"Document State inserted is invalid for present document type");
-							}
-						}
-					}
-					if (documentChanges.getRetentionUntil() != null) {
-						documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
-					}
-					if (documentChanges.getCheckSum() != null) {
-						documentEntityStored.setCheckSum(documentChanges.getCheckSum());
-					}
-					if (documentChanges.getContentLenght() != null) {
-						documentEntityStored.setContentLenght(documentChanges.getContentLenght());
-					}
-					log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
-					return documentEntityStored;
-				})
-				.doOnError(IllegalArgumentException.class, throwable -> log.error(throwable.getMessage()))
-				.flatMap(documentEntityStored -> {
-					log.info("patchDocument() : retention period : PRE");
-					return retentionService.setRetentionPeriodInBucketObjectMetadata(
-																			authPagopaSafestorageCxId, authApiKey, 
-																			documentEntityStored);
-				})
-				.zipWhen(documentUpdated -> Mono
-						.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
-				.map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
-	}
+        log.info("patchDocument() : IN : documentKey : {} , documentChanges {}", documentKey, documentChanges);
+        
+        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
+                   .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
+                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
+                   .map(documentEntityStored -> {
+                	   if (documentChanges == null) {
+                		   return documentEntityStored;
+                	   }
+                       log.info("patchDocument() : documentEntityStored : {}", documentEntityStored);
+                       if (documentChanges.getDocumentState() != null) {
+                           documentEntityStored.setDocumentState(documentChanges.getDocumentState());
+                       }
+                       if(documentChanges.getDocumentState().equalsIgnoreCase("available")) {
+                           if(documentEntityStored.getDocumentType().getTipoDocumento().equalsIgnoreCase("PN_NOTIFICATION_ATTACHMENTS")) {
+                               documentEntityStored.setDocumentLogicalState("PRELOADED");
+                           } else {
+                               documentEntityStored.setDocumentLogicalState("SAVED");
+                           }
+                       }
+                       if(documentChanges.getDocumentState().equalsIgnoreCase("attached")) {
+                           if(documentEntityStored.getDocumentType().getTipoDocumento().equalsIgnoreCase("PN_NOTIFICATION_ATTACHMENTS")) {
+                               documentEntityStored.setDocumentLogicalState("ATTACHED");
+                           } else {
+                               throw new IllegalDocumentStateException("Document State inserted is invalid for present document type");
+                           }
+                       }
+                       if (documentChanges.getRetentionUntil() != null && documentChanges.getRetentionUntil().isBlank()) {
+                    	   documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
+                       }
+                       if (documentChanges.getCheckSum() != null) {
+                    	   documentEntityStored.setCheckSum(documentChanges.getCheckSum());
+                       }
+                       if (documentChanges.getContentLenght() != null) {
+                    	   documentEntityStored.setContentLenght(documentChanges.getContentLenght());
+                       }
+                       log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
+
+                       log.info("patchDocument() : start Tagging");
+                       Region region = Region.of(awsConfigurationProperties.regionCode());
+                       S3AsyncClient s3 = S3AsyncClient.builder()
+                               .region(region)
+                               .build();
+                       String storageType;
+                       PutObjectTaggingRequest putObjectTaggingRequest;
+					   if(documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
+						   if (documentEntityStored.getDocumentType().getStatuses().containsKey(documentEntityStored.getDocumentLogicalState())) {
+							   storageType = documentEntityStored.getDocumentType().getStatuses().get(documentEntityStored.getDocumentLogicalState()).getStorage();
+							   putObjectTaggingRequest = PutObjectTaggingRequest.builder()
+									   .bucket(bucketName.ssHotName())
+									   .key(documentKey)
+									   .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
+										   setTag.key(STORAGETYPE);
+										   setTag.value(storageType);
+									   }))
+									   .build();
+							   CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse = s3.putObjectTagging(putObjectTaggingRequest);
+							   log.info("patchDocument() : Tagging : storageType {}", storageType);
+						   } else {
+							   log.info("patchDocument() : Tagging : storageTypeEmpty");
+						   }
+						   log.info("patchDocument() : end Tagging");
+					   }
+                       return documentEntityStored;
+                   })
+                   .doOnError(IllegalArgumentException.class, throwable -> log.error(throwable.getMessage()))
+                   .flatMap(documentEntityStored -> {
+						log.info("patchDocument() : retention period : PRE");
+						return retentionService.setRetentionPeriodInBucketObjectMetadata(
+																				authPagopaSafestorageCxId, authApiKey, 
+																				documentEntityStored);
+				   })
+                   .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
+                   .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
+    }
 
 	@Override
 	public Mono<Document> deleteDocument(String documentKey) {

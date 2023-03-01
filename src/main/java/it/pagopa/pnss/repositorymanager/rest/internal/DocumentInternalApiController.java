@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 
 import feign.Logger;
@@ -30,83 +31,82 @@ public class DocumentInternalApiController implements DocumentInternalApi {
     @Value("${header.x-pagopa-safestorage-cx-id}")
     private String xPagopaSafestorageCxId;
 
-    private final DocumentService documentService;
+	private final DocumentService documentService;
 
-    public DocumentInternalApiController(DocumentService documentService) {
-        this.documentService = documentService;
-    }
+	public DocumentInternalApiController(DocumentService documentService) {
+		this.documentService = documentService;
+	}
 
-    private DocumentResponse getResponse(Document document) {
-        DocumentResponse response = new DocumentResponse();
-        response.setDocument(document);
-        return response;
-    }
-    
-    private Mono<ResponseEntity<DocumentResponse>> buildErrorResponse(HttpStatus httpStatus, String errorMsg) {
-    	DocumentResponse response = new DocumentResponse();
-    	response.setError(new Error());
-    	response.getError().setDescription(errorMsg);
-    	return Mono.just(ResponseEntity.status(httpStatus).body(response));
-    }
-    
-    private Mono<ResponseEntity<DocumentResponse>> buildErrorResponse(HttpStatus httpStatus, Throwable throwable) {
-    	DocumentResponse response = new DocumentResponse();
-    	response.setError(new Error());
-    	response.getError().setDescription(throwable.getMessage());
-    	return Mono.just(ResponseEntity.status(httpStatus).body(response));
-    }
+	private DocumentResponse getResponse(Document document) {
+		DocumentResponse response = new DocumentResponse();
+		response.setDocument(document);
+		return response;
+	}
 
-    private Mono<ResponseEntity<DocumentResponse>> getResponse(String documentKey, Throwable throwable) {
-        DocumentResponse response = new DocumentResponse();
-        response.setError(new Error());
+	private Mono<ResponseEntity<DocumentResponse>> buildErrorResponse(HttpStatus httpStatus, String errorMsg) {
+		DocumentResponse response = new DocumentResponse();
+		response.setError(new Error());
+		response.getError().setDescription(errorMsg);
+		return Mono.just(ResponseEntity.status(httpStatus).body(response));
+	}
 
-        response.getError().setDescription(throwable.getMessage());
+	private Mono<ResponseEntity<DocumentResponse>> buildErrorResponse(HttpStatus httpStatus, Throwable throwable) {
+		DocumentResponse response = new DocumentResponse();
+		response.setError(new Error());
+		response.getError().setDescription(throwable.getMessage());
+		return Mono.just(ResponseEntity.status(httpStatus).body(response));
+	}
 
-        if (throwable instanceof ItemAlreadyPresent) {
-            String errorMsg = documentKey == null ? 
-            		"Document already present" : 
-            		String.format("Document with id %s already present", documentKey);
-            return buildErrorResponse(HttpStatus.CONFLICT, errorMsg);
-        } else if (throwable instanceof DocumentKeyNotPresentException) {
-            String errorMsg = documentKey == null ? 
-            		"Document not found" : 
-            		String.format("Document with id %s not found", documentKey);
-            return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
-        } else if (throwable instanceof RepositoryManagerException || throwable instanceof IllegalDocumentStateException) {
-        	return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
-        }
-        else if(throwable instanceof DocumentTypeNotPresentException) {
-            String errorMsg = "Document type invalide";
-            return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMsg);
-        }
-        else {
-        	log.info("getErrorResponse() : other");
-        	log.error("errore",throwable);
-        	return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
-        }
-    }
+	private Mono<ResponseEntity<DocumentResponse>> getResponse(String documentKey, Throwable throwable) {
+		DocumentResponse response = new DocumentResponse();
+		response.setError(new Error());
 
-    @Override
-    public Mono<ResponseEntity<DocumentResponse>> getDocument(String documentKey, final ServerWebExchange exchange) {
+		response.getError().setDescription(throwable.getMessage());
 
-        return documentService.getDocument(documentKey)
-                              .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
-                              .onErrorResume(throwable -> getResponse(documentKey, throwable));
+		if (throwable instanceof ItemAlreadyPresent) {
+			String errorMsg = documentKey == null ? "Document already present"
+					: String.format("Document with id %s already present", documentKey);
+			return buildErrorResponse(HttpStatus.CONFLICT, errorMsg);
+		} else if (throwable instanceof DocumentKeyNotPresentException) {
+			String errorMsg = documentKey == null ? "Document not found"
+					: String.format("Document with id %s not found", documentKey);
+			return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
+		} else if (throwable instanceof RepositoryManagerException
+				|| throwable instanceof IllegalDocumentStateException) {
+			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
+		} else if (throwable instanceof DocumentTypeNotPresentException) {
+			String errorMsg = "Document type invalide";
+			return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMsg);
+		} else {
+			log.info("getErrorResponse() : other");
+			log.error("errore", throwable);
+			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
+		}
+	}
 
-    }
+	@Override
+	public Mono<ResponseEntity<DocumentResponse>> getDocument(String documentKey, final ServerWebExchange exchange) {
 
-    @Override
-    public Mono<ResponseEntity<DocumentResponse>> insertDocument(Mono<DocumentInput> document, final ServerWebExchange exchange) {
+		return documentService.getDocument(documentKey)
+				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
+				.onErrorResume(throwable -> getResponse(documentKey, throwable));
 
-        return document.flatMap(documentService::insertDocument)
-                       .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
-                       .onErrorResume(throwable -> getResponse(null, throwable));
+	}
 
-    }
+	@Override
+	public Mono<ResponseEntity<DocumentResponse>> insertDocument(Mono<DocumentInput> document,
+			final ServerWebExchange exchange) {
 
-    @Override
-    public Mono<ResponseEntity<DocumentResponse>> patchDoc(String documentKey, Mono<DocumentChanges> documentChanges, final ServerWebExchange exchange) {
-    	
+		return document.flatMap(documentService::insertDocument)
+				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
+				.onErrorResume(throwable -> getResponse(null, throwable));
+
+	}
+
+	@Override
+	public Mono<ResponseEntity<DocumentResponse>> patchDoc(String documentKey, Mono<DocumentChanges> documentChanges,
+			final ServerWebExchange exchange) {
+
     	String xPagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(xPagopaSafestorageCxId);
     	String xApiKeyValue = exchange.getRequest().getHeaders().getFirst(xApiKey);
 
@@ -117,14 +117,14 @@ public class DocumentInternalApiController implements DocumentInternalApi {
                        .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
                        .onErrorResume(throwable -> getResponse(documentKey, throwable));
 
-    }
+	}
 
-    @Override
-    public Mono<ResponseEntity<DocumentResponse>> deleteDocument(String documentKey, final ServerWebExchange exchange) {
+	@Override
+	public Mono<ResponseEntity<Void>> deleteDocument(String documentKey, final ServerWebExchange exchange) {
 
-        return documentService.deleteDocument(documentKey)
-                              .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
-                              .onErrorResume(throwable -> getResponse(documentKey, throwable));
+		return documentService.deleteDocument(documentKey).map(docType -> ResponseEntity.noContent().<Void>build())
+				.onErrorResume(DocumentKeyNotPresentException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+						throwable.getMessage(), throwable.getCause())));
 
-    }
+	}
 }

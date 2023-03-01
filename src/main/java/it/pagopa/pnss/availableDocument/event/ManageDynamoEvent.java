@@ -10,18 +10,25 @@ import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 import java.util.Date;
 import java.util.Map;
 
-import static it.pagopa.pnss.common.Constant.AVAILABLE;
-import static it.pagopa.pnss.common.Constant.EVEN_BUS_SOURCE_AVAILABLE_DOCUMENT;
+import static it.pagopa.pnss.common.Constant.*;
 
 public class ManageDynamoEvent {
 
 
+    public static final String DOCUMENTSTATE_KEY = "documentState";
+    public static final String DOCUMENTKEY_KEY = "documentKey";
+    public static final String DOCUMENTTYPE_KEY = "documentType";
+    public static final String TIPODOCUMENTO_KEY = "tipoDocumento";
+    public static final String DOCUMENTLOGICALSTATE_KEY = "documentLogicalState";
+    public static final String CHECKSUM_KEY = "checksum";
+    public static final String RETENTIONUNTIL_KEY = "retentionUntil";
+    public static final String CONTENTTYPE_KEY = "contentType";
+    public static final String CLIENTSHORTCODE_KEY = "clientShortCode";
 
-    public PutEventsRequestEntry manageItem(AmazonDynamoDB dynamoDBClient, String tableName,
-                                            String disponibilitaDocumentiEventBridge, Map<String, AttributeValue> newImage,
+    public PutEventsRequestEntry manageItem(String disponibilitaDocumentiEventBridge, Map<String, AttributeValue> newImage,
                                             Map<String, AttributeValue> oldImage) {
-        String oldDocumentState = oldImage.get("documentState").getS();
-        String newDocumentState = newImage.get("documentState").getS();
+        String oldDocumentState = oldImage.get(DOCUMENTSTATE_KEY).getS();
+        String newDocumentState = newImage.get(DOCUMENTSTATE_KEY).getS();
 
         if (!oldDocumentState.equalsIgnoreCase(newDocumentState) && newDocumentState.equalsIgnoreCase(AVAILABLE)){
             return  createMessage(newImage, disponibilitaDocumentiEventBridge);
@@ -36,25 +43,25 @@ public class ManageDynamoEvent {
 
         NotificationMessage message = new NotificationMessage();
 
-        message.setKey(docEntity.get("documentKey").getS());
+        message.setKey(docEntity.get(DOCUMENTKEY_KEY).getS());
         message.setVersionId("01");
 
-        message.setDocumentType(docEntity.get("documentType").getM()!=null && docEntity.get("documentType").getM().get("tipoDocumento")!=null ?
-                docEntity.get("documentType").getM().get("tipoDocumento").getS():null);
+        message.setDocumentType(docEntity.get(DOCUMENTTYPE_KEY).getM()!=null && docEntity.get(DOCUMENTTYPE_KEY).getM().get(TIPODOCUMENTO_KEY)!=null ?
+                docEntity.get(DOCUMENTTYPE_KEY).getM().get(TIPODOCUMENTO_KEY).getS():null);
 
-        message.setDocumentStatus(docEntity.get("documentLogicalState")!=null ? docEntity.get("documentLogicalState").getS():null);
-        message.setContentType(docEntity.get("contentType")!=null ? docEntity.get("contentType").getS():null);
+        message.setDocumentStatus(docEntity.get(DOCUMENTLOGICALSTATE_KEY)!=null ? docEntity.get(DOCUMENTLOGICALSTATE_KEY).getS():null);
+        message.setContentType(docEntity.get(CONTENTTYPE_KEY)!=null ? docEntity.get(CONTENTTYPE_KEY).getS():null);
 
-        message.setChecksum(docEntity.get("documentType").getM()!=null && docEntity.get("documentType").getM().get("checksum")!=null ?
-                docEntity.get("documentType").getM().get("checksum").getS():null);
+        message.setChecksum(docEntity.get(DOCUMENTTYPE_KEY).getM()!=null && docEntity.get(DOCUMENTTYPE_KEY).getM().get(CHECKSUM_KEY)!=null ?
+                docEntity.get(DOCUMENTTYPE_KEY).getM().get(CHECKSUM_KEY).getS():null);
 
-        message.setRetentionUntil(docEntity.get("retentionUntil")!=null ? docEntity.get("retentionUntil").getS(): null);
-        message.setClientShortCode(docEntity.get("clientShortCode")!=null ? docEntity.get("clientShortCode").getS(): null);
+        message.setRetentionUntil(docEntity.get(RETENTIONUNTIL_KEY)!=null ? docEntity.get(RETENTIONUNTIL_KEY).getS(): null);
+        message.setClientShortCode(docEntity.get(CLIENTSHORTCODE_KEY)!=null ? docEntity.get(CLIENTSHORTCODE_KEY).getS(): null);
         ObjectMapper objMap = new ObjectMapper();
 
         try {
             String event = objMap.writeValueAsString(message);
-            return creatPutEventRequestEntry(event,docEntity.get("documentKey").getS(), disponibilitaDocumentiEventBridge );
+            return creatPutEventRequestEntry(event,docEntity.get(DOCUMENTKEY_KEY).getS(), disponibilitaDocumentiEventBridge );
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -63,7 +70,7 @@ public class ManageDynamoEvent {
     private PutEventsRequestEntry creatPutEventRequestEntry(String event, String detailType, String disponibilitaDocumentiEventBridge) {
         return  PutEventsRequestEntry.builder()
                 .time(new Date().toInstant())
-                .source("GESTORE DISPONIBILITA")
+                .source(GESTORE_DISPONIBILITA_EVENT_NAME)
                 .detailType(EVEN_BUS_SOURCE_AVAILABLE_DOCUMENT)
                 .eventBusName(disponibilitaDocumentiEventBridge)
 

@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.common.Constant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
@@ -23,7 +22,6 @@ import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 
 @Service
@@ -86,7 +84,7 @@ public class OrchestratorSignDocument {
                         }
                         byte[] fileSigned = signReturnV2.getBinaryoutput();
                         
-                        return uploadObjectService.execute(key, fileSigned, documentResponse.getDocument().getDocumentState(), documentResponse.getDocument().getDocumentType());
+                        return uploadObjectService.execute(key, fileSigned);
 
                     }catch (NoSuchBucketException nsbe){
                         throw new S3BucketException.BucketNotPresentException(nsbe.getMessage());

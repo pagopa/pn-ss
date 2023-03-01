@@ -32,7 +32,6 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
-import it.pagopa.pnss.common.retention.RetentionService;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +40,7 @@ import reactor.util.retry.Retry;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
@@ -50,9 +50,6 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 @Service
 @Slf4j
 public class UriBuilderService {
-	
-	@Value("${object.lock.retention.mode}")
-	private String objectLockRetentionMode;
 
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
@@ -62,16 +59,17 @@ public class UriBuilderService {
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
     
-    private final RetentionService retentionService;
+//    private final RetentionService retentionService;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName,
-                             RetentionService retentionService) {
+                             AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName
+                             // , RetentionService retentionService
+                             ) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.awsConfigurationProperties = awsConfigurationProperties;
         this.bucketName = bucketName;
-        this.retentionService = retentionService;
+//        this.retentionService = retentionService;
     }
 
     private Map<String, String> mapDocumentTypeToBucket;
@@ -85,8 +83,7 @@ public class UriBuilderService {
                                                 entry(PN_DOWNTIME_LEGAL_FACTS, bucketName.ssStageName()));
     }
 
-    public Mono<FileCreationResponse> createUriForUploadFile(String xPagopaSafestorageCxId, FileCreationRequest request,
-    		String authPagopaSafestorageCxId, String authApiKey) {
+    public Mono<FileCreationResponse> createUriForUploadFile(String xPagopaSafestorageCxId, FileCreationRequest request) {
 
         var contentType = request.getContentType();
         var documentType = request.getDocumentType();
@@ -132,9 +129,7 @@ public class UriBuilderService {
                             		   		  insertedDocument.getDocument().getDocumentState(), 
                             		   		  insertedDocument.getDocument().getDocumentKey(), 
                             		   		  contentType, 
-                            		   		  metadata,
-                            		   		  authPagopaSafestorageCxId,
-                            		   		  authApiKey)
+                            		   		  metadata)
                                .map(presignedPutObjectRequest -> {
                                    FileCreationResponse response = new FileCreationResponse();
                                    response.setKey(insertedDocument.getDocument().getDocumentKey());
@@ -184,8 +179,7 @@ public class UriBuilderService {
     }
 
     private Mono<PresignedPutObjectRequest> buildsUploadUrl(String documentType, String documentState, String documentKey, 
-    		String contentType, Map<String, String> secret, 
-    		String authPagopaSafestorageCxId, String authApiKey) {
+    		String contentType, Map<String, String> secret) {
     	log.info("buildsUploadUrl() : START : documentType {} : documentState {} : documentKey {} : contentType {} : secret {}",
     			documentType, documentState, documentKey, contentType, secret);
 
@@ -197,9 +191,7 @@ public class UriBuilderService {
         				  documentState, 
         				  documentType, 
         				  contentType, 
-        				  secret,
-        				  authPagopaSafestorageCxId,
-        				  authApiKey)
+        				  secret)
         		.onErrorResume(AmazonServiceException.class, throvable -> {
         			log.error("buildsUploadUrl() : Errore AMAZON AmazonServiceException : {}", throvable.getMessage(), throvable);
         			return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException "));
@@ -235,28 +227,42 @@ public class UriBuilderService {
 
     private Mono<PresignedPutObjectRequest> signBucket(S3Presigner s3Presigner, String bucketName, 
     		String documentKey, String documentState, String documentType,
-    		String contenType, Map<String,String> secret,
-    		String authPagopaSafestorageCxId, String authApiKey) {
+    		String contenType, Map<String,String> secret) {
 
     	log.debug("signBucket() : START : s3Presigner IN : bucketName {} : keyName {} : documentState {} : documentType {} : contenType {} : secret {}",
     			bucketName, documentKey, documentState, documentType, contenType, secret);
     	log.info("signBucket() : sign bucket {}", duration);
     	
-    	return retentionService.getPutObjectRequestForPresignRequest(bucketName,
-    																documentKey,
-    																contenType,
-    																secret,
-    																documentState,
-    																documentType,
-    																authPagopaSafestorageCxId,
-    																authApiKey)
-	    		.map(putObjectRequest -> PutObjectPresignRequest.builder()
-											                .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
-											                .putObjectRequest(putObjectRequest)
-											                .build()
-	    		)
-	    		.flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest)))
-	    		;
+    	return Mono.just(PutObjectRequest.builder()
+							 .bucket(bucketName)
+							 .key(documentKey)
+							 .contentType(contenType)
+							 .metadata(secret)
+			                //.tagging(storageType)
+							 .build())
+    				.map(putObjectRequest -> PutObjectPresignRequest.builder()
+					        .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
+					        .putObjectRequest(putObjectRequest)
+					        .build()
+					)
+					.flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest)));
+		    	
+    	
+//    	return retentionService.getPutObjectRequestForPresignRequest(bucketName,
+//    																documentKey,
+//    																contenType,
+//    																secret,
+//    																documentState,
+//    																documentType,
+//    																authPagopaSafestorageCxId,
+//    																authApiKey)
+//	    		.map(putObjectRequest -> PutObjectPresignRequest.builder()
+//											                .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
+//											                .putObjectRequest(putObjectRequest)
+//											                .build()
+//	    		)
+//	    		.flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest)))
+//	    		;
     }
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly) {

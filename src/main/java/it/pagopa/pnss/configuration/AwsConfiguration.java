@@ -3,14 +3,36 @@ package it.pagopa.pnss.configuration;
 import java.net.URI;
 import java.util.Collections;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
+import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBStreams;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBStreamsClientBuilder;
+import com.amazonaws.services.dynamodbv2.streamsadapter.AmazonDynamoDBStreamsAdapterClient;
+import com.amazonaws.services.dynamodbv2.streamsadapter.StreamsWorkerFactory;
+import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory;
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.core.QueueMessagingTemplate;
+import it.pagopa.pnss.availableDocument.event.StreamsRecordProcessorFactory;
+import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
+import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.handler.annotation.support.PayloadMethodArgumentResolver;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
@@ -56,6 +78,12 @@ public class AwsConfiguration {
     @Value("${test.aws.sns.endpoint:#{null}}")
     String snsLocalStackEndpoint;
 
+    @Value("${test.event.bridge:#{null}}")
+    private String testEventBridge;
+    @Autowired
+    DynamoEventStreamName dynamoEventStreamName;
+    @Autowired
+    AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
     private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
 
@@ -153,4 +181,47 @@ public class AwsConfiguration {
 
         return snsAsyncClientBuilder.build();
     }
+
+
+
+    @Bean
+    public TaskExecutor taskExecutor() {
+        return new SimpleAsyncTaskExecutor(); // Or use another one of your liking
+    }
+    @Bean
+    public CommandLineRunner schedulingRunner(TaskExecutor executor) {
+        return new CommandLineRunner() {
+            public void run(String... args) throws Exception {
+                AWSCredentialsProvider awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
+                AmazonDynamoDB amazonDynamoDB = AmazonDynamoDBClientBuilder.standard()
+                        .withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id())
+                        .build();
+                AmazonCloudWatch cloudWatchClient = AmazonCloudWatchClientBuilder.standard()
+                        .withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id())
+                        .build();
+                AmazonDynamoDBStreams dynamoDBStreamsClient = AmazonDynamoDBStreamsClientBuilder.standard()
+                        .withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id())
+                        .build();
+                AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
+                KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(
+                        "streams-adapter-demo",
+                        //"arn:aws:dynamodb:eu-central-1:713024823233:table/dgs-bing-ss-PnSsTableDocumenti-1TTOSMTT2OCLC/stream/2023-02-08T18:29:08.530",
+                        dynamoEventStreamName.documentName(),
+                        awsCredentialsProvider,
+                        "streams-demo-worker")
+                        .withMaxLeaseRenewalThreads(5000)
+                        .withMaxLeasesForWorker(5000)
+                        .withMaxRecords(1000)
+                        .withIdleTimeBetweenReadsInMillis(500)
+                        .withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
+
+                IRecordProcessorFactory recordProcessorFactory = new StreamsRecordProcessorFactory( availabelDocumentEventBridgeName.disponibilitaDocumentiName());
+                Worker worker  = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory, workerConfig, adapterClient, amazonDynamoDB, cloudWatchClient);
+                if (testEventBridge==null) {
+                    executor.execute(worker);
+                }
+            }
+        };
+    }
+
 }

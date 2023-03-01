@@ -158,7 +158,7 @@ Resources:
       #  LogFilePrefix: 'String'
       # MetricsConfigurations:
       #  MetricsConfigurations
-      # NotificationConfiguration:
+      NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
             Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'

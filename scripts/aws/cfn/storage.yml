@@ -15,7 +15,7 @@ Parameters:
   TemplateBucketBaseUrl:
     Type: String
     Description: URL da cui caricare i frammenti di template di infrastruttura
-  
+
   Version:
     Type: String
     Description: 'keep track of used projects commitIds'
@@ -24,10 +24,18 @@ Parameters:
   #   Type: String
   #   Description: 'Where to send CDC'
 
-  PnSsGestoreBucketLambdaName:
+  PnSsGestoreBucketLambdaNameIn:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
     Default: 'pn-safe-storage-gestore-bucket-lambda'
+
+  DeployEnv:
+    Type: String
+    Description: Nome dell'ambiente destinazione
+    Default: DEV
+
+Conditions:
+  IsProdEnv: !Equals ['PROD', !Ref DeployEnv]
 
 Resources:
   # NullResource:
@@ -122,51 +130,58 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_TEMPORARY_DOCUMENT'
           - Id: 'PnSsNotificationAttachment'
-            ExpirationInDays: 120
+            ExpirationInDays: 1
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'
                 Value: 'PN_NOTIFIED_DOCUMENT'
           - Id: 'PnSsAar'
-            ExpirationInDays: 3650
+            ExpirationInDays: 2
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
               - StorageClass: 'DEEP_ARCHIVE'
-                TransitionInDays: 10
+                TransitionInDays: 1
           - Id: 'PnSsLegalFacts'
-            ExpirationInDays: 3650
+            ExpirationInDays: 2
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
               - StorageClass: 'DEEP_ARCHIVE'
-                TransitionInDays: 120
+                TransitionInDays: 1
       #LoggingConfiguration:
       #  DestinationBucketName: 'String'
       #  LogFilePrefix: 'String'
-      #MetricsConfigurations:
+      # MetricsConfigurations:
       #  MetricsConfigurations
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaName}'
+            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
           - Event: 's3:ObjectRemoved:Delete'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaName}'
+            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
           - Event: 's3:ObjectRestore:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaName}'
+            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
           - Event: 's3:LifecycleExpiration:Delete'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaName}'
+            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
           - Event: 's3:LifecycleTransition'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaName}'
+            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
           # - Event: 's3:Replication'
-          #   Function: !GetAtt PnSsGestoreBucket.Arn
-      #ObjectLockConfiguration:
-      #  ObjectLockEnabled: 'String'
-      #ObjectLockEnabled: false
+            # Function: !GetAtt PnSsGestoreBucket.Arn
+      # ObjectLockEnabled: true
+      # ObjectLockConfiguration:
+      #   ObjectLockEnabled: 'Enabled'
+      #   Rule: 
+      #     DefaultRetention: 
+      #       Days: 1
+      #       Mode: !If [ IsProdEnv , 'COMPLIANCE' , 'GOVERNANCE']
+      #       # Years: 
+      VersioningConfiguration:
+        Status: Enabled
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
@@ -277,6 +292,10 @@ Outputs:
     Description: 'ARN della tabella SS Documenti'
     Value: !GetAtt PnSsTableDocumenti.Arn
 
+  PnSsTableDocumentiStreamArn:
+    Description: 'Nome tabella SS Documenti'
+    Value: !GetAtt PnSsTableDocumenti.StreamArn
+
   PnSsBucketName:
     Description: 'Nome Bucket SS'
     Value: !Ref PnSsBucket
@@ -311,4 +330,4 @@ Outputs:
 
   PnSsGestoreBucketLambdaName:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
-    Value: 'pn-safe-storage-gestore-bucket-lambda'
+    Value: !Ref PnSsGestoreBucketLambdaNameIn

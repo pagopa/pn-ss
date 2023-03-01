@@ -1,10 +1,37 @@
 package it.pagopa.pnss.transformation.services;
 
+import static it.pagopa.pnss.common.Constant.APPLICATION_PDF;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.mock.mockito.MockBean;
+
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
+import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfigurationStatuses;
+import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
+import it.pagopa.pn.template.rest.v1.dto.StorageConfiguration;
+import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.S3BucketException;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -14,40 +41,31 @@ import it.pagopa.pnss.transformation.model.Oggetto;
 import it.pagopa.pnss.transformation.model.S3ObjectCreated;
 import it.pagopa.pnss.transformation.service.DownloadObjectService;
 import it.pagopa.pnss.transformation.service.OrchestratorSignDocument;
-import it.pagopa.pnss.transformation.service.SignServiceSoap;
-import it.pagopa.pnss.transformation.sqsread.SQSConsumerService;
-import it.pagopa.pnss.transformation.wsdl.TypeOfTransportNotImplemented_Exception;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import it.pagopa.pnss.transformation.service.UploadObjectService;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-
-import javax.xml.bind.JAXBException;
-import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URI;
-
-import static it.pagopa.pnss.common.Constant.APPLICATION_PDF;
-import static it.pagopa.pnss.common.QueueNameConstant.SIGN_QUEUE_NAME;
-import static org.junit.Assert.*;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
+@Slf4j
 public class OrchestratorSignDocumentTest {
+		
+    @Value("${default.internal.x-api-key.value}")
+    private String defaultInteralApiKeyValue;
+
+    @Value("${default.internal.header.x-pagopa-safestorage-cx-id}")
+    private String defaultInternalClientIdValue;
+	
     @MockBean
     DocumentClientCall documentClientCall;
-
+    @MockBean
+    ConfigurationApiCall configurationApiCall;
 
     @Autowired
     OrchestratorSignDocument service;
@@ -58,6 +76,51 @@ public class OrchestratorSignDocumentTest {
     DownloadObjectService downloadObjectService;
     @Value("${test.aws.s3.endpoint:#{null}}")
     String testAwsS3Endpoint;
+    
+    private static final String tipoDocumentoPnNotificationAttachments = "PN_NOTIFICATION_ATTACHMENTS";
+    private static final String statoDocumentoPreloaded = "PRELOADED";
+    private static final String storageClassPnTemporaryDocument = "PN_TEMPORARY_DOCUMENT";
+    private static DocumentTypesConfigurations documentTypesConfigurationsReponse;
+    
+    @BeforeEach
+    private void createDocumentsConfigResponse() {
+    	
+    	List<String> listAllowedStatusTransition1 = new ArrayList<>();
+    	listAllowedStatusTransition1.add("ATTACHED");
+    	
+    	DocumentTypeConfigurationStatuses status1 = new DocumentTypeConfigurationStatuses();
+    	status1.setStorage(storageClassPnTemporaryDocument);
+    	status1.setAllowedStatusTransitions(listAllowedStatusTransition1);
+    	
+    	List<String> listAllowedStatusTransition2 = new ArrayList<>();
+    	
+    	DocumentTypeConfigurationStatuses status2 = new DocumentTypeConfigurationStatuses();
+    	status2.setStorage("PN_NOTIFIED_DOCUMENTS");
+    	status2.setAllowedStatusTransitions(listAllowedStatusTransition2);
+    	
+    	Map<String, DocumentTypeConfigurationStatuses> map = new HashMap<>();
+    	map.put(statoDocumentoPreloaded, status1);
+    	map.put("ATTACHED", status2);
+    	
+    	DocumentTypeConfiguration documentTypeConfiguration = new DocumentTypeConfiguration();
+    	documentTypeConfiguration.setName(tipoDocumentoPnNotificationAttachments);
+    	documentTypeConfiguration.setStatuses(map);
+    	
+    	List<DocumentTypeConfiguration> listDocumentTypeConfiguration = new ArrayList<>();
+    	listDocumentTypeConfiguration.add(documentTypeConfiguration);
+    	
+    	StorageConfiguration storageConfiguration = new StorageConfiguration();
+    	storageConfiguration.setName(storageClassPnTemporaryDocument);
+    	storageConfiguration.setHotPeriod("3d");
+    	storageConfiguration.setRetentionPeriod("3d");
+    	
+    	List<StorageConfiguration> listStorageConfiguration = new ArrayList<>();
+    	listStorageConfiguration.add(storageConfiguration);
+    	
+    	documentTypesConfigurationsReponse = new DocumentTypesConfigurations();
+    	documentTypesConfigurationsReponse.setDocumentsTypes(listDocumentTypeConfiguration);
+    	documentTypesConfigurationsReponse.setStorageConfigurations(listStorageConfiguration);
+    }
 
 
 
@@ -125,24 +188,32 @@ public class OrchestratorSignDocumentTest {
 
 
     @Test
-    public void readFileFromBucketStagingWriteBuckeHot(){
-        {
-
-
-            DocumentResponse docResp = new DocumentResponse();
-            Document doc =new Document();
-            DocumentType documentType = new DocumentType();
-            documentType.setDigitalSignature(true);
-            doc.setDocumentType(documentType);
-            doc.setContentType(APPLICATION_PDF);
-            docResp.setDocument(doc);
-            Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).getdocument(Mockito.any());
-            addFileToBucket("111-DDD");
-
-            Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).patchdocument(Mockito.any(),Mockito.any());
-
-            assertNull(service.incomingMessageFlow("111-DDD","dgs-bing-ss-pnssstagingbucket-28myu2kp62x9").block());
-        }
+    void readFileFromBucketStagingWriteBuckeHot() {
+    	
+    	log.debug("readFileFromBucketStagingWriteBuckeHot() : START : "
+    			+ "security configuration : defaultInternalClientIdValue {} : defaultInteralApiKeyValue {}",
+    			defaultInternalClientIdValue, defaultInteralApiKeyValue);
+    	
+    	Mockito.doReturn(Mono.just(documentTypesConfigurationsReponse)).when(configurationApiCall).getDocumentsConfigs(defaultInternalClientIdValue, defaultInteralApiKeyValue);
+		
+		DocumentType documentType = new DocumentType();
+		documentType.setTipoDocumento(tipoDocumentoPnNotificationAttachments);
+		documentType.setDigitalSignature(true);
+		Document doc = new Document();
+		doc.setDocumentKey("111-DDD");
+		doc.setDocumentType(documentType);
+		doc.setDocumentState(statoDocumentoPreloaded);
+		doc.setContentType(APPLICATION_PDF);
+		DocumentResponse docResp = new DocumentResponse();
+		docResp.setDocument(doc);
+		
+		Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).getdocument(Mockito.any());
+		
+		addFileToBucket("111-DDD");
+		
+		Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).patchdocument(Mockito.any(),Mockito.any());
+		
+		assertNull(service.incomingMessageFlow("111-DDD","dgs-bing-ss-pnssstagingbucket-28myu2kp62x9").block());
     }
 
 

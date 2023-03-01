@@ -39,4 +39,6 @@ public class Constant {
 
     public static final String technicalStatus_attached="attached";
     public static final String technicalStatus_available="available";
+
+    public static final String EVEN_BUS_SOURCE_AVAILABLE_DOCUMENT = "AVAILABLE DOCUMENT";
 }

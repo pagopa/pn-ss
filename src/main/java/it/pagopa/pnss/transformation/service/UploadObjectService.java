@@ -1,36 +1,51 @@
 package it.pagopa.pnss.transformation.service;
 
-import it.pagopa.pnss.configurationproperties.BucketName;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
+
+import it.pagopa.pnss.configurationproperties.BucketName;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
-import java.nio.ByteBuffer;
-
-import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.STORAGETYPE;
-
 @Service
-public class UploadObjectService  extends  CommonS3ObjectService {
+@Slf4j
+public class UploadObjectService extends CommonS3ObjectService {
 
+//	private final RetentionService retentionService;
+//
+//	public UploadObjectService(RetentionService retentionService) {
+//		this.retentionService = retentionService;
+//	}
 
 //    @Value("${S3.bucket.hot.name}")
 //    public  String bucketHot;
 
-    @Autowired
-    private BucketName bucketName;
-    public PutObjectResponse execute(String key, byte[] fileSigned){
-        S3Client s3 = getS3Client();
-        PutObjectRequest objectRequest = PutObjectRequest.builder()
-                .bucket(bucketName.ssHotName())
-                .key(key)
-                .build();
+	@Autowired
+	private BucketName bucketName;
 
-        PutObjectResponse putObjectResponse = s3.putObject(objectRequest, RequestBody.fromBytes(fileSigned));
-        return putObjectResponse;
-    }
+	public Mono<PutObjectResponse> execute(String documentKey, byte[] fileSigned) {
+		log.debug("UploadObjectService.execute() : documentKey {} : documentState {} : documentType {}", documentKey);
+
+		S3AsyncClient s3 = getS3AsynchClient();
+
+		return Mono.just(PutObjectRequest.builder()
+						         .bucket(bucketName.ssHotName())
+						         .contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(fileSigned))))
+						         .key(documentKey)
+						         .build())
+			.flatMap(putObjectRequest -> Mono.fromCompletionStage(s3.putObject(putObjectRequest, AsyncRequestBody.fromBytes(fileSigned))));
+
+//		return retentionService
+//				.getPutObjectRequestForObjectInBucket(bucketName.ssHotName(), fileSigned, documentKey, documentState,
+//						documentType.getTipoDocumento())
+//				.flatMap(objectRequest -> Mono
+//						.fromCompletionStage(s3.putObject(objectRequest, AsyncRequestBody.fromBytes(fileSigned))));
+
+	}
 }

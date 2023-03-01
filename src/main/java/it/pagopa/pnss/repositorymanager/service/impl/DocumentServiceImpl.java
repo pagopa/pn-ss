@@ -1,7 +1,5 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
-import com.amazonaws.services.lambda.runtime.events.ConnectEvent;
-import com.amazonaws.services.s3.model.ObjectTagging;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -62,59 +60,57 @@ public class DocumentServiceImpl implements DocumentService {
         this.awsConfigurationProperties = awsConfigurationProperties;
     }
 
-    private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
-        log.error("getErrorIdDocNotFoundException() : document with documentKey \"{}\" not found", documentKey);
-        return Mono.error(new DocumentKeyNotPresentException(documentKey));
-    }
+	private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
+		log.error("getErrorIdDocNotFoundException() : document with documentKey \"{}\" not found", documentKey);
+		return Mono.error(new DocumentKeyNotPresentException(documentKey));
+	}
 
-    @Override
-    public Mono<Document> getDocument(String documentKey) {
-        log.info("getDocument() : IN : documentKey {}", documentKey);
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
-                   .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
-                   .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class));
-    }
+	@Override
+	public Mono<Document> getDocument(String documentKey) {
+		log.info("getDocument() : IN : documentKey {}", documentKey);
+		return Mono
+				.fromCompletionStage(
+						documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
+				.switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
+				.doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
+				.map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class));
+	}
 
-    @Override
-    public Mono<Document> insertDocument(DocumentInput documentInput) {
-        log.info("insertDocument() : IN : documentInput : {}", documentInput);
-        Document resp = new Document();
-        if (documentInput == null) {
-            throw new RepositoryManagerException("Document is null");
-        }
-        if (documentInput.getDocumentKey() == null || documentInput.getDocumentKey().isBlank()) {
-            throw new RepositoryManagerException("Document Key is null");
-        }
-        String key = documentInput.getDocumentType();
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
-                        .partitionValue(documentInput.getDocumentKey())
-                        .build()))
-                .handle((documentFounded, sink) -> {
-                            if (documentFounded != null) {
-                                log.error("insertDocument() : document founded : {}", documentFounded);
-                                sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
-                            }
-                        }
-                )
-                .doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
-                .switchIfEmpty(Mono.just(documentInput))
-                .flatMap(o -> docTypesService.getDocType(key))
-                .flatMap(o -> {
-                    resp.setDocumentType(o);
-                    resp.setDocumentKey(documentInput.getDocumentKey());
-                    resp.setDocumentState(documentInput.getDocumentState());
-                    resp.setCheckSum(documentInput.getCheckSum());
-                    resp.setRetentionUntil(documentInput.getRetentionUntil());
-                    resp.setContentLenght(documentInput.getContentLenght());
-                    resp.setContentType(documentInput.getContentType());
-                    resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
-                    DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
-                    return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
-                            documentEntityInput)));
-                })
-                .thenReturn(resp);
-    }
+	@Override
+	public Mono<Document> insertDocument(DocumentInput documentInput) {
+		log.info("insertDocument() : IN : documentInput : {}", documentInput);
+		Document resp = new Document();
+		if (documentInput == null) {
+			throw new RepositoryManagerException("Document is null");
+		}
+		if (documentInput.getDocumentKey() == null || documentInput.getDocumentKey().isBlank()) {
+			throw new RepositoryManagerException("Document Key is null");
+		}
+		String key = documentInput.getDocumentType();
+		return Mono
+				.fromCompletionStage(documentEntityDynamoDbAsyncTable
+						.getItem(Key.builder().partitionValue(documentInput.getDocumentKey()).build()))
+				.handle((documentFounded, sink) -> {
+					if (documentFounded != null) {
+						log.error("insertDocument() : document founded : {}", documentFounded);
+						sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
+					}
+				}).doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
+				.switchIfEmpty(Mono.just(documentInput)).flatMap(o -> docTypesService.getDocType(key)).flatMap(o -> {
+					resp.setDocumentType(o);
+					resp.setDocumentKey(documentInput.getDocumentKey());
+					resp.setDocumentState(documentInput.getDocumentState());
+					resp.setCheckSum(documentInput.getCheckSum());
+					resp.setRetentionUntil(documentInput.getRetentionUntil());
+					resp.setContentLenght(documentInput.getContentLenght());
+					resp.setContentType(documentInput.getContentType());
+					resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
+					resp.setClientShortCode(documentInput.getClientShortCode());
+					DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
+					return Mono.fromCompletionStage(
+							documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(documentEntityInput)));
+				}).thenReturn(resp);
+	}
 
     @Override
     public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges) {
@@ -186,15 +182,16 @@ public class DocumentServiceImpl implements DocumentService {
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
     }
 
-    @Override
-    public Mono<Document> deleteDocument(String documentKey) {
-        log.info("deleteDocument() : IN : documentKey {}", documentKey);
-        Key typeKey = Key.builder().partitionValue(documentKey).build();
+	@Override
+	public Mono<Document> deleteDocument(String documentKey) {
+		log.info("deleteDocument() : IN : documentKey {}", documentKey);
+		Key typeKey = Key.builder().partitionValue(documentKey).build();
 
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(typeKey))
-                   .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
-                   .zipWhen(documentToDelete -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
-                   .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
-    }
+		return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(typeKey))
+				.switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
+				.doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
+				.zipWhen(documentToDelete -> Mono
+						.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
+				.map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
+	}
 }

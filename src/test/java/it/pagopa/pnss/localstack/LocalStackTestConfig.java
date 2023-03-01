@@ -83,6 +83,8 @@ public class LocalStackTestConfig {
         System.setProperty("aws.region",  localStackContainer.getRegion());
         System.setProperty("aws.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.secret.key", localStackContainer.getSecretKey());
+        System.setProperty("test.event.bridge", "true");
+
 //        System.setProperty("PnSsStagingBucketName","PnSsStagingBucketName");
 
         System.setProperty("PnSsStagingBucketArn","PnSsStagingBucketArn");
@@ -130,15 +132,24 @@ public class LocalStackTestConfig {
     public void initLocalStack() {
     	
     	//TODO aggiungere lifecycleRule per bucket relativo a PnSsBucketName
-    	List<String> allBucketNameList = List.of(bucketName.ssHotName(),bucketName.ssStageName());
-        log.info("initLocalStack() : allBucketNameList  {}", allBucketNameList);
-        for (String bucketName : allBucketNameList){
-        	try {
-        		localStackContainer.execInContainer("awslocal", "s3", "mb", "s3://" + bucketName);
-            } catch (IOException | InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+//    	List<String> allBucketNameList = List.of(bucketName.ssHotName(),bucketName.ssStageName());
+//        log.info("initLocalStack() : allBucketNameList  {}", allBucketNameList);
+    	try {
+    		localStackContainer.execInContainer("awslocal", "s3", "mb", "s3://" + bucketName.ssStageName());
+    		log.info("initLocalStack() : creato bucket  {}", bucketName.ssStageName());
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
         }
+        try {
+        	localStackContainer.execInContainer("awslocal", "s3api", "create-bucket", "--bucket", bucketName.ssHotName(), //"--object-lock-configuration",
+        			"--object-lock-enabled-for-bucket")
+        			//"{\"ObjectLockEnabled\": \"Enabled\",\"Rule\": {\"DefaultRetention\": {\"Mode\": \"GOVERNANCE\",\"Days\": 1,\"Years\": 0}}}")
+        	;
+        	log.info("initLocalStack() : creato bucket  {}", bucketName.ssHotName());
+        }
+        catch (IOException | InterruptedException e) {
+        	throw new RuntimeException(e);
+		}
     	
         Map<String, Class<?>> tableNameWithEntityClass =
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),

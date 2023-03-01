@@ -33,7 +33,7 @@ public class UploadObjectService extends CommonS3ObjectService {
 		log.debug("UploadObjectService.execute() : documentKey {} : documentState {} : documentType {}", documentKey);
 
 		S3AsyncClient s3 = getS3AsynchClient();
-		
+
 		return Mono.just(PutObjectRequest.builder()
 						         .bucket(bucketName.ssHotName())
 						         .contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(fileSigned))))

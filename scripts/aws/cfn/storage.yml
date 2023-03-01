@@ -292,6 +292,10 @@ Outputs:
     Description: 'ARN della tabella SS Documenti'
     Value: !GetAtt PnSsTableDocumenti.Arn
 
+  PnSsTableDocumentiStreamArn:
+    Description: 'Nome tabella SS Documenti'
+    Value: !GetAtt PnSsTableDocumenti.StreamArn
+
   PnSsBucketName:
     Description: 'Nome Bucket SS'
     Value: !Ref PnSsBucket

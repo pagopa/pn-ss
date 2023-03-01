@@ -14,6 +14,12 @@ import reactor.core.publisher.Mono;
 @Service
 public class ConfigurationApiCallImpl extends CommonBaseClient implements ConfigurationApiCall {
 	
+    @Value("${header.x-api-key}")
+    private String xApiKey;
+
+    @Value("${header.x-pagopa-safestorage-cx-id}")
+    private String xPagopaSafestorageCxId;
+	
 	private final WebClient.Builder ecInternalWebClient= WebClient.builder();
 
 	@Value("${gestore.repository.configuration.api.documents.config}")
@@ -21,13 +27,15 @@ public class ConfigurationApiCallImpl extends CommonBaseClient implements Config
 	
     public WebClient getWebClient(){
         WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
-        return builder.build();
+        return builder.baseUrl("http://localhost:8080").build();
     }
 
 	@Override
-	public Mono<DocumentTypesConfigurations> getDocumentsConfigs() {
+	public Mono<DocumentTypesConfigurations> getDocumentsConfigs(String authPagopaSafestorageCxId, String authApiKey) {
 		return getWebClient().get()
                 		.uri(configurationApiDocumentsConfigClientEndpoint)
+                		.header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
+                		.header(xApiKey, authApiKey)
                         .retrieve()
                         .bodyToMono(DocumentTypesConfigurations.class);
 	}

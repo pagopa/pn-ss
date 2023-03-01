@@ -55,11 +55,17 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 @AutoConfigureWebTestClient
 @Slf4j
 public class OrchestratorSignDocumentTest {
+		
+    @Value("${default.internal.x-api-key.value}")
+    private String defaultInteralApiKeyValue;
+
+    @Value("${default.internal.header.x-pagopa-safestorage-cx-id}")
+    private String defaultInternalClientIdValue;
+	
     @MockBean
     DocumentClientCall documentClientCall;
     @MockBean
     ConfigurationApiCall configurationApiCall;
-
 
     @Autowired
     OrchestratorSignDocument service;
@@ -184,9 +190,11 @@ public class OrchestratorSignDocumentTest {
     @Test
     void readFileFromBucketStagingWriteBuckeHot() {
     	
-    	log.debug("OrchestratorSignDocumentTest.readFileFromBucketStagingWriteBuckeHot() : decommentare");
+    	log.debug("readFileFromBucketStagingWriteBuckeHot() : START : "
+    			+ "security configuration : defaultInternalClientIdValue {} : defaultInteralApiKeyValue {}",
+    			defaultInternalClientIdValue, defaultInteralApiKeyValue);
     	
-    	Mockito.doReturn(Mono.just(documentTypesConfigurationsReponse)).when(configurationApiCall).getDocumentsConfigs();
+    	Mockito.doReturn(Mono.just(documentTypesConfigurationsReponse)).when(configurationApiCall).getDocumentsConfigs(defaultInternalClientIdValue, defaultInteralApiKeyValue);
 		
 		DocumentType documentType = new DocumentType();
 		documentType.setTipoDocumento(tipoDocumentoPnNotificationAttachments);

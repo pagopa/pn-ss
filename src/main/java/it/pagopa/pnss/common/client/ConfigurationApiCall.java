@@ -7,7 +7,7 @@ import reactor.core.publisher.Mono;
 
 public interface ConfigurationApiCall {
 	
-	Mono<DocumentTypesConfigurations> getDocumentsConfigs();
+	Mono<DocumentTypesConfigurations> getDocumentsConfigs(String authPagopaSafestorageCxId, String authApiKey);
 	Mono<UserConfiguration> getCurrentClientConfig(String clientId) throws IdClientNotFoundException;
 
 }

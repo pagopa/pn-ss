@@ -11,6 +11,7 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -119,15 +120,17 @@ public class FileMetadataUpdateTest {
 	@Test
 	void testErrorStatus() throws Exception {
 		UpdateFileMetadataRequest req = new UpdateFileMetadataRequest();
-		req.setStatus("PRELOADED");
+		req.setStatus(PRELOADED);
 		DocumentResponse resp = new DocumentResponse();
 		Document document = new Document();
 		DocumentType documentType = new DocumentType();
-		documentType.setStatuses(Map.ofEntries(Map.entry("PRELOADED", new CurrentStatus())));
+		documentType.setStatuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())));
+		documentType.setTipoDocumento(PN_AAR);
 		document.setDocumentType(documentType);
 		resp.setDocument(document);
 		Mono<DocumentResponse> monoResp = Mono.just(resp);
-
+		Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
+		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
 
 		fileMetadataUpdateTestCall(BodyInserters.fromValue(req), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
@@ -147,6 +150,8 @@ public class FileMetadataUpdateTest {
 		document.setDocumentType(documentType);
 		resp.setDocument(document);
 		Mono<DocumentResponse> monoResp = Mono.just(resp);
+		Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
+		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 
 		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
 
@@ -190,6 +195,18 @@ public class FileMetadataUpdateTest {
 
 		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
 
+		Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
+		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
+
+		Mockito.doReturn(monoResp).when(documentClientCall).patchdocument(Mockito.any(), Mockito.any());
+
+		WebTestClient.ResponseSpec responseSpec = fileMetadataUpdateTestCall(BodyInserters.fromValue(req),
+				X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isOk();
+
+	}
+
+	@NotNull
+	private static Mono<UserConfigurationResponse> mockUserConfiguration() {
 		UserConfiguration userConfiguration = new UserConfiguration();
 		userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
 		userConfiguration.setApiKey(X_API_KEY_VALUE);
@@ -198,13 +215,7 @@ public class FileMetadataUpdateTest {
 		userConfig.setUserConfiguration(userConfiguration);
 
 		Mono<UserConfigurationResponse> userConfigurationResponse = Mono.just(userConfig);
-		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
-
-		Mockito.doReturn(monoResp).when(documentClientCall).patchdocument(Mockito.any(), Mockito.any());
-
-		WebTestClient.ResponseSpec responseSpec = fileMetadataUpdateTestCall(BodyInserters.fromValue(req),
-				X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isOk();
-
+		return userConfigurationResponse;
 	}
 
 }

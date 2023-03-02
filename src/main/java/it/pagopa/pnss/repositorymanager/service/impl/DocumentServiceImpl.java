@@ -126,7 +126,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                 	   if (documentChanges == null) {
                 		   return documentEntityStored;
                 	   }
-                       log.info("patchDocument() : documentEntityStored : {}", documentEntityStored);
+                       log.info("patchDocument() : documentEntityStored {}", documentEntityStored);
                        if (documentChanges.getDocumentState() != null) {
                            documentEntityStored.setDocumentState(documentChanges.getDocumentState());
                        }
@@ -153,7 +153,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        if (documentChanges.getContentLenght() != null) {
                     	   documentEntityStored.setContentLenght(documentChanges.getContentLenght());
                        }
-                       log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
+                       log.info("patchDocument() : documentEntity for patch {}", documentEntityStored);
 
                        log.info("patchDocument() : START Tagging");
                        Region region = Region.of(awsConfigurationProperties.regionCode());
@@ -183,7 +183,6 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        return documentEntityStored;
                    })
                    .flatMap(documentEntityStored -> {
-						log.info("patchDocument() : retention period : PRE");
 						return retentionService.setRetentionPeriodInBucketObjectMetadata(
 																				authPagopaSafestorageCxId, authApiKey,
 																				documentChanges,
@@ -192,10 +191,10 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
                    .onErrorResume(RuntimeException.class, throwable -> {
                 	   if (throwable instanceof DocumentKeyNotPresentException) {
-                    	   log.error("patchDocument() : errore DocumentKeyNotPresentException: ", throwable.getMessage(), throwable);
+                    	   log.error("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage(), throwable);
                     	   return Mono.error(throwable);               		   
                 	   }
-                	   log.error("patchDocument() : errore generico: ", throwable.getMessage(), throwable);
+                	   log.error("patchDocument() : errore generico = {}", throwable.getMessage(), throwable);
                 	   return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
                    })
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));

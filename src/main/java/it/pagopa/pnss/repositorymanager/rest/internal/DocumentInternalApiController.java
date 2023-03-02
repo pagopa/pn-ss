@@ -3,6 +3,7 @@ package it.pagopa.pnss.repositorymanager.rest.internal;
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
+import it.pagopa.pnss.common.client.exception.PatchDocumentExcetpion;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -64,18 +65,27 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 		response.getError().setDescription(throwable.getMessage());
 
 		if (throwable instanceof ItemAlreadyPresent) {
+			log.error("getResponse() : error ItemAlreadyPresent");
 			String errorMsg = documentKey == null ? "Document already present"
 					: String.format("Document with id %s already present", documentKey);
 			return buildErrorResponse(HttpStatus.CONFLICT, errorMsg);
 		} else if (throwable instanceof DocumentKeyNotPresentException) {
+			log.error("getResponse() : error DocumentKeyNotPresentException");
 			String errorMsg = documentKey == null ? "Document not found"
 					: String.format("Document with id %s not found", documentKey);
 			return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
-		} else if (throwable instanceof RepositoryManagerException
-				|| throwable instanceof IllegalDocumentStateException) {
+		} else if (throwable instanceof RepositoryManagerException) {
+			log.error("getResponse() : error RepositoryManagerException");
+			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
+		}else if (throwable instanceof IllegalDocumentStateException) {
+			log.error("getResponse() : error IllegalDocumentStateException");
+			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
+		}else if (throwable instanceof PatchDocumentExcetpion) {
+			log.error("getResponse() : error PatchDocumentExcetpion");
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else if (throwable instanceof DocumentTypeNotPresentException) {
 			String errorMsg = "Document type invalide";
+			log.error("getResponse() : error DocumentTypeNotPresentException");
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMsg);
 		} else {
 			log.info("getErrorResponse() : other");

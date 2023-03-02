@@ -3,6 +3,7 @@ package it.pagopa.pnss.common.retention;
 import java.time.Instant;
 import java.util.Map;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import reactor.core.publisher.Mono;
@@ -29,6 +30,6 @@ public interface RetentionService {
 	
 	Mono<DocumentEntity> setRetentionPeriodInBucketObjectMetadata(
 			String authPagopaSafestorageCxId, String authApiKey, 
-			DocumentEntity documentEntity);
+			DocumentChanges documentChanges, DocumentEntity documentEntity);
 
 }

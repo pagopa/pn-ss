@@ -12,6 +12,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.PatchDocumentExcetpion;
 import it.pagopa.pnss.common.retention.RetentionService;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -95,20 +96,23 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 						sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
 					}
 				}).doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
-				.switchIfEmpty(Mono.just(documentInput)).flatMap(o -> docTypesService.getDocType(key)).flatMap(o -> {
-					resp.setDocumentType(o);
-					resp.setDocumentKey(documentInput.getDocumentKey());
-					resp.setDocumentState(documentInput.getDocumentState());
-					resp.setCheckSum(documentInput.getCheckSum());
-					resp.setRetentionUntil(documentInput.getRetentionUntil());
-					resp.setContentLenght(documentInput.getContentLenght());
-					resp.setContentType(documentInput.getContentType());
-					resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
-					resp.setClientShortCode(documentInput.getClientShortCode());
-					DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
-					return Mono.fromCompletionStage(
-							documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(documentEntityInput)));
-				}).thenReturn(resp);
+				.switchIfEmpty(Mono.just(documentInput))
+				.flatMap(o -> docTypesService.getDocType(key))
+				.flatMap(o -> {
+							resp.setDocumentType(o);
+							resp.setDocumentKey(documentInput.getDocumentKey());
+							resp.setDocumentState(documentInput.getDocumentState());
+							resp.setCheckSum(documentInput.getCheckSum());
+							resp.setRetentionUntil(documentInput.getRetentionUntil());
+							resp.setContentLenght(documentInput.getContentLenght());
+							resp.setContentType(documentInput.getContentType());
+							resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
+							resp.setClientShortCode(documentInput.getClientShortCode());
+							DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
+							return Mono.fromCompletionStage(
+									documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(documentEntityInput)));
+				})
+				.thenReturn(resp);
 	}
 
     @Override
@@ -118,7 +122,6 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
         
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
                    .map(documentEntityStored -> {
                 	   if (documentChanges == null) {
                 		   return documentEntityStored;
@@ -152,7 +155,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        }
                        log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
 
-                       log.info("patchDocument() : start Tagging");
+                       log.info("patchDocument() : START Tagging");
                        Region region = Region.of(awsConfigurationProperties.regionCode());
                        S3AsyncClient s3 = S3AsyncClient.builder()
                                .region(region)
@@ -175,18 +178,26 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 						   } else {
 							   log.info("patchDocument() : Tagging : storageTypeEmpty");
 						   }
-						   log.info("patchDocument() : end Tagging");
+						   log.info("patchDocument() : END Tagging");
 					   }
                        return documentEntityStored;
                    })
-                   .doOnError(IllegalArgumentException.class, throwable -> log.error(throwable.getMessage()))
                    .flatMap(documentEntityStored -> {
 						log.info("patchDocument() : retention period : PRE");
 						return retentionService.setRetentionPeriodInBucketObjectMetadata(
-																				authPagopaSafestorageCxId, authApiKey, 
+																				authPagopaSafestorageCxId, authApiKey,
+																				documentChanges,
 																				documentEntityStored);
 				   })
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
+                   .onErrorResume(RuntimeException.class, throwable -> {
+                	   if (throwable instanceof DocumentKeyNotPresentException) {
+                    	   log.error("patchDocument() : errore DocumentKeyNotPresentException: ", throwable.getMessage(), throwable);
+                    	   return Mono.error(throwable);               		   
+                	   }
+                	   log.error("patchDocument() : errore generico: ", throwable.getMessage(), throwable);
+                	   return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
+                   })
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
     }
 

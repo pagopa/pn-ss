@@ -17,7 +17,7 @@ import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoExtensionsKt;
+
 
 @RestController
 @Slf4j

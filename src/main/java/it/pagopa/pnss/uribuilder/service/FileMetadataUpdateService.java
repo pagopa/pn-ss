@@ -63,30 +63,7 @@ public class FileMetadataUpdateService {
 					Document document = documentResponse.getDocument();
 					String documentType = document.getDocumentType().getTipoDocumento();
 					DocumentChanges docChanges = new DocumentChanges();
-					boolean isStatusPresent = false;
 
-					if (!StringUtils.isEmpty(request.getStatus())) {
-						if (document.getDocumentType() != null && document.getDocumentType().getStatuses() != null) {
-							isStatusPresent = document.getDocumentType().getStatuses().containsKey(logicalState);
-						}
-						if (!isStatusPresent) {
-							throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-									"Status not found for document key : " + fileKey);
-						}
-						String technicalStatus = checkLookUp(documentType, logicalState);
-
-						if (StringUtils.isEmpty(technicalStatus)) {
-							throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-									"Technical status not found for document key : " + fileKey);
-						}
-						docChanges.setDocumentState(technicalStatus);
-
-					}
-
-					if (retentionUntil != null) {
-						docChanges.setRetentionUntil(
-								new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
-					}
 
 					return userConfigurationClientCall.getUser(xPagopaSafestorageCxId).flatMap(userConfiguration -> {
 						if (userConfiguration.getUserConfiguration().getCanModifyStatus() == null || !userConfiguration
@@ -95,6 +72,32 @@ public class FileMetadataUpdateService {
 									String.format("Client '%s' not has privilege for change document " + "type '%s'",
 											xPagopaSafestorageCxId, documentType));
 						}
+
+						boolean isStatusPresent = false;
+
+						if (!StringUtils.isEmpty(request.getStatus())) {
+							if (document.getDocumentType() != null && document.getDocumentType().getStatuses() != null) {
+								isStatusPresent = document.getDocumentType().getStatuses().containsKey(logicalState);
+							}
+							if (!isStatusPresent) {
+								throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+										"Status not found for document key : " + fileKey);
+							}
+							String technicalStatus = checkLookUp(documentType, logicalState);
+
+							if (StringUtils.isEmpty(technicalStatus)) {
+								throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+										"Technical status not found for document key : " + fileKey);
+							}
+							docChanges.setDocumentState(technicalStatus);
+
+						}
+
+						if (retentionUntil != null) {
+							docChanges.setRetentionUntil(
+									new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
+						}
+
 						return documentClientCall.patchdocument(fileKey, docChanges).flatMap(documentResponsePatch -> {
 							OperationResultCodeResponse resp = new OperationResultCodeResponse();
 							resp.setResultCode(HttpStatus.OK.name());

@@ -257,6 +257,14 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 				authPagopaSafestorageCxId, authApiKey,
 				documentKey, documentState, documentType);
 		
+		// se manca anche solo un elemento di autenticazione, imposto le credenziali con "utente interno"
+		if (authPagopaSafestorageCxId == null || authPagopaSafestorageCxId.isBlank()
+				|| authApiKey == null || authApiKey.isBlank()) {
+			log.info("getRetentionUntil() : almeno uno tra authPagopaSafestorageCxId e authApiKey non e' valorizzato, utilizzo le credenziali interne");
+			authPagopaSafestorageCxId = defaultInternalClientIdValue;
+			authApiKey = defaultInteralApiKeyValue;
+		}
+		
 		return getRetentionPeriodInDays(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
 						.map(retentionPeriodInDays -> getRetainUntilDate(dataCreazioneObjectForBucket, retentionPeriodInDays));
 	}
@@ -282,7 +290,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 						return Mono.error(new RetentionException(throwable.getMessage()));
 					})
 					.onErrorResume(RuntimeException.class, throwable -> {
-						log.error("setRetentionPeriodInBucketObjectMetadata() : AFTER headOjectRequest : errore generico : {}", 
+						log.error("setRetentionPeriodInBucketObjectMetadata() : AFTER headOjectRequest : errore generico = {}", 
 								throwable.getMessage(), throwable);
 						return Mono.error(new RetentionException(throwable.getMessage()));
 					})

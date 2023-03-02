@@ -33,6 +33,11 @@ Parameters:
     Type: String
     Description: Nome dell'ambiente destinazione
     Default: DEV
+  
+  PnSsEventBusExternalNotificationName:
+    Type: String 
+    Description: 'Nome del Event Bus che raccoglie gli eventi del microservizio Gestore Disponibilita'
+    Default: 'Pn-Ss-Notifications-Bus'
 
 Conditions:
   IsProdEnv: !Equals ['PROD', !Ref DeployEnv]
@@ -267,6 +272,120 @@ Resources:
         - Arn: !GetAtt PnSsQueueStagingBucket.Arn
           Id: "SQSTargetForStagingBucket"
   
+  #### RISORSE PER GESTORE DISPONIBILITA' ####
+  PnSsQueueNotificheExt1:
+    Type: AWS::SQS::Queue
+    Properties:
+      # KmsDataKeyReusePeriodSeconds: 300
+      # KmsMasterKeyId: 'alias/aws/sqs'
+      SqsManagedSseEnabled: True
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 1      
+      RedrivePolicy:
+        deadLetterTargetArn : !GetAtt PnSsDLQueueNotificheExt1.Arn
+        maxReceiveCount : 10
+      VisibilityTimeout: 30
+
+  PnSsDLQueueNotificheExt1:
+    Type: AWS::SQS::Queue
+    Properties:
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: 'alias/aws/sqs'
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 1
+      VisibilityTimeout: 30
+
+  PnSsEventBusExternalNotification: 
+    Type: AWS::Events::EventBus
+    Properties: 
+        Name: !Ref PnSsEventBusExternalNotificationName
+
+  PnSsEventBusPolicyECSExternalNotification:
+    Type: AWS::Events::EventBusPolicy
+    Properties:
+      EventBusName: !Ref PnSsEventBusExternalNotification
+      StatementId: 'PnSsCustomEventBusPolicyAllowS'
+      Statement:
+        Action: 
+          - "events:PutEvents"
+        Effect: "Allow"
+        Principal: 
+          Service:
+          - 'ecs.amazonaws.com'
+        Resource: !GetAtt PnSsEventBusExternalNotification.Arn
+        # Condition: 
+        #   ArnEquals:
+        #     aws:SourceArn: ECS ARN ??
+
+  PnSsEventBusPolicyManageExternalNotification:
+    Type: AWS::Events::EventBusPolicy
+    Properties:
+      EventBusName: !Ref PnSsEventBusExternalNotification
+      StatementId: 'PnSsCustomEventBusPolicyManage'
+      Statement:
+        Action: 
+          - 'events:PutRule'
+          - 'events:PutTargets'
+          - 'events:DeleteRule'
+          - 'events:RemoveTargets'
+          - 'events:DisableRule'
+          - 'events:EnableRule'
+          - 'events:TagResource'
+          - 'events:UntagResource'
+          - 'events:DescribeRule'
+          - 'events:ListTargetsByRule'
+          - 'events:ListTagsForResource'
+        Effect: 'Allow'
+        Resource: !GetAtt PnSsEventBusExternalNotification.Arn
+        Principal: 
+          AWS: !Sub '${AWS::AccountId}'
+        Condition:
+          StringEqualsIfExists:
+            events:creatorAccount: !Sub '${AWS::AccountId}'     
+
+  PnSsQueuePolicyNotificheExt1:
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !Ref PnSsQueueNotificheExt1
+      PolicyDocument: 
+        Statement: 
+          - Sid: 'AllowAccessSameAccount'
+            Action: 
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt PnSsQueueNotificheExt1.Arn
+            Principal: 
+              AWS: !Sub ${AWS::AccountId}
+          - Sid: 'AllowPutEventsFromEventRule'
+            Action: 
+              - "sqs:SendMessage"
+            Effect: "Allow"
+            Resource: !GetAtt PnSsQueueNotificheExt1.Arn
+            Principal: 
+              Service:
+              - 'events.amazonaws.com'
+            Condition: 
+              ArnEquals:
+                aws:SourceArn: !GetAtt PnSsEventRuleNotificheExt1.Arn
+
+  PnSsEventRuleNotificheExt1:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref PnSsEventBusExternalNotification
+      Description: Description
+      EventPattern:
+        source: 
+          - "GESTORE DISPONIBILITA"
+        account: 
+          - !Sub ${AWS::AccountId}
+        region: 
+          - !Sub ${AWS::Region}
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt PnSsQueueNotificheExt1.Arn
+          Id: 'Ext1QueueTargetForExtNotification'
+
 Outputs:
   PnSsTableNameAnagraficaClient:
     Description: 'Nome della tabella SS Anagrafica Client'
@@ -331,3 +450,31 @@ Outputs:
   PnSsGestoreBucketLambdaName:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
     Value: !Ref PnSsGestoreBucketLambdaNameIn
+
+  PnSsEventBusNameExternalNotification:
+    Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'
+    Value: !Ref  PnSsEventBusExternalNotification
+
+  PnSsQueueNameNotificheExt1:
+    Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
+    Value: !GetAtt  PnSsQueueNotificheExt1.QueueName
+
+  PnSsQueueArnNotificheExt1:
+    Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
+    Value: !GetAtt  PnSsQueueNotificheExt1.Arn
+
+  PnSsQueueUrlNotificheExt1:
+    Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
+    Value: !Ref PnSsQueueNotificheExt1
+
+  PnSsDLQueueNameNotificheExt1:
+    Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
+    Value: !GetAtt  PnSsDLQueueNotificheExt1.QueueName
+
+  PnSsDLQueueArnNotificheExt1:
+    Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
+    Value: !GetAtt  PnSsDLQueueNotificheExt1.Arn
+
+  PnSsDLQueueUrlNotificheExt1:
+    Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
+    Value: !Ref PnSsDLQueueNotificheExt1

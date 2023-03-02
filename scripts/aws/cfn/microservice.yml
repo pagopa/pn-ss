@@ -211,6 +211,11 @@ Parameters:
   PnSsGestoreRepositoryPathPatchDocument:
     Type: String
     Description: 'Path for PatchDocument towards pn-ss Gestore Respository'
+  
+  PnSsUriBuilderstayHotTime:
+    Type: String
+    Description: 'Days parameter for restoring of Staging Bucket's objects in Glacier archive'
+  
 
 Resources:
 
@@ -237,7 +242,7 @@ Resources:
         ContainerEnvEntry10: !Sub 'PnSsTableDocumentiStreamArn=${PnSsTableDocumentiStreamArn}'
         ContainerEnvEntry11: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
         ContainerEnvEntry12: !Sub 'pst=${PresignedUrlMinutesLifespan}'
-        ContainerEnvEntry13: !Sub 'stayHotTime=${stayHotTime}'
+        ContainerEnvEntry13: !Sub 'stayHotTime=${PnSsUriBuilderstayHotTime}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'

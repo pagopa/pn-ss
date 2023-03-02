@@ -455,6 +455,10 @@ Outputs:
     Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'
     Value: !Ref  PnSsEventBusExternalNotification
 
+  PnSsEventBusArnExternalNotification:
+    Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
+    Value: !GetAtt  PnSsEventBusExternalNotification.Arn
+
   PnSsQueueNameNotificheExt1:
     Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
     Value: !GetAtt  PnSsQueueNotificheExt1.QueueName

@@ -237,6 +237,7 @@ Resources:
         ContainerEnvEntry10: !Sub 'PnSsTableDocumentiStreamArn=${PnSsTableDocumentiStreamArn}'
         ContainerEnvEntry11: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
         ContainerEnvEntry12: !Sub 'pst=${PresignedUrlMinutesLifespan}'
+        ContainerEnvEntry13: !Sub 'stayHotTime=${stayHotTime}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'
@@ -392,7 +393,7 @@ Resources:
                   - !Sub '${PnSsBucketArn}'
                   - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
 
-  PnSsGestoreBucketNotificationPermission:
+  PnSsGestoreBucketHotNotificationPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !GetAtt PnSsGestoreBucket.Arn
@@ -400,6 +401,15 @@ Resources:
       Principal: s3.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Ref PnSsBucketArn
+
+  PnSsGestoreBucketStagingNotificationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt PnSsGestoreBucket.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Ref PnSsStagingBucketArn
 
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function

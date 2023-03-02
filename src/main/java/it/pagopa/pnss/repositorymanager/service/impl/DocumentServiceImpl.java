@@ -1,64 +1,64 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
-import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
-import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
-import it.pagopa.pnss.repositorymanager.service.DocTypesService;
+import static it.pagopa.pnss.common.Constant.STORAGETYPE;
+
+import java.util.concurrent.CompletableFuture;
+
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.PatchDocumentExcetpion;
+import it.pagopa.pnss.common.retention.RetentionService;
+import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
+import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
+import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
+import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
-import software.amazon.awssdk.services.s3.model.Tagging;
-
-import java.util.concurrent.CompletableFuture;
-
-import static it.pagopa.pnss.common.Constant.STORAGETYPE;
 
 
 @Service
 @Slf4j
-public class DocumentServiceImpl implements DocumentService {
+public class DocumentServiceImpl extends CommonS3ObjectService implements DocumentService {
 
-    private final ObjectMapper objectMapper;
+	private final ObjectMapper objectMapper;
+	private final DynamoDbAsyncTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
+	private final DocTypesService docTypesService;
+	private final RetentionService retentionService;
+	private final AwsConfigurationProperties awsConfigurationProperties;
+	private final BucketName bucketName;
 
-    private final AwsConfigurationProperties awsConfigurationProperties;
-
-    private final BucketName bucketName;
-
-    private final DynamoDbAsyncTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
-
-    private final DocTypesService docTypesService;
-
-    public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService, AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName) {
-        this.docTypesService = docTypesService;
-        this.bucketName = bucketName;
-        this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
-                                                                                  TableSchema.fromBean(DocumentEntity.class));
-        this.objectMapper = objectMapper;
-        this.awsConfigurationProperties = awsConfigurationProperties;
-    }
+	public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
+			RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
+			RetentionService retentionService, AwsConfigurationProperties awsConfigurationProperties,
+			BucketName bucketName) {
+		this.docTypesService = docTypesService;
+		this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient
+				.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+		this.objectMapper = objectMapper;
+		this.retentionService = retentionService;
+		this.awsConfigurationProperties = awsConfigurationProperties;
+		this.bucketName = bucketName;
+	}
 
 	private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
 		log.error("getErrorIdDocNotFoundException() : document with documentKey \"{}\" not found", documentKey);
@@ -96,29 +96,32 @@ public class DocumentServiceImpl implements DocumentService {
 						sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
 					}
 				}).doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
-				.switchIfEmpty(Mono.just(documentInput)).flatMap(o -> docTypesService.getDocType(key)).flatMap(o -> {
-					resp.setDocumentType(o);
-					resp.setDocumentKey(documentInput.getDocumentKey());
-					resp.setDocumentState(documentInput.getDocumentState());
-					resp.setCheckSum(documentInput.getCheckSum());
-					resp.setRetentionUntil(documentInput.getRetentionUntil());
-					resp.setContentLenght(documentInput.getContentLenght());
-					resp.setContentType(documentInput.getContentType());
-					resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
-					resp.setClientShortCode(documentInput.getClientShortCode());
-					DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
-					return Mono.fromCompletionStage(
-							documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(documentEntityInput)));
-				}).thenReturn(resp);
+				.switchIfEmpty(Mono.just(documentInput))
+				.flatMap(o -> docTypesService.getDocType(key))
+				.flatMap(o -> {
+							resp.setDocumentType(o);
+							resp.setDocumentKey(documentInput.getDocumentKey());
+							resp.setDocumentState(documentInput.getDocumentState());
+							resp.setCheckSum(documentInput.getCheckSum());
+							resp.setRetentionUntil(documentInput.getRetentionUntil());
+							resp.setContentLenght(documentInput.getContentLenght());
+							resp.setContentType(documentInput.getContentType());
+							resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
+							resp.setClientShortCode(documentInput.getClientShortCode());
+							DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
+							return Mono.fromCompletionStage(
+									documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(documentEntityInput)));
+				})
+				.thenReturn(resp);
 	}
 
     @Override
-    public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges) {
+    public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges,
+			String authPagopaSafestorageCxId, String authApiKey) {
         log.info("patchDocument() : IN : documentKey : {} , documentChanges {}", documentKey, documentChanges);
         
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
                    .map(documentEntityStored -> {
                 	   if (documentChanges == null) {
                 		   return documentEntityStored;
@@ -152,7 +155,7 @@ public class DocumentServiceImpl implements DocumentService {
                        }
                        log.info("patchDocument() : documentEntity for patch : {}", documentEntityStored);
 
-                       log.info("patchDocument() : start Tagging");
+                       log.info("patchDocument() : START Tagging");
                        Region region = Region.of(awsConfigurationProperties.regionCode());
                        S3AsyncClient s3 = S3AsyncClient.builder()
                                .region(region)
@@ -175,12 +178,26 @@ public class DocumentServiceImpl implements DocumentService {
 						   } else {
 							   log.info("patchDocument() : Tagging : storageTypeEmpty");
 						   }
-						   log.info("patchDocument() : end Tagging");
+						   log.info("patchDocument() : END Tagging");
 					   }
                        return documentEntityStored;
                    })
-                   .doOnError(IllegalArgumentException.class, throwable -> log.error(throwable.getMessage()))
+                   .flatMap(documentEntityStored -> {
+						log.info("patchDocument() : retention period : PRE");
+						return retentionService.setRetentionPeriodInBucketObjectMetadata(
+																				authPagopaSafestorageCxId, authApiKey,
+																				documentChanges,
+																				documentEntityStored);
+				   })
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
+                   .onErrorResume(RuntimeException.class, throwable -> {
+                	   if (throwable instanceof DocumentKeyNotPresentException) {
+                    	   log.error("patchDocument() : errore DocumentKeyNotPresentException: ", throwable.getMessage(), throwable);
+                    	   return Mono.error(throwable);               		   
+                	   }
+                	   log.error("patchDocument() : errore generico: ", throwable.getMessage(), throwable);
+                	   return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
+                   })
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
     }
 

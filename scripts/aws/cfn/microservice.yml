@@ -85,7 +85,7 @@ Parameters:
   
   PnSsTableNameDocumenti:
     Type: String
-    Description: 'Nome tabella SS Documenti' 
+    Description: 'Nome tabella SS Documenti'
 
   PnSsTableArnDocumenti:
     Type: String
@@ -131,6 +131,38 @@ Parameters:
     Type: String
     Description: 'Nome della managed policy associata alla state machine'
     Default: 'PnSsManagedPolicyName'
+
+  PnSsEventBusNameExternalNotification:
+    Type: String
+    Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'
+
+  PnSsEventBusArnExternalNotification:
+    Type: String
+    Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
+
+  PnSsQueueNameNotificheExt1:
+    Type: String
+    Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
+
+  PnSsQueueArnNotificheExt1:
+    Type: String
+    Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
+
+  PnSsQueueUrlNotificheExt1:
+    Type: String
+    Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
+
+  PnSsDLQueueNameNotificheExt1:
+    Type: String
+    Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
+
+  PnSsDLQueueArnNotificheExt1:
+    Type: String
+    Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
+
+  PnSsDLQueueUrlNotificheExt1:
+    Type: String
+    Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
 
   PnSsGestoreBucketLambdaName:
     Type: String
@@ -194,7 +226,7 @@ Resources:
         AlarmSNSTopicArn: !Ref AlarmSNSTopicArn
         ContainerImageURI: !Sub '${ContainerImageUri}'
         ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'
-        ContainerEnvEntry2: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry2: !Sub 'PnSsEventBusNameExternalNotification=${PnSsEventBusNameExternalNotification}'
         ContainerEnvEntry3: !Sub 'PnSsBucketName=${PnSsBucketName}'
         ContainerEnvEntry4: !Sub 'PnSsBucketArn=${PnSsBucketArn}'
         ContainerEnvEntry5: !Sub 'PnSsStagingBucketName=${PnSsStagingBucketName}'
@@ -205,6 +237,8 @@ Resources:
         ContainerEnvEntry10: !Sub 'PnSsTableDocumentiStreamArn=${PnSsTableDocumentiStreamArn}'
         ContainerEnvEntry11: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
         ContainerEnvEntry12: !Sub 'pst=${PresignedUrlMinutesLifespan}'
+        ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref SubnetsIds
@@ -269,6 +303,7 @@ Resources:
               - 'sqs:List*'
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
+              - !Sub '${PnSsQueueArnNotificheExt1}'
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -282,6 +317,13 @@ Resources:
               - 'kms:*'
             Resource:
               - '*'
+          - Sid: 'AllowPutEventsDisponibilita'
+            Effect: Allow
+            Action:
+              - 'events:PutEvents'
+              - 'events:DescribeEventBus'
+            Resource:
+              - !Sub '${PnSsEventBusArnExternalNotification}'
 
   PnSsStagingBucketPolicy:
     Type: AWS::S3::BucketPolicy

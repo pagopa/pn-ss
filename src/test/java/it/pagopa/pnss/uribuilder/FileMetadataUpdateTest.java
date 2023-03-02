@@ -1,14 +1,17 @@
 package it.pagopa.pnss.uribuilder;
 
-import static it.pagopa.pnss.common.Constant.ATTACHED;
-import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PRELOADED;
-import static it.pagopa.pnss.common.Constant.SAVED;
-
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Map;
-
+import it.pagopa.pn.template.internal.rest.v1.dto.*;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
+import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
+import it.pagopa.pnss.common.client.DocTypesClientCall;
+import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.uribuilder.service.UriBuilderService;
+import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -17,7 +20,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpOutputMessage;
+import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -36,6 +42,23 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import static it.pagopa.pnss.common.Constant.*;
+import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
@@ -110,15 +133,17 @@ public class FileMetadataUpdateTest {
 	@Test
 	void testErrorStatus() throws Exception {
 		UpdateFileMetadataRequest req = new UpdateFileMetadataRequest();
-		req.setStatus("PRELOADED");
+		req.setStatus(PRELOADED);
 		DocumentResponse resp = new DocumentResponse();
 		Document document = new Document();
 		DocumentType documentType = new DocumentType();
-		documentType.setStatuses(Map.ofEntries(Map.entry("PRELOADED", new CurrentStatus())));
+		documentType.setStatuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())));
+		documentType.setTipoDocumento(PN_AAR);
 		document.setDocumentType(documentType);
 		resp.setDocument(document);
 		Mono<DocumentResponse> monoResp = Mono.just(resp);
-
+		Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
+		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
 
 		fileMetadataUpdateTestCall(BodyInserters.fromValue(req), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
@@ -138,6 +163,8 @@ public class FileMetadataUpdateTest {
 		document.setDocumentType(documentType);
 		resp.setDocument(document);
 		Mono<DocumentResponse> monoResp = Mono.just(resp);
+		Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
+		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 
 		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
 
@@ -181,6 +208,18 @@ public class FileMetadataUpdateTest {
 
 		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
 
+		Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
+		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
+
+		Mockito.doReturn(monoResp).when(documentClientCall).patchdocument(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
+		WebTestClient.ResponseSpec responseSpec = fileMetadataUpdateTestCall(BodyInserters.fromValue(req),
+				X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isOk();
+
+	}
+
+	@NotNull
+	private static Mono<UserConfigurationResponse> mockUserConfiguration() {
 		UserConfiguration userConfiguration = new UserConfiguration();
 		userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
 		userConfiguration.setApiKey(X_API_KEY_VALUE);
@@ -189,13 +228,7 @@ public class FileMetadataUpdateTest {
 		userConfig.setUserConfiguration(userConfiguration);
 
 		Mono<UserConfigurationResponse> userConfigurationResponse = Mono.just(userConfig);
-		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
-
-		Mockito.doReturn(monoResp).when(documentClientCall).patchdocument(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
-
-		WebTestClient.ResponseSpec responseSpec = fileMetadataUpdateTestCall(BodyInserters.fromValue(req),
-				X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isOk();
-
+		return userConfigurationResponse;
 	}
 
 }

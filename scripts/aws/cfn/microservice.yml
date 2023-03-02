@@ -238,6 +238,7 @@ Resources:
         ContainerEnvEntry11: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
         ContainerEnvEntry12: !Sub 'pst=${PresignedUrlMinutesLifespan}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref SubnetsIds
@@ -322,7 +323,7 @@ Resources:
               - 'events:PutEvents'
               - 'events:DescribeEventBus'
             Resource:
-              - !Sub '${PnSsEventBusNameExternalNotification}'
+              - !Sub '${PnSsEventBusArnExternalNotification}'
 
   PnSsStagingBucketPolicy:
     Type: AWS::S3::BucketPolicy

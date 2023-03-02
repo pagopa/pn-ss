@@ -214,7 +214,7 @@ Parameters:
   
   PnSsUriBuilderstayHotTime:
     Type: String
-    Description: 'Days parameter for restoring of Staging Bucket's objects in Glacier archive'
+    Description: 'Days parameter for restoring of Staging Buckets objects in Glacier archive'
   
 
 Resources:

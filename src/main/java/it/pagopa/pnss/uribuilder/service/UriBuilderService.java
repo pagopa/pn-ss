@@ -13,12 +13,15 @@ import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
 import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
 import static it.pagopa.pnss.common.Constant.technicalStatus_available;
 import static java.util.Map.entry;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.log;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -67,7 +70,7 @@ public class UriBuilderService {
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
     
-    @Value("${header.presignUrl.checksum-sha256:#{null}}")
+    @Value("${header.presignedUrl.checksum-sha256:#{null}}")
     String headerChecksumSha256;
     
 
@@ -105,8 +108,13 @@ public class UriBuilderService {
         var documentType = request.getDocumentType();
         var status = request.getStatus();
 
-        var secret = List.of(generateSecret());
-        var metadata = Map.of("secret", secret.toString());
+        // NOTA : in questo modo, sono immutabili
+//        var secret = List.of(generateSecret());
+//        var metadata = Map.of("secret", secret.toString());
+        var secret = new ArrayList<String>();
+        secret.add(generateSecret());
+        var metadata = new HashMap<String,String>();
+        metadata.put("secret", secret.toString());
 
         return Mono.fromCallable(() -> validationField(contentType, documentType, status))
                    .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))

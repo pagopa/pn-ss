@@ -289,12 +289,13 @@ public class UriBuilderService {
 		    			else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank()
 		    					&& secret != null
 		    					&& ChecksumEnum.SHA256.name().equals(checksumTypeToEvaluate.name())) {
-		    				secret.put(headerChecksumSha256, checksumValue);
+		    				// secret.put(headerChecksumSha256, checksumValue);
 			    			return Mono.just(PutObjectRequest.builder()
 									 .bucket(bucketName)
 									 .key(documentKey)
 									 .contentType(contenType)
 									 .metadata(secret)
+									 .checksumSHA256(checksumValue)
 					                //.tagging(storageType)
 									 .build());
 		    			}

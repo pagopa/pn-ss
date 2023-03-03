@@ -26,7 +26,7 @@ public class Constant {
     public static final String AVAILABLE = "AVAILABLE";
     public static final String STAGED = "STAGED";
     
-    public static final String STORAGETYPE = "storageType=";
+    public static final String STORAGETYPE = "storageType";
 
     public static final List<String> listaTipologieDoc = Arrays.asList(PN_NOTIFICATION_ATTACHMENTS, PN_AAR, PN_LEGAL_FACTS, PN_EXTERNAL_LEGAL_FACTS, PN_DOWNTIME_LEGAL_FACTS);
     public static final List<String> listaTipoDocumenti =  Arrays.asList(APPLICATION_PDF, APPLICATION_ZIP, IMAGE_TIFF);

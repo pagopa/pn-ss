@@ -1,12 +1,6 @@
 package it.pagopa.pnss.uribuilder;
 
-import static it.pagopa.pnss.common.Constant.IMAGE_TIFF;
-import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
-import static it.pagopa.pnss.common.Constant.PRELOADED;
-import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
-import static org.assertj.core.api.Assertions.assertThat;
+import static it.pagopa.pnss.common.Constant.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -16,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import org.apache.logging.log4j.core.util.Assert;
 import org.junit.jupiter.api.Test;
@@ -33,35 +29,37 @@ import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.server.ResponseStatusException;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @Slf4j
-public class UriBulderUploadTest {
+public class UriBuilderUploadTest {
 
     @Value("${header.x-api-key:#{null}}")
     private String xApiKey;
     @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
     private String X_PAGOPA_SAFESTORAGE_CX_ID;
 //    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
+    @Value("${header.x-checksum-value:#{null}}")
+    private String headerChecksumValue;
 
     private static final String xApiKeyValue = "apiKey_value";
     private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
+    private static final String xChecksumValue = "checkSumValue";
     private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey"));
 
     @Value("${file.upload.api.url}")
@@ -94,6 +92,7 @@ public class UriBulderUploadTest {
                              .body(bodyInserter)
                              .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
                              .header(xApiKey, xApiKeyValue)
+                             .header(headerChecksumValue, xChecksumValue)
                              .exchange();
     }
 
@@ -132,12 +131,12 @@ public class UriBulderUploadTest {
         Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
         Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
 
-
-        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
-
         DocumentResponse docResp = new DocumentResponse();
         Document document = new Document();
         document.setDocumentKey("keyFile");
+        DocumentType documentTypeDoc = new DocumentType();
+        documentTypeDoc.setChecksum(DocumentType.ChecksumEnum.MD5);
+        document.setDocumentType(documentTypeDoc);
         docResp.setDocument(document);
         Mono<DocumentResponse> respDoc = Mono.just(docResp);
         Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
@@ -168,7 +167,7 @@ public class UriBulderUploadTest {
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF);
         fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
-        fcr.setStatus("ATTACHED");
+        fcr.setStatus(ATTACHED);
         fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
     }
 
@@ -195,7 +194,6 @@ public class UriBulderUploadTest {
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
         Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
-        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
 
         DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
         DocumentType documentType = new DocumentType();
@@ -208,6 +206,9 @@ public class UriBulderUploadTest {
         DocumentResponse docResp = new DocumentResponse();
         Document document = new Document();
         document.setDocumentKey("keyFile");
+        DocumentType documentTypeDoc = new DocumentType();
+        documentTypeDoc.setChecksum(DocumentType.ChecksumEnum.MD5);
+        document.setDocumentType(documentTypeDoc);
         docResp.setDocument(document);
         Mono<DocumentResponse> respDoc = Mono.just(docResp);
         Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());

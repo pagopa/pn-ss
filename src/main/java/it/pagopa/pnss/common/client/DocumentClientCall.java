@@ -14,6 +14,10 @@ public interface DocumentClientCall {
     Mono<DocumentResponse> getdocument(String keyFile) throws IdClientNotFoundException;
     Mono<DocumentResponse> postDocument(DocumentInput documentInput) throws IdClientNotFoundException;
     ResponseEntity<Document> updatedocument( Document document) throws IdClientNotFoundException;
-    Mono<DocumentResponse> patchdocument( String keyFile, DocumentChanges document) throws IdClientNotFoundException;
+    
+    Mono<DocumentResponse> patchdocument(
+    		String authPagopaSafestorageCxId, String authApiKey, 
+    		String keyFile, DocumentChanges document) throws IdClientNotFoundException;
+    
     ResponseEntity<Document> deletedocument(String keyFile) throws IdClientNotFoundException;
 }

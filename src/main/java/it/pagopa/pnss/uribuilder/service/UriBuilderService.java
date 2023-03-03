@@ -2,12 +2,15 @@ package it.pagopa.pnss.uribuilder.service;
 
 import static it.pagopa.pnss.common.Constant.*;
 import static java.util.Map.entry;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.log;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,12 +32,14 @@ import com.amazonaws.SdkClientException;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.ChecksumException;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
@@ -67,6 +72,9 @@ public class UriBuilderService extends CommonS3ObjectService {
     @Value("${uri.builder.stay.Hot.Bucket.tyme.days}")
     Integer stayHotTime;
 
+    @Value("${header.presignedUrl.checksum-sha256:#{null}}")
+    String headerChecksumSha256;
+
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
 
@@ -80,7 +88,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         this.documentClientCall = documentClientCall;
         this.awsConfigurationProperties = awsConfigurationProperties;
         this.bucketName = bucketName;
-//        this.retentionService = retentionService;
     }
 
     private Map<String, String> mapDocumentTypeToBucket;
@@ -94,14 +101,21 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                 entry(PN_DOWNTIME_LEGAL_FACTS, bucketName.ssStageName()));
     }
 
-    public Mono<FileCreationResponse> createUriForUploadFile(String xPagopaSafestorageCxId, FileCreationRequest request) {
+    public Mono<FileCreationResponse> createUriForUploadFile(
+    		String xPagopaSafestorageCxId, FileCreationRequest request,
+    		String checksumValue) {
 
         var contentType = request.getContentType();
         var documentType = request.getDocumentType();
         var status = request.getStatus();
 
-        var secret = List.of(generateSecret());
-        var metadata = Map.of("secret", secret.toString());
+        // NOTA : in questo modo, sono immutabili
+//        var secret = List.of(generateSecret());
+//        var metadata = Map.of("secret", secret.toString());
+        var secret = new ArrayList<String>();
+        secret.add(generateSecret());
+        var metadata = new HashMap<String,String>();
+        metadata.put("secret", secret.toString());
 
         return Mono.fromCallable(() -> validationField(contentType, documentType, status))
                    .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
@@ -140,7 +154,9 @@ public class UriBuilderService extends CommonS3ObjectService {
                             		   		  insertedDocument.getDocument().getDocumentState(), 
                             		   		  insertedDocument.getDocument().getDocumentKey(), 
                             		   		  contentType, 
-                            		   		  metadata)
+                            		   		  metadata,
+                            		   		  insertedDocument.getDocument().getDocumentType().getChecksum(),
+                            		   		  checksumValue)
                                .map(presignedPutObjectRequest -> {
                                    FileCreationResponse response = new FileCreationResponse();
                                    response.setKey(insertedDocument.getDocument().getDocumentKey());
@@ -189,9 +205,9 @@ public class UriBuilderService extends CommonS3ObjectService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private Mono<PresignedPutObjectRequest> buildsUploadUrl(String documentType, String documentState, String documentKey, 
-    		String contentType, Map<String, String> secret) {
-    	log.info("buildsUploadUrl() : START : documentType {} : documentState {} : documentKey {} : contentType {} : secret {}",
+    private Mono<PresignedPutObjectRequest> buildsUploadUrl(String documentType, String documentState, String documentKey,
+                                                            String contentType, Map<String, String> secret, ChecksumEnum checksumType, String checksumValue) {
+        log.info("buildsUploadUrl() : START : documentType {} : documentState {} : documentKey {} : contentType {} : secret {}",
     			documentType, documentState, documentKey, contentType, secret);
 
         S3Presigner presigner = getS3Presigner();
@@ -202,7 +218,13 @@ public class UriBuilderService extends CommonS3ObjectService {
         				  documentState, 
         				  documentType, 
         				  contentType, 
-        				  secret)
+        				  secret,
+        				  checksumType,
+        				  checksumValue)
+        		.onErrorResume(ChecksumException.class, throvable -> {
+        			log.error("buildsUploadUrl() : Errore impostazione ChecksumValue = {}", throvable.getMessage(), throvable);
+        			return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, throvable.getMessage()));
+        		})
         		.onErrorResume(AmazonServiceException.class, throvable -> {
         			log.error("buildsUploadUrl() : Errore AMAZON AmazonServiceException : {}", throvable.getMessage(), throvable);
         			return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException "));
@@ -237,20 +259,48 @@ public class UriBuilderService extends CommonS3ObjectService {
 
     private Mono<PresignedPutObjectRequest> signBucket(S3Presigner s3Presigner, String bucketName, 
     		String documentKey, String documentState, String documentType,
-    		String contenType, Map<String,String> secret) {
+    		String contenType, Map<String,String> secret, ChecksumEnum checksumType, String checksumValue) {
 
-    	log.debug("signBucket() : START : s3Presigner IN : bucketName {} : keyName {} : documentState {} : documentType {} : contenType {} : secret {}",
-    			bucketName, documentKey, documentState, documentType, contenType, secret);
+    	log.debug("signBucket() : START : s3Presigner IN : "
+    			+ "bucketName {} : keyName {} : "
+    			+ "documentState {} : documentType {} : contenType {} : "
+    			+ "secret {} : checksumValue {}",
+    			bucketName, documentKey, documentState, documentType, contenType, secret, checksumValue);
     	log.info("signBucket() : sign bucket {}", duration);
     	
-    	return Mono.just(PutObjectRequest.builder()
-							 .bucket(bucketName)
-							 .key(documentKey)
-							 .contentType(contenType)
-							 .metadata(secret)
-			                //.tagging(storageType)
-							 .build())
-    				.map(putObjectRequest -> PutObjectPresignRequest.builder()
+    	if (checksumType == null || checksumValue == null || checksumValue.isBlank()) {
+    		return Mono.error(new ChecksumException("Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
+    	}
+
+    	return  Mono.just(checksumType)
+		    		.flatMap(checksumTypeToEvaluate -> {
+		    			if (ChecksumEnum.MD5.name().equals(checksumTypeToEvaluate.name())) {
+		        			return Mono.just(PutObjectRequest.builder()
+									 .bucket(bucketName)
+									 .key(documentKey)
+									 .contentType(contenType)
+									 .metadata(secret)
+									 .contentMD5(checksumValue)
+					                //.tagging(storageType)
+									 .build());
+		    			}
+		    			else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank()
+		    					&& secret != null
+		    					&& ChecksumEnum.SHA256.name().equals(checksumTypeToEvaluate.name())) {
+		    				secret.put(headerChecksumSha256, checksumValue);
+			    			return Mono.just(PutObjectRequest.builder()
+									 .bucket(bucketName)
+									 .key(documentKey)
+									 .contentType(contenType)
+									 .metadata(secret)
+					                //.tagging(storageType)
+									 .build());
+		    			}
+		    			else {
+		    				return Mono.error(new ChecksumException("Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
+		    			}
+		    		})
+					.map(putObjectRequest -> PutObjectPresignRequest.builder()
 					        .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
 					        .putObjectRequest(putObjectRequest)
 					        .build()

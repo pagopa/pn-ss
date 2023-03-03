@@ -27,7 +27,20 @@ import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.server.ResponseStatusException;
+
+import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
+import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
+import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.uribuilder.service.UriBuilderService;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -198,7 +211,7 @@ public class FileMetadataUpdateTest {
 		Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
 		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 
-		Mockito.doReturn(monoResp).when(documentClientCall).patchdocument(Mockito.any(), Mockito.any());
+		Mockito.doReturn(monoResp).when(documentClientCall).patchdocument(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
 		WebTestClient.ResponseSpec responseSpec = fileMetadataUpdateTestCall(BodyInserters.fromValue(req),
 				X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isOk();

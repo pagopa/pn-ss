@@ -1,14 +1,24 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.*;
+import static it.pagopa.pnss.common.Constant.BOOKED;
+import static it.pagopa.pnss.common.Constant.FREEZED;
+import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
+import static it.pagopa.pnss.common.Constant.PN_AAR;
+import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
+import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+import static it.pagopa.pnss.common.Constant.listaStatus;
+import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
+import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
+import static it.pagopa.pnss.common.Constant.technicalStatus_available;
 import static java.util.Map.entry;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.log;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Base64;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -16,11 +26,6 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.RestoreObjectRequest;
-import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -29,6 +34,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.RestoreObjectRequest;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
@@ -44,11 +52,11 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import software.amazon.awssdk.http.SdkHttpMethod;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -60,25 +68,26 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 @Service
 @Slf4j
 public class UriBuilderService extends CommonS3ObjectService {
-
-    private final UserConfigurationClientCall userConfigurationClientCall;
-    private final DocumentClientCall documentClientCall;
-    private final AwsConfigurationProperties awsConfigurationProperties;
-    private final BucketName bucketName;
-
+	
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
 
     @Value("${uri.builder.stay.Hot.Bucket.tyme.days}")
     Integer stayHotTime;
-
-    @Value("${header.presignedUrl.checksum-sha256:#{null}}")
+    
+    @Value("${header.presignUrl.checksum-sha256:#{null}}")
     String headerChecksumSha256;
+    
+    @Value("${presignedUrl.initial.newDocument.state}")
+    String initialNewDocumentState;
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
 
-//    private final RetentionService retentionService;
+    private final UserConfigurationClientCall userConfigurationClientCall;
+    private final DocumentClientCall documentClientCall;
+    private final AwsConfigurationProperties awsConfigurationProperties;
+    private final BucketName bucketName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
                              AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName
@@ -135,7 +144,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                    .then(documentClientCall.postDocument(new DocumentInput().contentType(contentType)
                                                                             .documentKey(GenerateRandoKeyFile.getInstance()
                                                                                                              .createKeyName(documentType))
-                                                                            .documentState(BOOKED)
+                                                                            .documentState(initialNewDocumentState)
                                                                             .clientShortCode(xPagopaSafestorageCxId)
                                                                             .documentType(documentType))
                                            .retryWhen(Retry.max(10)
@@ -205,10 +214,12 @@ public class UriBuilderService extends CommonS3ObjectService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private Mono<PresignedPutObjectRequest> buildsUploadUrl(String documentType, String documentState, String documentKey,
-                                                            String contentType, Map<String, String> secret, ChecksumEnum checksumType, String checksumValue) {
-        log.info("buildsUploadUrl() : START : documentType {} : documentState {} : documentKey {} : contentType {} : secret {}",
-    			documentType, documentState, documentKey, contentType, secret);
+    private Mono<PresignedPutObjectRequest> buildsUploadUrl(String documentType, String documentState, String documentKey, 
+    		String contentType, Map<String, String> secret, ChecksumEnum checksumType, String checksumValue) {
+    	log.info("buildsUploadUrl() : START : "
+    			+ "documentType {} : documentState {} : documentKey {} : "
+    			+ "contentType {} : secret {} : checksumType {} : checksumValue {}",
+    			documentType, documentState, documentKey, contentType, secret, checksumType, checksumValue);
 
         S3Presigner presigner = getS3Presigner();
         
@@ -226,16 +237,16 @@ public class UriBuilderService extends CommonS3ObjectService {
         			return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, throvable.getMessage()));
         		})
         		.onErrorResume(AmazonServiceException.class, throvable -> {
-        			log.error("buildsUploadUrl() : Errore AMAZON AmazonServiceException : {}", throvable.getMessage(), throvable);
-        			return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException "));
+        			log.error("buildsUploadUrl() : Errore AMAZON AmazonServiceException = {}", throvable.getMessage(), throvable);
+        			return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException"));
         		})
 				.onErrorResume(ResponseStatusException.class, throvable -> {
-        			log.error("buildsUploadUrl() : Errore AMAZON SdkClientException : {}", throvable.getMessage(), throvable);
+        			log.error("buildsUploadUrl() : Errore AMAZON SdkClientException = {}", throvable.getMessage(), throvable);
         			return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException "));
         		})
 				.onErrorResume(Exception.class, throvable -> {
         			log.error("buildsUploadUrl() : Errore generico: {}", throvable.getMessage(), throvable);
-        			return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore generico "));
+        			return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore generico"));
         		});
         
 //        try {
@@ -253,9 +264,6 @@ public class UriBuilderService extends CommonS3ObjectService {
 //
 //        return response;
     }
-
-
-
 
     private Mono<PresignedPutObjectRequest> signBucket(S3Presigner s3Presigner, String bucketName, 
     		String documentKey, String documentState, String documentType,

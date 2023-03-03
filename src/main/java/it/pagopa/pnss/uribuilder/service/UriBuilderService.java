@@ -70,6 +70,9 @@ public class UriBuilderService {
     @Value("${header.presignUrl.checksum-sha256:#{null}}")
     String headerChecksumSha256;
     
+    @Value("${presignedUrl.initial.newDocument.state}")
+    String initialNewDocumentState;
+    
 
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
@@ -126,7 +129,7 @@ public class UriBuilderService {
                    .then(documentClientCall.postDocument(new DocumentInput().contentType(contentType)
                                                                             .documentKey(GenerateRandoKeyFile.getInstance()
                                                                                                              .createKeyName(documentType))
-                                                                            .documentState(BOOKED)
+                                                                            .documentState(initialNewDocumentState)
                                                                             .clientShortCode(xPagopaSafestorageCxId)
                                                                             .documentType(documentType))
                                            .retryWhen(Retry.max(10)

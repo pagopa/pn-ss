@@ -215,9 +215,20 @@ Resources:
       #  LogFilePrefix: 'String'
       #MetricsConfigurations:
       #  MetricsConfigurations
+      LifecycleConfiguration:
+        Rules:
+          - Id: 'PnSsStagingAbortIncompleteMultipartUpload'
+            AbortIncompleteMultipartUpload: 
+                DaysAfterInitiation: 1
+            Status: 'Enabled'
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+          - Event: 's3:ObjectRemoved:Delete'
+            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced

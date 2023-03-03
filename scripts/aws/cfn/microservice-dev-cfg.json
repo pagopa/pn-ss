@@ -1,5 +1,6 @@
 {
   "Parameters": {
+    "PnSsUriBuilderstayHotTime": "1",
     "PresignedUrlMinutesLifespan": "60",
     "PnEcIdentityTimemark": "pn/identity/timemark",
     "PnEcIdentitySignature": "pn/identity/signature",

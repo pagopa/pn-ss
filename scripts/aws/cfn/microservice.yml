@@ -218,7 +218,7 @@ Parameters:
 
   PnSsTableDocumentiStreamMetadatiTable:
     Type: String
-    Description: 'Name of the DynamoDB Stream's metadata table for the source table PnSsDocumenti'
+    Description: 'Name of the DynamoDB Stream s metadata table for the source table PnSsDocumenti'
   
 
 Resources:

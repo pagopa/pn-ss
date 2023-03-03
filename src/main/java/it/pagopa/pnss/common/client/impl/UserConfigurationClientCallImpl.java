@@ -20,6 +20,9 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
     @Value("${gestore.repository.anagrafica.internal.userConfiguration}")
     String anagraficaUserConfigurationInternalClientEndpoint;
 
+    @Value("${internal.base.url}")
+    String internalBaseUrl;
+
     @Override
     public Mono<UserConfigurationResponse> getUser(String xPagopaSafestorageCxId) throws IdClientNotFoundException {
         return getWebClient().get()
@@ -46,7 +49,7 @@ public class UserConfigurationClientCallImpl extends CommonBaseClient implements
 
     public WebClient getWebClient(){
         WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
-        return builder.baseUrl("http://localhost:8080").build();
+        return builder.baseUrl(internalBaseUrl).build();
     }
 
 }

@@ -24,10 +24,13 @@ public class ConfigurationApiCallImpl extends CommonBaseClient implements Config
 
 	@Value("${gestore.repository.configuration.api.documents.config}")
 	private String configurationApiDocumentsConfigClientEndpoint;
+
+	@Value("${internal.base.url}")
+	String internalBaseUrl;
 	
     public WebClient getWebClient(){
         WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
-        return builder.baseUrl("http://localhost:8080").build();
+        return builder.baseUrl(internalBaseUrl).build();
     }
 
 	@Override

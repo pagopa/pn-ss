@@ -2,20 +2,15 @@ package it.pagopa.pnss.uribuilder;
 
 import static it.pagopa.pnss.common.Constant.IMAGE_TIFF;
 import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
 import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
 import static it.pagopa.pnss.common.Constant.PRELOADED;
-import static it.pagopa.pnss.common.QueueNameConstant.BUCKET_HOT_NAME;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.List;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,41 +20,42 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpOutputMessage;
-import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.server.ResponseStatusException;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @Slf4j
-public class UriBulderUploadTest {
+public class UriBuilderUploadTest {
 
     @Value("${header.x-api-key:#{null}}")
     private String xApiKey;
     @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
     private String X_PAGOPA_SAFESTORAGE_CX_ID;
 //    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
+    @Value("${header.x-checksum-value:#{null}}")
+    private String headerChecksumValue;
 
     private static final String xApiKeyValue = "apiKey_value";
     private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
+    private static final String xChecksumValue = "checkSumValue";
     private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey"));
 
     @Value("${file.upload.api.url}")
@@ -90,6 +86,7 @@ public class UriBulderUploadTest {
                              .body(bodyInserter)
                              .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
                              .header(xApiKey, xApiKeyValue)
+                             .header(headerChecksumValue, xChecksumValue)
                              .exchange();
     }
 

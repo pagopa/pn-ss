@@ -1,24 +1,23 @@
 package it.pagopa.pnss.common.client.impl;
 
-import it.pagopa.pn.commons.pnclients.CommonBaseClient;
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pnss.common.client.DocumentClientCall;
-
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
-import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import static org.springframework.http.HttpStatus.FORBIDDEN;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
-import static org.springframework.http.HttpStatus.FORBIDDEN;
+import it.pagopa.pn.commons.pnclients.CommonBaseClient;
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
+import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
+import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import reactor.core.publisher.Mono;
 
 @Service
 public class DocumentClientCallImpl extends CommonBaseClient implements DocumentClientCall {
@@ -28,8 +27,13 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     String anagraficaDocumentiClientEndpoint;
     @Value("${gestore.repository.anagrafica.internal.docClient.post}")
     String anagraficaDocumentiClientEndpointpost;
+
     @Value("${internal.base.url}")
     String internalBaseUrl;
+    @Value("${header.x-api-key}")
+    private String xApiKey;
+    @Value("${header.x-pagopa-safestorage-cx-id}")
+    private String xPagopaSafestorageCxId;
 
     @Override
     public Mono<DocumentResponse> getdocument(String keyFile) throws IdClientNotFoundException {
@@ -60,9 +64,13 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     }
 
     @Override
-    public Mono<DocumentResponse> patchdocument(String keyFile, DocumentChanges document) throws IdClientNotFoundException {
+    public Mono<DocumentResponse> patchdocument(
+    		String authPagopaSafestorageCxId, String authApiKey, 
+    		String keyFile, DocumentChanges document) throws IdClientNotFoundException {
         return getWebClient().patch()
                 .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
+        		.header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
+        		.header(xApiKey, authApiKey)
                 .bodyValue(document)
                 .retrieve()
                 .bodyToMono(DocumentResponse.class);

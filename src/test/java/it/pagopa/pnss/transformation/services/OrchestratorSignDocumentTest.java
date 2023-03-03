@@ -41,7 +41,6 @@ import it.pagopa.pnss.transformation.model.Oggetto;
 import it.pagopa.pnss.transformation.model.S3ObjectCreated;
 import it.pagopa.pnss.transformation.service.DownloadObjectService;
 import it.pagopa.pnss.transformation.service.OrchestratorSignDocument;
-import it.pagopa.pnss.transformation.service.UploadObjectService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.ResponseBytes;
@@ -211,7 +210,7 @@ public class OrchestratorSignDocumentTest {
 		
 		addFileToBucket("111-DDD");
 		
-		Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).patchdocument(Mockito.any(),Mockito.any());
+		Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).patchdocument(Mockito.any(), Mockito.any(), Mockito.any(),Mockito.any());
 		
 		assertNull(service.incomingMessageFlow("111-DDD","dgs-bing-ss-pnssstagingbucket-28myu2kp62x9").block());
     }

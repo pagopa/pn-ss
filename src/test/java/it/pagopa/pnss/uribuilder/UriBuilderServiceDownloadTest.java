@@ -240,7 +240,7 @@ class UriBuilderServiceDownloadTest {
 
         String docId = "1111-aaaa";
 
-        mockUserConfiguration(List.of(PN_NOTIFICATION_ATTACHMENTS));
+        mockUserConfiguration(List.of(PN_AAR));
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);

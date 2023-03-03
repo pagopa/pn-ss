@@ -108,8 +108,19 @@ Resources:
       TableClass: 'STANDARD'
     DeletionPolicy: Retain
 
+##### TEMP POLICY TO AVOID DOUBLE DEPLOYS #####
+  PnSsGestoreBucketALLNotificationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: 'arn:aws:s3:::*'
+
   PnSsBucket:
     Type: AWS::S3::Bucket
+    DependsOn: PnSsGestoreBucketALLNotificationPermission 
     Properties:
       AccessControl: 'Private'
       BucketEncryption:
@@ -147,7 +158,8 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
+              # - StorageClass: 'DEEP_ARCHIVE'
+              - StorageClass: 'GLACIER_IR'
                 TransitionInDays: 1
           - Id: 'PnSsLegalFacts'
             ExpirationInDays: 2
@@ -156,7 +168,8 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
+              # - StorageClass: 'DEEP_ARCHIVE'
+              - StorageClass: 'GLACIER_IR'
                 TransitionInDays: 1
       #LoggingConfiguration:
       #  DestinationBucketName: 'String'
@@ -177,14 +190,14 @@ Resources:
             Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
           # - Event: 's3:Replication'
             # Function: !GetAtt PnSsGestoreBucket.Arn
-      # ObjectLockEnabled: true
-      # ObjectLockConfiguration:
-      #   ObjectLockEnabled: 'Enabled'
-      #   Rule: 
-      #     DefaultRetention: 
-      #       Days: 1
-      #       Mode: !If [ IsProdEnv , 'COMPLIANCE' , 'GOVERNANCE']
-      #       # Years: 
+      ObjectLockEnabled: true
+      ObjectLockConfiguration:
+        ObjectLockEnabled: 'Enabled'
+        Rule: 
+          DefaultRetention: 
+            Days: 1
+            Mode: !If [ IsProdEnv , 'COMPLIANCE' , 'GOVERNANCE']
+            # Years: 
       VersioningConfiguration:
         Status: Enabled
       OwnershipControls:
@@ -215,9 +228,20 @@ Resources:
       #  LogFilePrefix: 'String'
       #MetricsConfigurations:
       #  MetricsConfigurations
+      LifecycleConfiguration:
+        Rules:
+          - Id: 'PnSsStagingAbortIncompleteMultipartUpload'
+            AbortIncompleteMultipartUpload: 
+                DaysAfterInitiation: 1
+            Status: 'Enabled'
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+          - Event: 's3:ObjectRemoved:Delete'
+            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced

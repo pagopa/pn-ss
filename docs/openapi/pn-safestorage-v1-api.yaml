@@ -503,6 +503,10 @@ components:
             lo stato del documento, ne definisce il tempo di permanenza all'interno 
             di _SafeStorage_.
           example: PRELOADED
+        checksumValue:
+          type: string
+          description: >-
+            Contiene il valore hash del file che verrà upload-ato
 
     FileCreationResponse:
       description: Informazioni necessarie a caricare il contenuto di un file

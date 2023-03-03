@@ -11,6 +11,7 @@
     "PnSsGestoreRepositoryProtocol" : "http",
     "PnSsGestoreRepositoryPort" : "8080",
     "PnSsGestoreRepositoryPathGetDocument" : "/safestorage/internal/v1/documents",
-    "PnSsGestoreRepositoryPathPatchDocument" : "/safestorage/internal/v1/documents"
+    "PnSsGestoreRepositoryPathPatchDocument" : "/safestorage/internal/v1/documents",
+    "PnSsTableDocumentiStreamMetadatiTable" : "PnSsTableDocumentiStreamMetadati"
   }
 }

@@ -31,10 +31,10 @@ import software.amazon.awssdk.services.s3.model.PutObjectRetentionRequest;
 @Slf4j
 public class RetentionServiceImpl extends CommonS3ObjectService implements RetentionService {
 	
-    @Value("${default.internal.x-api-key.value}")
+    @Value("${default.internal.x-api-key.value:#{null}}")
     private String defaultInteralApiKeyValue;
 
-    @Value("${default.internal.header.x-pagopa-safestorage-cx-id}")
+    @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
     private String defaultInternalClientIdValue;
 	
     /*

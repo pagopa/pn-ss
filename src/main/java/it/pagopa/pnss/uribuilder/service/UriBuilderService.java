@@ -18,7 +18,9 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +34,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.RestoreObjectRequest;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
@@ -47,11 +52,11 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import software.amazon.awssdk.http.SdkHttpMethod;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -62,17 +67,22 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 @Service
 @Slf4j
-public class UriBuilderService {
+public class UriBuilderService extends CommonS3ObjectService {
 	
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
+
+    @Value("${uri.builder.stay.Hot.Bucket.tyme.days}")
+    Integer stayHotTime;
     
     @Value("${header.presignUrl.checksum-sha256:#{null}}")
     String headerChecksumSha256;
     
     @Value("${presignedUrl.initial.newDocument.state}")
     String initialNewDocumentState;
-    
+
+    @Value("${test.aws.s3.endpoint:#{null}}")
+    private String testAwsS3Endpoint;
 
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
@@ -108,8 +118,13 @@ public class UriBuilderService {
         var documentType = request.getDocumentType();
         var status = request.getStatus();
 
-        var secret = List.of(generateSecret());
-        var metadata = Map.of("secret", secret.toString());
+        // NOTA : in questo modo, sono immutabili
+//        var secret = List.of(generateSecret());
+//        var metadata = Map.of("secret", secret.toString());
+        var secret = new ArrayList<String>();
+        secret.add(generateSecret());
+        var metadata = new HashMap<String,String>();
+        metadata.put("secret", secret.toString());
 
         return Mono.fromCallable(() -> validationField(contentType, documentType, status))
                    .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
@@ -250,10 +265,6 @@ public class UriBuilderService {
 //        return response;
     }
 
-    public S3Presigner getS3Presigner() {
-        return S3Presigner.builder().region(Region.of(awsConfigurationProperties.regionCode())).build();
-    }
-
     private Mono<PresignedPutObjectRequest> signBucket(S3Presigner s3Presigner, String bucketName, 
     		String documentKey, String documentState, String documentType,
     		String contenType, Map<String,String> secret, ChecksumEnum checksumType, String checksumValue) {
@@ -268,7 +279,7 @@ public class UriBuilderService {
     	if (checksumType == null || checksumValue == null || checksumValue.isBlank()) {
     		return Mono.error(new ChecksumException("Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
     	}
-    	
+
     	return  Mono.just(checksumType)
 		    		.flatMap(checksumTypeToEvaluate -> {
 		    			if (ChecksumEnum.MD5.name().equals(checksumTypeToEvaluate.name())) {
@@ -284,12 +295,13 @@ public class UriBuilderService {
 		    			else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank()
 		    					&& secret != null
 		    					&& ChecksumEnum.SHA256.name().equals(checksumTypeToEvaluate.name())) {
-		    				secret.put(headerChecksumSha256, checksumValue);
+		    				// secret.put(headerChecksumSha256, checksumValue);
 			    			return Mono.just(PutObjectRequest.builder()
 									 .bucket(bucketName)
 									 .key(documentKey)
 									 .contentType(contenType)
 									 .metadata(secret)
+									 .checksumSHA256(checksumValue)
 					                //.tagging(storageType)
 									 .build());
 		    			}
@@ -303,6 +315,23 @@ public class UriBuilderService {
 					        .build()
 					)
 					.flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest)));
+		    	
+    	
+//    	return retentionService.getPutObjectRequestForPresignRequest(bucketName,
+//    																documentKey,
+//    																contenType,
+//    																secret,
+//    																documentState,
+//    																documentType,
+//    																authPagopaSafestorageCxId,
+//    																authApiKey)
+//	    		.map(putObjectRequest -> PutObjectPresignRequest.builder()
+//											                .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
+//											                .putObjectRequest(putObjectRequest)
+//											                .build()
+//	    		)
+//	    		.flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest)))
+//	    		;
     }
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly) {
@@ -382,59 +411,97 @@ public class UriBuilderService {
 
     private FileDownloadInfo createFileDownloadInfo(String fileKey, String status, String documentType) {
         FileDownloadInfo fileDOwnloadInfo = null;
-        try {
-            S3Presigner presigner = getS3Presigner();
+
+
             String bucketName = mapDocumentTypeToBucket.get(documentType);
             log.info("INIZIO RECUPERO URL DOWLOAND ");
             if (!status.equals(FREEZED)) {
-                fileDOwnloadInfo = getPresignedUrl(presigner, bucketName, fileKey);
+                fileDOwnloadInfo = getPresignedUrl( bucketName, fileKey);
             } else {
-                fileDOwnloadInfo = recoverDocumentFromBucket(presigner, bucketName, fileKey);
+                fileDOwnloadInfo = recoverDocumentFromBucket( bucketName, fileKey);
             }
-        } catch (AmazonServiceException ase) {
-            log.error(" Errore AMAZON AmazonServiceException", ase);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException ");
-        } catch (SdkClientException sce) {
-            log.error(" Errore AMAZON SdkClientException", sce);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException ");
-        } catch (Exception e) {
-            log.error(" Errore Generico", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico ");
 
-        }
 
         return fileDOwnloadInfo;
 
     }
 
-    private FileDownloadInfo recoverDocumentFromBucket(S3Presigner presigner, String bucketName, String fileKey) {
+    private FileDownloadInfo recoverDocumentFromBucket( String bucketName, String keyName) {
         FileDownloadInfo fdinfo = new FileDownloadInfo();
         // mettere codice per far partire il recupero del file
-        //todo
+        log.info("--- RESTORE DOCUMENT : " + keyName);
+
+        try {
+            log.info("--- CREATION S3 CLIENT DOCUMENT : " + keyName);
+            AmazonS3 s3Client = getAmazonS3();
+
+            // Create and submit a request to restore an object from Glacier for two days.
+            log.info("--- REQUIRE RESTORE OBJECT DOCUMENT : " + keyName);
+            RestoreObjectRequest requestRestore = new RestoreObjectRequest(bucketName, keyName, stayHotTime);
+            log.info("--- RESTORE OBJECT DOCUMENT : " + keyName);
+            s3Client.restoreObjectV2(requestRestore);
+
+            // Check the restoration status of the object.
+            ObjectMetadata response = s3Client.getObjectMetadata(bucketName, keyName);
+            Boolean restoreFlag = response.getOngoingRestore();
+            log.info("--- RENTION DATE "+response.getHttpExpiresDate() +" DOCUMENT "+keyName);
+            log.info("Restoration status: %s.\n",restoreFlag ? "in progress" : "not in progress (finished or failed)");
+        } catch (AmazonServiceException ase) {
+            log.error(" Errore AMAZON AmazonServiceException", ase);
+            if (!ase.getErrorCode().equalsIgnoreCase("RestoreAlreadyInProgress")){
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException - "+ase.getErrorMessage());
+            }
+        } catch (SdkClientException sce) {
+            log.error(" Errore AMAZON SdkClientException", sce);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON SdkClientException - "+sce.getMessage());
+        } catch (Exception e) {
+            log.error(" Errore Generico", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico "+e.getMessage());
+
+        }
+
         fdinfo.setRetryAfter(MAX_RECOVER_COLD);
         return fdinfo;
     }
 
-    private FileDownloadInfo getPresignedUrl(S3Presigner presigner, String bucketName, String keyName) {
-        FileDownloadInfo fdinfo = new FileDownloadInfo();
-        log.info("INIZIO CREAZIONE OGGETTO  GetObjectRequest");
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(bucketName).key(keyName).build();
-        log.info("FINE  CREAZIONE OGGETTO  GetObjectRequest");
-        log.info("INIZIO  CREAZIONE OGGETTO  GetObjectPresignRequest");
-        GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
-                                                                                 .signatureDuration(Duration.ofMinutes(Long.parseLong(
-                                                                                         duration)))
-                                                                                 .getObjectRequest(getObjectRequest)
-                                                                                 .build();
-        log.info("FINE  CREAZIONE OGGETTO  GetObjectPresignRequest");
 
-        log.info("INIZIO  RECUPERO URL ");
-        PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(getObjectPresignRequest);
-        log.info("FINE   RECUPERO URL ");
 
-        String theUrl = presignedGetObjectRequest.url().toString();
-        fdinfo.setUrl(theUrl);
-        return fdinfo;
+    private FileDownloadInfo getPresignedUrl( String bucketName, String keyName) {
+
+        try {
+            S3Presigner presigner = getS3Presigner();
+            FileDownloadInfo fdinfo = new FileDownloadInfo();
+            log.info("INIZIO CREAZIONE OGGETTO  GetObjectRequest");
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(bucketName).key(keyName).build();
+            log.info("FINE  CREAZIONE OGGETTO  GetObjectRequest");
+            log.info("INIZIO  CREAZIONE OGGETTO  GetObjectPresignRequest");
+            GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(Long.parseLong(
+                            duration)))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+            log.info("FINE  CREAZIONE OGGETTO  GetObjectPresignRequest");
+
+            log.info("INIZIO  RECUPERO URL ");
+            PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(getObjectPresignRequest);
+            log.info("FINE   RECUPERO URL ");
+
+            String theUrl = presignedGetObjectRequest.url().toString();
+            fdinfo.setUrl(theUrl);
+            return fdinfo;
+
+        }
+        catch (AmazonServiceException ase) {
+            log.error(" Errore AMAZON AmazonServiceException", ase);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException - "+ase.getMessage());
+        } catch (SdkClientException sce) {
+            log.error(" Errore AMAZON SdkClientException", sce);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException - "+ sce.getMessage());
+        } catch (Exception e) {
+            log.error(" Errore Generico", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico ");
+
+        }
 
     }
 

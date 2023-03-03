@@ -215,6 +215,10 @@ Parameters:
   PnSsUriBuilderstayHotTime:
     Type: String
     Description: 'Days parameter for restoring of Staging Buckets objects in Glacier archive'
+
+  PnSsTableDocumentiStreamMetadatiTable:
+    Type: String
+    Description: 'Name of the DynamoDB Stream's metadata table for the source table PnSsDocumenti'
   
 
 Resources:
@@ -240,9 +244,10 @@ Resources:
         ContainerEnvEntry8: !Sub 'PnSsTableNameTipologieDocumenti=${PnSsTableNameTipologieDocumenti}'
         ContainerEnvEntry9: !Sub 'PnSsTableNameDocumenti=${PnSsTableNameDocumenti}'
         ContainerEnvEntry10: !Sub 'PnSsTableDocumentiStreamArn=${PnSsTableDocumentiStreamArn}'
-        ContainerEnvEntry11: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
-        ContainerEnvEntry12: !Sub 'pst=${PresignedUrlMinutesLifespan}'
-        ContainerEnvEntry13: !Sub 'stayHotTime=${PnSsUriBuilderstayHotTime}'
+        ContainerEnvEntry11: !Sub 'PnSsTableDocumentiStreamMetadatiTable=${PnSsTableDocumentiStreamMetadatiTable}'
+        ContainerEnvEntry12: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
+        ContainerEnvEntry20: !Sub 'pst=${PresignedUrlMinutesLifespan}'
+        ContainerEnvEntry21: !Sub 'stayHotTime=${PnSsUriBuilderstayHotTime}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'
@@ -283,6 +288,7 @@ Resources:
               - !Sub '${PnSsTableArnTipologieDocumenti}'
               - !Sub '${PnSsTableArnDocumenti}'
               - !Sub '${PnSsTableDocumentiStreamArn}'
+              - !Join [ '', [ !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/' , '*', !Ref PnSsTableDocumentiStreamMetadatiTable , '*']]
           - Effect: Allow
             Action:
               - 's3:List*'

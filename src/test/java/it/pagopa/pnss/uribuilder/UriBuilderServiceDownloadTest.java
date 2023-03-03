@@ -1,11 +1,14 @@
 package it.pagopa.pnss.uribuilder;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
+import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -17,8 +20,20 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
+import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
+import org.testcontainers.shaded.org.bouncycastle.jcajce.provider.digest.SHA256;
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.StorageClass;
 
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 
@@ -53,20 +68,25 @@ class UriBuilderServiceDownloadTest {
 
     @MockBean
     DocumentClientCall documentClientCall;
-    
+
+    @Value("${test.aws.s3.endpoint:#{null}}")
+    String testAwsS3Endpoint;
+
+    @Autowired
+    BucketName bucketName;
     private static final String CHECKSUM = "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
 
     private WebTestClient.ResponseSpec fileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
         this.webClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         return this.webClient.get()
-                             .uri(uriBuilder -> uriBuilder.path(urlDownload).queryParam("metadataOnly", metadataOnly)
-                                                          //... building a URI
-                                                          .build(requestIdx))
-                             .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
-                             .header(xApiKey, X_API_KEY_VALUE)
-                             .header(HttpHeaders.ACCEPT, "application/json")
-                             .attribute("metadataOnly", false)
-                             .exchange();
+                .uri(uriBuilder -> uriBuilder.path(urlDownload).queryParam("metadataOnly", metadataOnly)
+                        //... building a URI
+                        .build(requestIdx))
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(HttpHeaders.ACCEPT, "application/json")
+                .attribute("metadataOnly", metadataOnly)
+                .exchange();
 
 
     }
@@ -148,50 +168,47 @@ class UriBuilderServiceDownloadTest {
     }
 
 
-//    @Test
-//    void testFileTrovatoBasketHot(){
-//        String docId = "1111-aaaa";
-//
-//
-//
-//
-//        DocumentInput d = new DocumentInput();
-//        d.setDocumentType(PN_AAR);
-//        d.setDocumentState(AVAILABLE);
-//        d.setCheckSum(DocumentInput.CheckSumEnum.SHA256);
-//
-//        mockGetDocument(d, docId);
-//
-//
-//        //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
-//        fileDownloadTestCall( docId,true).expectStatus()
-//                .isOk().expectBody(FileDownloadResponse.class).value(response ->{
-//                    Assertions.assertThat(!response.getChecksum().isEmpty());
-//                    Assertions.assertThat(StringUtils.isNotEmpty(response.getDownload().getUrl()));
-//
-//                });
-//    }
+    @Test
+    void testFileTrovatoBasketHot(){
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(PN_AAR));
 
-//    @Test
-//    void testFileTrovatoBasketCold(){
-//        String docId = "1111-aaaa";
-//        mockUserConfiguration(List.of(PN_AAR));
-//
-//
-//        DocumentInput d = new DocumentInput();
-//        d.setDocumentType(PN_AAR);
-//        d.setDocumentState(AVAILABLE);
-//        d.setCheckSum(DocumentInput.CheckSumEnum.SHA256);
-//        mockGetDocument(d, docId);
-//        //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
-//        fileDownloadTestCall( docId,true).expectStatus()
-//                .isOk().expectBody(FileDownloadResponse.class).value(response ->{
-//                    Assertions.assertThat(!response.getChecksum().isEmpty());
-//                    //TODO rimettere
-////                    Assertions.assertThat(!response.getDownload().getRetryAfter().equals(MAX_RECOVER_COLD));
-//
-//                });
-//    }
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum("");
+        mockGetDocument(d, docId);
+        //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
+
+
+        fileDownloadTestCall( docId,false).expectStatus()
+                .isOk().expectBody(FileDownloadResponse.class).value(response ->{
+                    Assertions.assertThat(StringUtils.isNotEmpty(response.getDownload().getUrl()));
+                });
+    }
+
+    @Test
+    void testFileTrovatoBasketCold(){
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(PN_AAR));
+
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setDocumentLogicalState(FREEZED);
+        d.setCheckSum("" );
+        mockGetDocument(d, docId);
+        addFileToBucket(docId);
+        //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
+        fileDownloadTestCall( docId,false).expectStatus()
+                .isOk().expectBody(FileDownloadResponse.class).value(response ->{
+                    //Assertions.assertThat(!response.getChecksum().isEmpty());
+                    //TODO rimettere
+                    Assertions.assertThat(!response.getDownload().getRetryAfter().equals(MAX_RECOVER_COLD));
+
+                });
+    }
 
     @Test
     void testFileNonTrovato() {
@@ -211,8 +228,8 @@ class UriBuilderServiceDownloadTest {
     void testIdClienteNonTrovatoDownload() {
 
         Mockito.doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found : "))
-               .when(userConfigurationClientCall)
-               .getUser(Mockito.any());
+                .when(userConfigurationClientCall)
+                .getUser(Mockito.any());
         String docId = "1111-aaaa";
         fileDownloadTestCall(docId, null).expectStatus().isNotFound();
 
@@ -257,6 +274,7 @@ class UriBuilderServiceDownloadTest {
         type.setTipoDocumento(d.getDocumentType());
         doc.setDocumentType(type);
         doc.setDocumentState(d.getDocumentState());
+        doc.setDocumentLogicalState(d.getDocumentLogicalState());
         documentResponse.setDocument(doc);
         Mono<DocumentResponse> docRespEntity = Mono.just(documentResponse);
         Mockito.doReturn(docRespEntity).when(documentClientCall).getdocument(docId);
@@ -266,4 +284,40 @@ class UriBuilderServiceDownloadTest {
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().canRead(
                 permessi).apiKey(X_API_KEY_VALUE))));
     }
+    private void addFileToBucket(String fileName) {
+        S3ClientBuilder client = S3Client.builder();
+        client.endpointOverride(URI.create(testAwsS3Endpoint));
+        S3Client s3Client = client.build();
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(bucketName.ssHotName())
+                .storageClass(StorageClass.GLACIER)
+                .key(fileName).build();
+
+        s3Client.putObject(request, RequestBody.fromBytes(readPdfDocoument()));
+    }
+
+    private byte[] readPdfDocoument() {
+        byte[] byteArray=null;
+        try {
+            InputStream is =  getClass().getResourceAsStream("/PDF_PROVA.pdf");
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+            int nRead;
+            byte[] data = new byte[16384];
+
+            while ((nRead = is.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, nRead);
+            }
+
+            byteArray = buffer.toByteArray();
+
+        } catch (FileNotFoundException e) {
+            System.out.println("File Not found"+e);
+        } catch (IOException e) {
+            System.out.println("IO Ex"+e);
+        }
+        return byteArray;
+
+    }
+
 }

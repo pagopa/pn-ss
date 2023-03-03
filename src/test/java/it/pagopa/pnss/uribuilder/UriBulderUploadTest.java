@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
+import it.pagopa.pnss.configurationproperties.BucketName;
+import org.apache.logging.log4j.core.util.Assert;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,6 +80,8 @@ public class UriBulderUploadTest {
     @MockBean
     DocumentClientCall documentClientCall;
 
+    @Autowired
+    BucketName bucketName;
 
     private WebTestClient.ResponseSpec fileUploadTestCall(BodyInserter<FileCreationRequest, ReactiveHttpOutputMessage> bodyInserter,
                                                           String requestIdx) {
@@ -103,59 +107,47 @@ public class UriBulderUploadTest {
     	
     	log.debug("UriBulderUploadTest.testUrlGenStatusPre() : decommentare");
     	
-//        FileCreationRequest fcr = new FileCreationRequest();
-//        fcr.setContentType(IMAGE_TIFF);
-//        fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
-//        fcr.setStatus(PRELOADED);
-//        FileCreationResponse fcresp = new FileCreationResponse();
-//        fcresp.setUploadUrl("http://host:9090/urlFile");
-//
-//        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-//        UserConfiguration userConfiguration = new UserConfiguration();
-//        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-//        userConfiguration.setApiKey(xApiKeyValue);
-//        userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
-//        userConfig.setUserConfiguration(userConfiguration);
-//
-//        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
-//        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-//
-//        DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
-//        DocumentType documentType = new DocumentType();
-//        documentType.setTipoDocumento(PN_LEGAL_FACTS);
-//        documentTypeResponse.setDocType(documentType);
-//
-//        Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
-//        Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
-//
-//
-//        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
-//
-//        DocumentResponse docResp = new DocumentResponse();
-//        Document document = new Document();
-//        document.setDocumentKey("keyFile");
-//        docResp.setDocument(document);
-//        Mono<DocumentResponse> respDoc = Mono.just(docResp);
-//        Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
-//
-//        WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
-//        FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
-//                responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
-//        FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-//        S3Presigner presigner = uriBuilderService.getS3Presigner();
-//
-//
-//        GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(BUCKET_HOT_NAME).key(resp.getKey()).build();
-//
-//        GetObjectPresignRequest getObjectPresignRequest =
-//                GetObjectPresignRequest.builder().signatureDuration(Duration.ofMinutes(60)).getObjectRequest(getObjectRequest).build();
-//
-//        PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(getObjectPresignRequest);
-//        assertThat(presignedGetObjectRequest.url().toString()).startsWith(
-//                "https://s3.eu-central-1.amazonaws.com/PnSsBucketName/" + resp.getKey());
-//        assertThat(presignedGetObjectRequest.isBrowserExecutable()).isTrue();
-//        assertThat(presignedGetObjectRequest.signedHeaders().get("host")).containsExactly("s3.eu-central-1.amazonaws.com");
-//        assertThat(presignedGetObjectRequest.signedPayload()).isEmpty();
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType(IMAGE_TIFF);
+        fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
+        fcr.setStatus(PRELOADED);
+        FileCreationResponse fcresp = new FileCreationResponse();
+        fcresp.setUploadUrl("http://host:9090/urlFile");
+
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
+        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+
+        DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
+        DocumentType documentType = new DocumentType();
+        documentType.setTipoDocumento(PN_LEGAL_FACTS);
+        documentTypeResponse.setDocType(documentType);
+
+        Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
+        Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
+
+
+        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
+
+        DocumentResponse docResp = new DocumentResponse();
+        Document document = new Document();
+        document.setDocumentKey("keyFile");
+        docResp.setDocument(document);
+        Mono<DocumentResponse> respDoc = Mono.just(docResp);
+        Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
+
+        WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
+        FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
+                responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
+        FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
+
+        Assert.isNonEmpty(resp.getUploadUrl());
 
 
     }
@@ -185,59 +177,49 @@ public class UriBulderUploadTest {
     	
     	log.debug("UriBulderUploadTest.testUrlGenerato() : decommentare");
     	
-//        FileCreationRequest fcr = new FileCreationRequest();
-//        fcr.setContentType(IMAGE_TIFF);
-//        fcr.setDocumentType(PN_AAR);
-//        fcr.setStatus("");
-//        FileCreationResponse fcresp = new FileCreationResponse();
-//        fcresp.setUploadUrl("http://host:9090/urlFile");
-//
-//        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-//
-//        UserConfiguration userConfiguration = new UserConfiguration();
-//        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-//        userConfiguration.setApiKey(xApiKeyValue);
-//        userConfiguration.setCanCreate(List.of(PN_AAR));
-//        userConfig.setUserConfiguration(userConfiguration);
-//
-//        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
-//        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-//
-//        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
-//
-//        DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
-//        DocumentType documentType = new DocumentType();
-//        documentType.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
-//        documentTypeResponse.setDocType(documentType);
-//
-//        Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
-//        Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
-//
-//        DocumentResponse docResp = new DocumentResponse();
-//        Document document = new Document();
-//        document.setDocumentKey("keyFile");
-//        docResp.setDocument(document);
-//        Mono<DocumentResponse> respDoc = Mono.just(docResp);
-//        Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
-//
-//        WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
-//        FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
-//                responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
-//        FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-//        S3Presigner presigner = uriBuilderService.getS3Presigner();
-//
-//
-//        GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(BUCKET_HOT_NAME).key(resp.getKey()).build();
-//
-//        GetObjectPresignRequest getObjectPresignRequest =
-//                GetObjectPresignRequest.builder().signatureDuration(Duration.ofMinutes(60)).getObjectRequest(getObjectRequest).build();
-//
-//        PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(getObjectPresignRequest);
-//        assertThat(presignedGetObjectRequest.url().toString()).startsWith(
-//                "https://s3.eu-central-1.amazonaws.com/PnSsBucketName/" + resp.getKey());
-//        assertThat(presignedGetObjectRequest.isBrowserExecutable()).isTrue();
-//        assertThat(presignedGetObjectRequest.signedHeaders().get("host")).containsExactly("s3.eu-central-1.amazonaws.com");
-//        assertThat(presignedGetObjectRequest.signedPayload()).isEmpty();
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType(IMAGE_TIFF);
+        fcr.setDocumentType(PN_AAR);
+        fcr.setStatus("");
+        FileCreationResponse fcresp = new FileCreationResponse();
+        fcresp.setUploadUrl("http://host:9090/urlFile");
+
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfiguration.setCanCreate(List.of(PN_AAR));
+        userConfig.setUserConfiguration(userConfiguration);
+
+        Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
+        Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+
+        Mockito.when(documentClientCall.getdocument(Mockito.any())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
+
+        DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
+        DocumentType documentType = new DocumentType();
+        documentType.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
+        documentTypeResponse.setDocType(documentType);
+
+        Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
+        Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
+
+        DocumentResponse docResp = new DocumentResponse();
+        Document document = new Document();
+        document.setDocumentKey("keyFile");
+        docResp.setDocument(document);
+        Mono<DocumentResponse> respDoc = Mono.just(docResp);
+        Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
+
+        WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID);
+        FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
+                responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
+
+
+        FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
+        Assert.isNonEmpty(resp.getUploadUrl());
+
 
     }
 

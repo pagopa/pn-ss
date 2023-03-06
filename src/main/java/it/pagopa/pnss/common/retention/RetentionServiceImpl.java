@@ -298,8 +298,10 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 										   .build())
 					.flatMap(headObjectRequest -> Mono.fromCompletionStage(getS3AsynchClient().headObject(headObjectRequest)))
 					.flatMap(headOjectResponse -> {
-						log.info("setRetentionPeriodInBucketObjectMetadata() : headOjectResponse.objectLockRetainUntilDate() = {}", 
-								headOjectResponse.objectLockRetainUntilDate());
+						log.info("setRetentionPeriodInBucketObjectMetadata() : "
+								+ "headOjectResponse.lastModified() = {} :"
+								+ "headOjectResponse.objectLockRetainUntilDate() = {}", 
+								headOjectResponse.lastModified(), headOjectResponse.objectLockRetainUntilDate());
 						
 						// VERIFICO LE CONDIZIONI preliminare all'impostazione della retentionUntil:
 						
@@ -340,8 +342,12 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 										})
 										.thenReturn(documentEntity);
 						}
-						// 1. l'oggetto nel bucket non ha una retaintUntilDate impostata
-						else if (headOjectResponse.objectLockRetainUntilDate() == null 
+						else if (
+								// 1. l'oggetto nel bucket non ha una retaintUntilDate impostata
+								//headOjectResponse.objectLockRetainUntilDate() == null 
+								// 1. non si puo' distinguere il caso dell'impostazione di default da quella imposta dall'esterno o altro
+								//    Fare riferimento alla entity, piuttosto che all'oggetto presente nel bucket
+								documentEntity.getRetentionUntil() == null 
 						// 2. l'applicazione esterna NON sta chiedendo di modificare la retentionUntil
 								&& documentChanges.getRetentionUntil() == null
 						// 3. lo stato dell'oggetto Document e' 'available'

@@ -17,9 +17,11 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Service
+@Slf4j
 public class DocumentClientCallImpl extends CommonBaseClient implements DocumentClientCall {
     private final WebClient.Builder ecInternalWebClient= WebClient.builder();
 
@@ -40,44 +42,47 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
 
 
     @Override
-    public Mono<DocumentResponse> getdocument(String keyFile) throws IdClientNotFoundException {
+    public Mono<DocumentResponse> getdocument(String keyFile) throws DocumentKeyNotPresentException {
         return getWebClient().get()
-                .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
-                .retrieve()
-                .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
-                .bodyToMono(DocumentResponse.class);
+			                .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
+			                .retrieve()
+			                .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
+			                .bodyToMono(DocumentResponse.class)
+                .onErrorResume(RuntimeException.class, e -> {
+                	log.error("DocumentClientCallImpl.getdocument() : errore generico = {}", e.getMessage(), e);
+                	return Mono.error(e);
+                });
     }
 
     @Override
-    public Mono<DocumentResponse> postDocument(DocumentInput document) throws IdClientNotFoundException {
-        return getWebClient().post()
-                .uri(anagraficaDocumentiClientEndpointpost)
-                .bodyValue(document)
-                .retrieve()
-                .onStatus(FORBIDDEN::equals, clientResponse -> Mono.error(new DocumentkeyPresentException(document.getDocumentKey())))
-                .bodyToMono(DocumentResponse.class);
-    }
-
-    @Override
-    public ResponseEntity<Document> updatedocument(Document document) throws IdClientNotFoundException {
-        return getWebClient().put()
-                .uri(String.format(anagraficaDocumentiClientEndpoint))
-                .bodyValue(document)
-                .retrieve()
-                .bodyToMono(ResponseEntity.class).block();
+    public Mono<DocumentResponse> postDocument(DocumentInput document) throws DocumentkeyPresentException {
+        return    getWebClient().post()
+				                .uri(anagraficaDocumentiClientEndpointpost)
+				                .bodyValue(document)
+				                .retrieve()
+				                .onStatus(FORBIDDEN::equals, clientResponse -> Mono.error(new DocumentkeyPresentException(document.getDocumentKey())))
+				                .bodyToMono(DocumentResponse.class)
+		                .onErrorResume(RuntimeException.class, e -> {
+		                	log.error("DocumentClientCallImpl.postDocument() : errore generico = {}", e.getMessage(), e);
+		                	return Mono.error(e);
+		                });
     }
 
     @Override
     public Mono<DocumentResponse> patchdocument(
     		String authPagopaSafestorageCxId, String authApiKey, 
-    		String keyFile, DocumentChanges document) throws IdClientNotFoundException {
-        return getWebClient().patch()
-                .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
-        		.header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
-        		.header(xApiKey, authApiKey)
-                .bodyValue(document)
-                .retrieve()
-                .bodyToMono(DocumentResponse.class);
+    		String keyFile, DocumentChanges document) throws DocumentKeyNotPresentException {
+        return    getWebClient().patch()
+				                .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
+				        		.header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
+				        		.header(xApiKey, authApiKey)
+				                .bodyValue(document)
+				                .retrieve()
+				                .bodyToMono(DocumentResponse.class)
+		                .onErrorResume(RuntimeException.class, e -> {
+		                	log.error("DocumentClientCallImpl.patchdocument() : errore generico = {}", e.getMessage(), e);
+		                	return Mono.error(e);
+		                });
     }
 
     @Override

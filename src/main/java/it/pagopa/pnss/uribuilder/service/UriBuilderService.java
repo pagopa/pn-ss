@@ -1,6 +1,5 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.BOOKED;
 import static it.pagopa.pnss.common.Constant.FREEZED;
 import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
 import static it.pagopa.pnss.common.Constant.PN_AAR;
@@ -17,8 +16,8 @@ import static java.util.Map.entry;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Base64;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -52,6 +51,7 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -83,6 +83,9 @@ public class UriBuilderService extends CommonS3ObjectService {
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
+    
+    @Value("${queryParam.presignedUrl.traceId:#{null}}")
+    String queryParamPresignedUrlTraceId;
 
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
@@ -91,7 +94,6 @@ public class UriBuilderService extends CommonS3ObjectService {
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
                              AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName
-                             // , RetentionService retentionService
                              ) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
@@ -272,12 +274,16 @@ public class UriBuilderService extends CommonS3ObjectService {
     	log.debug("signBucket() : START : s3Presigner IN : "
     			+ "bucketName {} : keyName {} : "
     			+ "documentState {} : documentType {} : contenType {} : "
-    			+ "secret {} : checksumValue {}",
-    			bucketName, documentKey, documentState, documentType, contenType, secret, checksumValue);
+    			+ "secret {} : checksumType{} : checksumValue {}",
+    			bucketName, documentKey, documentState, 
+    			documentType, contenType, secret, checksumType, checksumValue);
     	log.info("signBucket() : sign bucket {}", duration);
     	
     	if (checksumType == null || checksumValue == null || checksumValue.isBlank()) {
     		return Mono.error(new ChecksumException("Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
+    	}
+    	if (queryParamPresignedUrlTraceId == null || queryParamPresignedUrlTraceId.isBlank()) {
+    		return Mono.error(new QueryParamException("Property \"queryParam.presignedUrl.traceId\" non impostata"));
     	}
 
     	return  Mono.just(checksumType)
@@ -290,6 +296,9 @@ public class UriBuilderService extends CommonS3ObjectService {
 									 .metadata(secret)
 									 .contentMD5(checksumValue)
 					                //.tagging(storageType)
+									 // Aggiungere queryParam custom alle presigned URL di upload e download
+									 .overrideConfiguration(awsRequestOverrideConfiguration -> 
+		 								awsRequestOverrideConfiguration.putRawQueryParameter(queryParamPresignedUrlTraceId, documentKey))
 									 .build());
 		    			}
 		    			else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank()
@@ -303,6 +312,9 @@ public class UriBuilderService extends CommonS3ObjectService {
 									 .metadata(secret)
 									 .checksumSHA256(checksumValue)
 					                //.tagging(storageType)
+									 // Aggiungere queryParam custom alle presigned URL di upload e download
+									 .overrideConfiguration(awsRequestOverrideConfiguration -> 
+		 								awsRequestOverrideConfiguration.putRawQueryParameter(queryParamPresignedUrlTraceId, documentKey))
 									 .build());
 		    			}
 		    			else {
@@ -315,23 +327,6 @@ public class UriBuilderService extends CommonS3ObjectService {
 					        .build()
 					)
 					.flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest)));
-		    	
-    	
-//    	return retentionService.getPutObjectRequestForPresignRequest(bucketName,
-//    																documentKey,
-//    																contenType,
-//    																secret,
-//    																documentState,
-//    																documentType,
-//    																authPagopaSafestorageCxId,
-//    																authApiKey)
-//	    		.map(putObjectRequest -> PutObjectPresignRequest.builder()
-//											                .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
-//											                .putObjectRequest(putObjectRequest)
-//											                .build()
-//	    		)
-//	    		.flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest)))
-//	    		;
     }
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly) {

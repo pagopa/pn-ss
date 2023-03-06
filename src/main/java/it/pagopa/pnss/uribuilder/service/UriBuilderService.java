@@ -296,6 +296,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 									 .metadata(secret)
 									 .contentMD5(checksumValue)
 					                //.tagging(storageType)
+									 // Aggiungere queryParam custom alle presigned URL di upload e download
 									 .overrideConfiguration(awsRequestOverrideConfiguration -> 
 		 								awsRequestOverrideConfiguration.putRawQueryParameter(queryParamPresignedUrlTraceId, documentKey))
 									 .build());
@@ -311,6 +312,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 									 .metadata(secret)
 									 .checksumSHA256(checksumValue)
 					                //.tagging(storageType)
+									 // Aggiungere queryParam custom alle presigned URL di upload e download
 									 .overrideConfiguration(awsRequestOverrideConfiguration -> 
 		 								awsRequestOverrideConfiguration.putRawQueryParameter(queryParamPresignedUrlTraceId, documentKey))
 									 .build());

@@ -84,6 +84,7 @@ public class AwsConfiguration {
     DynamoEventStreamName dynamoEventStreamName;
     @Autowired
     AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
+
     private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
 
@@ -204,8 +205,7 @@ public class AwsConfiguration {
                         .build();
                 AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
                 KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(
-                        "streams-adapter-demo",
-                        //"arn:aws:dynamodb:eu-central-1:713024823233:table/dgs-bing-ss-PnSsTableDocumenti-1TTOSMTT2OCLC/stream/2023-02-08T18:29:08.530",
+                        dynamoEventStreamName.tableMetadata(),
                         dynamoEventStreamName.documentName(),
                         awsCredentialsProvider,
                         "streams-demo-worker")

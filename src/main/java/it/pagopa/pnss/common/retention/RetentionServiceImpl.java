@@ -365,7 +365,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 											documentEntity.getDocumentKey(),
 											// si assume che la postDocument abbia gia' effettuato la traduzione dello stato logico
 											// e l'impostazione dello stesso stato nella entity
-											documentEntity.getDocumentState(), // stato tecnico
+											documentEntity.getDocumentLogicalState(), // stato logico
 											documentEntity.getDocumentType().getTipoDocumento(), 
 											dataCreazioneObjectInBucket)
 									.flatMap(istantRetentionUntil -> {

@@ -191,13 +191,13 @@ Resources:
           # - Event: 's3:Replication'
             # Function: !GetAtt PnSsGestoreBucket.Arn
       ObjectLockEnabled: true
-      ObjectLockConfiguration:
-        ObjectLockEnabled: 'Enabled'
-        Rule: 
-          DefaultRetention: 
-            Days: 1
-            Mode: !If [ IsProdEnv , 'COMPLIANCE' , 'GOVERNANCE']
-            # Years: 
+      # ObjectLockConfiguration:
+      #   ObjectLockEnabled: 'Enabled'
+      #   Rule: 
+      #     DefaultRetention: 
+      #       Days: 1
+      #       Mode: !If [ IsProdEnv , 'COMPLIANCE' , 'GOVERNANCE']
+      #       # Years: 
       VersioningConfiguration:
         Status: Enabled
       OwnershipControls:

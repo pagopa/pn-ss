@@ -294,6 +294,12 @@ Resources:
               - 'dynamodb:*'
             Resource:
               - !Join [ '', [ !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/' , '*', !Ref PnSsTableDocumentiStreamMetadatiTable , '*']]
+          - Sid: 'CloudWatchPutMetricData'
+            Effect: Allow
+            Action:
+              - 'cloudwatch:PutMetricData'
+            Resource:
+              - '*'
           - Effect: Allow
             Action:
               - 's3:List*'

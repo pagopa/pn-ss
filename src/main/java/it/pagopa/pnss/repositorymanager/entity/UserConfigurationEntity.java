@@ -2,6 +2,7 @@ package it.pagopa.pnss.repositorymanager.entity;
 
 import java.util.List;
 
+import it.pagopa.pnss.common.model.entity.DocumentVersion;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -12,7 +13,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 @DynamoDbBean
 @Data
 @ToString
-public class UserConfigurationEntity {
+public class UserConfigurationEntity extends DocumentVersion {
 	
 	@Getter(AccessLevel.NONE)
 	private String name; // ok

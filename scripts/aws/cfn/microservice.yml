@@ -248,6 +248,7 @@ Resources:
         ContainerEnvEntry12: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
         ContainerEnvEntry20: !Sub 'pst=${PresignedUrlMinutesLifespan}'
         ContainerEnvEntry21: !Sub 'stayHotTime=${PnSsUriBuilderstayHotTime}'
+        ContainerEnvEntry22: !Sub 'PnSsBucketLockRetentionMode=GOVERNANCE'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'

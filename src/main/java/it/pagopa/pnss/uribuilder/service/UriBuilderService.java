@@ -15,10 +15,10 @@ import static java.util.Map.entry;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -358,7 +358,11 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                 .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
                    })
                    .map(doc -> getFileDownloadResponse(fileKey, doc, metadataOnly))
-                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "));
+                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "))
+                   .onErrorResume(RuntimeException.class, throwable -> {
+                	   log.error("createUriForDownloadFile() : erroe generico = {}", throwable.getMessage(), throwable);
+                	   return Mono.error(throwable);
+                   });
     }
 
     @NotNull
@@ -383,7 +387,21 @@ public class UriBuilderService extends CommonS3ObjectService {
         downloadResponse.setDocumentType(doc.getDocumentType().getTipoDocumento());
 
         downloadResponse.setKey(fileKey);
-        downloadResponse.setRetentionUntil(new Date());
+        
+        if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
+        	try {
+	        	final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+	        	downloadResponse.setRetentionUntil(new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()));
+	        }
+        	catch (Exception e) {
+        		log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+			}
+        }
+        log.info("getFileDownloadResponse() : doc.getRetentionUntil() = {} : downloadResponse.getRetentionUntil() = {}",
+        		doc.getRetentionUntil() == null ? "puntatore null" : doc.getRetentionUntil() ,
+        		downloadResponse.getRetentionUntil() == null ? "puntatore null" : downloadResponse.getRetentionUntil());
+        
         downloadResponse.setVersionId(null);
 
         if (Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) {

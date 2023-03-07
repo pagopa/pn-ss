@@ -3,6 +3,7 @@ package it.pagopa.pnss.repositorymanager.entity;
 import java.math.BigDecimal;
 
 
+import it.pagopa.pnss.common.model.entity.DocumentVersion;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -13,7 +14,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 @DynamoDbBean
 @Data
 @ToString
-public class DocumentEntity {
+public class DocumentEntity extends DocumentVersion {
 
 	@Getter(AccessLevel.NONE)
 	private String documentKey;

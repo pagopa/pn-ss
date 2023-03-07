@@ -19,6 +19,8 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
+import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
+
 @Service
 @Slf4j
 public class UserConfigurationServiceImpl implements UserConfigurationService {
@@ -100,7 +102,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                        return entityStored;
                    })
                    .zipWhen(userConfigurationUpdated -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
-                           userConfigurationUpdated)))
+                           userConfigurationUpdated))).retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
                    .map(objects -> objectMapper.convertValue(objects.getT2(), UserConfiguration.class));
     }
 

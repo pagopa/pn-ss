@@ -1,6 +1,7 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
 import static it.pagopa.pnss.common.Constant.STORAGETYPE;
+import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -192,6 +193,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 																				documentEntityStored);
 				   })
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
+			   	   .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
                    .onErrorResume(RuntimeException.class, throwable -> {
                 	   if (throwable instanceof NullPointerException) {
                     	   log.error("patchDocument() : errore per valore null : messaggio = {}", throwable.getMessage(), throwable);

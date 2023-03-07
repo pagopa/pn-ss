@@ -288,7 +288,7 @@ Resources:
               - !Sub '${PnSsTableArnTipologieDocumenti}'
               - !Sub '${PnSsTableArnDocumenti}'
               - !Sub '${PnSsTableDocumentiStreamArn}'
-              - !Join [ '', [ !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/' , '*', !Ref PnSsTableDocumentiStreamMetadatiTable , '*']]
+              - !Join [ '', [ !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/' , !Ref PnSsTableDocumentiStreamMetadatiTable]]
           - Effect: Allow
             Action:
               - 's3:List*'

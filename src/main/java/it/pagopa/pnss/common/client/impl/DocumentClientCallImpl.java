@@ -23,23 +23,19 @@ import reactor.core.publisher.Mono;
 @Service
 @Slf4j
 public class DocumentClientCallImpl extends CommonBaseClient implements DocumentClientCall {
-    private final WebClient.Builder ecInternalWebClient= WebClient.builder();
+    private final WebClient.Builder ecInternalWebClient = WebClient.builder();
 
     @Value("${gestore.repository.anagrafica.internal.docClient}")
     String anagraficaDocumentiClientEndpoint;
     @Value("${gestore.repository.anagrafica.internal.docClient.post}")
     String anagraficaDocumentiClientEndpointpost;
 
+    @Value("${internal.base.url}")
+    String internalBaseUrl;
     @Value("${header.x-api-key}")
     private String xApiKey;
     @Value("${header.x-pagopa-safestorage-cx-id}")
     private String xPagopaSafestorageCxId;
-    
-    public WebClient getWebClient(){
-        WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
-        return builder.baseUrl("http://localhost:8080").build();
-    }
-
 
     @Override
     public Mono<DocumentResponse> getdocument(String keyFile) throws DocumentKeyNotPresentException {
@@ -88,6 +84,11 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     @Override
     public ResponseEntity<Document> deletedocument(String keyFile) throws IdClientNotFoundException {
         return null;
+    }
+
+    public WebClient getWebClient() {
+        WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
+        return builder.baseUrl(internalBaseUrl).build();
     }
 
 }

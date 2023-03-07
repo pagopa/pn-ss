@@ -300,7 +300,7 @@ Resources:
         - Arn: !GetAtt PnSsQueueStagingBucket.Arn
           Id: "SQSTargetForStagingBucket"
   
-  #### RISORSE PER GESTORE DISPONIBILITA' ####
+########### GESTORE DISPONIBILITA' EXTERNAL NOTIFICATION ###########
   PnSsQueueNotificheExt1:
     Type: AWS::SQS::Queue
     Properties:
@@ -341,9 +341,6 @@ Resources:
           Service:
           - 'ecs.amazonaws.com'
         Resource: !GetAtt PnSsEventBusExternalNotification.Arn
-        # Condition: 
-        #   ArnEquals:
-        #     aws:SourceArn: ECS ARN ??
 
   PnSsEventBusPolicyManageExternalNotification:
     Type: AWS::Events::EventBusPolicy
@@ -369,7 +366,25 @@ Resources:
           AWS: !Sub '${AWS::AccountId}'
         Condition:
           StringEqualsIfExists:
-            events:creatorAccount: !Sub '${AWS::AccountId}'     
+            events:creatorAccount: !Sub '${AWS::AccountId}'   
+
+  # ####### DENY POLICY FROM OUTSIDE ACCOUNT ########
+  # PnEcEventBusPolicyDenyTrackerExternalNotification:
+  #   Type: AWS::Events::EventBusPolicy
+  #   Properties:
+  #     EventBusName: !Ref PnEcEventBusNameTrackerExternalNotification
+  #     StatementId: 'PnEcCustomEventBusPolicyDenyCrossAccount'
+  #     Statement:
+  #       Action: 
+  #         - "events:*"
+  #       Effect: 'Deny'
+  #       Principal: 
+  #         Service:
+  #           - 'ecs.amazonaws.com'
+  #       Resource: !Ref PnEcEventBusArnTrackerExternalNotification
+  #       Condition:
+  #         StringNotEquals:
+  #           aws:SourceAccount: !Sub '${AWS::AccountId}'
 
   PnSsQueuePolicyNotificheExt1:
     Type: AWS::SQS::QueuePolicy
@@ -412,7 +427,7 @@ Resources:
       State: 'ENABLED'
       Targets:
         - Arn: !GetAtt PnSsQueueNotificheExt1.Arn
-          Id: 'Ext1QueueTargetForExtNotification'
+          Id: 'PnSsExt1QueueTargetForExtNotification'
 
 Outputs:
   PnSsTableNameAnagraficaClient:

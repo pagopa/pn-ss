@@ -369,10 +369,10 @@ Resources:
             events:creatorAccount: !Sub '${AWS::AccountId}'   
 
   # ####### DENY POLICY FROM OUTSIDE ACCOUNT ########
-  # PnEcEventBusPolicyDenyTrackerExternalNotification:
+  # PnSsEventBusPolicyDenyExternalNotification:
   #   Type: AWS::Events::EventBusPolicy
   #   Properties:
-  #     EventBusName: !Ref PnEcEventBusNameTrackerExternalNotification
+  #     EventBusName: !Ref PnSsEventBusExternalNotification
   #     StatementId: 'PnEcCustomEventBusPolicyDenyCrossAccount'
   #     Statement:
   #       Action: 
@@ -381,7 +381,7 @@ Resources:
   #       Principal: 
   #         Service:
   #           - 'ecs.amazonaws.com'
-  #       Resource: !Ref PnEcEventBusArnTrackerExternalNotification
+  #       Resource: !GetAtt PnSsEventBusExternalNotification.Arn
   #       Condition:
   #         StringNotEquals:
   #           aws:SourceAccount: !Sub '${AWS::AccountId}'

@@ -280,6 +280,7 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Description: Description
+      EventBusName: !Ref PnSsEventBusExternalNotification
       EventPattern:   
         source: 
           - 'aws.s3' 

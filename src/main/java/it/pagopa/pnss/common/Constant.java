@@ -34,6 +34,7 @@ public class Constant {
 
     public static final Region EU_CENTRAL_1 = Region.EU_CENTRAL_1;
 
+    public static final String technicalStatus_booked="BOOKED";
     public static final String technicalStatus_attached="ATTACHED";
     public static final String technicalStatus_available="AVAILABLE";
 

@@ -11,6 +11,7 @@ import static it.pagopa.pnss.common.Constant.listaStatus;
 import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
 import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
 import static it.pagopa.pnss.common.Constant.technicalStatus_available;
+import static it.pagopa.pnss.common.Constant.technicalStatus_attached;
 import static java.util.Map.entry;
 
 import java.math.BigDecimal;
@@ -406,7 +407,8 @@ public class UriBuilderService extends CommonS3ObjectService {
 
         if (Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) {
             if (doc.getDocumentState() == null ||
-                    !doc.getDocumentState().equalsIgnoreCase(technicalStatus_available)){
+                    !( doc.getDocumentState().equalsIgnoreCase(technicalStatus_available)
+                    ||doc.getDocumentState().equalsIgnoreCase(technicalStatus_attached))){
                 throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Document : " + doc.getDocumentKey() +
                                 " not has a valid state " ));

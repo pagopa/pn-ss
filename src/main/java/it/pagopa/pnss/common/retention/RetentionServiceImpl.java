@@ -285,12 +285,19 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 				+ "documentChanges {} : documentEntity {} ", 
 				authPagopaSafestorageCxId, authApiKey,
 				documentChanges, documentEntity);
-		log.info("setRetentionPeriodInBucketObjectMetadata() : INPUT : retentionUntil = {} : ", 
-				documentChanges != null && documentChanges.getRetentionUntil() == null ?
-						"valore puntatore null" :
-						(documentChanges != null && documentChanges.getRetentionUntil() != null && documentChanges.getRetentionUntil() .isBlank() ?
-								"valore stringa vuota" :
-								"(altro valore = <"+documentChanges.getRetentionUntil()+">)"));
+		String msg = null;
+		if (documentChanges != null) {
+			if (documentChanges.getRetentionUntil() == null) {
+				msg = "valore puntatore null"; 
+			}
+			else if (documentChanges.getRetentionUntil() != null && documentChanges.getRetentionUntil().isBlank()) {
+				msg = "valore stringa vuota";
+			}
+			else {
+				msg = "(altro valore = <"+documentChanges.getRetentionUntil()+">)";
+			}	
+		}
+		log.info("setRetentionPeriodInBucketObjectMetadata() : INPUT : retentionUntil = {} : ", msg);
 		
 		return  Mono.just(HeadObjectRequest.builder()
 										   .bucket(bucketName.ssHotName())
@@ -301,10 +308,15 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 						log.info("setRetentionPeriodInBucketObjectMetadata() : "
 								+ "headOjectResponse.lastModified() = {} :"
 								+ "headOjectResponse.objectLockRetainUntilDate() = {} :"
-								+ "headOjectResponse.objectLockModeAsString() = {} ", 
+								+ "objectLockRetentionMode = {} ", 
 								headOjectResponse.lastModified(), 
 								headOjectResponse.objectLockRetainUntilDate(),
-								headOjectResponse.objectLockModeAsString());
+								objectLockRetentionMode);
+						
+						if (objectLockRetentionMode == null || objectLockRetentionMode.isBlank()) {
+							log.error("setRetentionPeriodInBucketObjectMetadata() : Valore non trovato per la variabile \"PnSsBucketLockRetentionMode\"");
+							return Mono.error(new RetentionException("Valore non trovato per la variabile \"PnSsBucketLockRetentionMode\""));
+						}
 						
 						// VERIFICO LE CONDIZIONI preliminare all'impostazione della retentionUntil:
 						
@@ -330,8 +342,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 													instantRetentionUntil);
 											return Mono.just(ObjectLockRetention.builder()
 																				.retainUntilDate(instantRetentionUntil)
-																				// riutilizzo il valore presente
-																				.mode(headOjectResponse.objectLockModeAsString())
+																				.mode(objectLockRetentionMode)
 																				.build());
 										})
 										.flatMap(objectLockRetention -> Mono.just(PutObjectRetentionRequest.builder()
@@ -385,8 +396,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 										// restituisco l'objectLockRetention per il successivo aggiornamento del metadato per l'object nel bucket
 										return Mono.just(ObjectLockRetention.builder()
 																			.retainUntilDate(istantRetentionUntil)
-																			// riutilizzo il valore presente
-																			.mode(headOjectResponse.objectLockModeAsString())
+																			.mode(objectLockRetentionMode)
 																			.build());
 									})
 									.flatMap(objectLockRetention -> Mono.just(PutObjectRetentionRequest.builder()

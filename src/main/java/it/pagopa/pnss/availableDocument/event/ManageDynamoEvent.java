@@ -20,7 +20,7 @@ public class ManageDynamoEvent {
     public static final String DOCUMENTTYPE_KEY = "documentType";
     public static final String TIPODOCUMENTO_KEY = "tipoDocumento";
     public static final String DOCUMENTLOGICALSTATE_KEY = "documentLogicalState";
-    public static final String CHECKSUM_KEY = "checksum";
+    public static final String CHECKSUM_KEY = "checkSum";
     public static final String RETENTIONUNTIL_KEY = "retentionUntil";
     public static final String CONTENTTYPE_KEY = "contentType";
     public static final String CLIENTSHORTCODE_KEY = "clientShortCode";
@@ -52,8 +52,7 @@ public class ManageDynamoEvent {
         message.setDocumentStatus(docEntity.get(DOCUMENTLOGICALSTATE_KEY)!=null ? docEntity.get(DOCUMENTLOGICALSTATE_KEY).getS():null);
         message.setContentType(docEntity.get(CONTENTTYPE_KEY)!=null ? docEntity.get(CONTENTTYPE_KEY).getS():null);
 
-        message.setChecksum(docEntity.get(DOCUMENTTYPE_KEY).getM()!=null && docEntity.get(DOCUMENTTYPE_KEY).getM().get(CHECKSUM_KEY)!=null ?
-                docEntity.get(DOCUMENTTYPE_KEY).getM().get(CHECKSUM_KEY).getS():null);
+        message.setChecksum(docEntity.get(CHECKSUM_KEY)!=null ? docEntity.get(CHECKSUM_KEY).getS(): null);
 
         message.setRetentionUntil(docEntity.get(RETENTIONUNTIL_KEY)!=null ? docEntity.get(RETENTIONUNTIL_KEY).getS(): null);
         message.setClientShortCode(docEntity.get(CLIENTSHORTCODE_KEY)!=null ? docEntity.get(CLIENTSHORTCODE_KEY).getS(): null);

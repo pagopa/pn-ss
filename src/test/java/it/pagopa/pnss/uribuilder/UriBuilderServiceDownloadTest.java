@@ -261,7 +261,7 @@ class UriBuilderServiceDownloadTest {
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
-        d.setDocumentState(technicalStatus_attached);
+        d.setDocumentState(technicalStatus_booked);
 
         mockGetDocument(d, docId);
         fileDownloadTestCall(docId, false).expectStatus().isBadRequest();

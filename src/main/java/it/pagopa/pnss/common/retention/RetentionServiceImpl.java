@@ -38,7 +38,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRetentionRequest;
 
 @Service
 @Slf4j
-public class RetentionServiceImpl extends CommonS3ObjectService implements RetentionService {
+public class RetentionServiceImpl extends CommonS3ObjectService implements RetentionService { 
 	
     @Value("${default.internal.x-api-key.value:#{null}}")
     private String defaultInteralApiKeyValue;

@@ -10,8 +10,8 @@ import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
 import static it.pagopa.pnss.common.Constant.listaStatus;
 import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
 import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
-import static it.pagopa.pnss.common.Constant.technicalStatus_available;
 import static it.pagopa.pnss.common.Constant.technicalStatus_attached;
+import static it.pagopa.pnss.common.Constant.technicalStatus_available;
 import static java.util.Map.entry;
 
 import java.math.BigDecimal;
@@ -342,7 +342,6 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                                                                                    "Document key Not " +
                                                                                                                    "Found : " + fileKey)))
-
                                                 .map(documentResponse -> {
                                                     if (!canRead.contains(documentResponse.getDocument()
                                                             .getDocumentType()
@@ -487,7 +486,12 @@ public class UriBuilderService extends CommonS3ObjectService {
             S3Presigner presigner = getS3Presigner();
             FileDownloadInfo fdinfo = new FileDownloadInfo();
             log.info("INIZIO CREAZIONE OGGETTO  GetObjectRequest");
-            GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(bucketName).key(keyName).build();
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+            		                                            .bucket(bucketName)
+            		                                            .key(keyName)
+            		                                            .overrideConfiguration(awsRequestOverrideConfiguration -> 
+            		    		 										awsRequestOverrideConfiguration.putRawQueryParameter(queryParamPresignedUrlTraceId, keyName))
+            		                                            .build();
             log.info("FINE  CREAZIONE OGGETTO  GetObjectRequest");
             log.info("INIZIO  CREAZIONE OGGETTO  GetObjectPresignRequest");
             GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()

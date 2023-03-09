@@ -285,9 +285,9 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 			String oldState) {
 		
 		log.info("setRetentionPeriodInBucketObjectMetadata() : START : authPagopaSafestorageCxId {} : authApiKey {} : "
-				+ "documentChanges {} : documentEntity {} ", 
+				+ "documentChanges {} : documentEntity {} : oldState {}", 
 				authPagopaSafestorageCxId, authApiKey,
-				documentChanges, documentEntity);
+				documentChanges, documentEntity, oldState);
 		String msg = null;
 		if (documentChanges != null) {
 			if (documentChanges.getRetentionUntil() == null) {
@@ -366,13 +366,13 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 						else if (
 								// 1. l'oggetto nel bucket non ha una retaintUntilDate impostata
 								//headOjectResponse.objectLockRetainUntilDate() == null 
-								// 1. non si puo' distinguere il caso dell'impostazione di default da quella imposta dall'esterno o altro
-								//    Fare riferimento alla entity, piuttosto che all'oggetto presente nel bucket
-								documentEntity.getRetentionUntil() == null 
+//								// 1. non si puo' distinguere il caso dell'impostazione di default da quella imposta dall'esterno o altro
+//								//    Fare riferimento alla entity, piuttosto che all'oggetto presente nel bucket
+//								documentEntity.getRetentionUntil() == null 
 //								// 2. l'applicazione esterna NON sta chiedendo di modificare la retentionUntil
 //								&& documentChanges.getRetentionUntil() == null
 								// 3. verifico i passaggi di stato utili
-								&& oldState != null
+								oldState != null
 								&& documentChanges.getDocumentState() != null
 //								&& (documentChanges.getDocumentState().equalsIgnoreCase(AVAILABLE)
 //										|| documentChanges.getDocumentState().equalsIgnoreCase(ATTACHED))

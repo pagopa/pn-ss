@@ -1,5 +1,10 @@
 package it.pagopa.pnss.common.retention;
 
+import static it.pagopa.pnss.common.Constant.AVAILABLE;
+import static it.pagopa.pnss.common.Constant.BOOKED;
+import static it.pagopa.pnss.common.Constant.STAGED;
+import static it.pagopa.pnss.common.Constant.ATTACHED;
+
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -30,9 +35,6 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRetentionRequest;
-
-import static it.pagopa.pnss.common.Constant.AVAILABLE;
-import static it.pagopa.pnss.common.Constant.ATTACHED;
 
 @Service
 @Slf4j
@@ -279,7 +281,8 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 	@Override
 	public Mono<DocumentEntity> setRetentionPeriodInBucketObjectMetadata(
 			String authPagopaSafestorageCxId, String authApiKey, 
-			DocumentChanges documentChanges, DocumentEntity documentEntity) {
+			DocumentChanges documentChanges, DocumentEntity documentEntity,
+			String oldState) {
 		
 		log.info("setRetentionPeriodInBucketObjectMetadata() : START : authPagopaSafestorageCxId {} : authApiKey {} : "
 				+ "documentChanges {} : documentEntity {} ", 
@@ -366,15 +369,30 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 								// 1. non si puo' distinguere il caso dell'impostazione di default da quella imposta dall'esterno o altro
 								//    Fare riferimento alla entity, piuttosto che all'oggetto presente nel bucket
 								documentEntity.getRetentionUntil() == null 
-						// 2. l'applicazione esterna NON sta chiedendo di modificare la retentionUntil
-								&& documentChanges.getRetentionUntil() == null
-						// 3. lo stato dell'oggetto Document e' 'available'
+//								// 2. l'applicazione esterna NON sta chiedendo di modificare la retentionUntil
+//								&& documentChanges.getRetentionUntil() == null
+								// 3. verifico i passaggi di stato utili
+								&& oldState != null
 								&& documentChanges.getDocumentState() != null
-								&& (documentChanges.getDocumentState().equalsIgnoreCase(AVAILABLE)
-										|| documentChanges.getDocumentState().equalsIgnoreCase(ATTACHED))) 
+//								&& (documentChanges.getDocumentState().equalsIgnoreCase(AVAILABLE)
+//										|| documentChanges.getDocumentState().equalsIgnoreCase(ATTACHED))
+								&& (
+										(oldState.equalsIgnoreCase(BOOKED) && 
+												documentChanges.getDocumentState().equalsIgnoreCase(AVAILABLE))
+										|| (oldState.equalsIgnoreCase(STAGED) && 
+												documentChanges.getDocumentState().equalsIgnoreCase(AVAILABLE))
+										|| (oldState.equalsIgnoreCase(AVAILABLE) && 
+												documentChanges.getDocumentState().equalsIgnoreCase(ATTACHED))
+								)
+						) 
 						{
-							log.info("setRetentionPeriodInBucketObjectMetadata() : caso di rententionUtil NON impostata per l'object, NON specificata da applicazione chiamante E "
-									+ " stato document = {}", documentChanges.getDocumentState());
+							log.info("setRetentionPeriodInBucketObjectMetadata() : caso di rententionUtil "
+									+ "NON specificata da applicazione chiamante E "
+									+ " vecchio stato document = {}"
+									+ " nuovo stato document = {}", 
+									oldState,
+									documentChanges.getDocumentState());
+							
 							Instant dataCreazioneObjectInBucket = headOjectResponse.lastModified();
 							log.info("setRetentionPeriodInBucketObjectMetadata() : dataCreazioneObjectInBucket = {}", dataCreazioneObjectInBucket);
 							return getRetentionUntil(

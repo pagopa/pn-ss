@@ -30,6 +30,7 @@ public interface RetentionService {
 	
 	Mono<DocumentEntity> setRetentionPeriodInBucketObjectMetadata(
 			String authPagopaSafestorageCxId, String authApiKey, 
-			DocumentChanges documentChanges, DocumentEntity documentEntity);
+			DocumentChanges documentChanges, DocumentEntity documentEntity,
+			String oldState);
 
 }

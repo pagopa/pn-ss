@@ -4,6 +4,7 @@ import static it.pagopa.pnss.common.Constant.STORAGETYPE;
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.stereotype.Service;
 
@@ -122,6 +123,8 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
         log.info("patchDocument() : START : authPagopaSafestorageCxId = {} : authApiKey = {} : documentKey = {} : documentChanges  = {}", 
         		authPagopaSafestorageCxId, authApiKey, documentKey, documentChanges);
         
+        AtomicReference<String> oldState = new AtomicReference<>();
+        
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .map(documentEntityStored -> {
@@ -131,6 +134,9 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        log.info("patchDocument() : (recupero documentEntity dal DB) documentEntityStored = {}", documentEntityStored);
                        if (documentChanges.getDocumentState() != null) 
                        {
+                    	   // il vecchio stato viene considerato nella gestione della retentionUntil
+                    	   oldState.set(documentEntityStored.getDocumentState());
+                    	   
                     	   documentEntityStored.setDocumentState(documentChanges.getDocumentState());
                     	   
                            if(documentChanges.getDocumentState().equalsIgnoreCase("available")) {
@@ -190,7 +196,8 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 						return retentionService.setRetentionPeriodInBucketObjectMetadata(
 																				authPagopaSafestorageCxId, authApiKey,
 																				documentChanges,
-																				documentEntityStored);
+																				documentEntityStored,
+																				oldState.get());
 				   })
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
 			   	   .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)

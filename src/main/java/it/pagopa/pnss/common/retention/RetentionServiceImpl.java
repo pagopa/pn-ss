@@ -439,8 +439,14 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 					
 					// gestione errore
 					.onErrorResume(NoSuchKeyException.class, throwable -> {
-						log.error("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore = {}", 
+						log.error("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore = {}",
 								documentEntity.getDocumentKey(), throwable.getMessage(), throwable);
+						if (documentChanges.getDocumentState().equalsIgnoreCase(STAGED)) {
+							log.info("setRetentionPeriodInBucketObjectMetadata() : stato di arrivo per il documento = {} -> "
+									+ "documento non presente in bucket hot -> scarto l'errore",
+									 documentChanges.getDocumentState());
+							return Mono.just(documentEntity);
+						}
 						return Mono.error(new RetentionException(throwable.getMessage()));
 					})
 					.onErrorResume(DateTimeException.class, throwable -> {

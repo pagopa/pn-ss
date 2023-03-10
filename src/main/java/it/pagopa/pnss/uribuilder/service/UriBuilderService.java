@@ -1,6 +1,5 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.FREEZED;
 import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
 import static it.pagopa.pnss.common.Constant.PN_AAR;
 import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
@@ -12,6 +11,7 @@ import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
 import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
 import static it.pagopa.pnss.common.Constant.technicalStatus_attached;
 import static it.pagopa.pnss.common.Constant.technicalStatus_available;
+import static it.pagopa.pnss.common.Constant.technicalStatus_freezed;
 import static java.util.Map.entry;
 
 import java.math.BigDecimal;
@@ -407,7 +407,8 @@ public class UriBuilderService extends CommonS3ObjectService {
         if (Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) {
             if (doc.getDocumentState() == null ||
                     !( doc.getDocumentState().equalsIgnoreCase(technicalStatus_available)
-                    ||doc.getDocumentState().equalsIgnoreCase(technicalStatus_attached))){
+                    ||doc.getDocumentState().equalsIgnoreCase(technicalStatus_attached)
+                    ||doc.getDocumentState().equalsIgnoreCase(technicalStatus_freezed))){
                 throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Document : " + doc.getDocumentKey() +
                                 " not has a valid state " ));
@@ -429,7 +430,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 
             String bucketName = mapDocumentTypeToBucket.get(documentType);
             log.info("INIZIO RECUPERO URL DOWLOAND ");
-            if (!status.equals(FREEZED)) {
+            if (!status.equalsIgnoreCase(technicalStatus_freezed)) {
                 fileDOwnloadInfo = getPresignedUrl( bucketName, fileKey);
             } else {
                 fileDOwnloadInfo = recoverDocumentFromBucket( bucketName, fileKey);

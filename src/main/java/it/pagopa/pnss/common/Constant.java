@@ -12,7 +12,7 @@ public class Constant {
     public static final String APPLICATION_ZIP = "application/zip";
     public static final String IMAGE_TIFF = "image/tiff";
     
-    public static final String FILE_EXTENSION_PDF = ".pdf";
+    public static final String FILE_EXTENSION_PDF = ".pdf"; 
     public static final String FILE_EXTENSION_ZIP = ".zip";
     public static final String FILE_EXTENSION_TIFF = ".tiff";
     

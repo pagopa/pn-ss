@@ -11,6 +11,11 @@ public class Constant {
     public static final String APPLICATION_PDF = "application/pdf";
     public static final String APPLICATION_ZIP = "application/zip";
     public static final String IMAGE_TIFF = "image/tiff";
+    
+    public static final String FILE_EXTENSION_PDF = ".pdf";
+    public static final String FILE_EXTENSION_ZIP = ".zip";
+    public static final String FILE_EXTENSION_TIFF = ".tiff";
+    
     public static final String PN_NOTIFICATION_ATTACHMENTS = "PN_NOTIFICATION_ATTACHMENTS";
     public static final String PN_AAR = "PN_AAR";
     public static final String PN_LEGAL_FACTS = "PN_LEGAL_FACTS";

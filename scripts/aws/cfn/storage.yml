@@ -154,7 +154,7 @@ Resources:
             Transitions: 
               # - StorageClass: 'DEEP_ARCHIVE'
               - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 2
+                TransitionInDays: 1
           - Id: 'PnSsAar'
             ExpirationInDays: 15
             Status: 'Enabled'
@@ -163,8 +163,8 @@ Resources:
                 Value: 'PN_AAR'
             Transitions: 
               # - StorageClass: 'DEEP_ARCHIVE'
-              - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 2
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
           - Id: 'PnSsLegalFacts'
             ExpirationInDays: 15
             Status: 'Enabled'
@@ -172,9 +172,9 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
-              - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 2
+              - StorageClass: 'DEEP_ARCHIVE'
+              # - StorageClass: 'GLACIER_IR'
+                TransitionInDays: 1
       #LoggingConfiguration:
       #  DestinationBucketName: 'String'
       #  LogFilePrefix: 'String'

@@ -258,8 +258,9 @@ Resources:
   PnSsQueueStagingBucket:
     Type: AWS::SQS::Queue
     Properties:
-      KmsDataKeyReusePeriodSeconds: 300
+      # KmsDataKeyReusePeriodSeconds: 300
       # KmsMasterKeyId: 'alias/aws/sqs'
+      SqsManagedSseEnabled: True
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20      
       RedrivePolicy:
@@ -280,7 +281,6 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Description: Description
-      EventBusName: !Ref PnSsEventBusExternalNotification
       EventPattern:   
         source: 
           - 'aws.s3' 

@@ -3,10 +3,8 @@ package it.pagopa.pnss.localstack;
 import static it.pagopa.pnss.common.QueueNameConstant.ALL_QUEUE_NAME_LIST;
 import static it.pagopa.pnss.localstack.LocalStackUtils.DEFAULT_LOCAL_STACK_TAG;
 import static java.util.Map.entry;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.DYNAMODB;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.S3;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SNS;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SQS;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.*;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SECRETSMANAGER;
 import static software.amazon.awssdk.services.dynamodb.model.TableStatus.ACTIVE;
 
 import java.io.IOException;
@@ -51,10 +49,10 @@ public class LocalStackTestConfig {
 
     @Autowired
     private DynamoDbWaiter dynamoDbWaiter;
-    
+
     @Autowired
     private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
-    
+
     @Autowired
     private BucketName bucketName;
 
@@ -66,7 +64,7 @@ public class LocalStackTestConfig {
 
     static {
         localStackContainer.start();
-        
+
         System.setProperty("test.aws.region", localStackContainer.getRegion());
 
 //      <-- Override spring-cloud-starter-aws-messaging endpoints for testing -->
@@ -84,6 +82,9 @@ public class LocalStackTestConfig {
         System.setProperty("aws.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.secret.key", localStackContainer.getSecretKey());
         System.setProperty("test.event.bridge", "true");
+        System.setProperty("test.aws.ses.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SES)));
+        System.setProperty("test.aws.secretsmanager.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SECRETSMANAGER)));
+
 
 //        System.setProperty("PnSsStagingBucketName","PnSsStagingBucketName");
 
@@ -99,7 +100,7 @@ public class LocalStackTestConfig {
             for (String queueName : ALL_QUEUE_NAME_LIST) {
                 localStackContainer.execInContainer("awslocal", "sqs", "create-queue", "--queue-name", queueName);
             }
-            
+
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -114,23 +115,23 @@ public class LocalStackTestConfig {
                 tableName).build()).matched();
         responseOrException.response().orElseThrow(() -> new DynamoDbInitTableCreationException(tableName));
     }
-    
+
     //TODO aggiungere lifecycleRule per bucket relativo a PnSsBucketName
     private void addLifecycleConfigurationToHotBucket() {
     	//TODO metodo da completare
         LifecycleRuleFilter ruleFilter_PN_TEMPORARY_DOCUMENT = LifecycleRuleFilter.builder()
 //                .prefix("glacierobjects/")
                 .build();
-        
+
         Transition transition = Transition.builder()
                 .storageClass(TransitionStorageClass.STANDARD_IA)
                 .days(0)
                 .build();
     }
-    
+
     @PostConstruct
     public void initLocalStack() {
-    	
+
     	//TODO aggiungere lifecycleRule per bucket relativo a PnSsBucketName
 //    	List<String> allBucketNameList = List.of(bucketName.ssHotName(),bucketName.ssStageName());
 //        log.info("initLocalStack() : allBucketNameList  {}", allBucketNameList);
@@ -150,12 +151,12 @@ public class LocalStackTestConfig {
         catch (IOException | InterruptedException e) {
         	throw new RuntimeException(e);
 		}
-    	
+
         Map<String, Class<?>> tableNameWithEntityClass =
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),
                 			  entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), DocTypeEntity.class),
                               entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class));
-        
+
         tableNameWithEntityClass.forEach((tableName, entityClass) -> {
             log.info("<-- START initLocalStack -->");
             try {

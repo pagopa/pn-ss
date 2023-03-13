@@ -83,9 +83,6 @@ public class AwsConfiguration {
     @Value("${test.aws.sns.endpoint:#{null}}")
     String snsLocalStackEndpoint;
 
-    @Value("${test.aws.ses.endpoint:#{null}}")
-    String sesLocalStackEndpoint;
-
     @Value("${test.aws.secretsmanager.endpoint:#{null}}")
     String secretsmanagerLocalStackEndpoint;
 
@@ -204,7 +201,7 @@ public class AwsConfiguration {
                 .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
                 .region(Region.of(awsConfigurationProperties.regionCode()));
 
-        if (sesLocalStackEndpoint != null) {
+        if (secretsmanagerLocalStackEndpoint != null) {
             secretsManagerClient.endpointOverride(URI.create(secretsmanagerLocalStackEndpoint));
         }
 

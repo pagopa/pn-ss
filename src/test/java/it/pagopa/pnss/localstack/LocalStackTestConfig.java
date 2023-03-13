@@ -13,6 +13,8 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -60,7 +62,8 @@ public class LocalStackTestConfig {
     static LocalStackContainer localStackContainer = new LocalStackContainer(DockerImageName.parse(DEFAULT_LOCAL_STACK_TAG)).withServices(
             SQS,
             DYNAMODB,
-            S3);
+            S3,
+            SECRETSMANAGER);
 
     static {
         localStackContainer.start();
@@ -78,30 +81,50 @@ public class LocalStackTestConfig {
         System.setProperty("aws.config.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.config.secret.key", localStackContainer.getSecretKey());
         System.setProperty("aws.config.default.region", localStackContainer.getRegion());
-        System.setProperty("aws.region",  localStackContainer.getRegion());
+        System.setProperty("aws.region", localStackContainer.getRegion());
         System.setProperty("aws.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.secret.key", localStackContainer.getSecretKey());
         System.setProperty("test.event.bridge", "true");
-        System.setProperty("test.aws.ses.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SES)));
         System.setProperty("test.aws.secretsmanager.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SECRETSMANAGER)));
 
 
 //        System.setProperty("PnSsStagingBucketName","PnSsStagingBucketName");
 
-        System.setProperty("PnSsStagingBucketArn","PnSsStagingBucketArn");
+        System.setProperty("PnSsStagingBucketArn", "PnSsStagingBucketArn");
 //        System.setProperty("PnSsBucketName","PnSsBucketName");
-        System.setProperty("PnSsBucketArn","PnSsBucketArn");
-
+        System.setProperty("PnSsBucketArn", "PnSsBucketArn");
 
 
         try {
+            //Set Aruba secret credentials
+            localStackContainer.execInContainer("awslocal",
+                    "secretsmanager",
+                    "create-secret",
+                    "--name",
+                    "pn/identity/signature",
+                    "--secret-string",
+                    getArubaCredentials()
 
-//          Create SQS queue
+            );
+            //Create SQS queue
             for (String queueName : ALL_QUEUE_NAME_LIST) {
                 localStackContainer.execInContainer("awslocal", "sqs", "create-queue", "--queue-name", queueName);
             }
 
         } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String getArubaCredentials() {
+        try {
+            return new JSONObject().put("delegated_domain", "${ArubaDelegatedDomain}")
+                    .put("delegated_password", "${ArubaDelegatedPassword}")
+                    .put("delegated_user", "${ArubaDelegatedUser}")
+                    .put("otpPwd", "${ArubaOtpPwd}")
+                    .put("typeOtpAuth", "${ArubaTypeOtpAuth}")
+                    .put("user", "${ArubaUser}").toString();
+        } catch (JSONException e) {
             throw new RuntimeException(e);
         }
     }
@@ -118,7 +141,7 @@ public class LocalStackTestConfig {
 
     //TODO aggiungere lifecycleRule per bucket relativo a PnSsBucketName
     private void addLifecycleConfigurationToHotBucket() {
-    	//TODO metodo da completare
+        //TODO metodo da completare
         LifecycleRuleFilter ruleFilter_PN_TEMPORARY_DOCUMENT = LifecycleRuleFilter.builder()
 //                .prefix("glacierobjects/")
                 .build();
@@ -132,30 +155,29 @@ public class LocalStackTestConfig {
     @PostConstruct
     public void initLocalStack() {
 
-    	//TODO aggiungere lifecycleRule per bucket relativo a PnSsBucketName
+        //TODO aggiungere lifecycleRule per bucket relativo a PnSsBucketName
 //    	List<String> allBucketNameList = List.of(bucketName.ssHotName(),bucketName.ssStageName());
 //        log.info("initLocalStack() : allBucketNameList  {}", allBucketNameList);
-    	try {
-    		localStackContainer.execInContainer("awslocal", "s3", "mb", "s3://" + bucketName.ssStageName());
-    		log.info("initLocalStack() : creato bucket  {}", bucketName.ssStageName());
+        try {
+            localStackContainer.execInContainer("awslocal", "s3", "mb", "s3://" + bucketName.ssStageName());
+            log.info("initLocalStack() : creato bucket  {}", bucketName.ssStageName());
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
         try {
-        	localStackContainer.execInContainer("awslocal", "s3api", "create-bucket", "--bucket", bucketName.ssHotName(), //"--object-lock-configuration",
-        			"--object-lock-enabled-for-bucket")
-        			//"{\"ObjectLockEnabled\": \"Enabled\",\"Rule\": {\"DefaultRetention\": {\"Mode\": \"GOVERNANCE\",\"Days\": 1,\"Years\": 0}}}")
-        	;
-        	log.info("initLocalStack() : creato bucket  {}", bucketName.ssHotName());
+            localStackContainer.execInContainer("awslocal", "s3api", "create-bucket", "--bucket", bucketName.ssHotName(), //"--object-lock-configuration",
+                    "--object-lock-enabled-for-bucket")
+            //"{\"ObjectLockEnabled\": \"Enabled\",\"Rule\": {\"DefaultRetention\": {\"Mode\": \"GOVERNANCE\",\"Days\": 1,\"Years\": 0}}}")
+            ;
+            log.info("initLocalStack() : creato bucket  {}", bucketName.ssHotName());
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
         }
-        catch (IOException | InterruptedException e) {
-        	throw new RuntimeException(e);
-		}
 
         Map<String, Class<?>> tableNameWithEntityClass =
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),
-                			  entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), DocTypeEntity.class),
-                              entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class));
+                        entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), DocTypeEntity.class),
+                        entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class));
 
         tableNameWithEntityClass.forEach((tableName, entityClass) -> {
             log.info("<-- START initLocalStack -->");

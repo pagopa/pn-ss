@@ -38,7 +38,7 @@ public class ArubaCredentialConf {
             if (delegatedDomain != null && delegatedPassword != null && delegatedUser != null && otpPwd != null && typeOtpAuth != null && user != null) {
                 return new ArubaSecretValue(delegatedDomain, delegatedUser, delegatedPassword, otpPwd, typeOtpAuth, user);
             } else {
-                String secretStringJson = secretsManagerClient.getSecretValue(builder -> builder.secretId("pn/identity/pec")).secretString();
+                String secretStringJson = secretsManagerClient.getSecretValue(builder -> builder.secretId("pn/identity/signature")).secretString();
                 return objectMapper.readValue(secretStringJson, ArubaSecretValue.class);
             }
         } catch (JsonProcessingException e) {

@@ -1,6 +1,7 @@
 package it.pagopa.pnss.transformation.service;
 
 import it.pagopa.pnss.transformation.configuration.ArubaCredentialConf;
+import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
 import it.pagopa.pnss.transformation.wsdl.ArubaSignServiceService;
 import it.pagopa.pnss.transformation.wsdl.Auth;
 import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
@@ -24,7 +25,7 @@ public abstract class CommonArubaService {
     ArubaSignServiceService arubaSignService = createArubaService(null);
 
     @Autowired
-    private ArubaCredentialConf arubaCredentialConf;
+    private ArubaSecretValue arubaSecretValue;
 
 
     Auth identity;
@@ -43,12 +44,12 @@ public abstract class CommonArubaService {
     public Auth createIdentity(Auth auth) {
         if (auth == null) {
             auth = new Auth();
-            auth.setDelegatedDomain(arubaCredentialConf.arubaCredentialProvider().getDelegatedDomain());
-            auth.setDelegatedPassword(arubaCredentialConf.arubaCredentialProvider().getDelegatedPassword());
-            auth.setDelegatedUser(arubaCredentialConf.arubaCredentialProvider().getDelegatedUser());
-            auth.setOtpPwd(arubaCredentialConf.arubaCredentialProvider().getOtpPwd());
-            auth.setTypeOtpAuth(arubaCredentialConf.arubaCredentialProvider().getTypeOtpAuth());
-            auth.setUser(arubaCredentialConf.arubaCredentialProvider().getUser());
+            auth.setDelegatedDomain(arubaSecretValue.getDelegatedDomain());
+            auth.setDelegatedPassword(arubaSecretValue.getDelegatedPassword());
+            auth.setDelegatedUser(arubaSecretValue.getDelegatedUser());
+            auth.setOtpPwd(arubaSecretValue.getOtpPwd());
+            auth.setTypeOtpAuth(arubaSecretValue.getTypeOtpAuth());
+            auth.setUser(arubaSecretValue.getUser());
         }
 
         return auth;

@@ -19,11 +19,8 @@ public class ArubaSecretValue {
     String delegatedUser;
     @JsonProperty("delegated_password")
     String delegatedPassword;
-    @JsonProperty("otpPwd")
     String otpPwd;
-    @JsonProperty("typeOtpAuth")
     String typeOtpAuth;
-    @JsonProperty("user")
     String user;
 
 }

@@ -28,20 +28,6 @@ public abstract class CommonArubaService {
 
 
     Auth identity;
-    @Value("${aruba.delegated.domain}")
-    public String delegated_domain;
-    @Value("${aruba.delegated.password}")
-    public String delegated_password;
-    @Value("${aruba.delegated.user}")
-    public String delegated_user;
-    @Value("${aruba.otpPwd}")
-    public String otpPwd;
-    @Value("${aruba.typeOtpAuth}")
-    public String typeOtpAuth;
-
-    @Value("${aruba.user}")
-    public String user;
-
     @Value("${aruba.cert_id}")
     public String certId = "AS0";
     @Value("${aruba.sign.wsdl.url}")

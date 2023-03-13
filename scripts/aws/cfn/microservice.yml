@@ -126,6 +126,22 @@ Parameters:
   PnSsDLQueueNameStagingBucket:
     Type: String
     Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
+
+  PnSsQueueNameGestoreBucketErrori:
+    Type: String
+    Description: 'Nome coda per pubblicazione errori del Gestore Bucket'
+
+  PnSsQueueArnGestoreBucketErrori:
+    Type: String
+    Description: 'ARN coda per pubblicazione errori del Gestore Bucket'
+
+  PnSsQueueUrlGestoreBucketErrori:
+    Type: String
+    Description: 'URL coda per pubblicazione errori del Gestore Bucket'
+
+  PnSsDLQueueNameGestoreBucketErrori:
+    Type: String
+    Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
   
   PnSsManagedPolicyName:
     Type: String
@@ -170,7 +186,7 @@ Parameters:
 
   PresignedUrlMinutesLifespan:
     Type: String
-    Description: 'Minuti di validità dei pre-signed url prima di scadere'
+    Description: 'Minuti di validità dei pre-signed url prima della scadenza'
 
   PnEcIdentityTimemark:
     Type: String
@@ -381,7 +397,25 @@ Resources:
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
               Service:
                 - 'events.amazonaws.com'
-           
+  
+  PnSsQueuePolicyGestoreBucketErrori:
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !Sub '${PnSsQueueUrlGestoreBucketErrori}'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement: 
+          - Action: 
+              - 'SQS:*'
+            Effect: "Allow"
+            Resource: !Sub ${PnSsQueueArnGestoreBucketErrori}
+            Principal:  
+              AWS: 
+                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !Ref PnSsGestoreBucketRole]]
+              Service:
+                - 'events.amazonaws.com'         
+  
   PnSsGestoreBucketRole:
     Type: AWS::IAM::Role
     Properties:
@@ -415,6 +449,21 @@ Resources:
                 Resource:
                   - !Sub '${PnSsBucketArn}'
                   - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
+              - Sid: 'QueueErroriPublishPolicy'
+                Effect: 'Allow'
+                Action: 
+                  - 'sqs:SendMessage'
+                Resource:
+                  - !Sub '${PnSsQueueArnGestoreBucketErrori}'
+              - Sid: 'DefaultKMSGrantRead'
+                Effect: 'Allow'
+                Action: 
+                  - 'kms:GenerateDataKey'
+                  - 'kms:Decrypt'
+                Resource: '*'
+                Condition:
+                  StringLike:
+                    kms:RequestAlias: 'alias/aws/sqs'
 
   PnSsGestoreBucketHotNotificationPermission:
     Type: AWS::Lambda::Permission
@@ -459,26 +508,32 @@ Resources:
           PnSsGestoreRepositoryPathGetDocument: !Ref PnSsGestoreRepositoryPathGetDocument
           PnSsGestoreRepositoryPathPatchDocument: !Ref PnSsGestoreRepositoryPathPatchDocument
           PnSsStagingBucketName: !Ref PnSsStagingBucketName
+          PnSsQueueUrlGestoreBucketErrori: !Ref PnSsQueueUrlGestoreBucketErrori
       Code:
         ZipFile: |
           "use strict";
+          import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
+
 
           const http = require(process.env.PnSsGestoreRepositoryProtocol);
           const AWS = require("aws-sdk");
           const crypto = require("crypto");
 
-          const s3 = new AWS.S3();
+
           const HOSTNAME = process.env.PnSsHostname;
           const PORT = process.env.PnSsGestoreRepositoryPort;
-          const PATHGET  = process.env.PnSsGestoreRepositoryPathGetDocument;
+          const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
           const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
           const STAGINGBUCKET = process.env.PnSsStagingBucketName;
+          const SQS_QUEUE_URL = process.env.PnSsQueueUrlGestoreBucketErrori;
+          const s3 = new AWS.S3();
 
-          let jsonDocument = {
-            documentKey: "",
-            documentState: "",
-          };
           exports.handler = async (event) => {
+            let jsonDocument = {
+              documentKey: "",
+              documentState: "",
+            };
+
             console.log(JSON.stringify(event));
             let bucketName;
             console.log("Buket Name: " + event.Records[0].s3.bucket.name);
@@ -494,9 +549,9 @@ Resources:
               case "ObjectCreated:*":
                 break;
               case "ObjectCreated:Put":
-                if(bucketName === STAGINGBUCKET){
+                if (bucketName === STAGINGBUCKET) {
                   jsonDocument.documentState = "staged";
-                }else{
+                } else {
                   jsonDocument.contentLenght = event.Records[0].s3.object.size;
                   jsonDocument.documentState = "available";
                   params.Bucket = bucketName;
@@ -504,17 +559,21 @@ Resources:
                   const { Body } = await s3.getObject(params).promise();
                   console.log(Body);
                   const doc = await getDocumentFromDB(jsonDocument.documentKey);
-                  console.log(doc);
+
                   console.log(doc.document);
                   console.log(doc.document.documentType.checksum);
                   console.log(JSON.stringify(doc.document.documentType.checksum));
-                  jsonDocument.checkSum = crypto.createHash(doc.document.documentType.checksum).update(Body).digest("hex"); 
+
+                  jsonDocument.checkSum = crypto
+                    .createHash(doc.document.documentType.checksum)
+                    .update(Body)
+                    .digest("hex");
                 }
                 console.log(jsonDocument);
                 break;
               case "ObjectCreated:Copy":
                 jsonDocument.documentState = "available";
-              break;
+                break;
               case "ObjectRestore:Completed":
                 jsonDocument.documentState = "available";
                 break;
@@ -531,18 +590,12 @@ Resources:
                 jsonDocument.documentState = "deleted";
                 break;
               default:
-                const response = {
-                  statusCode: 200,
-                };
-              return response;
+                return;
             }
-            const res = await updateDynamo(jsonDocument);
+            const res = await updateDynamo(jsonDocument, event);
             console.log(res);
             console.log("############## EXIT  ####################");
-            const response = {
-              statusCode: 200,
-            };
-            return response;
+            return;
           };
           function getDocumentFromDB(docKey) {
             const options = {
@@ -552,11 +605,10 @@ Resources:
               path: PATHGET + "/" + docKey,
               headers: {
                 "Content-Type": "application/json",
-              }, 
+              },
             };
             return new Promise((resolve, reject) => {
               const req = http.request(options, (res) => {
-                
                 let responseBody = "";
 
                 res.on("data", (chunk) => {
@@ -575,7 +627,7 @@ Resources:
               req.end();
             });
           }
-          function updateDynamo(data) {
+          function updateDynamo(data, eventData, retries = 3, backoff = 2000) {
             const options = {
               method: "PATCH",
               hostname: HOSTNAME,
@@ -583,7 +635,7 @@ Resources:
               path: PATHPATCH + "/" + data.documentKey,
               headers: {
                 "Content-Type": "application/json",
-              }, 
+              }
             };
             return new Promise((resolve, reject) => {
               const req = http.request(options, (res) => {
@@ -593,6 +645,25 @@ Resources:
                 });
                 res.on("end", () => {
                   resolve(JSON.parse(responseBody));
+                  switch (res.statusCode) {
+                    case 404:
+                      reject;
+                      break;
+                    case 500:
+                      if (retries > 0) {
+                        setTimeout(() => {
+                          req.destroy();
+                          return updateDynamo(data, eventData, retries - 1, backoff * 2);
+                        }, backoff);
+                      } else {
+                        console.log("Retry attempts terminated");
+                        sendOnQueue(eventData);
+                      }
+                      break;
+                    default:
+                      resolve(JSON.parse(responseBody));
+                      break;
+                  }
                 });
               });
               req.on("error", (err) => {
@@ -601,5 +672,27 @@ Resources:
               });
               req.write(JSON.stringify(data));
               req.end();
+            });
+          }
+
+          function sendOnQueue(msg) {
+            const params = {
+              DelaySeconds: 10,
+              MessageAttributes: {
+                Timestamp: {
+                  DataType: "String",
+                  StringValue: Date.now().toString(),
+                },
+              },
+              MessageBody: msg,
+              QueueUrl: SQS_QUEUE_URL
+            };
+
+            SQSClient.sendMessage(params, (err, data) => {
+              if (err) {
+                console.err("Error", err);
+              } else {
+                console.log("Success", data.MessageId);
+              }
             });
           }

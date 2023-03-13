@@ -414,8 +414,8 @@ public class UriBuilderService extends CommonS3ObjectService {
                                 " not has a valid state " ));
             }
             downloadResponse.setDownload(createFileDownloadInfo(fileKey,
-                                                                downloadResponse.getDocumentStatus(),
-                                                                downloadResponse.getDocumentType()));
+            		doc.getDocumentState(),
+                    downloadResponse.getDocumentType()));
         }
         return downloadResponse;
     }

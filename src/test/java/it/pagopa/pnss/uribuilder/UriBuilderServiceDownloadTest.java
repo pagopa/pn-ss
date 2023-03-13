@@ -195,8 +195,8 @@ class UriBuilderServiceDownloadTest {
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
-        d.setDocumentState(AVAILABLE);
-        d.setDocumentLogicalState(FREEZED);
+        d.setDocumentState(FREEZED);
+        d.setDocumentLogicalState(SAVED);
         d.setCheckSum("" );
         mockGetDocument(d, docId);
         addFileToBucket(docId);

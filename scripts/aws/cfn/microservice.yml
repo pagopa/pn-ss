@@ -341,6 +341,7 @@ Resources:
               - 'sqs:PurgeQueue'
               - 'sqs:Get*'
               - 'sqs:List*'
+              - 'sqs:SendMessage'
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
               - !Sub '${PnSsQueueArnNotificheExt1}'
@@ -413,8 +414,6 @@ Resources:
             Principal:  
               AWS: 
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !Ref PnSsGestoreBucketRole]]
-              Service:
-                - 'events.amazonaws.com'         
   
   PnSsGestoreBucketRole:
     Type: AWS::IAM::Role

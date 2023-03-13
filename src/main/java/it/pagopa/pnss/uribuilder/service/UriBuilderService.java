@@ -12,6 +12,13 @@ import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
 import static it.pagopa.pnss.common.Constant.technicalStatus_attached;
 import static it.pagopa.pnss.common.Constant.technicalStatus_available;
 import static it.pagopa.pnss.common.Constant.technicalStatus_freezed;
+import static it.pagopa.pnss.common.Constant.APPLICATION_PDF;
+import static it.pagopa.pnss.common.Constant.APPLICATION_ZIP;
+import static it.pagopa.pnss.common.Constant.IMAGE_TIFF;
+import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_PDF;
+import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_ZIP;
+import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_TIFF;
+
 import static java.util.Map.entry;
 
 import java.math.BigDecimal;
@@ -144,23 +151,38 @@ public class UriBuilderService extends CommonS3ObjectService {
                        }
                    })
                    .doOnSuccess(object -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
-                   .then(documentClientCall.postDocument(new DocumentInput().contentType(contentType)
-                                                                            .documentKey(GenerateRandoKeyFile.getInstance()
-                                                                                                             .createKeyName(documentType))
-                                                                            .documentState(initialNewDocumentState)
-                                                                            .clientShortCode(xPagopaSafestorageCxId)
-                                                                            .documentType(documentType))
-                                           .retryWhen(Retry.max(10)
-                                                           .filter(DocumentkeyPresentException.class::isInstance)
-                                                           .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
-                                                               throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                                                                                 "Non e' stato possibile " +
-                                                                                                 "produrre una chiave per " + "user " +
-                                                                                                 xPagopaSafestorageCxId);
-                                                           })))
+                   .flatMap(unused -> {
+	            	   	String documenKeyTmp = GenerateRandoKeyFile.getInstance().createKeyName(documentType);
+	            	   	switch(contentType) {
+						case APPLICATION_PDF:
+							documenKeyTmp += FILE_EXTENSION_PDF;
+							break;
+						case APPLICATION_ZIP:
+							documenKeyTmp += FILE_EXTENSION_ZIP;
+							break;
+						case IMAGE_TIFF:
+							documenKeyTmp += FILE_EXTENSION_TIFF;
+							break;
+						default:
+							return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,"Unrecognized Content Type"));
+						}
+	            	   	log.info("createUriForUploadFile(): documenKeyTmp = {} : ", documenKeyTmp);
+	            	   	return documentClientCall.postDocument(new DocumentInput()
+	            			   										.contentType(request.getContentType())
+	                                                                .documentKey(documenKeyTmp)
+	                                                                .documentState(initialNewDocumentState)
+	                                                                .clientShortCode(xPagopaSafestorageCxId)
+	                                                                .documentType(request.getDocumentType()))
+	                                       .retryWhen(Retry.max(10)
+	                                                       .filter(DocumentkeyPresentException.class::isInstance)
+	                                                       .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
+	                                                           throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+	                                                                                             "Non e' stato possibile " +
+	                                                                                             "produrre una chiave per " + "user " +
+	                                                                                             xPagopaSafestorageCxId);
+	                                                       }));
+                   	})
                    .flatMap(insertedDocument -> 
-
-                   
 //                       PresignedPutObjectRequest presignedPutObjectRequest =
                                buildsUploadUrl(documentType, 
                             		   		  insertedDocument.getDocument().getDocumentState(), 
@@ -191,7 +213,6 @@ public class UriBuilderService extends CommonS3ObjectService {
     }
 
     private Mono<Boolean> validationField(String contentType, String documentType, String status) {
-
         if (!listaTipoDocumenti.contains(contentType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid");
         }

@@ -127,19 +127,19 @@ Parameters:
     Type: String
     Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
 
-  PnSsQueueNameGestoreBucketErrori:
+  PnSsQueueNameGestoreBucketInvokeErrors:
     Type: String
     Description: 'Nome coda per pubblicazione errori del Gestore Bucket'
 
-  PnSsQueueArnGestoreBucketErrori:
+  PnSsQueueArnGestoreBucketInvokeErrors:
     Type: String
     Description: 'ARN coda per pubblicazione errori del Gestore Bucket'
 
-  PnSsQueueUrlGestoreBucketErrori:
+  PnSsQueueUrlGestoreBucketInvokeErrors:
     Type: String
     Description: 'URL coda per pubblicazione errori del Gestore Bucket'
 
-  PnSsDLQueueNameGestoreBucketErrori:
+  PnSsDLQueueGestoreBucketInvokeErrors:
     Type: String
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
   
@@ -399,18 +399,18 @@ Resources:
               Service:
                 - 'events.amazonaws.com'
   
-  PnSsQueuePolicyGestoreBucketErrori:
+  PnSsQueuePolicyGestoreBucketInvokeErrors:
     Type: AWS::SQS::QueuePolicy
     Properties: 
       Queues: 
-        - !Sub '${PnSsQueueUrlGestoreBucketErrori}'
+        - !Sub '${PnSsQueueUrlGestoreBucketInvokeErrors}'
       PolicyDocument:
         Version: '2012-10-17'
         Statement: 
           - Action: 
               - 'SQS:*'
             Effect: "Allow"
-            Resource: !Sub ${PnSsQueueArnGestoreBucketErrori}
+            Resource: !Sub ${PnSsQueueArnGestoreBucketInvokeErrors}
             Principal:  
               AWS: 
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !Ref PnSsGestoreBucketRole]]
@@ -448,12 +448,12 @@ Resources:
                 Resource:
                   - !Sub '${PnSsBucketArn}'
                   - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
-              - Sid: 'QueueErroriPublishPolicy'
+              - Sid: 'QueueInvokeErrorsPolicyProducer'
                 Effect: 'Allow'
                 Action: 
                   - 'sqs:SendMessage'
                 Resource:
-                  - !Sub '${PnSsQueueArnGestoreBucketErrori}'
+                  - !Sub '${PnSsQueueArnGestoreBucketInvokeErrors}'
               - Sid: 'DefaultKMSGrantRead'
                 Effect: 'Allow'
                 Action: 
@@ -492,6 +492,8 @@ Resources:
       Runtime: nodejs16.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240
+      DeadLetterConfig: 
+        TargetArn: !GetAtt PnSsQueueArnGestoreBucketInvokeErrors
       VpcConfig:
         SubnetIds:
           - !Ref PnVPCSubnetId1
@@ -507,24 +509,20 @@ Resources:
           PnSsGestoreRepositoryPathGetDocument: !Ref PnSsGestoreRepositoryPathGetDocument
           PnSsGestoreRepositoryPathPatchDocument: !Ref PnSsGestoreRepositoryPathPatchDocument
           PnSsStagingBucketName: !Ref PnSsStagingBucketName
-          PnSsQueueUrlGestoreBucketErrori: !Ref PnSsQueueUrlGestoreBucketErrori
+
       Code:
         ZipFile: |
           "use strict";
-          import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
-
 
           const http = require(process.env.PnSsGestoreRepositoryProtocol);
           const AWS = require("aws-sdk");
           const crypto = require("crypto");
-
 
           const HOSTNAME = process.env.PnSsHostname;
           const PORT = process.env.PnSsGestoreRepositoryPort;
           const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
           const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
           const STAGINGBUCKET = process.env.PnSsStagingBucketName;
-          const SQS_QUEUE_URL = process.env.PnSsQueueUrlGestoreBucketErrori;
           const s3 = new AWS.S3();
 
           exports.handler = async (event) => {
@@ -555,18 +553,25 @@ Resources:
                   jsonDocument.documentState = "available";
                   params.Bucket = bucketName;
                   params.Key = jsonDocument.documentKey;
-                  const { Body } = await s3.getObject(params).promise();
-                  console.log(Body);
-                  const doc = await getDocumentFromDB(jsonDocument.documentKey);
+                  try {
+                    const { Body } = await s3.getObject(params).promise();
+                    console.log(Body);
+                    const doc = await getDocumentFromDB(jsonDocument.documentKey);
 
-                  console.log(doc.document);
-                  console.log(doc.document.documentType.checksum);
-                  console.log(JSON.stringify(doc.document.documentType.checksum));
+                    console.log(doc.document);
+                    console.log(doc.document.documentType.checksum);
+                    console.log(JSON.stringify(doc.document.documentType.checksum));
 
-                  jsonDocument.checkSum = crypto
-                    .createHash(doc.document.documentType.checksum)
-                    .update(Body)
-                    .digest("hex");
+                    jsonDocument.checkSum = crypto
+                      .createHash(doc.document.documentType.checksum)
+                      .update(Body)
+                      .digest("hex");
+                  } catch (error) {
+                    console.log(error);
+                    const messageError = `Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}. Verificare che l'oggetto esiste nel bucket o sul database Dynamo.`;
+                    console.log(messageError);
+                    throw new Error(messageError);
+                  }
                 }
                 console.log(jsonDocument);
                 break;
@@ -591,10 +596,17 @@ Resources:
               default:
                 return;
             }
-            const res = await updateDynamo(jsonDocument, event);
-            console.log(res);
-            console.log("############## EXIT  ####################");
-            return;
+            try {
+              const res = await updateDynamo(jsonDocument);
+              console.log(res);
+              console.log("############## EXIT  ####################");
+              return res;
+            } catch (err) {
+              console.log(err);
+              const retMessgeError = "Errore nella patch su DynamoDB.";
+              console.log(retMessgeError);
+              throw new Error(retMessgeError);
+            }
           };
           function getDocumentFromDB(docKey) {
             const options = {
@@ -626,7 +638,7 @@ Resources:
               req.end();
             });
           }
-          function updateDynamo(data, eventData, retries = 3, backoff = 2000) {
+          function updateDynamo(data) {
             const options = {
               method: "PATCH",
               hostname: HOSTNAME,
@@ -634,7 +646,7 @@ Resources:
               path: PATHPATCH + "/" + data.documentKey,
               headers: {
                 "Content-Type": "application/json",
-              }
+              },
             };
             return new Promise((resolve, reject) => {
               const req = http.request(options, (res) => {
@@ -645,22 +657,14 @@ Resources:
                 res.on("end", () => {
                   resolve(JSON.parse(responseBody));
                   switch (res.statusCode) {
-                    case 404:
-                      reject;
+                    case 200:
+                      resolve(JSON.parse(responseBody));
                       break;
                     case 500:
-                      if (retries > 0) {
-                        setTimeout(() => {
-                          req.destroy();
-                          return updateDynamo(data, eventData, retries - 1, backoff * 2);
-                        }, backoff);
-                      } else {
-                        console.log("Retry attempts terminated");
-                        sendOnQueue(eventData);
-                      }
+                      reject;
                       break;
                     default:
-                      resolve(JSON.parse(responseBody));
+                      reject;
                       break;
                   }
                 });
@@ -671,27 +675,5 @@ Resources:
               });
               req.write(JSON.stringify(data));
               req.end();
-            });
-          }
-
-          function sendOnQueue(msg) {
-            const params = {
-              DelaySeconds: 10,
-              MessageAttributes: {
-                Timestamp: {
-                  DataType: "String",
-                  StringValue: Date.now().toString(),
-                },
-              },
-              MessageBody: msg,
-              QueueUrl: SQS_QUEUE_URL
-            };
-
-            SQSClient.sendMessage(params, (err, data) => {
-              if (err) {
-                console.err("Error", err);
-              } else {
-                console.log("Success", data.MessageId);
-              }
             });
           }

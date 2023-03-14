@@ -493,7 +493,7 @@ Resources:
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240
       DeadLetterConfig: 
-        TargetArn: !GetAtt PnSsQueueArnGestoreBucketInvokeErrors
+        TargetArn: !Ref PnSsQueueArnGestoreBucketInvokeErrors
       VpcConfig:
         SubnetIds:
           - !Ref PnVPCSubnetId1

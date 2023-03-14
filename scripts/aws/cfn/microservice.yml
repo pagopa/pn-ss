@@ -517,10 +517,6 @@ Resources:
           const http = require(process.env.PnSsGestoreRepositoryProtocol);
           const AWS = require("aws-sdk");
           const crypto = require("crypto");
-<<<<<<< HEAD
-=======
-          const sqs = new AWS.SQS();
->>>>>>> main
 
           const HOSTNAME = process.env.PnSsHostname;
           const PORT = process.env.PnSsGestoreRepositoryPort;
@@ -680,30 +676,4 @@ Resources:
               req.write(JSON.stringify(data));
               req.end();
             });
-<<<<<<< HEAD
           }
-=======
-          }
-
-          function sendOnQueue(msg) {
-            const params = {
-              DelaySeconds: 10,
-              MessageAttributes: {
-                Timestamp: {
-                  DataType: "String",
-                  StringValue: Date.now().toString(),
-                },
-              },
-              MessageBody: msg,
-              QueueUrl: SQS_QUEUE_URL
-            };
-
-            sqs.sendMessage(params, (err, data) => {
-              if (err) {
-                console.err("Error", err);
-              } else {
-                console.log("Success", data.MessageId);
-              }
-            });
-          }
->>>>>>> main

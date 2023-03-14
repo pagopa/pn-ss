@@ -2,8 +2,10 @@ package it.pagopa.pnss.transformation.rest;
 
 import com.sun.xml.ws.util.ByteArrayDataSource;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.transformation.configuration.ArubaCredentialConf;
 import it.pagopa.pnss.transformation.model.GenericFileSignRequestV2;
 import it.pagopa.pnss.transformation.model.GenericFileSignReturnV2;
+import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
 import it.pagopa.pnss.transformation.service.SignServiceSoap;
 import it.pagopa.pnss.transformation.wsdl.Auth;
 import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
@@ -37,7 +39,8 @@ public class GenericFileServiceSignTest {
     @Autowired
     SignServiceSoap service;
 
-
+    @Autowired
+    ArubaSecretValue arubaSecretValue;
 
 
     @BeforeEach
@@ -66,12 +69,12 @@ public class GenericFileServiceSignTest {
     private Auth createIdentity() {
         Auth auth = new Auth();
 
-        auth.setDelegatedDomain("demoprod");
-        auth.setDelegatedPassword("password11");
-        auth.setDelegatedUser("delegato");
-        auth.setOtpPwd("dsign");
-        auth.setTypeOtpAuth("demoprod");
-        auth.setUser("titolare_aut");
+        auth.setDelegatedDomain(arubaSecretValue.getDelegatedDomain());
+        auth.setDelegatedPassword(arubaSecretValue.getDelegatedPassword());
+        auth.setDelegatedUser(arubaSecretValue.getDelegatedUser());
+        auth.setOtpPwd(arubaSecretValue.getOtpPwd());
+        auth.setTypeOtpAuth(arubaSecretValue.getTypeOtpAuth());
+        auth.setUser(arubaSecretValue.getUser());
         return auth;
     }
 
@@ -91,10 +94,11 @@ public class GenericFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
         GenericFileSignReturnV2 response = service.callGenericFile(input);
         Assertions.assertNotNull(response.getPdfInfoResultSign());
-        Assertions.assertEquals(response.getCode(),"0002");
-        Assertions.assertEquals(response.getDescription(),"STREAM EMPTY" );
+        Assertions.assertEquals(response.getCode(), "0002");
+        Assertions.assertEquals(response.getDescription(), "STREAM EMPTY");
 
     }
+
     @Test
     public void testGenericFileTranspotType() throws JAXBException, TypeOfTransportNotImplemented_Exception {
         byte[] buf = readPdfDocoument();
@@ -111,10 +115,11 @@ public class GenericFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
         GenericFileSignReturnV2 response = service.callGenericFile(input);
         Assertions.assertNotNull(response.getPdfInfoResultSign());
-        Assertions.assertEquals(response.getCode(),"0005");
-        Assertions.assertEquals(response.getDescription(),"Trasport Method not Valid");
+        Assertions.assertEquals(response.getCode(), "0005");
+        Assertions.assertEquals(response.getDescription(), "Trasport Method not Valid");
 
     }
+
     @Test
     public void testGenericFileLoginKO() throws JAXBException, TypeOfTransportNotImplemented_Exception {
         byte[] buf = readPdfDocoument();
@@ -133,9 +138,10 @@ public class GenericFileServiceSignTest {
         GenericFileSignReturnV2 response = service.callGenericFile(input);
         Assertions.assertNotNull(response);
 
-        Assertions.assertEquals(response.getCode(),"0003");
-        Assertions.assertEquals(response.getDescription(),"Invalid User Credentials" );
+        Assertions.assertEquals(response.getCode(), "0003");
+        Assertions.assertEquals(response.getDescription(), "Invalid User Credentials");
     }
+
     @Test
     public void testGenericFileTranspotTypeEmpty() throws JAXBException, TypeOfTransportNotImplemented_Exception {
         byte[] buf = readPdfDocoument();
@@ -152,9 +158,10 @@ public class GenericFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
         GenericFileSignReturnV2 response = service.callGenericFile(input);
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(response.getCode(),"0002");
-        Assertions.assertEquals(response.getDescription(),"BYNARY INPUT EMPTY" );
+        Assertions.assertEquals(response.getCode(), "0002");
+        Assertions.assertEquals(response.getDescription(), "BYNARY INPUT EMPTY");
     }
+
     @Test
     public void testGenericFileUrlIncorrect() throws JAXBException, TypeOfTransportNotImplemented_Exception, MalformedURLException {
         byte[] buf = readPdfDocoument();
@@ -177,6 +184,7 @@ public class GenericFileServiceSignTest {
 //        Assertions.assertEquals(response.getCode(),"500");
         //Assertions.assertEquals(response.getDescription(),"Connection refused: connect" );
     }
+
     @Test
     public void testGenericFileCertIdNotcorrect() throws JAXBException, TypeOfTransportNotImplemented_Exception {
         byte[] buf = readPdfDocoument();
@@ -193,9 +201,10 @@ public class GenericFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
         GenericFileSignReturnV2 response = service.callGenericFile(input);
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(response.getCode(),"0001");
-        Assertions.assertEquals(response.getDescription(),"Generic error" );
+        Assertions.assertEquals(response.getCode(), "0001");
+        Assertions.assertEquals(response.getDescription(), "Generic error");
     }
+
     @Test
     public void testGenericFileSignedNotMarked() throws JAXBException, TypeOfTransportNotImplemented_Exception {
         byte[] buf = readPdfDocoument();
@@ -217,9 +226,9 @@ public class GenericFileServiceSignTest {
 
 
     private byte[] readPdfDocoument() {
-        byte[] byteArray=null;
+        byte[] byteArray = null;
         try {
-            InputStream is =  getClass().getResourceAsStream("/PDF_PROVA.pdf");
+            InputStream is = getClass().getResourceAsStream("/PDF_PROVA.pdf");
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
             int nRead;
@@ -232,9 +241,9 @@ public class GenericFileServiceSignTest {
             byteArray = buffer.toByteArray();
 
         } catch (FileNotFoundException e) {
-            System.out.println("File Not found"+e);
+            System.out.println("File Not found" + e);
         } catch (IOException e) {
-            System.out.println("IO Ex"+e);
+            System.out.println("IO Ex" + e);
         }
         return byteArray;
 

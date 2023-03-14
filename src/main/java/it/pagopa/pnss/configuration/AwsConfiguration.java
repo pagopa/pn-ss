@@ -3,6 +3,7 @@ package it.pagopa.pnss.configuration;
 import java.net.URI;
 import java.util.Collections;
 
+import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
@@ -46,6 +47,8 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
@@ -53,7 +56,9 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 
 @Configuration
 public class AwsConfiguration {
-	
+
+    private final AwsConfigurationProperties awsConfigurationProperties;
+
     /**
      * Set in LocalStackTestConfig
      */
@@ -78,6 +83,9 @@ public class AwsConfiguration {
     @Value("${test.aws.sns.endpoint:#{null}}")
     String snsLocalStackEndpoint;
 
+    @Value("${test.aws.secretsmanager.endpoint:#{null}}")
+    String secretsmanagerLocalStackEndpoint;
+
     @Value("${test.event.bridge:#{null}}")
     private String testEventBridge;
     @Autowired
@@ -89,6 +97,10 @@ public class AwsConfiguration {
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
 
 //  <-- spring-cloud-starter-aws-messaging -->
+
+    public AwsConfiguration(AwsConfigurationProperties awsConfigurationProperties) {
+        this.awsConfigurationProperties = awsConfigurationProperties;
+    }
 
     @Bean
     public QueueMessagingTemplate queueMessagingTemplate(final AmazonSQSAsync amazonSQSAsync) {
@@ -135,7 +147,7 @@ public class AwsConfiguration {
 
         return dynamoDbClientBuilder.build();
     }
-    
+
     @Bean
     public DynamoDbEnhancedClient dynamoDbEnhancedClient(DynamoDbClient dynamoDbClient) {
         return DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoDbClient).build();
@@ -145,11 +157,11 @@ public class AwsConfiguration {
     public DynamoDbWaiter dynamoDbWaiter(DynamoDbClient dynamoDbClient) {
         return DynamoDbWaiter.builder().client(dynamoDbClient).build();
     }
-    
+
     @Bean
     public DynamoDbAsyncClient dynamoDbAsyncClient() {
         DynamoDbAsyncClientBuilder dynamoDbAsyncClientBuilder = DynamoDbAsyncClient.builder()
-                                                                                   .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
 
         if (dynamoDbLocalStackEndpoint != null) {
             dynamoDbAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
@@ -159,7 +171,7 @@ public class AwsConfiguration {
 
         return dynamoDbAsyncClientBuilder.build();
     }
-    
+
     @Bean
     public DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient(DynamoDbAsyncClient dynamoDbAsyncClient) {
         return DynamoDbEnhancedAsyncClient.builder().dynamoDbClient(dynamoDbAsyncClient).build();
@@ -183,12 +195,25 @@ public class AwsConfiguration {
         return snsAsyncClientBuilder.build();
     }
 
+    @Bean
+    public SecretsManagerClient secretsManagerClient() {
+        SecretsManagerClientBuilder secretsManagerClient = SecretsManagerClient.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (secretsmanagerLocalStackEndpoint != null) {
+            secretsManagerClient.endpointOverride(URI.create(secretsmanagerLocalStackEndpoint));
+        }
+
+        return secretsManagerClient.build();
+    }
 
 
     @Bean
     public TaskExecutor taskExecutor() {
         return new SimpleAsyncTaskExecutor(); // Or use another one of your liking
     }
+
     @Bean
     public CommandLineRunner schedulingRunner(TaskExecutor executor) {
         return new CommandLineRunner() {
@@ -215,9 +240,9 @@ public class AwsConfiguration {
                         .withIdleTimeBetweenReadsInMillis(500)
                         .withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
 
-                IRecordProcessorFactory recordProcessorFactory = new StreamsRecordProcessorFactory( availabelDocumentEventBridgeName.disponibilitaDocumentiName());
-                Worker worker  = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory, workerConfig, adapterClient, amazonDynamoDB, cloudWatchClient);
-                if (testEventBridge==null) {
+                IRecordProcessorFactory recordProcessorFactory = new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());
+                Worker worker = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory, workerConfig, adapterClient, amazonDynamoDB, cloudWatchClient);
+                if (testEventBridge == null) {
                     executor.execute(worker);
                 }
             }

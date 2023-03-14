@@ -301,8 +301,8 @@ Resources:
         - Arn: !GetAtt PnSsQueueStagingBucket.Arn
           Id: "SQSTargetForStagingBucket"
 
-########### GESTORE BUCKET CODA ERRORI PATCH  ###########
-  PnSsQueueGestoreBucketErrori:
+########### GESTORE BUCKET INVOKE DLQ ###########
+  PnSsQueueGestoreBucketInvokeErrors:
     Type: AWS::SQS::Queue
     Properties:
       KmsDataKeyReusePeriodSeconds: 300
@@ -311,11 +311,11 @@ Resources:
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 0      
       RedrivePolicy:
-        deadLetterTargetArn : !GetAtt PnSsDLQueueGestoreBucketErrori.Arn
+        deadLetterTargetArn : !GetAtt PnSsDLQueueGestoreBucketInvokeErrors.Arn
         maxReceiveCount : 10
       VisibilityTimeout: 30
 
-  PnSsDLQueueGestoreBucketErrori:
+  PnSsDLQueueGestoreBucketInvokeErrors:
     Type: AWS::SQS::Queue
     Properties:
       KmsDataKeyReusePeriodSeconds: 300
@@ -514,21 +514,21 @@ Outputs:
     Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
     Value: !GetAtt PnSsDLQueueStagingBucket.QueueName
 
-  PnSsQueueNameGestoreBucketErrori:
+  PnSsQueueNameGestoreBucketInvokeErrors:
     Description: 'Nome coda per pubblicazione errori del Gestore Bucket'
-    Value: !GetAtt  PnSsQueueGestoreBucketErrori.QueueName
+    Value: !GetAtt  PnSsQueueGestoreBucketInvokeErrors.QueueName
 
-  PnSsQueueArnGestoreBucketErrori:
+  PnSsQueueArnGestoreBucketInvokeErrors:
     Description: 'ARN coda per pubblicazione errori del Gestore Bucket'
-    Value: !GetAtt  PnSsQueueGestoreBucketErrori.Arn
+    Value: !GetAtt  PnSsQueueGestoreBucketInvokeErrors.Arn
 
-  PnSsQueueUrlGestoreBucketErrori:
+  PnSsQueueUrlGestoreBucketInvokeErrors:
     Description: 'URL coda per pubblicazione errori del Gestore Bucket'
-    Value: !Ref PnSsQueueGestoreBucketErrori
+    Value: !Ref PnSsQueueGestoreBucketInvokeErrors
 
-  PnSsDLQueueNameGestoreBucketErrori:
+  PnSsDLQueueGestoreBucketInvokeErrors:
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
-    Value: !GetAtt PnSsDLQueueGestoreBucketErrori.QueueName
+    Value: !GetAtt PnSsDLQueueGestoreBucketInvokeErrors.QueueName
 
   PnSsGestoreBucketLambdaName:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'

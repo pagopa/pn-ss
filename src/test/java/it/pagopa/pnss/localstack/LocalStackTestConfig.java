@@ -96,7 +96,7 @@ public class LocalStackTestConfig {
 
 
         try {
-            //Set Aruba secret credentials
+            //Set Aruba secret credentials.
             localStackContainer.execInContainer("awslocal",
                     "secretsmanager",
                     "create-secret",
@@ -118,12 +118,12 @@ public class LocalStackTestConfig {
 
     private static String getArubaCredentials() {
         try {
-            return new JSONObject().put("delegated_domain", "${ArubaDelegatedDomain}")
-                    .put("delegated_password", "${ArubaDelegatedPassword}")
-                    .put("delegated_user", "${ArubaDelegatedUser}")
-                    .put("otpPwd", "${ArubaOtpPwd}")
-                    .put("typeOtpAuth", "${ArubaTypeOtpAuth}")
-                    .put("user", "${ArubaUser}").toString();
+            return new JSONObject().put("delegated_domain", "demoprod")
+                    .put("delegated_password", "password11")
+                    .put("delegated_user", "delegato")
+                    .put("otpPwd", "dsign")
+                    .put("typeOtpAuth", "demoprod")
+                    .put("user", "titolare_aut").toString();
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }

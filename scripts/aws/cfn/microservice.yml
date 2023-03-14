@@ -511,13 +511,11 @@ Resources:
       Code:
         ZipFile: |
           "use strict";
-          import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
-
 
           const http = require(process.env.PnSsGestoreRepositoryProtocol);
           const AWS = require("aws-sdk");
           const crypto = require("crypto");
-
+          const sqs = new AWS.SQS();
 
           const HOSTNAME = process.env.PnSsHostname;
           const PORT = process.env.PnSsGestoreRepositoryPort;
@@ -687,7 +685,7 @@ Resources:
               QueueUrl: SQS_QUEUE_URL
             };
 
-            SQSClient.sendMessage(params, (err, data) => {
+            sqs.sendMessage(params, (err, data) => {
               if (err) {
                 console.err("Error", err);
               } else {

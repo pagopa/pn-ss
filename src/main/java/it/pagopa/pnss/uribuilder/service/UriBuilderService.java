@@ -395,7 +395,7 @@ public class UriBuilderService extends CommonS3ObjectService {
         downloadResponse.setChecksum(doc.getCheckSum() != null ? doc.getCheckSum() : null);
         downloadResponse.setContentLength(contentLength);
         downloadResponse.setContentType(doc.getContentType());
-        // NOTA: deve essere restituito lo satto logico, piuttosto che lo stato tecnico
+        // NOTA: deve essere restituito lo stato logico, piuttosto che lo stato tecnico
         //downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
         if (doc.getDocumentLogicalState() != null) {
             downloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
@@ -421,8 +421,8 @@ public class UriBuilderService extends CommonS3ObjectService {
         }
         log.info("getFileDownloadResponse() : doc.getRetentionUntil() = {} : downloadResponse.getRetentionUntil() = {}",
         		doc.getRetentionUntil() == null ? "puntatore null" : doc.getRetentionUntil() ,
-        		downloadResponse.getRetentionUntil() == null ? "puntatore null" : downloadResponse.getRetentionUntil());
-        
+        		downloadResponse.getRetentionUntil());
+
         downloadResponse.setVersionId(null);
 
         if (Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) {

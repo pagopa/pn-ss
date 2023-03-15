@@ -123,7 +123,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 shutdownInput.getCheckpointer().checkpoint();
             }
             catch (Exception e) {
-                e.printStackTrace();
+                log.error("Errore durante il processo di shutDown", e);
             }
         }
 

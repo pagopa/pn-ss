@@ -1,9 +1,9 @@
 package it.pagopa.pnss.common.retention;
 
+import static it.pagopa.pnss.common.Constant.ATTACHED;
 import static it.pagopa.pnss.common.Constant.AVAILABLE;
 import static it.pagopa.pnss.common.Constant.BOOKED;
 import static it.pagopa.pnss.common.Constant.STAGED;
-import static it.pagopa.pnss.common.Constant.ATTACHED;
 
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -13,10 +13,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import java.util.Map;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +30,6 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRetentionRequest;
 
 @Service
@@ -168,20 +164,6 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 
 	}
 	
-	@Deprecated(since="2.0")
-	// la data di scadenza deve essere calcolata a partire dalla data di creazione dell'oggetto (da collocare nel bucket)
-	private Instant getRetainUntilDate(Integer retentionPeriod) throws RetentionException {
-		try {
-			Instant retaintUntilDate = Instant.now().plus(Period.ofDays(retentionPeriod));
-			log.info("getRetainUntilDate(): retaintUntilDate {}", retaintUntilDate);
-			return retaintUntilDate;
-		}
-		catch (Exception e) {
-			log.error("getRetainUntilDate() : errore", e);
-			throw new RetentionException(String.format("Error in Retain Until Date: %s", e.getMessage()));
-		}
-	}
-	
 	private Instant getRetainUntilDate(Instant dataCreazione, Integer retentionPeriod) throws RetentionException {
 		try {
 			return dataCreazione.plus(Period.ofDays(retentionPeriod));
@@ -190,70 +172,6 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 			log.error("getRetainUntilDate() : errore", e);
 			throw new RetentionException(String.format("Error in Retain Until Date: %s", e.getMessage()));
 		}
-	}
-	
-
-	// configurazione object lock direttamente per il bucket
-//	@Override
-//	public Mono<PutObjectLockConfigurationRequest> getPutObjectLockConfigurationRequest(String documentKey, 
-//			String documentState, DocumentType documentType) throws RetentionException {
-//		log.info("getPutObjectLockConfigurationRequest() : START : documentKey '{}' : documentState '{}' : documentType {}",
-//				documentKey, documentState, (documentType == null ? "assente" : documentType.getTipoDocumento()));
-//		
-//		return getRetentionPeriod(documentKey, documentState, documentType.getTipoDocumento())
-//				.map(retentionPeriod -> 
-//					PutObjectLockConfigurationRequest.builder()
-//					   .bucket(bucketName.ssHotName())
-//					   .objectLockConfiguration(
-//							   objLockConf -> objLockConf.objectLockEnabled(ObjectLockEnabled.ENABLED).rule(
-//									   rule -> rule.defaultRetention(
-//											   defaultRetention -> defaultRetention.days(retentionPeriod)
-//											   									   .mode(objectLockRetentionMode))
-//				        					)
-//				        )
-//					.build()
-//				);
-//	}
-	
-	@Override
-	public Mono<PutObjectRequest> getPutObjectRequestForObjectInBucket(
-			String bucketName, byte[] contentBytes, String documentKey, 
-			String documentState, String documentType) throws RetentionException {
-		log.info("getPutObjectRequestForObjectInBucket() : START : documentKey {} : documentState {} : documentType {}", 
-				documentKey, documentState, documentType);
-		
-		return getRetentionPeriodInDays(documentKey, documentState, documentType, defaultInternalClientIdValue, defaultInteralApiKeyValue)
-				.map(this::getRetainUntilDate)
-				.map(retainUntilDate ->  PutObjectRequest.builder()
-                        .bucket(bucketName)
-                        .contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(contentBytes))))
-						.objectLockMode(objectLockRetentionMode)
-						.objectLockRetainUntilDate(retainUntilDate)
-                        .key(documentKey)
-                        .build());
-	}
-	
-	@Override
-	public Mono<PutObjectRequest> getPutObjectRequestForPresignRequest(
-			String bucketName, String documentKey, String contenType, Map<String,String> secret, 
-			String documentState, String documentType,
-			String authPagopaSafestorageCxId, String authApiKey) throws RetentionException {
-		log.info("getPutObjectRequestForPresignRequest() : START : bucketName {} : keyName {} : contenType {} : secret {} : documentState {} : documentType {}", 
-				bucketName, documentKey, contenType, secret,
-				documentState, documentType);
-		
-		return getRetentionPeriodInDays(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
-				.map(this::getRetainUntilDate)
-				.map(retainUntilDate -> PutObjectRequest.builder()
-							 .bucket(bucketName)
-							 .key(documentKey)
-							 .contentType(contenType)
-							 .metadata(secret)
-			                //.tagging(storageType)
-							 .objectLockMode(objectLockRetentionMode)
-							 .objectLockRetainUntilDate(retainUntilDate)
-							 .build()
-				);
 	}
 	
 	@Override

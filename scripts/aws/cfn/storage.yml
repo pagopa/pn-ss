@@ -108,15 +108,19 @@ Resources:
       TableClass: 'STANDARD'
     DeletionPolicy: Retain
 
-##### TEMP POLICY TO AVOID DOUBLE DEPLOYS #####
-  PnSsGestoreBucketALLNotificationPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-      Action: lambda:InvokeFunction
-      Principal: s3.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: 'arn:aws:s3:::*'
+##### TEMPORARY POLICY TO AVOID DOUBLE DEPLOYS #####
+# Decommentare la seguente policy nel seguente scenario:
+# - la stack microservice è stata rilasciata e con essa la lambda 'gestore-bucket'
+# - il bucket principale (PnSsBucket) deve essere ricreato a causa di modifiche di alcune proprietà (object lock, replication ...)
+
+  # PnSsGestoreBucketALLNotificationPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+  #     Action: lambda:InvokeFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref 'AWS::AccountId'
+  #     SourceArn: 'arn:aws:s3:::*'
 
   PnSsBucket:
     Type: AWS::S3::Bucket
@@ -184,7 +188,7 @@ Resources:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
             Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:ObjectRemoved:Delete'
+          - Event: 's3:ObjectRemoved:Delete*'
             Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
           - Event: 's3:ObjectRestore:*'
             Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
@@ -243,8 +247,6 @@ Resources:
           EventBridgeEnabled: true
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:ObjectRemoved:Delete'
             Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
       OwnershipControls:
         Rules:

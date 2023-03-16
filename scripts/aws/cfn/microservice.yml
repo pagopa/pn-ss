@@ -590,7 +590,7 @@ Resources:
               case "LifecycleExpiration:Delete":
                 jsonDocument.documentState = "deleted";
                 break;
-              case "ObjectRemoved:Delete":
+              case "ObjectRemoved:Delete*":
                 jsonDocument.documentState = "deleted";
                 break;
               default:

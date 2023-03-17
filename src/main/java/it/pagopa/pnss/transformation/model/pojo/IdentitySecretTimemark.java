@@ -15,6 +15,7 @@ public class IdentitySecretTimemark {
 
     @JsonProperty("user")
     String userTimemark;
+
     @JsonProperty("password")
     String passwordTimemark;
 

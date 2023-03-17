@@ -124,7 +124,7 @@ Resources:
 
   PnSsBucket:
     Type: AWS::S3::Bucket
-    DependsOn: PnSsGestoreBucketALLNotificationPermission 
+    # DependsOn: PnSsGestoreBucketALLNotificationPermission 
     Properties:
       AccessControl: 'Private'
       BucketEncryption:
@@ -150,35 +150,29 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_TEMPORARY_DOCUMENT'
           - Id: 'PnSsNotificationAttachment'
-            ExpirationInDays: 4
+            ExpirationInDays: 120
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'
                 Value: 'PN_NOTIFIED_DOCUMENT'
-            Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
-              - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 1
           - Id: 'PnSsAar'
-            ExpirationInDays: 15
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+                TransitionInDays: 120
           - Id: 'PnSsLegalFacts'
-            ExpirationInDays: 15
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
-              # - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 1
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 120
       #LoggingConfiguration:
       #  DestinationBucketName: 'String'
       #  LogFilePrefix: 'String'

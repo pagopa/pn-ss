@@ -235,6 +235,26 @@ Parameters:
   PnSsTableDocumentiStreamMetadatiTable:
     Type: String
     Description: 'Name of the DynamoDB Stream s metadata table for the source table PnSsDocumenti'
+
+  PnSsArubaCertId:
+    Type: String
+    Description: 'Aruba param CertId'
+
+  PnSsArubaEnabledLog:
+    Type: String
+    Description: 'Aruba param EnabledLog'
+
+  PnSsArubaSignWsdlUrl:
+    Type: String
+    Description: 'Aruba param SignWsdlUrl'
+  
+  PnSsArubaQname:
+    Type: String
+    Description: 'Aruba param Qname'
+
+  PnSsArubaSignService:
+    Type: String
+    Description: 'Aruba param SignService'
   
 
 Resources:
@@ -265,6 +285,11 @@ Resources:
         ContainerEnvEntry20: !Sub 'pst=${PresignedUrlMinutesLifespan}'
         ContainerEnvEntry21: !Sub 'stayHotTime=${PnSsUriBuilderstayHotTime}'
         ContainerEnvEntry22: !Sub 'PnSsBucketLockRetentionMode=GOVERNANCE'
+        ContainerEnvEntry30: !Sub 'PnSsArubaCertId=${PnSsArubaCertId}'
+        ContainerEnvEntry31: !Sub 'PnSsArubaEnabledLog=${PnSsArubaEnabledLog}'
+        ContainerEnvEntry32: !Sub 'PnSsArubaSignWsdlUrl=${PnSsArubaSignWsdlUrl}'
+        ContainerEnvEntry33: !Sub 'PnSsArubaQname=${PnSsArubaQname}'
+        ContainerEnvEntry34: !Sub 'PnSsArubaSignService=${PnSsArubaSignService}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'

@@ -124,7 +124,7 @@ Resources:
 
   PnSsBucket:
     Type: AWS::S3::Bucket
-    DependsOn: PnSsGestoreBucketALLNotificationPermission 
+    # DependsOn: PnSsGestoreBucketALLNotificationPermission 
     Properties:
       AccessControl: 'Private'
       BucketEncryption:

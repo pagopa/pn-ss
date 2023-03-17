@@ -63,9 +63,9 @@ public class OrchestratorSignDocument {
                         SignReturnV2 signReturnV2 = null;
                         try {
                             if (contentType.equals(Constant.APPLICATION_PDF)) {
-                                signReturnV2 = signServiceSoap.singnPdfDocument(fileInput, true);
+                                signReturnV2 = signServiceSoap.singnPdfDocument(fileInput, false);
                             } else {
-                                signReturnV2 = signServiceSoap.pkcs7signV2(fileInput, true);
+                                signReturnV2 = signServiceSoap.pkcs7signV2(fileInput, false);
                             }
 
                         } catch (TypeOfTransportNotImplemented_Exception e) {

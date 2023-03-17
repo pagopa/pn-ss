@@ -108,19 +108,23 @@ Resources:
       TableClass: 'STANDARD'
     DeletionPolicy: Retain
 
-##### TEMP POLICY TO AVOID DOUBLE DEPLOYS #####
-  PnSsGestoreBucketALLNotificationPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-      Action: lambda:InvokeFunction
-      Principal: s3.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: 'arn:aws:s3:::*'
+##### TEMPORARY POLICY TO AVOID DOUBLE DEPLOYS #####
+# Decommentare la seguente policy nel seguente scenario:
+# - la stack microservice è stata rilasciata e con essa la lambda 'gestore-bucket'
+# - il bucket principale (PnSsBucket) deve essere ricreato a causa di modifiche di alcune proprietà (object lock, replication ...)
+
+  # PnSsGestoreBucketALLNotificationPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+  #     Action: lambda:InvokeFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref 'AWS::AccountId'
+  #     SourceArn: 'arn:aws:s3:::*'
 
   PnSsBucket:
     Type: AWS::S3::Bucket
-    DependsOn: PnSsGestoreBucketALLNotificationPermission 
+    # DependsOn: PnSsGestoreBucketALLNotificationPermission 
     Properties:
       AccessControl: 'Private'
       BucketEncryption:
@@ -146,52 +150,46 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_TEMPORARY_DOCUMENT'
           - Id: 'PnSsNotificationAttachment'
-            ExpirationInDays: 4
+            ExpirationInDays: 120
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'
                 Value: 'PN_NOTIFIED_DOCUMENT'
-            Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
-              - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 1
           - Id: 'PnSsAar'
-            ExpirationInDays: 15
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+                TransitionInDays: 120
           - Id: 'PnSsLegalFacts'
-            ExpirationInDays: 15
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
-              # - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 1
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 120
       #LoggingConfiguration:
       #  DestinationBucketName: 'String'
       #  LogFilePrefix: 'String'
       # MetricsConfigurations:
       #  MetricsConfigurations
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: 's3:ObjectCreated:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:ObjectRemoved:Delete'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:ObjectRestore:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:LifecycleExpiration:Delete'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:LifecycleTransition'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      # NotificationConfiguration:
+      #   LambdaConfigurations:
+      #     - Event: 's3:ObjectCreated:*'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      #     - Event: 's3:ObjectRemoved:Delete*'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      #     - Event: 's3:ObjectRestore:*'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      #     - Event: 's3:LifecycleExpiration:Delete'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+      #     - Event: 's3:LifecycleTransition'
+      #       Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
           # - Event: 's3:Replication'
             # Function: !GetAtt PnSsGestoreBucket.Arn
       ObjectLockEnabled: true
@@ -241,11 +239,9 @@ Resources:
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
-        LambdaConfigurations:
-          - Event: 's3:ObjectCreated:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-          - Event: 's3:ObjectRemoved:Delete'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+        # LambdaConfigurations:
+        #   - Event: 's3:ObjectCreated:*'
+        #     Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced

@@ -106,6 +106,15 @@ public class LocalStackTestConfig {
                     getArubaCredentials()
 
             );
+
+            localStackContainer.execInContainer("awslocal",
+                    "secretsmanager",
+                    "create-secret",
+                    "--name",
+                    "pn/identity/timemark",
+                    "--secret-string",
+                    getIdentityTimemarkCredentials());
+
             //Create SQS queue
             for (String queueName : ALL_QUEUE_NAME_LIST) {
                 localStackContainer.execInContainer("awslocal", "sqs", "create-queue", "--queue-name", queueName);
@@ -124,6 +133,16 @@ public class LocalStackTestConfig {
                     .put("otpPwd", "dsign")
                     .put("typeOtpAuth", "demoprod")
                     .put("user", "titolare_aut").toString();
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String getIdentityTimemarkCredentials() {
+        try {
+            return new JSONObject().put("user", "user1")
+                    .put("password", "password1")
+                    .toString();
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }

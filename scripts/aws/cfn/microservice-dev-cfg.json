@@ -12,6 +12,11 @@
     "PnSsGestoreRepositoryPort" : "8080",
     "PnSsGestoreRepositoryPathGetDocument" : "/safestorage/internal/v1/documents",
     "PnSsGestoreRepositoryPathPatchDocument" : "/safestorage/internal/v1/documents",
-    "PnSsTableDocumentiStreamMetadatiTable" : "PnSsTableDocumentiStreamMetadati"
+    "PnSsTableDocumentiStreamMetadatiTable" : "PnSsTableDocumentiStreamMetadati",
+    "PnSsArubaCertId" : "AS0",
+    "PnSsArubaEnabledLog" : false,
+    "PnSsArubaSignWsdlUrl" : "https://arss.demo.firma-automatica.it:443/ArubaSignService/ArubaSignService",
+    "PnSsArubaQname" : "http://arubasignservice.arubapec.it/",
+    "PnSsArubaSignService" : "ArubaSignServiceService"
   }
 }

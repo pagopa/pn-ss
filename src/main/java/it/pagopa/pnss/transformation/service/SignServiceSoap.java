@@ -7,8 +7,10 @@ import it.pagopa.pnss.transformation.model.GenericFileSignRequestV2;
 import it.pagopa.pnss.transformation.model.GenericFileSignReturnV2;
 import it.pagopa.pnss.transformation.model.InputPdfFileSignRequestV2;
 import it.pagopa.pnss.transformation.model.PdfFileSignReturnV2;
+import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimemark;
 import it.pagopa.pnss.transformation.wsdl.*;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.activation.DataHandler;
@@ -20,9 +22,14 @@ import java.net.MalformedURLException;
 @Service
 public class SignServiceSoap extends CommonArubaService {
 
+    @Autowired
+    private IdentitySecretTimemark identitySecretTimemark;
 
+    @Value("${TimemarkUrl:#{null}}")
+    public String timemarkUrl;
 
-    protected SignServiceSoap() throws MalformedURLException {
+    protected SignServiceSoap(IdentitySecretTimemark identitySecretTimemark) throws MalformedURLException {
+        this.identitySecretTimemark = identitySecretTimemark;
     }
 
     public SignReturnV2 singnPdfDocument(byte[] pdfFile, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
@@ -33,7 +40,11 @@ public class SignServiceSoap extends CommonArubaService {
         signRequestV2.setBinaryinput(pdfFile);
         signRequestV2.setTransport(TypeTransport.BYNARYNET);
 
-
+        var tsaAuth = new TsaAuth();
+        tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
+        tsaAuth.setPassword(identitySecretTimemark.getPasswordTimemark());
+        tsaAuth.setTsaurl(timemarkUrl);
+        signRequestV2.setTsaIdentity(tsaAuth);
 
         logCallAruba(signRequestV2);
 
@@ -53,6 +64,12 @@ public class SignServiceSoap extends CommonArubaService {
         signRequestV2.setStream(new DataHandler(source));
         signRequestV2.setTransport(TypeTransport.STREAM);
         signRequestV2.setRequiredmark(marcatura);
+
+        var tsaAuth = new TsaAuth();
+        tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
+        tsaAuth.setPassword(identitySecretTimemark.getPasswordTimemark());
+        tsaAuth.setTsaurl(timemarkUrl);
+        signRequestV2.setTsaIdentity(tsaAuth);
 
         logCallAruba(signRequestV2);
 

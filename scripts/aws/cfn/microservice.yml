@@ -615,7 +615,7 @@ Resources:
               case "LifecycleExpiration:Delete":
                 jsonDocument.documentState = "deleted";
                 break;
-              case "ObjectRemoved:Delete*":
+              case "ObjectRemoved:DeleteMarkerCreated":
                 jsonDocument.documentState = "deleted";
                 break;
               default:

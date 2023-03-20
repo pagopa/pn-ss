@@ -15,7 +15,7 @@
     "PnSsTableDocumentiStreamMetadatiTable" : "PnSsTableDocumentiStreamMetadati",
     "PnSsArubaCertId" : "AS0",
     "PnSsArubaEnabledLog" : false,
-    "PnSsArubaSignWsdlUrl" : "https://arss.demo.firma-automatica.it:443/ArubaSignService/ArubaSignService",
+    "PnSsArubaSignWsdlUrl" : "https://asbr-pagopa.arubapec.it/ArubaSignService/ArubaSignService",
     "PnSsArubaQname" : "http://arubasignservice.arubapec.it/",
     "PnSsArubaSignService" : "ArubaSignServiceService"
   }

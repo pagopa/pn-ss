@@ -14,7 +14,7 @@
     "PnSsGestoreRepositoryPathPatchDocument" : "/safestorage/internal/v1/documents",
     "PnSsTableDocumentiStreamMetadatiTable" : "PnSsTableDocumentiStreamMetadati",
     "PnSsArubaCertId" : "AS0",
-    "PnSsArubaEnabledLog" : false,
+    "PnSsArubaEnabledLog" : "false",
     "PnSsArubaSignWsdlUrl" : "https://asbr-pagopa.arubapec.it/ArubaSignService/ArubaSignService",
     "PnSsArubaQname" : "http://arubasignservice.arubapec.it/",
     "PnSsArubaSignService" : "ArubaSignServiceService"

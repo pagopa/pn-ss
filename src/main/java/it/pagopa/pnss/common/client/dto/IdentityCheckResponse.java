@@ -5,11 +5,9 @@ import java.io.Serializable;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
 @Data
-@ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @AllArgsConstructor
 public class IdentityCheckResponse implements Serializable{

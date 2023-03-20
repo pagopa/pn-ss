@@ -9,9 +9,11 @@ import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Service
+@Slf4j
 public class ConfigurationApiCallImpl extends CommonBaseClient implements ConfigurationApiCall {
 	
     @Value("${header.x-api-key}")
@@ -40,7 +42,11 @@ public class ConfigurationApiCallImpl extends CommonBaseClient implements Config
                 		.header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
                 		.header(xApiKey, authApiKey)
                         .retrieve()
-                        .bodyToMono(DocumentTypesConfigurations.class);
+                        .bodyToMono(DocumentTypesConfigurations.class)
+		                .onErrorResume(RuntimeException.class, e -> {
+		                	log.error("ConfigurationApiCallImpl.getDocumentsConfigs() : errore generico = {}", e.getMessage(), e);
+		                	return Mono.error(e);
+		                });                        
 	}
 
 	@Override

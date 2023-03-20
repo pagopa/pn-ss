@@ -10,9 +10,11 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Service
+@Slf4j
 public class DocTypesClientCallImpl extends CommonBaseClient implements DocTypesClientCall {
     private final WebClient.Builder ecInternalWebClient= WebClient.builder();
 
@@ -27,7 +29,11 @@ public class DocTypesClientCallImpl extends CommonBaseClient implements DocTypes
         return getWebClient().get()
                 .uri(String.format(anagraficaDocTypesInternalClientEndpoint, tipologiaDocumento))
                 .retrieve()
-                .bodyToMono(DocumentTypeResponse.class);
+                .bodyToMono(DocumentTypeResponse.class)
+                .onErrorResume(RuntimeException.class, e -> {
+                	log.error("DocTypesClientCallImpl.getdocTypes() : errore generico = {}", e.getMessage(), e);
+                	return Mono.error(e);
+                });                 
     }
 
     @Override

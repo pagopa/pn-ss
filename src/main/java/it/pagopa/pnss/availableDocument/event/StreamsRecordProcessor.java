@@ -45,6 +45,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     public void processRecords(ProcessRecordsInput processRecordsInput) {
 
         try {
+        	log.info("StreamsRecordProcessor.processRecords() : START");
             List<PutEventsRequestEntry> requestEntries = findEventSendToBridge(processRecordsInput);
             if (!requestEntries.isEmpty()) {
                 EventBridgeClient eventBridgeClient =
@@ -60,21 +61,21 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                         .entries(requestEntries)
                         .build();
                 PutEventsResponse result = eventBridgeClient.putEvents(eventsRequest);
-
             }
         }catch (Exception e ){
-            log.error("Errore generico ",e);
+            log.error("StreamsRecordProcessor.processRecords() : Errore generico ",e);
         }
 
     }
 
     @NotNull
     public List<PutEventsRequestEntry> findEventSendToBridge (ProcessRecordsInput processRecordsInput) {
+    	log.info("StreamsRecordProcessor.findEventSendToBridge() : START");
         List<PutEventsRequestEntry> requestEntries = new ArrayList<>();
         for (Record record : processRecordsInput.getRecords()) {
             String data = new String(record.getData().array(), Charset.forName("UTF-8"));
-            log.info(data);
-            log.info("--- START ---");
+            //log.info(data);
+            log.debug("--- START for record ---");
             if (record instanceof RecordAdapter) {
                 com.amazonaws.services.dynamodbv2.model.Record streamRecord = ((RecordAdapter) record)
                         .getInternalObject();
@@ -95,11 +96,11 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                             break;
                     }
 
-                    log.info("--- COMPLETATO CON SUCCESSO  ---");
+                    log.debug("--- COMPLETATO CON SUCCESSO  ---");
 
                 }catch (Exception ex){
                     log.error("Errore generico nella gestione dell'evento ",ex );
-                    log.info("--- COMPLETATO CON ERRORE  ---");
+                    log.debug("--- COMPLETATO CON ERRORE  ---");
                 }
             }
 
@@ -118,6 +119,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     @Override
     public void shutdown(ShutdownInput shutdownInput) {
+    	log.info("StreamsRecordProcessor.shutdown() : START");
         if (shutdownInput.getShutdownReason() == ShutdownReason.TERMINATE) {
             try {
                 shutdownInput.getCheckpointer().checkpoint();

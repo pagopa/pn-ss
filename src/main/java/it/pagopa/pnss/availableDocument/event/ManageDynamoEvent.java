@@ -1,17 +1,21 @@
 package it.pagopa.pnss.availableDocument.event;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import it.pagopa.pnss.availableDocument.dto.NotificationMessage;
-import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
+import static it.pagopa.pnss.common.Constant.AVAILABLE;
+import static it.pagopa.pnss.common.Constant.EVEN_BUS_SOURCE_AVAILABLE_DOCUMENT;
+import static it.pagopa.pnss.common.Constant.GESTORE_DISPONIBILITA_EVENT_NAME;
 
 import java.util.Date;
 import java.util.Map;
 
-import static it.pagopa.pnss.common.Constant.*;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import it.pagopa.pnss.availableDocument.dto.NotificationMessage;
+import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
+
+@Slf4j
 public class ManageDynamoEvent {
 
 
@@ -27,6 +31,7 @@ public class ManageDynamoEvent {
 
     public PutEventsRequestEntry manageItem(String disponibilitaDocumentiEventBridge, Map<String, AttributeValue> newImage,
                                             Map<String, AttributeValue> oldImage) {
+    	log.info("ManageDynamoEvent.manageItem() : START");
         String oldDocumentState = oldImage.get(DOCUMENTSTATE_KEY).getS();
         String newDocumentState = newImage.get(DOCUMENTSTATE_KEY).getS();
 
@@ -62,6 +67,7 @@ public class ManageDynamoEvent {
             String event = objMap.writeValueAsString(message);
             return creatPutEventRequestEntry(event,docEntity.get(DOCUMENTKEY_KEY).getS(), disponibilitaDocumentiEventBridge );
         } catch (JsonProcessingException e) {
+        	log.error("ManageDynamoEvent.createMessage() : errore = {}",e.getMessage(),e);
             throw new RuntimeException(e);
         }
     }

@@ -196,18 +196,6 @@ Parameters:
     Type: String
     Description: 'Secret ID for Identity Signature'
 
-  PnVPCSubnetId1:
-    Type: String
-    Description: 'VPC Subnet ID 1 out of 3'
-
-  PnVPCSubnetId2:
-    Type: String
-    Description: 'VPC Subnet ID 2 out of 3'
-
-  PnVPCSubnetId3:
-    Type: String
-    Description: 'VPC Subnet ID 3 out of 3'
-
   PnVPCDefaultSecurityGroup:
     Type: String
     Description: 'VPC default Security Group'
@@ -521,9 +509,9 @@ Resources:
         TargetArn: !Ref PnSsQueueArnGestoreBucketInvokeErrors
       VpcConfig:
         SubnetIds:
-          - !Ref PnVPCSubnetId1
-          - !Ref PnVPCSubnetId2
-          - !Ref PnVPCSubnetId3
+          - !Select [ 0, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
         SecurityGroupIds:
           - !Ref PnVPCDefaultSecurityGroup
       Environment:
@@ -615,7 +603,7 @@ Resources:
               case "LifecycleExpiration:Delete":
                 jsonDocument.documentState = "deleted";
                 break;
-              case "ObjectRemoved:Delete*":
+              case "ObjectRemoved:DeleteMarkerCreated":
                 jsonDocument.documentState = "deleted";
                 break;
               default:

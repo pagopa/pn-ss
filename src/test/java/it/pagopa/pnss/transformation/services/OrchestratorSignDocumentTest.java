@@ -137,7 +137,7 @@ public class OrchestratorSignDocumentTest {
 
         assertThrows( DocumentKeyNotPresentException.class,
                 () -> {
-                    service.incomingMessageFlow("111-DDD","").block();
+                    service.incomingMessageFlow("111-DDD","", false).block();
                 });
 
     }
@@ -178,7 +178,7 @@ public class OrchestratorSignDocumentTest {
 
         assertThrows( S3BucketException.NoSuchKeyException.class,
                 () -> {
-                    service.incomingMessageFlow("222-DDD","dgs-bing-ss-pnssstagingbucket-28myu2kp62x9").block();
+                    service.incomingMessageFlow("222-DDD","dgs-bing-ss-pnssstagingbucket-28myu2kp62x9", false).block();
                 });
 
 
@@ -212,7 +212,7 @@ public class OrchestratorSignDocumentTest {
 		
 		Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).patchdocument(Mockito.any(), Mockito.any(), Mockito.any(),Mockito.any());
 		
-		assertNull(service.incomingMessageFlow("111-DDD","dgs-bing-ss-pnssstagingbucket-28myu2kp62x9").block());
+		assertNull(service.incomingMessageFlow("111-DDD","dgs-bing-ss-pnssstagingbucket-28myu2kp62x9", false).block());
     }
 
 

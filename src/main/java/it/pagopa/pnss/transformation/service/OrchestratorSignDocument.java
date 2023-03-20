@@ -45,7 +45,7 @@ public class OrchestratorSignDocument {
     }
 
 
-    public Mono<Void> incomingMessageFlow(String key, String bucketName) {
+    public Mono<Void> incomingMessageFlow(String key, String bucketName, Boolean marcatura) {
         log.info("chiamo la document con keyname :"+key);
         return Mono.fromCallable(() -> validationField())
                 .flatMap(voidMono -> documentClientCall.getdocument(key))
@@ -63,9 +63,9 @@ public class OrchestratorSignDocument {
                         SignReturnV2 signReturnV2 = null;
                         try {
                             if (contentType.equals(Constant.APPLICATION_PDF)) {
-                                signReturnV2 = signServiceSoap.singnPdfDocument(fileInput, false);
+                                signReturnV2 = signServiceSoap.singnPdfDocument(fileInput, marcatura);
                             } else {
-                                signReturnV2 = signServiceSoap.pkcs7signV2(fileInput, false);
+                                signReturnV2 = signServiceSoap.pkcs7signV2(fileInput, marcatura);
                             }
 
                         } catch (TypeOfTransportNotImplemented_Exception e) {

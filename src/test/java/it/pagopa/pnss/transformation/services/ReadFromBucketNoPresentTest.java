@@ -60,7 +60,7 @@ public class ReadFromBucketNoPresentTest {
 
         assertThrows( S3BucketException.BucketNotPresentException.class,
                 () -> {
-                    service.incomingMessageFlow("111-DDD","").block();
+                    service.incomingMessageFlow("111-DDD","", false).block();
                 });
     }
 

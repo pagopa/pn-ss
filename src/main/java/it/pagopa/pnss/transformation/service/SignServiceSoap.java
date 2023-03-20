@@ -63,7 +63,7 @@ public class SignServiceSoap extends CommonArubaService {
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
         signRequestV2.setTransport(TypeTransport.STREAM);
-        signRequestV2.setRequiredmark(marcatura);
+        signRequestV2.setRequiredmark(true);
 
         var tsaAuth = new TsaAuth();
         tsaAuth.setUser(identitySecretTimemark.getUserTimemark());

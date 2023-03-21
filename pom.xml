@@ -207,6 +207,9 @@
 					<keep>true</keep>
 					<packageName>it.pagopa.pnss.transformation.wsdl</packageName>
 					<sourceDestDir>src/main/java</sourceDestDir>
+					<vmArgs>
+						<vmArg>-Djavax.xml.accessExternalSchema=all</vmArg>
+					</vmArgs>
 				</configuration>
 			</plugin>
             <plugin>

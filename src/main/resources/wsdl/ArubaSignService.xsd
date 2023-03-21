@@ -1,7 +1,6 @@
-<!--  Published by JAX-WS RI at http://jax-ws.dev.java.net. RI's version is Metro/2.3 (tags/2.3-7528; 2013-04-29T19:34:10+0000) JAXWS-RI/2.2.8 JAXWS/2.2 svn-revision#unknown.  -->
-<xs:schema xmlns:tns="http://arubasignservice.arubapec.it/" xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xs="http://www.w3.org/2001/XMLSchema" version="1.0" targetNamespace="http://arubasignservice.arubapec.it/">
-   <xs:import namespace="http://www.w3.org/2005/05/xmlmime"
-              schemaLocation="./xmlmime.xsd"/>
+<!--Published by JAX-WS RI at http://jax-ws.dev.java.net. RI's version is Metro/2.3 (tags/2.3-7528; 2013-04-29T19:34:10+0000) JAXWS-RI/2.2.8 JAXWS/2.2 svn-revision#unknown.-->
+<xs:schema version="1.0" targetNamespace="http://arubasignservice.arubapec.it/" xmlns:tns="http://arubasignservice.arubapec.it/" xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+   <xs:import namespace="http://www.w3.org/2005/05/xmlmime" schemaLocation="http://www.w3.org/2005/05/xmlmime"/>
    <xs:element name="ArssReturn" type="tns:arssReturn"/>
    <xs:element name="Auth" type="tns:auth"/>
    <xs:element name="EncryptedEnvelopReq" type="tns:encryptedEnvelopReq"/>
@@ -23,10 +22,6 @@
    <xs:element name="encryptedEnvelopeResponse" type="tns:encryptedEnvelopeResponse"/>
    <xs:element name="getVersion" type="tns:getVersion"/>
    <xs:element name="getVersionResponse" type="tns:getVersionResponse"/>
-   <xs:element name="jwsSignature" type="tns:jwsSignature"/>
-   <xs:element name="jwsSignatureResponse" type="tns:jwsSignatureResponse"/>
-   <xs:element name="jwsSignature_multiple" type="tns:jwsSignature_multiple"/>
-   <xs:element name="jwsSignature_multipleResponse" type="tns:jwsSignature_multipleResponse"/>
    <xs:element name="listCert" type="tns:listCert"/>
    <xs:element name="listCertAuth" type="tns:listCertAuth"/>
    <xs:element name="listCertAuthResponse" type="tns:listCertAuthResponse"/>
@@ -539,24 +534,6 @@
          <xs:element name="return" type="tns:markReturn" minOccurs="0"/>
       </xs:sequence>
    </xs:complexType>
-   <xs:complexType name="jwsSignature">
-      <xs:sequence>
-         <xs:element name="SignRequestV2" type="tns:signRequestV2"/>
-         <xs:element name="parameter" type="tns:jwsSignatureParameter" minOccurs="0"/>
-      </xs:sequence>
-   </xs:complexType>
-   <xs:complexType name="jwsSignatureParameter">
-      <xs:sequence>
-         <xs:element name="jwtId" type="xs:string" minOccurs="0"/>
-         <xs:element name="audience" type="xs:string" minOccurs="0"/>
-         <xs:element name="jwsSerializationType" type="tns:jwsSerializationType" minOccurs="0"/>
-      </xs:sequence>
-   </xs:complexType>
-   <xs:complexType name="jwsSignatureResponse">
-      <xs:sequence>
-         <xs:element name="return" type="tns:signReturnV2" minOccurs="0"/>
-      </xs:sequence>
-   </xs:complexType>
    <xs:complexType name="verify">
       <xs:sequence>
          <xs:element name="request" type="tns:verifyRequest" minOccurs="0"/>
@@ -785,24 +762,6 @@
          <xs:element name="return_code" type="xs:string" minOccurs="0"/>
       </xs:sequence>
    </xs:complexType>
-   <xs:complexType name="listCert">
-      <xs:sequence>
-         <xs:element name="Identity" type="tns:auth" minOccurs="0"/>
-      </xs:sequence>
-   </xs:complexType>
-   <xs:complexType name="listCertResponse">
-      <xs:sequence>
-         <xs:element name="return" type="tns:userCertList" minOccurs="0"/>
-      </xs:sequence>
-   </xs:complexType>
-   <xs:complexType name="userCertList">
-      <xs:sequence>
-         <xs:element name="app1" type="tns:cert" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
-         <xs:element name="app2" type="tns:cert" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
-         <xs:element name="description" type="xs:string" minOccurs="0"/>
-         <xs:element name="status" type="xs:string" minOccurs="0"/>
-      </xs:sequence>
-   </xs:complexType>
    <xs:complexType name="pkcs7signV2">
       <xs:sequence>
          <xs:element name="SignRequestV2" type="tns:signRequestV2" minOccurs="0"/>
@@ -826,16 +785,22 @@
          <xs:element name="return" type="tns:signReturnV2" minOccurs="0"/>
       </xs:sequence>
    </xs:complexType>
-   <xs:complexType name="jwsSignature_multiple">
+   <xs:complexType name="listCert">
       <xs:sequence>
-         <xs:element name="identity" type="tns:auth" minOccurs="0"/>
-         <xs:element name="SignRequestV2" type="tns:signRequestV2" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
-         <xs:element name="parameter" type="tns:jwsSignatureParameter" minOccurs="0"/>
+         <xs:element name="Identity" type="tns:auth" minOccurs="0"/>
       </xs:sequence>
    </xs:complexType>
-   <xs:complexType name="jwsSignature_multipleResponse">
+   <xs:complexType name="listCertResponse">
       <xs:sequence>
-         <xs:element name="return" type="tns:signReturnV2Multiple" minOccurs="0"/>
+         <xs:element name="return" type="tns:userCertList" minOccurs="0"/>
+      </xs:sequence>
+   </xs:complexType>
+   <xs:complexType name="userCertList">
+      <xs:sequence>
+         <xs:element name="app1" type="tns:cert" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
+         <xs:element name="app2" type="tns:cert" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
+         <xs:element name="description" type="xs:string" minOccurs="0"/>
+         <xs:element name="status" type="xs:string" minOccurs="0"/>
       </xs:sequence>
    </xs:complexType>
    <xs:simpleType name="credentialsType">
@@ -897,13 +862,6 @@
          <xs:enumeration value="BASIC"/>
          <xs:enumeration value="PADESBES"/>
          <xs:enumeration value="PADESLTV"/>
-      </xs:restriction>
-   </xs:simpleType>
-   <xs:simpleType name="jwsSerializationType">
-      <xs:restriction base="xs:string">
-         <xs:enumeration value="COMPACT"/>
-         <xs:enumeration value="JSON_FLATTENED"/>
-         <xs:enumeration value="JSON"/>
       </xs:restriction>
    </xs:simpleType>
    <xs:simpleType name="documentType">

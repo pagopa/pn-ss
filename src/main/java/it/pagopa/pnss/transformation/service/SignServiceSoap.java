@@ -1,23 +1,33 @@
 package it.pagopa.pnss.transformation.service;
 
+import java.io.InputStream;
+import java.net.MalformedURLException;
+
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.xml.bind.JAXBException;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import com.sun.xml.ws.encoding.xml.XMLMessage;
 import com.sun.xml.ws.util.ByteArrayDataSource;
 import com.sun.xml.ws.wsdl.parser.InaccessibleWSDLException;
+
 import it.pagopa.pnss.transformation.model.GenericFileSignRequestV2;
 import it.pagopa.pnss.transformation.model.GenericFileSignReturnV2;
 import it.pagopa.pnss.transformation.model.InputPdfFileSignRequestV2;
 import it.pagopa.pnss.transformation.model.PdfFileSignReturnV2;
 import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimemark;
-import it.pagopa.pnss.transformation.wsdl.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.xml.bind.JAXBException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
+import it.pagopa.pnss.transformation.wsdl.ArubaSignService;
+import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
+import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
+import it.pagopa.pnss.transformation.wsdl.TsaAuth;
+import it.pagopa.pnss.transformation.wsdl.TypeOfTransportNotImplemented_Exception;
+import it.pagopa.pnss.transformation.wsdl.TypeTransport;
+import it.pagopa.pnss.transformation.wsdl.XmlSignatureParameter;
+import it.pagopa.pnss.transformation.wsdl.XmlSignatureType;
 
 @Service
 public class SignServiceSoap extends CommonArubaService {

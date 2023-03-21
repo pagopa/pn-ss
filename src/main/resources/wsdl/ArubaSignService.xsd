@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema version="1.0" targetNamespace="http://arubasignservice.arubapec.it/" xmlns:tns="http://arubasignservice.arubapec.it/" xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xs="http://www.w3.org/2001/XMLSchema">
-   <xs:import namespace="http://www.w3.org/2005/05/xmlmime" schemaLocation="http://www.w3.org/2005/05/xmlmime"/>
+   <xs:import namespace="http://www.w3.org/2005/05/xmlmime" schemaLocation="./xmlmime.xsd"/>
    <xs:element name="ArssReturn" type="tns:arssReturn"/>
    <xs:element name="Auth" type="tns:auth"/>
    <xs:element name="EncryptedEnvelopReq" type="tns:encryptedEnvelopReq"/>

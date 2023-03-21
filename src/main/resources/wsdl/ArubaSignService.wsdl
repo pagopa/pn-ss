@@ -14,7 +14,7 @@
    </wsp:Policy>
    <types>
       <xsd:schema>
-         <xsd:import namespace="http://arubasignservice.arubapec.it/" schemaLocation="https://asbr-pagopa.arubapec.it:443/ArubaSignService/ArubaSignService?xsd=1"/>
+         <xsd:import namespace="http://arubasignservice.arubapec.it/" schemaLocation="./ArubaSignService.xsd"/>
       </xsd:schema>
    </types>
    <message name="tsd">

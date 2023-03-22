@@ -136,8 +136,8 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 						   var documentStatusChange = new DocumentStatusChange();
 						   documentStatusChange.setXPagopaExtchCxId(authPagopaSafestorageCxId);
 						   documentStatusChange.setProcessId("SS");
-						   documentStatusChange.setCurrentStatus(documentEntity.getDocumentState());
-						   documentStatusChange.setNextStatus(documentChanges.getDocumentState());
+						   documentStatusChange.setCurrentStatus(documentEntity.getDocumentState().toLowerCase());
+						   documentStatusChange.setNextStatus(documentChanges.getDocumentState().toLowerCase());
 						   return callMacchinaStati.statusValidation(documentStatusChange);
 				   })
                    .map(tuple -> {

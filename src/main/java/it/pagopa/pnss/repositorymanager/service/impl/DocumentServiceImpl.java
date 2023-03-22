@@ -245,4 +245,5 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 						.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
 				.map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
 	}
+
 }

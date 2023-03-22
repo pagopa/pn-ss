@@ -65,7 +65,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 	 * Controlla: StorageConfigurationsImpl.formatInYearsDays()
 	 */
 	private Integer getRetentionPeriodInDays(String retentionPeriod) throws RetentionException {
-		log.info("getRetentionPeriodInDays() : START : retentionPeriod '{}'", retentionPeriod);
+		log.info("getRetentionPeriodInDays() : START");
 		
 		if (retentionPeriod == null || retentionPeriod.isBlank() || retentionPeriod.length() < 2) {
 			throw new RetentionException("Storage Configuration : Retention Period not found");
@@ -236,7 +236,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 								objectLockRetentionMode);
 						
 						if (objectLockRetentionMode == null || objectLockRetentionMode.isBlank()) {
-							log.error("setRetentionPeriodInBucketObjectMetadata() : Valore non trovato per la variabile \"PnSsBucketLockRetentionMode\"");
+							log.debug("setRetentionPeriodInBucketObjectMetadata() : Valore non trovato per la variabile \"PnSsBucketLockRetentionMode\"");
 							return Mono.error(new RetentionException("Valore non trovato per la variabile \"PnSsBucketLockRetentionMode\""));
 						}
 						
@@ -358,10 +358,10 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 					
 					// gestione errore
 					.onErrorResume(NoSuchKeyException.class, throwable -> {
-						log.error("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore = {}",
+						log.debug("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore = {}",
 								documentEntity.getDocumentKey(), throwable.getMessage(), throwable);
 						if (documentChanges.getDocumentState()!= null && documentChanges.getDocumentState().equalsIgnoreCase(STAGED)) {
-							log.info("setRetentionPeriodInBucketObjectMetadata() : stato di arrivo per il documento = {} -> "
+							log.debug("setRetentionPeriodInBucketObjectMetadata() : stato di arrivo per il documento = {} -> "
 									+ "documento non presente in bucket hot -> scarto l'errore",
 									 documentChanges.getDocumentState());
 							return Mono.just(documentEntity);
@@ -369,7 +369,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 						return Mono.error(new RetentionException(throwable.getMessage()));
 					})
 					.onErrorResume(DateTimeException.class, throwable -> {
-						log.error("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore formattazione instant retention util = {}", 
+						log.debug("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore formattazione instant retention util = {}", 
 								documentEntity.getDocumentKey(), throwable.getMessage(), throwable);
 						return Mono.error(new RetentionException(throwable.getMessage()));
 					})

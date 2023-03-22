@@ -36,7 +36,7 @@ public class ConfigurationApiController implements CfgApi {
     }
 
     private Mono<ResponseEntity<DocumentTypesConfigurations>> getDocumentTypesConfigurationsErrorResponse(Throwable throwable) {
-        log.error("errore", throwable);
+        log.debug("getDocumentTypesConfigurationsErrorResponse() : START : errore {}", throwable.getMessage());
 
         if (throwable instanceof DocumentTypeNotPresentException) {
             return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(null));
@@ -45,21 +45,21 @@ public class ConfigurationApiController implements CfgApi {
         } else if (throwable instanceof IdClientNotFoundException) {
             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(null));
         }
-        log.info("getErrorResponse() : other");
-        log.info("getErrorResponse() : {}", throwable.getClass());
+        log.debug("getErrorResponse() : other");
+        log.debug("getErrorResponse() : {}", throwable.getClass());
         return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
     }
 
     private Mono<ResponseEntity<UserConfiguration>> getUserConfigurationErrorResponse(String clientId, Throwable throwable) {
-        log.error("errore", throwable);
+    	log.debug("getUserConfigurationErrorResponse() : START : errore {}", throwable.getMessage());
 
         if (throwable instanceof RepositoryManagerException) {
             return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null));
         } else if (throwable instanceof IdClientNotFoundException) {
             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(null));
         }
-        log.info("getErrorResponse() : other");
-        log.info("getErrorResponse() : {}", throwable.getClass());
+        log.debug("getErrorResponse() : other");
+        log.debug("getErrorResponse() : {}", throwable.getClass());
         return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
     }
 

@@ -12,7 +12,6 @@ import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
@@ -63,8 +62,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 		} else if (throwable instanceof RepositoryManagerException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else {
-			log.info("getErrorResponse() : other");
-			log.error("errore", throwable);
+			log.debug("UserConfigurationInternalApiController.getErrorResponse() : other : errore generico {}", throwable.getMessage());
 			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
 		}
 	}
@@ -72,8 +70,12 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 	@Override
 	public Mono<ResponseEntity<UserConfigurationResponse>> getUserConfiguration(String name,
 			final ServerWebExchange exchange) {
-
-		return userConfigurationService.getUserConfiguration(name)
+		
+		return Mono.just(name)
+				.flatMap(clientName -> {
+					log.info("UserConfigurationInternalApiController.getUserConfiguration() : START");
+					return userConfigurationService.getUserConfiguration(name);
+				})
 				.map(userConfiguration -> ResponseEntity.ok(getResponse(userConfiguration)))
 				.onErrorResume(throwable -> getResponse(name, throwable));
 
@@ -83,7 +85,10 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 	public Mono<ResponseEntity<UserConfigurationResponse>> insertUserConfiguration(
 			Mono<UserConfiguration> userConfiguration, final ServerWebExchange exchange) {
 
-		return userConfiguration.flatMap(request -> userConfigurationService.insertUserConfiguration(request))
+		return userConfiguration.flatMap(request -> {
+					log.info("UserConfigurationInternalApiController.insertUserConfiguration() : START");
+					return userConfigurationService.insertUserConfiguration(request);
+				})
 				.map(userConfigurationOutput -> ResponseEntity.ok(getResponse(userConfigurationOutput)))
 				.onErrorResume(throwable -> getResponse(null, throwable));
 
@@ -94,7 +99,10 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 			Mono<UserConfigurationChanges> userConfigurationChanges, final ServerWebExchange exchange) {
 
 		return userConfigurationChanges
-				.flatMap(request -> userConfigurationService.patchUserConfiguration(name, request))
+				.flatMap(request -> {
+					log.info("UserConfigurationInternalApiController.patchUserConfiguration() : START");
+					return userConfigurationService.patchUserConfiguration(name, request);
+				})
 				.map(userConfigurationOutput -> ResponseEntity.ok(getResponse(userConfigurationOutput)))
 				.onErrorResume(throwable -> getResponse(name, throwable));
 	}

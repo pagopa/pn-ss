@@ -72,12 +72,11 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     public List<PutEventsRequestEntry> findEventSendToBridge (ProcessRecordsInput processRecordsInput) {
     	log.info("StreamsRecordProcessor.findEventSendToBridge() : START");
         List<PutEventsRequestEntry> requestEntries = new ArrayList<>();
-        for (Record record : processRecordsInput.getRecords()) {
-            String data = new String(record.getData().array(), Charset.forName("UTF-8"));
-            //log.info(data);
+        for (Record rec : processRecordsInput.getRecords()) {
+            String data = new String(rec.getData().array(), Charset.forName("UTF-8"));
             log.debug("--- START for record ---");
-            if (record instanceof RecordAdapter) {
-                com.amazonaws.services.dynamodbv2.model.Record streamRecord = ((RecordAdapter) record)
+            if (rec instanceof RecordAdapter) {
+                com.amazonaws.services.dynamodbv2.model.Record streamRecord = ((RecordAdapter) rec)
                         .getInternalObject();
                 PutEventsRequestEntry putEventsRequestEntry = null;
                 try{

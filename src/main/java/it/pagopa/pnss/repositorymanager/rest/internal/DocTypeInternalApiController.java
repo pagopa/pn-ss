@@ -10,7 +10,6 @@ import it.pagopa.pn.template.internal.rest.v1.api.DocTypeInternalApi;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
 import it.pagopa.pn.template.internal.rest.v1.dto.Error;
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
@@ -50,7 +49,8 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 	}
 
 	private Mono<ResponseEntity<DocumentTypeResponse>> getErrorResponse(String typeId, Throwable throwable) {
-		log.info("getErrorResponse() : IN : typeId {} : throwable {}", typeId, throwable);
+		log.info("DocTypeInternalApiController.getErrorResponse() : START");
+		log.debug("getErrorResponse() : START : typeId {} : throwable {}", typeId, throwable);
 
 		if (throwable instanceof ItemAlreadyPresent) {
 			String errorMsg = typeId == null ? "DocType already present"
@@ -63,26 +63,31 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 		} else if (throwable instanceof RepositoryManagerException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else {
-			log.info("getErrorResponse() : other");
-			log.error("errore", throwable);
+			log.debug("DocTypeInternalApiController.getErrorResponse() : other : errore generico {}", throwable.getMessage());
 			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
 		}
 	}
 
 	@Override
 	public Mono<ResponseEntity<DocumentTypeResponse>> getDocType(String typeId, final ServerWebExchange exchange) {
-
-		return docTypesService.getDocType(typeId).map(docType -> ResponseEntity.ok(getResponse(docType)))
-				.onErrorResume(throwable -> getErrorResponse(typeId, throwable));
+		
+		return Mono.just(typeId)
+			.flatMap(typeIdent -> {
+				log.info("DocTypeInternalApiController.getDocType() : START");
+				return docTypesService.getDocType(typeIdent);
+			})
+			.map(docType -> ResponseEntity.ok(getResponse(docType)))
+			.onErrorResume(throwable -> getErrorResponse(typeId, throwable));
 	}
 
 	@Override
 	public Mono<ResponseEntity<DocumentTypeResponse>> insertDocType(Mono<DocumentType> documentType,
 			final ServerWebExchange exchange) {
 
-		log.info("insertDocType() : IN");
-
-		return documentType.flatMap(docTypesService::insertDocType)
+		return documentType.flatMap(docType -> {
+					log.info("DocTypeInternalApiController.insertDocType() : START");
+					return docTypesService.insertDocType(docType);
+				})
 				.map(docType -> ResponseEntity.ok(getResponse(docType)))
 				.onErrorResume(throwable -> getErrorResponse(null, throwable));
 
@@ -92,7 +97,10 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 	public Mono<ResponseEntity<DocumentTypeResponse>> updateDocType(String typeId, Mono<DocumentType> documentType,
 			final ServerWebExchange exchange) {
 
-		return documentType.flatMap(request -> docTypesService.updateDocType(typeId, request))
+		return documentType.flatMap(docType -> {
+					log.info("DocTypeInternalApiController.updateDocType() : START");
+					return docTypesService.updateDocType(typeId, docType); 
+				})
 				.map(docType -> ResponseEntity.ok(getResponse(docType)))
 				.onErrorResume(throwable -> getErrorResponse(typeId, throwable));
 
@@ -101,10 +109,14 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 	@Override
 	public Mono<ResponseEntity<Void>> deleteDocType(String typeId, final ServerWebExchange exchange) {
 
-		return docTypesService.deleteDocType(typeId).map(docType -> ResponseEntity.noContent().<Void>build())
-				.onErrorResume(DocumentTypeNotPresentException.class,
+		return Mono.just(typeId)
+			.flatMap(typeIdent -> {
+				log.info("DocTypeInternalApiController.deleteDocType() : START");
+				return docTypesService.deleteDocType(typeId);
+			})
+			.map(docType -> ResponseEntity.noContent().<Void>build())
+			.onErrorResume(DocumentTypeNotPresentException.class,
 						throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
 								throwable.getMessage(), throwable.getCause())));
-
 	}
 }

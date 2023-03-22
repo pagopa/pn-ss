@@ -4,11 +4,14 @@ import com.sun.xml.ws.util.ByteArrayDataSource;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.model.InputPdfFileSignRequestV2;
 import it.pagopa.pnss.transformation.model.PdfFileSignReturnV2;
+import it.pagopa.pnss.transformation.service.OrchestratorSignDocument;
 import it.pagopa.pnss.transformation.service.SignServiceSoap;
 import it.pagopa.pnss.transformation.wsdl.Auth;
 import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
 import it.pagopa.pnss.transformation.wsdl.TypeOfTransportNotImplemented_Exception;
 import it.pagopa.pnss.transformation.wsdl.TypeTransport;
+import lombok.extern.slf4j.Slf4j;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 @SpringBootTestWebEnv
+@Slf4j
 public class PdfFileServiceSignTest {
 
     @Autowired
@@ -197,6 +201,8 @@ public class PdfFileServiceSignTest {
 
         PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
         Assertions.assertNotNull(response);
+        log.info("PdfFileServiceSignTest.testPDFFileCertIdNotcorrect: response.getCode() = {}",response.getCode());
+        log.info("PdfFileServiceSignTest.testPDFFileCertIdNotcorrect: response.getDescription() = {}",response.getDescription());
         Assertions.assertEquals(response.getCode(),"0001");
         Assertions.assertEquals(response.getDescription(),"Generic error" );
     }

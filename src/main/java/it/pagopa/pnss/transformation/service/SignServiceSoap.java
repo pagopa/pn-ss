@@ -31,6 +31,9 @@ import it.pagopa.pnss.transformation.wsdl.XmlSignatureType;
 
 @Service
 public class SignServiceSoap extends CommonArubaService {
+	
+    @Value("${aruba.cert_id}")
+    public String certId;
 
     @Autowired
     private IdentitySecretTimemark identitySecretTimemark;
@@ -68,7 +71,7 @@ public class SignServiceSoap extends CommonArubaService {
 
     public SignReturnV2 pkcs7signV2(byte[] buf, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
         SignRequestV2 signRequestV2 = new SignRequestV2();
-        signRequestV2.setCertID("AS0");
+        signRequestV2.setCertID(certId);
         signRequestV2.setIdentity(createIdentity(null));
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
@@ -90,7 +93,7 @@ public class SignServiceSoap extends CommonArubaService {
 
     public SignReturnV2 xmlsignature(String contentType, InputStream xml, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
         SignRequestV2 signRequestV2 = new SignRequestV2();
-        signRequestV2.setCertID("AS0");
+        signRequestV2.setCertID(certId);
         signRequestV2.setIdentity(createIdentity(null));
         DataSource dataSourceXml = XMLMessage.createDataSource( contentType,xml);
         signRequestV2.setStream(new DataHandler(dataSourceXml));

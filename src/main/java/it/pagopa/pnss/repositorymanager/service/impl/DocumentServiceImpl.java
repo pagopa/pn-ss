@@ -134,7 +134,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
 				   .zipWhen(documentEntity -> {
 						   var documentStatusChange = new DocumentStatusChange();
-						   documentStatusChange.setXPagopaExtchCxId(authPagopaSafestorageCxId);
+						   documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
 						   documentStatusChange.setProcessId("SS");
 						   documentStatusChange.setCurrentStatus(documentEntity.getDocumentState().toLowerCase());
 						   documentStatusChange.setNextStatus(documentChanges.getDocumentState().toLowerCase());

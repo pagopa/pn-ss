@@ -202,6 +202,13 @@
 			<scope>test</scope>
 		</dependency>
 
+        <!-- Start SS WebClient dependencies -->
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-reactive-httpclient</artifactId>
+        </dependency>
+        <!-- Finish SS WebClient dependencies -->
+
     </dependencies>
 
 	<build>

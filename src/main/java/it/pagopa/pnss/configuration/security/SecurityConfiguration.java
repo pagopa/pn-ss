@@ -23,7 +23,7 @@ public class SecurityConfiguration {
 
     private final UserConfigurationClientCall userConfigurationClientCall;
 
-    @Value("${header.x-api-key:_}")
+    @Value("${header.x-api-key}")
     private String xApiKey;
 
     @Value("${header.x-pagopa-safestorage-cx-id}")
@@ -49,6 +49,7 @@ public class SecurityConfiguration {
                                .flatMap(serverWebExchange -> Mono.justOrEmpty(serverWebExchange.getRequest().getHeaders()))
                                .flatMap(headerValues -> {
                                    String apiKey = headerValues.getFirst(xApiKey);
+                                   String apiKeyNonBlank = ( apiKey == null || apiKey.isBlank() ) ? "_" : apiKey;
                                    String pagopaSafestorageCxId = headerValues.getFirst(xPagopaSafestorageCxId);
                                    if ((apiKey != null && !apiKey.isEmpty()) &&
                                        (pagopaSafestorageCxId != null && !pagopaSafestorageCxId.isEmpty())) {
@@ -61,8 +62,8 @@ public class SecurityConfiguration {
                                                                          .flatMap(userConfigurationResponse -> {
                                                                              if (userConfigurationResponse.getUserConfiguration()
                                                                                                           .getApiKey()
-                                                                                                          .equals(apiKey)) {
-                                                                                 return Mono.just(new KeyAuthenticationToken(apiKey,
+                                                                                                          .equals(apiKeyNonBlank)) {
+                                                                                 return Mono.just(new KeyAuthenticationToken(apiKeyNonBlank,
                                                                                                                              pagopaSafestorageCxId));
                                                                              } else {
                                                                                  return Mono.error(new ResponseStatusException(FORBIDDEN,

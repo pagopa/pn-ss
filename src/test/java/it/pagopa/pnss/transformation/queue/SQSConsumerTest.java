@@ -77,7 +77,7 @@ public class SQSConsumerTest {
         S3ObjectCreated s3obj = new S3ObjectCreated();
 
         Mockito.doThrow(new ArubaSignExceptionLimitCall("")).
-                when(orchestrator).incomingMessageFlow(Mockito.any(),Mockito.any());
+                when(orchestrator).incomingMessageFlow(Mockito.any(),Mockito.any(),Mockito.any());
 
         amazonSQSAsync.listQueues();
         queueMessagingTemplate.convertAndSend(queName.signQueueName(),s3obj);

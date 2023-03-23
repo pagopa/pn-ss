@@ -61,7 +61,7 @@ public class SQSConsumerService {
         log.info("Ricevuto messaggio "+s3ObjectCreated.toString());
 
         try {
-            orchestrator.incomingMessageFlow(key, bucketName).block();
+            orchestrator.incomingMessageFlow(key, bucketName, true).block();
 
         }catch(ArubaSignExceptionLimitCall arubaEx){
             log.error("Impossible connect wit aruba for key "+arubaEx.getMessage(),arubaEx);

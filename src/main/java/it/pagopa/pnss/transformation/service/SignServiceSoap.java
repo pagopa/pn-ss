@@ -28,8 +28,10 @@ import it.pagopa.pnss.transformation.wsdl.TypeOfTransportNotImplemented_Exceptio
 import it.pagopa.pnss.transformation.wsdl.TypeTransport;
 import it.pagopa.pnss.transformation.wsdl.XmlSignatureParameter;
 import it.pagopa.pnss.transformation.wsdl.XmlSignatureType;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class SignServiceSoap extends CommonArubaService {
 	
     @Value("${aruba.cert_id}")
@@ -52,6 +54,10 @@ public class SignServiceSoap extends CommonArubaService {
         signRequestV2.setRequiredmark(marcatura);
         signRequestV2.setBinaryinput(pdfFile);
         signRequestV2.setTransport(TypeTransport.BYNARYNET);
+        
+        log.debug("SignServiceSoap.singnPdfDocument() : userkUrl = {}", identitySecretTimemark.getUserTimemark());	
+        log.debug("SignServiceSoap.singnPdfDocument() : passwordkUrl = {}", identitySecretTimemark.getPasswordTimemark());	
+        log.debug("SignServiceSoap.singnPdfDocument() : timemarkUrl = {}", timemarkUrl);	
 
         var tsaAuth = new TsaAuth();
         tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
@@ -60,6 +66,8 @@ public class SignServiceSoap extends CommonArubaService {
         signRequestV2.setTsaIdentity(tsaAuth);
 
         logCallAruba(signRequestV2);
+        
+        log.debug("SignServiceSoap.singnPdfDocument() : arubaUrlWsdl = {}", arubaUrlWsdl);	
 
         ArubaSignService service = createArubaService(arubaUrlWsdl).getArubaSignServicePort();
         SignReturnV2 signReturnV2 = service.pdfsignatureV2(signRequestV2,null ,null,null ,null,null);

@@ -567,3 +567,11 @@ Outputs:
   PnSsDLQueueUrlNotificheExt1:
     Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
     Value: !Ref PnSsDLQueueNotificheExt1
+
+  PnSsEventRuleArnNotificheExt1:
+    Description: 'Regola Event Bridge per pubblicare gli eventi relativi al Gestore Disponibilita sulla code per le piattaforme esterne'
+    Value: !GetAtt PnSsEventRuleNotificheExt1.Arn
+  
+  PnSsEventRuleArnStagingBucket:
+    Description: 'Regola Event Bridge per pubblicare gli eventi di creazione oggetti nel Bucket Staging'
+    Value: !GetAtt PnSsEventRuleStagingBucket.Arn

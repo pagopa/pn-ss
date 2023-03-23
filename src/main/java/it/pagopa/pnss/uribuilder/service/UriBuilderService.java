@@ -227,7 +227,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 //                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status :" + status + " - Not valid for documentType");
 //                }
 //            }
-//        }
+//        } 
         return Mono.just(true);
     }
 

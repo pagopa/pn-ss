@@ -52,25 +52,27 @@ public class SecurityConfiguration {
                                    String pagopaSafestorageCxId = headerValues.getFirst(xPagopaSafestorageCxId);
                                    if ((apiKey != null && !apiKey.isEmpty()) &&
                                        (pagopaSafestorageCxId != null && !pagopaSafestorageCxId.isEmpty())) {
-                                       return userConfigurationClientCall.getUser(pagopaSafestorageCxId)
-                                                                         .onErrorResume(IdClientNotFoundException.class,
-                                                                                        throwable -> Mono.error(new ResponseStatusException(
-                                                                                                FORBIDDEN,
-                                                                                                String.format("Invalid %s header",
-                                                                                                              xPagopaSafestorageCxId))))
-                                                                         .flatMap(userConfigurationResponse -> {
-                                                                             if (userConfigurationResponse.getUserConfiguration()
-                                                                                                          .getApiKey()
-                                                                                                          .equals(apiKey)) {
-                                                                                 return Mono.just(new KeyAuthenticationToken(apiKey,
-                                                                                                                             pagopaSafestorageCxId));
-                                                                             } else {
-                                                                                 return Mono.error(new ResponseStatusException(FORBIDDEN,
-                                                                                                                               String.format(
-                                                                                                                                       "Invalid %s header",
-                                                                                                                                       xApiKey)));
-                                                                             }
-                                                                         });
+                                       return Mono.just(new KeyAuthenticationToken(apiKey,
+                                                                                   pagopaSafestorageCxId));
+//                                       return userConfigurationClientCall.getUser(pagopaSafestorageCxId)
+//                                                                         .onErrorResume(IdClientNotFoundException.class,
+//                                                                                        throwable -> Mono.error(new ResponseStatusException(
+//                                                                                                FORBIDDEN,
+//                                                                                                String.format("Invalid %s header",
+//                                                                                                              xPagopaSafestorageCxId))))
+//                                                                         .flatMap(userConfigurationResponse -> {
+//                                                                             if (userConfigurationResponse.getUserConfiguration()
+//                                                                                                          .getApiKey()
+//                                                                                                          .equals(apiKey)) {
+//                                                                                 return Mono.just(new KeyAuthenticationToken(apiKey,
+//                                                                                                                             pagopaSafestorageCxId));
+//                                                                             } else {
+//                                                                                 return Mono.error(new ResponseStatusException(FORBIDDEN,
+//                                                                                                                               String.format(
+//                                                                                                                                       "Invalid %s header",
+//                                                                                                                                       xApiKey)));
+//                                                                             }
+//                                                                         });
                                    } else {
                                        return Mono.empty();
                                    }

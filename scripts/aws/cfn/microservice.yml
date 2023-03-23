@@ -406,13 +406,13 @@ Resources:
       Parameters:
         DashboardName: 'safe-storage-msvc'
         AlarmArns: 
-          !Join:
+          !Join
           - ','
           - - !GetAtt SafeStorageMicroserviceAlarm.Outputs.MicroserviceAlarmArn
             - !GetAtt SafeStorageMicroservice.Outputs.FatalLogsMetricAlarmArn
             # - !GetAtt SafeStorageMicroservice.Outputs.AutoScalingAlarmArn
         DynamoDBTableNames:
-          !Join:
+          !Join
           - ','
           - - !Ref PnSsTableNameAnagraficaClient
             - !Ref PnSsTableNameTipologieDocumenti
@@ -420,7 +420,7 @@ Resources:
         # RestApiStageArns:
         # RestApiNames:
         QueueArns:
-          !Join:
+          !Join
           - ','
           - - !Ref PnSsQueueArnStagingBucket
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
@@ -429,12 +429,12 @@ Resources:
         # KinesisDataArns:
         # KinesisFirehoseArns:
         EventRuleArns:
-          !Join:
+          !Join
           - ','
           - - !Ref PnSsEventRuleArnNotificheExt1
             - !Ref PnSsEventRuleArnStagingBucket
         BucketNames:
-          !Join:
+          !Join
           - ','
           - - !Ref PnSsBucketName
             - !Ref PnSsStagingBucketName

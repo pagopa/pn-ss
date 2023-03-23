@@ -6,14 +6,11 @@ import it.pagopa.pnss.transformation.configuration.ArubaCredentialConf;
 import it.pagopa.pnss.transformation.model.GenericFileSignRequestV2;
 import it.pagopa.pnss.transformation.model.GenericFileSignReturnV2;
 import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
-import it.pagopa.pnss.transformation.service.OrchestratorSignDocument;
 import it.pagopa.pnss.transformation.service.SignServiceSoap;
 import it.pagopa.pnss.transformation.wsdl.Auth;
 import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
 import it.pagopa.pnss.transformation.wsdl.TypeOfTransportNotImplemented_Exception;
 import it.pagopa.pnss.transformation.wsdl.TypeTransport;
-import lombok.extern.slf4j.Slf4j;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +33,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 @SpringBootTestWebEnv
-@Slf4j
 public class GenericFileServiceSignTest {
 
 
@@ -204,8 +200,6 @@ public class GenericFileServiceSignTest {
         GenericFileSignRequestV2 input = new GenericFileSignRequestV2();
         input.setInfoTosigned(signRequestV2);
         GenericFileSignReturnV2 response = service.callGenericFile(input);
-        log.info("PdfFileServiceSignTest.testPDFFileCertIdNotcorrect: response.getCode() = {}",response.getCode());
-        log.info("PdfFileServiceSignTest.testPDFFileCertIdNotcorrect: response.getDescription() = {}",response.getDescription());
         Assertions.assertNotNull(response);
         Assertions.assertEquals(response.getCode(), "0001");
         Assertions.assertEquals(response.getDescription(), "Generic error");

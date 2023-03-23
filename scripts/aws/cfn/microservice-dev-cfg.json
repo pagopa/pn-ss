@@ -4,7 +4,7 @@
     "PresignedUrlMinutesLifespan": "60",
     "PnEcIdentityTimemark": "pn/identity/timemark",
     "PnEcIdentitySignature": "pn/identity/signature",
-    "PnVPCDefaultSecurityGroup": "sg-0f77fb87c5cf71631",
+    "PnVPCDefaultSecurityGroup": "sg-0edd50b1733dcf45b",
     "PnSsGestoreRepositoryProtocol" : "http",
     "PnSsGestoreRepositoryPort" : "8080",
     "PnSsGestoreRepositoryPathGetDocument" : "/safestorage/internal/v1/documents",

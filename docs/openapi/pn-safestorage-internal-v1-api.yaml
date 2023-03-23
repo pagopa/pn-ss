@@ -100,7 +100,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/DocumentType'
-        required: true
       responses:
         '400':
           description: >-
@@ -289,7 +288,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/DocumentChanges'
-        required: true
       responses:
         '400':
           description: >-
@@ -467,7 +465,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UserConfigurationChanges'
-        required: true
       responses:
         '400':
           description: >-

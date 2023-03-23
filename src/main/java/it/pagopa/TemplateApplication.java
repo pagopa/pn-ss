@@ -28,9 +28,6 @@ import org.springframework.context.annotation.PropertySource;
 // EVENT BRIDGE
 @PropertySource("classpath:eventBridge/event-bridge-disponibilita-documenti.properties")
 
-// INTERNAL ENDPOINTS
-@PropertySource("classpath:commons/internal-endpoint.properties")
-
 public class TemplateApplication {
 
     public static void main(String[] args) {

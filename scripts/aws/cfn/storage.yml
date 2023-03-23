@@ -150,35 +150,29 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_TEMPORARY_DOCUMENT'
           - Id: 'PnSsNotificationAttachment'
-            ExpirationInDays: 4
+            ExpirationInDays: 120
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'
                 Value: 'PN_NOTIFIED_DOCUMENT'
-            Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
-              - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 1
           - Id: 'PnSsAar'
-            ExpirationInDays: 15
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+                TransitionInDays: 120
           - Id: 'PnSsLegalFacts'
-            ExpirationInDays: 15
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
-              # - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 1
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 120
       #LoggingConfiguration:
       #  DestinationBucketName: 'String'
       #  LogFilePrefix: 'String'
@@ -567,11 +561,3 @@ Outputs:
   PnSsDLQueueUrlNotificheExt1:
     Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
     Value: !Ref PnSsDLQueueNotificheExt1
-
-  PnSsEventRuleArnNotificheExt1:
-    Description: 'Regola Event Bridge per pubblicare gli eventi relativi al Gestore Disponibilita sulla code per le piattaforme esterne'
-    Value: !GetAtt PnSsEventRuleNotificheExt1.Arn
-  
-  PnSsEventRuleArnStagingBucket:
-    Description: 'Regola Event Bridge per pubblicare gli eventi di creazione oggetti nel Bucket Staging'
-    Value: !GetAtt PnSsEventRuleStagingBucket.Arn

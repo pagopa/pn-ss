@@ -151,25 +151,25 @@ public class UriBuilderUploadTest {
 
     }
 
-//    @Test
-//    void testStatoNonConsentito_PN_NOTIFICATION_ATTACHMENTS() {
-//
-//        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-//        UserConfiguration userConfiguration = new UserConfiguration();
-//        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-//        userConfiguration.setApiKey(xApiKeyValue);
-//        userConfig.setUserConfiguration(userConfiguration);
-//
-//        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-//        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-//
-//
-//        FileCreationRequest fcr = new FileCreationRequest();
-//        fcr.setContentType(IMAGE_TIFF);
-//        fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
-//        fcr.setStatus(ATTACHED);
-//        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
-//    }
+    @Test
+    void testStatoNonConsentito_PN_NOTIFICATION_ATTACHMENTS() {
+
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfig.setUserConfiguration(userConfiguration);
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+
+
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType(IMAGE_TIFF);
+        fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
+        fcr.setStatus(ATTACHED);
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
+    }
 
     @Test
     void testUrlGenerato() throws InterruptedException {
@@ -224,24 +224,24 @@ public class UriBuilderUploadTest {
 
     }
 
-//    @Test
-//    void testStatoNonConsentito_PN_AAR() {
-//
-//        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-//        UserConfiguration userConfiguration = new UserConfiguration();
-//        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-//        userConfiguration.setApiKey(xApiKeyValue);
-//        userConfig.setUserConfiguration(userConfiguration);
-//
-//        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-//        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-//
-//        FileCreationRequest fcr = new FileCreationRequest();
-//        fcr.setContentType(IMAGE_TIFF);
-//        fcr.setDocumentType(PN_AAR);
-//        fcr.setStatus(PRELOADED);
-//        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
-//    }
+    @Test
+    void testStatoNonConsentito_PN_AAR() {
+
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfig.setUserConfiguration(userConfiguration);
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType(IMAGE_TIFF);
+        fcr.setDocumentType(PN_AAR);
+        fcr.setStatus(PRELOADED);
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
+    }
 
 
     @Test
@@ -282,25 +282,25 @@ public class UriBuilderUploadTest {
         fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
     }
 
-//    @Test
-//    void testErroreInserimentoStatus() {
-//
-//        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-//        UserConfiguration userConfiguration = new UserConfiguration();
-//        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-//        userConfiguration.setApiKey(xApiKeyValue);
-//        userConfig.setUserConfiguration(userConfiguration);
-//
-//        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-//        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-//
-//        FileCreationRequest fcr = new FileCreationRequest();
-//        fcr.setContentType(IMAGE_TIFF);
-//        fcr.setDocumentType(PN_AAR);
-//        fcr.setStatus("VALUE_FAULT");
-//
-//        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
-//    }
+    @Test
+    void testErroreInserimentoStatus() {
+
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfig.setUserConfiguration(userConfiguration);
+
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType(IMAGE_TIFF);
+        fcr.setDocumentType(PN_AAR);
+        fcr.setStatus("VALUE_FAULT");
+
+        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
+    }
 
     @Test
     void testContetTypeParamObbligatorio() {

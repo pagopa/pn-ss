@@ -44,14 +44,15 @@ public class ArubaCredentialConf {
     public ArubaSecretValue arubaCredentialProvider() {
 
         try {
+        	log.info("ArubaSecretValue: create bean");
             if (delegatedDomain != null && delegatedPassword != null && delegatedUser != null && otpPwd != null && typeOtpAuth != null && user != null) {
                 ArubaSecretValue arubaSecretValue = new ArubaSecretValue(delegatedDomain, delegatedUser, delegatedPassword, otpPwd, typeOtpAuth, user);
-                log.info("Secret locale reperito ---> " + arubaSecretValue.toString());
+                log.debug("Secret locale reperito ---> " + arubaSecretValue.toString());
                 return arubaSecretValue;
             } else {
                 String secretStringJson = secretsManagerClient.getSecretValue(builder -> builder.secretId("pn/identity/signature")).secretString();
                 ArubaSecretValue arubaSecretValue = objectMapper.readValue(secretStringJson, ArubaSecretValue.class);
-                log.info("Secret reperito ---> " + arubaSecretValue.toString());
+                log.debug("Secret reperito ---> " + arubaSecretValue.toString());
                 return arubaSecretValue;
             }
         } catch (JsonProcessingException e) {
@@ -63,14 +64,15 @@ public class ArubaCredentialConf {
     public IdentitySecretTimemark identityTimemarkProvider() {
 
         try {
+        	log.info("IdentitySecretTimemark: create bean");
             if (userTimemark != null && passwordTimemark != null) {
                 IdentitySecretTimemark identitySecretTimemark = new IdentitySecretTimemark(userTimemark, passwordTimemark);
-                log.info("Secret locale reperito ---> " + identitySecretTimemark.toString());
+                log.debug("Secret locale reperito ---> " + identitySecretTimemark.toString());
                 return identitySecretTimemark;
             } else {
                 String secretStringJson = secretsManagerClient.getSecretValue(builder -> builder.secretId("pn/identity/timemark")).secretString();
                 IdentitySecretTimemark identitySecretTimemark = objectMapper.readValue(secretStringJson, IdentitySecretTimemark.class);
-                log.info("Secret reperito ---> " + identitySecretTimemark.toString());
+                log.debug("Secret reperito ---> " + identitySecretTimemark.toString());
                 return identitySecretTimemark;
             }
         } catch (JsonProcessingException e) {

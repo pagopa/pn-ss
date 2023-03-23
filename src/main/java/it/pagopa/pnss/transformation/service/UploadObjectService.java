@@ -17,19 +17,11 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 @Slf4j
 public class UploadObjectService extends CommonS3ObjectService {
 
-//	private final RetentionService retentionService;
-//
-//	public UploadObjectService(RetentionService retentionService) {
-//		this.retentionService = retentionService;
-//	}
-
-//    @Value("${S3.bucket.hot.name}")
-//    public  String bucketHot;
-
 	@Autowired
 	private BucketName bucketName;
 
 	public Mono<PutObjectResponse> execute(String documentKey, byte[] fileSigned) {
+		log.info("UploadObjectService.execute() : START");
 		log.debug("UploadObjectService.execute() : documentKey {} : documentState {} : documentType {}", documentKey);
 
 		S3AsyncClient s3 = getS3AsynchClient();

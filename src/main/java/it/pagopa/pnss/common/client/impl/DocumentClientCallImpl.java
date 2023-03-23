@@ -39,6 +39,7 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
 
     @Override
     public Mono<DocumentResponse> getdocument(String keyFile) throws DocumentKeyNotPresentException {
+    	log.info("DocumentClientCallImpl.getdocument() : START");
         return getWebClient().get()
 			                .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
 			                .retrieve()
@@ -52,6 +53,7 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
 
     @Override
     public Mono<DocumentResponse> postDocument(DocumentInput document) throws DocumentkeyPresentException {
+    	log.info("DocumentClientCallImpl.postDocument() : START");
         return    getWebClient().post()
 				                .uri(anagraficaDocumentiClientEndpointpost)
 				                .bodyValue(document)
@@ -68,6 +70,7 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     public Mono<DocumentResponse> patchdocument(
     		String authPagopaSafestorageCxId, String authApiKey, 
     		String keyFile, DocumentChanges document) throws DocumentKeyNotPresentException {
+    	log.info("DocumentClientCallImpl.patchdocument() : START");
         return    getWebClient().patch()
 				                .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
 				        		.header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)

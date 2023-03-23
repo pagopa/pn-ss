@@ -82,14 +82,14 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 			log.debug("DocumentInternalApiController.getResponse() : error IllegalDocumentStateException");
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		}else if (throwable instanceof PatchDocumentExcetpion) {
-			log.error("DocumentInternalApiController.getResponse() : error PatchDocumentExcetpion");
+			log.debug("DocumentInternalApiController.getResponse() : error PatchDocumentExcetpion");
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else if (throwable instanceof DocumentTypeNotPresentException) {
 			String errorMsg = "Document type invalide";
 			log.debug("DocumentInternalApiController.getResponse() : error DocumentTypeNotPresentException");
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMsg);
 		} else {
-			log.debug("DocumentInternalApiController.getErrorResponse() : other : errore generico = {}", throwable.getMessage());
+			log.error("DocumentInternalApiController.getErrorResponse() : other : errore generico = {}", throwable.getMessage());
 			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
 		}
 	}

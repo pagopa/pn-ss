@@ -33,7 +33,7 @@ public class FileUploadApiController implements FileUploadApi {
     public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId,
                                                                  Mono<FileCreationRequest> fileCreationRequest,
                                                                  final ServerWebExchange exchange) {
-    	
+    	log.info("FileUploadApiController.createFile() : START");
         return fileCreationRequest.flatMap(request -> {
         								String checksumValue = null;
         								if (request != null && request.getChecksumValue() != null && !request.getChecksumValue().isBlank()) {
@@ -53,7 +53,7 @@ public class FileUploadApiController implements FileUploadApi {
         																				checksumValue);
         						  })
         						  .onErrorResume(ChecksumException.class, throwable -> {
-        							  log.error("FileUploadApiController.createFile() : errore checksum = {}", throwable.getMessage(), throwable);
+        							  log.debug("FileUploadApiController.createFile() : errore checksum = {}", throwable.getMessage(), throwable);
         							  throw new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage());
         						  })
                                   .map(ResponseEntity::ok);

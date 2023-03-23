@@ -37,6 +37,7 @@ public class ConfigurationApiCallImpl extends CommonBaseClient implements Config
 
 	@Override
 	public Mono<DocumentTypesConfigurations> getDocumentsConfigs(String authPagopaSafestorageCxId, String authApiKey) {
+		log.info("ConfigurationApiCallImpl.getDocumentsConfigs() : START");
 		return getWebClient().get()
                 		.uri(configurationApiDocumentsConfigClientEndpoint)
                 		.header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)

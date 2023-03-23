@@ -62,7 +62,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 		} else if (throwable instanceof RepositoryManagerException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else {
-			log.debug("UserConfigurationInternalApiController.getErrorResponse() : other : errore generico {}", throwable.getMessage());
+			log.error("UserConfigurationInternalApiController.getErrorResponse() : other : errore generico {}", throwable.getMessage());
 			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
 		}
 	}
@@ -109,11 +109,15 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 
 	@Override
 	public Mono<ResponseEntity<Void>> deleteUserConfiguration(String name, final ServerWebExchange exchange) {
-
-		return userConfigurationService.deleteUserConfiguration(name)
-				.map(docType -> ResponseEntity.noContent().<Void>build()).onErrorResume(IdClientNotFoundException.class,
-						throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-								throwable.getMessage(), throwable.getCause())));
+		
+		return Mono.just(name)
+					.flatMap(clientId -> {
+						log.info("UserConfigurationInternalApiController.deleteUserConfiguration() : START");
+						return userConfigurationService.deleteUserConfiguration(clientId);
+					})
+					.map(docType -> ResponseEntity.noContent().<Void>build()).onErrorResume(IdClientNotFoundException.class,
+											throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+													throwable.getMessage(), throwable.getCause())));
 
 	}
 

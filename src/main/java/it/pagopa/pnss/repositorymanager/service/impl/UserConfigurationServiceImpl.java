@@ -43,7 +43,8 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     @Override
     public Mono<UserConfiguration> getUserConfiguration(String name) {
-        log.info("getUserConfiguration() : IN : name {}", name);
+        log.info("StorageConfigurationsImpl.getUserConfiguration() : START");
+        log.debug("StorageConfigurationsImpl.getUserConfiguration() : name {}",name);
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
@@ -52,7 +53,8 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     @Override
     public Mono<UserConfiguration> insertUserConfiguration(UserConfiguration userConfigurationInput) {
-        log.info("insertUserConfiguration() : IN : userConfigurationInput : {}", userConfigurationInput);
+    	log.info("UserConfigurationServiceImpl.insertUserConfiguration() : START");
+        log.debug("UserConfigurationServiceImpl.insertUserConfiguration() : userConfigurationInput : {}", userConfigurationInput);
 
         if (userConfigurationInput == null) {
             throw new RepositoryManagerException("UserConfiguration is null");
@@ -67,7 +69,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                                                                                              .partitionValue(userConfigurationInput.getName())
                                                                                              .build()))
                 .flatMap(foundedClientConfiguration -> Mono.error(new ItemAlreadyPresent(userConfigurationInput.getApiKey())))
-                .doOnError(ItemAlreadyPresent.class, throwable -> log.info(throwable.getMessage()))
+                .doOnError(ItemAlreadyPresent.class, throwable -> log.debug(throwable.getMessage()))
                 .switchIfEmpty(Mono.just(userConfigurationInput))
                 .flatMap(unused -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
                         userConfigurationEntity))))
@@ -76,13 +78,14 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     @Override
     public Mono<UserConfiguration> patchUserConfiguration(String name, UserConfigurationChanges userConfigurationChanges) {
-        log.info("patchUserConfiguration() : IN : name : {} , userConfigurationChanges {}", name, userConfigurationChanges);
+        log.info("UserConfigurationServiceImpl.patchUserConfiguration() : START");
+        log.debug("UserConfigurationServiceImpl.patchUserConfiguration() :  name = {} , userConfigurationChanges = {}", name, userConfigurationChanges);
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
                    .map(entityStored -> {
-                       log.info("patchUserConfiguration() : userConfigurationEntity begore patch : {}", entityStored);
+                       log.debug("UserConfigurationServiceImpl.patchUserConfiguration() : userConfigurationEntity before patch : {}", entityStored);
                        if (userConfigurationChanges.getCanCreate() != null && !userConfigurationChanges.getCanCreate().isEmpty()) {
                            entityStored.setCanCreate(userConfigurationChanges.getCanCreate());
                        }
@@ -98,7 +101,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                        if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
                            entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
                        }
-                       log.info("patchUserConfiguration() : userConfigurationEntity for patch : {}", entityStored);
+                       log.info("UserConfigurationServiceImpl.patchUserConfiguration() : userConfigurationEntity for patch : {}", entityStored);
                        return entityStored;
                    })
                    .zipWhen(userConfigurationUpdated -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
@@ -108,7 +111,8 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     @Override
     public Mono<UserConfiguration> deleteUserConfiguration(String name) {
-        log.info("deleteUserConfiguration() : IN : name {}", name);
+        log.info("UserConfigurationServiceImpl.deleteUserConfiguration() : START");
+        log.info("UserConfigurationServiceImpl.deleteUserConfiguration() : name {}", name);
         Key userConfigurationKey = Key.builder().partitionValue(name).build();
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(userConfigurationKey))

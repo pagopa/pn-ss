@@ -68,13 +68,14 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 	}
 
 	private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
-		log.error("getErrorIdDocNotFoundException() : document with documentKey \"{}\" not found", documentKey);
+		log.debug("getErrorIdDocNotFoundException() : document with documentKey \"{}\" not found", documentKey);
 		return Mono.error(new DocumentKeyNotPresentException(documentKey));
 	}
 
 	@Override
 	public Mono<Document> getDocument(String documentKey) {
-		log.info("getDocument() : IN : documentKey {}", documentKey);
+		log.info("DocumentServiceImpl.getDocument() : START");
+		log.debug("DocumentServiceImpl.getDocument() : documentKey {}", documentKey);
 		return Mono
 				.fromCompletionStage(
 						documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
@@ -85,7 +86,8 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 
 	@Override
 	public Mono<Document> insertDocument(DocumentInput documentInput) {
-		log.info("insertDocument() : IN : documentInput : {}", documentInput);
+		log.info("DocumentServiceImpl.insertDocument() : START");
+		log.debug("DocumentServiceImpl.insertDocument() : documentInput : {}", documentInput);
 		Document resp = new Document();
 		if (documentInput == null) {
 			throw new RepositoryManagerException("Document is null");
@@ -99,7 +101,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 						.getItem(Key.builder().partitionValue(documentInput.getDocumentKey()).build()))
 				.handle((documentFounded, sink) -> {
 					if (documentFounded != null) {
-						log.error("insertDocument() : document founded : {}", documentFounded);
+						log.debug("DocumentServiceImpl.insertDocument() : document founded : {}", documentFounded);
 						sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
 					}
 				}).doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
@@ -125,8 +127,9 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
     @Override
     public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges,
 			String authPagopaSafestorageCxId, String authApiKey) {
-        log.info("patchDocument() : START : authPagopaSafestorageCxId = {} : authApiKey = {} : documentKey = {} : documentChanges  = {}", 
-        		authPagopaSafestorageCxId, authApiKey, documentKey, documentChanges);
+        log.info("DocumentServiceImpl.patchDocument() : START");
+        log.debug("DocumentServiceImpl.patchDocument() : documentKey = {} : documentChanges  = {}", 
+        		documentKey, documentChanges);
         
         AtomicReference<String> oldState = new AtomicReference<>();
         
@@ -142,7 +145,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 				   })
                    .map(tuple -> {
 					   DocumentEntity documentEntityStored = tuple.getT1();
-                       log.info("patchDocument() : (recupero documentEntity dal DB) documentEntityStored = {}", documentEntityStored);
+                       log.debug("DocumentServiceImpl.patchDocument() : (recupero documentEntity dal DB) documentEntityStored = {}", documentEntityStored);
                        if (documentChanges.getDocumentState() != null) 
                        {
 						   // il vecchio stato viene considerato nella gestione della retentionUntil
@@ -174,9 +177,9 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        if (documentChanges.getContentLenght() != null) {
                     	   documentEntityStored.setContentLenght(documentChanges.getContentLenght());
                        }
-                       log.info("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}", documentEntityStored);
+                       log.debug("DocumentServiceImpl.patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}", documentEntityStored);
 
-                       log.info("patchDocument() : START Tagging");
+                       log.debug("DocumentServiceImpl.patchDocument() : START Tagging");
                        Region region = Region.of(awsConfigurationProperties.regionCode());
                        S3AsyncClient s3 = S3AsyncClient.builder()
                                .region(region)
@@ -195,11 +198,11 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 									   }))
 									   .build();
 							   CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse = s3.putObjectTagging(putObjectTaggingRequest);
-							   log.info("patchDocument() : Tagging : storageType {}", storageType);
+							   log.debug("DocumentServiceImpl.patchDocument() : Tagging : storageType {}", storageType);
 						   } else {
-							   log.info("patchDocument() : Tagging : storageTypeEmpty");
+							   log.debug("DocumentServiceImpl.patchDocument() : Tagging : storageTypeEmpty");
 						   }
-						   log.info("patchDocument() : END Tagging");
+						   log.debug("DocumentServiceImpl.patchDocument() : END Tagging");
 					   }
                        return documentEntityStored;
                    })
@@ -213,7 +216,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
 			   	   .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
 				   .onErrorResume(InvalidNextStatusException.class, throwable -> {
-					   log.error("patchDocument() : invalid next status : messaggio = {}", throwable.getMessage(), throwable);
+					   log.debug("patchDocument() : invalid next status : messaggio = {}", throwable.getMessage());
 					   return Mono.error(throwable);
 				   })
                    .onErrorResume(RuntimeException.class, throwable -> {
@@ -222,8 +225,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                     	   /*TOGLIERE*/log.info("patchDocument() : errore per valore null: messaggio = {}", throwable.getMessage());
                     	   return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
                 	   } else if (throwable instanceof DocumentKeyNotPresentException) {
-                    	   log.error("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage(), throwable);
-                    	   /*TOGLIERE*/log.info("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage());
+                    	   log.debug("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage());
                     	   return Mono.error(throwable);               		   
                 	   }
                 	   log.error("patchDocument() : errore generico : messaggio = {}", throwable.getMessage(), throwable);
@@ -235,7 +237,8 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 
 	@Override
 	public Mono<Document> deleteDocument(String documentKey) {
-		log.info("deleteDocument() : IN : documentKey {}", documentKey);
+		log.info("DocumentServiceImpl.deleteDocument() : START");
+		log.info("DocumentServiceImpl.deleteDocument() : documentKey {}", documentKey);
 		Key typeKey = Key.builder().partitionValue(documentKey).build();
 
 		return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(typeKey))

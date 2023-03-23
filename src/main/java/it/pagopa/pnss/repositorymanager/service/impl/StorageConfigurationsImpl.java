@@ -61,25 +61,25 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
 	}
 	
 	private LifecycleRuleDTO getLifecycleRuleDTO(LifecycleRule rule) {
-		log.info("getLifecycleRuleDTO() : START");
+		log.info("StorageConfigurationsImpl.getLifecycleRuleDTO() : START");
 		LifecycleRuleDTO dto = new LifecycleRuleDTO();
 		rule.filter().and().tags().forEach(tag -> {
-			log.info("getLifecycleRuleDTO() : tag : value for {} : {}", tag.key(), tag.value());
+			log.debug("getLifecycleRuleDTO() : tag : value for {} : {}", tag.key(), tag.value());
 			if (TAG_KEY.equals(tag.key())) {
 				dto.setName(tag.value());
 			}
 		});
 		dto.setExpirationDays(rule.expiration() != null ? formatInYearsDays(rule.expiration().days()) : null);
 		if (rule.hasTransitions() && rule.transitions().size() > 1) {
-			log.warn("getLifecycleRuleDTO() : rule with name {} has {} transitions : the first is used", rule.id(), rule.transitions().size());
+			log.debug("StorageConfigurationsImpl.getLifecycleRuleDTO() : rule with name {} has {} transitions : the first is used", rule.id(), rule.transitions().size());
 		}
 		dto.setTransitionDays(rule.hasTransitions() ? formatInYearsDays(rule.transitions().get(0).days()) : dto.getExpirationDays());
-		log.info("getLifecycleRuleDTO() : dto : {}", dto);
+		log.debug("StorageConfigurationsImpl.getLifecycleRuleDTO() : dto : {}", dto);
 		return dto;
 	}
 	
 	private List<LifecycleRuleDTO> convert(List<LifecycleRule> listIn) {
-		log.info("convert() : START");
+		log.debug("StorageConfigurationsImpl.convert() : START");
 		List<LifecycleRuleDTO> listOut = new ArrayList<>();
 		if (listIn == null || listIn.isEmpty()) {
 			return listOut;
@@ -92,7 +92,7 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
 	
 	private GetBucketLifecycleConfigurationResponse getAsynchLifecycleConfigurationResponse() {
 		try {
-			log.info("getLifecycleConfiguration() : pnSsBucketName : {}", bucketName.ssHotName());
+			log.debug("StorageConfigurationsImpl.getLifecycleConfiguration() : pnSsBucketName : {}", bucketName.ssHotName());
 			S3AsyncClient s3AsyncClient = getS3AsynchClient();
 	        GetBucketLifecycleConfigurationRequest request = 
 	        		GetBucketLifecycleConfigurationRequest.builder()
@@ -101,7 +101,7 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
 	        return s3AsyncClient.getBucketLifecycleConfiguration(request).get();
 		}
 		catch (Exception e) {
-			log.error("getAsynchLifecycleConfigurationResponse() : no response",e);
+			log.error("StorageConfigurationsImpl.getAsynchLifecycleConfigurationResponse() : no response",e);
 			Thread.currentThread().interrupt();
 			return null;
 		}
@@ -109,7 +109,7 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
 	
 	public Mono<List<LifecycleRuleDTO> > getLifecycleConfiguration() {
 //	public Flux<LifecycleRuleDTO> getLifecycleConfiguration() {
-		log.info("getLifecycleConfiguration() : START");
+		log.info("StorageConfigurationsImpl.getLifecycleConfiguration() : START");
 		
 		GetBucketLifecycleConfigurationResponse response = getAsynchLifecycleConfigurationResponse();
 		if (response == null || response.rules() == null) {

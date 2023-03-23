@@ -63,7 +63,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 		} else if (throwable instanceof RepositoryManagerException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else {
-			log.debug("DocTypeInternalApiController.getErrorResponse() : other : errore generico {}", throwable.getMessage());
+			log.error("DocTypeInternalApiController.getErrorResponse() : other : errore generico {}", throwable.getMessage());
 			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
 		}
 	}

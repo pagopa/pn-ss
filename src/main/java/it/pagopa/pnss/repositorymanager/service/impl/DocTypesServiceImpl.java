@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
@@ -57,7 +56,8 @@ public class DocTypesServiceImpl implements DocTypesService {
 
     @Override
     public Mono<DocumentType> getDocType(String typeId) {
-        log.info("getDocType() : IN : typeId {}", typeId);
+        log.info("DocTypesServiceImpl.getDocType() : START");
+        log.debug("DocTypesServiceImpl.getDocType() : typeId {}", typeId);
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error(throwable.getMessage()))
@@ -67,7 +67,7 @@ public class DocTypesServiceImpl implements DocTypesService {
     @Override
 //    public Flux<DocumentType> getAllDocumentType() {
     public Mono<List<DocumentType>> getAllDocumentType() {
-        log.info("getAllDocumentType() : START");
+        log.info("DocTypesServiceImpl.getAllDocumentType() : START");
         
 //        return Mono.from(docTypeEntityDynamoDbAsyncTable.scan())
 //                .map(Page::items)
@@ -82,7 +82,8 @@ public class DocTypesServiceImpl implements DocTypesService {
 
     @Override
     public Mono<DocumentType> insertDocType(DocumentType docTypeInput) {
-        log.info("insertDocType() : IN : docTypeInput : {}", docTypeInput);
+        log.info("DocTypesServiceImpl.insertDocType() : START");
+        log.debug("DocTypesServiceImpl.insertDocType() : docTypeInput : {}", docTypeInput);
 
         if (docTypeInput == null) {
             throw new RepositoryManagerException("The object DocumentType is null");
@@ -106,7 +107,8 @@ public class DocTypesServiceImpl implements DocTypesService {
 
     @Override
     public Mono<DocumentType> updateDocType(String typeId, DocumentType docTypeInput) {
-        log.info("updateDocType() : IN : typeId : {} , docTypeInput {}", typeId, docTypeInput);
+        log.info("DocTypesServiceImpl.updateDocType() : START");
+        log.debug("DocTypesServiceImpl.updateDocType() : typeId : {} , docTypeInput {}", typeId, docTypeInput);
         DocTypeEntity docTypeEntityInput = objectMapper.convertValue(docTypeInput, DocTypeEntity.class);
         docTypeEntityInput.setTipoDocumento(typeId);
 
@@ -119,7 +121,8 @@ public class DocTypesServiceImpl implements DocTypesService {
 
     @Override
     public Mono<DocumentType> deleteDocType(String typeId) {
-        log.info("deleteDocType() : IN : typeId : {}", typeId);
+    	log.info("DocTypesServiceImpl.deleteDocType() : START");
+        log.debug("DocTypesServiceImpl.deleteDocType() : typeId : {}", typeId);
         Key typeKey = Key.builder().partitionValue(typeId).build();
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(typeKey))

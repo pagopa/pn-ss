@@ -61,7 +61,7 @@ public class FileMetadataUpdateService {
 
 	public Mono<OperationResultCodeResponse> createUriForUploadFile(String fileKey, String xPagopaSafestorageCxId,
 			UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {
-		log.info("createUriForUploadFile()");
+		log.info("FileMetadataUpdateService.createUriForUploadFile() : START");
 		var retentionUntil = request.getRetentionUntil();
 		var logicalState = request.getStatus();
 		return Mono.fromCallable(() -> validationField(retentionUntil, fileKey, logicalState, xPagopaSafestorageCxId))
@@ -79,7 +79,7 @@ public class FileMetadataUpdateService {
 																			|| !userConfiguration.getUserConfiguration().getCanModifyStatus().contains(documentType)) {
 																		String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
 																									  xPagopaSafestorageCxId, documentType);
-																		log.error("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
+																		log.debug("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
 																		throw new ResponseStatusException(
 																				HttpStatus.FORBIDDEN,
 																				errore);
@@ -87,13 +87,13 @@ public class FileMetadataUpdateService {
 
 																	boolean isStatusPresent = false;
 																	if (!StringUtils.isBlank(request.getStatus())) {
-																		log.info("FileMetadataUpdateService.createUriForUploadFile() : request.getStatus() ins't blank : CONTINUO");
+																		log.debug("FileMetadataUpdateService.createUriForUploadFile() : request.getStatus() ins't blank : CONTINUO");
 																		if (document.getDocumentType() != null
 																				&& document.getDocumentType().getStatuses() != null) {
 																			isStatusPresent = document.getDocumentType().getStatuses().containsKey(logicalState);
 																		}
 																		if (!isStatusPresent) {
-																			log.error("FileMetadataUpdateService.createUriForUploadFile() : Status not found for document key {}",
+																			log.debug("FileMetadataUpdateService.createUriForUploadFile() : Status not found for document key {}",
 																					fileKey);
 																			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 																					"Status not found for document key : " + fileKey);
@@ -101,7 +101,7 @@ public class FileMetadataUpdateService {
 																		
 																		String technicalStatus = checkLookUp(documentType, logicalState);
 																		if (StringUtils.isEmpty(technicalStatus)) {
-																			log.error("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found for document key {}",
+																			log.debug("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found for document key {}",
 																					fileKey);
 																			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 																					"Technical status not found for document key : " + fileKey);
@@ -125,13 +125,13 @@ public class FileMetadataUpdateService {
 														});
 			   							})
 			   							.onErrorResume(WebClientResponseException.class, e -> {
-											log.error("FileMetadataUpdateService.createUriForUploadFile() : rilevata una WebClientResponseException : errore = {}",
-													e.getMessage(), e);
+											log.debug("FileMetadataUpdateService.createUriForUploadFile() : rilevata una WebClientResponseException : errore = {}",
+													e.getMessage());
 											return Mono.error(new ResponseStatusException(e.getStatusCode(), e.getMessage()));
 										})
 										.onErrorResume(DocumentKeyNotPresentException.class, e -> {
-											log.error("FileMetadataUpdateService.createUriForUploadFile() : rilevata una DocumentKeyNotPresentException : errore = {}",
-													e.getMessage(), e);
+											log.debug("FileMetadataUpdateService.createUriForUploadFile() : rilevata una DocumentKeyNotPresentException : errore = {}",
+													e.getMessage());
 											return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
 										})
 										.onErrorResume(RuntimeException.class, e -> {

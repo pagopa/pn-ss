@@ -26,6 +26,7 @@ public class DocTypesClientCallImpl extends CommonBaseClient implements DocTypes
 
     @Override
     public Mono<DocumentTypeResponse>  getdocTypes(String tipologiaDocumento) throws IdClientNotFoundException {
+    	log.info("DocTypesClientCallImpl.getdocTypes() : START");
         return getWebClient().get()
                 .uri(String.format(anagraficaDocTypesInternalClientEndpoint, tipologiaDocumento))
                 .retrieve()

@@ -9,6 +9,8 @@ import it.pagopa.pnss.transformation.model.InputPdfFileSignRequestV2;
 import it.pagopa.pnss.transformation.model.PdfFileSignReturnV2;
 import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimemark;
 import it.pagopa.pnss.transformation.wsdl.*;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 
 @Service
+@Slf4j
 public class SignServiceSoap extends CommonArubaService {
 
     @Autowired
@@ -33,6 +36,8 @@ public class SignServiceSoap extends CommonArubaService {
     }
 
     public SignReturnV2 singnPdfDocument(byte[] pdfFile, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
+    	log.info("SignServiceSoap.singnPdfDocument() : START");
+    	
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID(certId);
         signRequestV2.setIdentity(createIdentity(null));
@@ -57,6 +62,8 @@ public class SignServiceSoap extends CommonArubaService {
 
 
     public SignReturnV2 pkcs7signV2(byte[] buf, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
+    	log.info("SignServiceSoap.pkcs7signV2() : START");
+    	
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
         signRequestV2.setIdentity(createIdentity(null));
@@ -79,6 +86,8 @@ public class SignServiceSoap extends CommonArubaService {
     }
 
     public SignReturnV2 xmlsignature(String contentType, InputStream xml, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
+    	log.info("SignServiceSoap.xmlsignature() : START");
+    	
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID("AS0");
         signRequestV2.setIdentity(createIdentity(null));
@@ -101,6 +110,8 @@ public class SignServiceSoap extends CommonArubaService {
 
 
     public PdfFileSignReturnV2 callArubaSignPdfFile(InputPdfFileSignRequestV2 input) throws JAXBException, TypeOfTransportNotImplemented_Exception {
+    	log.info("SignServiceSoap.callArubaSignPdfFile() : START");
+    	
         logCallAruba(input.getInfoTosigned());
 
         PdfFileSignReturnV2 response = new PdfFileSignReturnV2();
@@ -131,6 +142,8 @@ public class SignServiceSoap extends CommonArubaService {
         return  response;
     }
     public GenericFileSignReturnV2 callGenericFile(GenericFileSignRequestV2 input) throws JAXBException, TypeOfTransportNotImplemented_Exception {
+    	log.info("SignServiceSoap.callGenericFile() : START");
+    	
         logCallAruba(input.getInfoTosigned());
         GenericFileSignReturnV2 response = new GenericFileSignReturnV2();
 

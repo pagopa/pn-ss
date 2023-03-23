@@ -7,7 +7,9 @@ import java.util.ArrayList;
 
 public class S3ObjectCreated implements Serializable {
 
-    private String version;
+    private static final long serialVersionUID = 9083456461500769486L;
+    
+	private String version;
     private String id;
     @JsonProperty("detail-type")
     private String detailtype;

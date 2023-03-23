@@ -41,13 +41,13 @@ public class OrchestratorSignDocument {
         this.downloadObjectService = downloadObjectService;
         this.documentClientCall = documentClientCall;
         this.deleteObjectService = deleteObjectService;
-
     }
 
 
     public Mono<Void> incomingMessageFlow(String key, String bucketName, Boolean marcatura) {
-        log.info("chiamo la document con keyname :"+key);
-        return Mono.fromCallable(() -> validationField())
+    	log.info("OrchestratorSignDocument.incomingMessageFlow() : START");
+        log.debug("OrchestratorSignDocument.incomingMessageFlow() : chiamo la document con keyname = {}", key);
+        return Mono.fromCallable(this::validationField)
                 .flatMap(voidMono -> documentClientCall.getdocument(key))
                 .flatMap(documentResponse -> {
                     try {
@@ -75,7 +75,7 @@ public class OrchestratorSignDocument {
                         } catch (MalformedURLException e) {
                             throw new ArubaSignException(key);
                         }
-                        log.info("\n--- ARUBA RESPONSE "+
+                        log.debug("\n--- ARUBA RESPONSE "+
                                  "\n--- ARUBA RETURN CODE : "+signReturnV2.getReturnCode()+
                                  "\n--- ARUBA STATUS      : "+signReturnV2.getStatus()+
                                  "\n--- ARUBA DESCRIPTION : "+signReturnV2.getDescription());

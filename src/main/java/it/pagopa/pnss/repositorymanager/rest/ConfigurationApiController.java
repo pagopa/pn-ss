@@ -65,8 +65,9 @@ public class ConfigurationApiController implements CfgApi {
 
     @Override
     public Mono<ResponseEntity<DocumentTypesConfigurations>> getDocumentsConfigs(final ServerWebExchange exchange) {
-
-        return documentsConfigsService.getDocumentsConfigs()
+    	log.info("ConfigurationApiController.getDocumentsConfigs() : START");
+    	
+    	return documentsConfigsService.getDocumentsConfigs()
                                       .map(ResponseEntity::ok)
                                       .onErrorResume(this::getDocumentTypesConfigurationsErrorResponse);
     }
@@ -86,10 +87,14 @@ public class ConfigurationApiController implements CfgApi {
     @Override
     public Mono<ResponseEntity<UserConfiguration>> getCurrentClientConfig(String clientId, final ServerWebExchange exchange) {
 
-        return userConfigurationService.getUserConfiguration(clientId)
-                                       .map(userConfigurationInternal -> ResponseEntity.ok(objectMapper.convertValue(
-                                               userConfigurationInternal,
-                                               UserConfiguration.class)))
-                                       .onErrorResume(throwable -> getUserConfigurationErrorResponse(clientId, throwable));
+    	return Mono.just(clientId)
+	    		.flatMap(idClient -> {
+	    			log.info("ConfigurationApiController.getCurrentClientConfig() : START");
+	    			return userConfigurationService.getUserConfiguration(clientId);
+	    		})
+	    		.map(userConfigurationInternal -> ResponseEntity.ok(objectMapper.convertValue(
+                                               							userConfigurationInternal,
+                                               							UserConfiguration.class)))
+                .onErrorResume(throwable -> getUserConfigurationErrorResponse(clientId, throwable));
     }
 }

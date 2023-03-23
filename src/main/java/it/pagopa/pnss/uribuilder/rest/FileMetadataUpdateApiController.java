@@ -11,10 +11,12 @@ import it.pagopa.pn.template.rest.v1.dto.OperationResultCodeResponse;
 import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
 import it.pagopa.pnss.uribuilder.service.FileMetadataUpdateService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
 	
     @Value("${header.x-api-key}")
@@ -30,6 +32,7 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
     public Mono<ResponseEntity<OperationResultCodeResponse>> updateFileMetadata
             (String fileKey, String xPagopaSafestorageCxId, Mono<UpdateFileMetadataRequest> updateFileMetadataRequest, final ServerWebExchange exchange) {
 
+    	log.info("FileMetadataUpdateApiController.updateFileMetadata() : START");
     	String pagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(pagopaSafestorageCxId);
     	String apiKeyValue = exchange.getRequest().getHeaders().getFirst(apiKey);
     	

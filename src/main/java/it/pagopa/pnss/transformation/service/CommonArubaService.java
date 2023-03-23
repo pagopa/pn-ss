@@ -1,53 +1,44 @@
 package it.pagopa.pnss.transformation.service;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import it.pagopa.pnss.transformation.configuration.ArubaCredentialConf;
+import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
+import it.pagopa.pnss.transformation.wsdl.ArubaSignServiceService;
+import it.pagopa.pnss.transformation.wsdl.Auth;
+import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.namespace.QName;
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
-import it.pagopa.pnss.transformation.wsdl.ArubaSignServiceService;
-import it.pagopa.pnss.transformation.wsdl.Auth;
-import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
-import lombok.extern.slf4j.Slf4j;
-
-@Service
-@Slf4j
 public abstract class CommonArubaService {
 
     public static String ARUBA_RESP_OK = "OK";
 
-    @Autowired
-    ArubaSignServiceService arubaSignService;
+    ArubaSignServiceService arubaSignService = createArubaService(null);
 
     @Autowired
     private ArubaSecretValue arubaSecretValue;
 
 
     Auth identity;
-    
     @Value("${aruba.cert_id}")
-    public String certId;
+    public String certId = "AS0";
     @Value("${aruba.sign.wsdl.url}")
     public String arubaUrlWsdl;
+
     @Value("${aruba.enabled.log}")
     public Boolean enableArubaLog;
-    @Value("${aruba.qname}")
-    public String arubaQname;
-    @Value("${aruba.sign.service}")
-    public String arubaSignatureService; 
+
 
     protected CommonArubaService() throws MalformedURLException {
-//    	arubaSignService = createArubaService(null);
     }
 
     public Auth createIdentity(Auth auth) {
@@ -67,10 +58,10 @@ public abstract class CommonArubaService {
 
     public ArubaSignServiceService createArubaService(String url) throws MalformedURLException {
         if (StringUtils.isEmpty(url)) {
-            url = arubaUrlWsdl;
+            url = "https://arss.demo.firma-automatica.it:443/ArubaSignService/ArubaSignService";
         }
         URL newEndpoint = new URL(url);
-        QName qname = new QName(arubaQname, arubaSignatureService);
+        QName qname = new QName("http://arubasignservice.arubapec.it/", "ArubaSignServiceService");
         return new ArubaSignServiceService(newEndpoint, qname);
 
     }

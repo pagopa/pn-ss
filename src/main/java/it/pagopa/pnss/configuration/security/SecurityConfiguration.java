@@ -86,8 +86,8 @@ public class SecurityConfiguration {
         authenticationWebFilter.setServerAuthenticationConverter(serverAuthenticationConverter);
 
         return http.authorizeExchange()
-//                   .pathMatchers("/safe-storage/v1/**")
-//                   .authenticated()
+                   .pathMatchers("/safe-storage/v1/**")
+                   .authenticated()
                    .anyExchange()
                    .permitAll()
                    .and()

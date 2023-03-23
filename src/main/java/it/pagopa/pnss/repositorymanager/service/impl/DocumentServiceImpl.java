@@ -6,9 +6,6 @@ import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKIN
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
-import it.pagopa.pnss.common.exception.InvalidNextStatusException;
-import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
-import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,14 +48,12 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 	private final RetentionService retentionService;
 	private final AwsConfigurationProperties awsConfigurationProperties;
 	private final BucketName bucketName;
-	private final CallMacchinaStati callMacchinaStati;
 
 	public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-							   RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
-							   RetentionService retentionService, AwsConfigurationProperties awsConfigurationProperties,
-							   BucketName bucketName, CallMacchinaStati callMacchinaStati) {
+			RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
+			RetentionService retentionService, AwsConfigurationProperties awsConfigurationProperties,
+			BucketName bucketName) {
 		this.docTypesService = docTypesService;
-		this.callMacchinaStati = callMacchinaStati;
 		this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient
 				.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
 		this.objectMapper = objectMapper;
@@ -132,21 +127,15 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
         
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-				   .zipWhen(documentEntity -> {
-						   var documentStatusChange = new DocumentStatusChange();
-						   documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
-						   documentStatusChange.setProcessId("SS");
-						   documentStatusChange.setCurrentStatus(documentEntity.getDocumentState().toLowerCase());
-						   documentStatusChange.setNextStatus(documentChanges.getDocumentState().toLowerCase());
-						   return callMacchinaStati.statusValidation(documentStatusChange);
-				   })
-                   .map(tuple -> {
-					   DocumentEntity documentEntityStored = tuple.getT1();
+                   .map(documentEntityStored -> {
+                	   if (documentChanges == null) {
+                		   return documentEntityStored;
+                	   }
                        log.info("patchDocument() : (recupero documentEntity dal DB) documentEntityStored = {}", documentEntityStored);
                        if (documentChanges.getDocumentState() != null) 
                        {
-						   // il vecchio stato viene considerato nella gestione della retentionUntil
-						   oldState.set(documentEntityStored.getDocumentState());
+                    	   // il vecchio stato viene considerato nella gestione della retentionUntil
+                    	   oldState.set(documentEntityStored.getDocumentState());
                     	   
                     	   documentEntityStored.setDocumentState(documentChanges.getDocumentState());
                     	   
@@ -217,10 +206,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                     	   log.error("patchDocument() : errore per valore null : messaggio = {}", throwable.getMessage(), throwable);
                     	   /*TOGLIERE*/log.info("patchDocument() : errore per valore null: messaggio = {}", throwable.getMessage());
                     	   return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
-                	   } else if (throwable instanceof InvalidNextStatusException) {
-						   log.error("patchDocument() : invalid next status : messaggio = {}", throwable.getMessage(), throwable);
-						   return Mono.error(throwable);
-					   } else if (throwable instanceof DocumentKeyNotPresentException) {
+                	   } else if (throwable instanceof DocumentKeyNotPresentException) {
                     	   log.error("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage(), throwable);
                     	   /*TOGLIERE*/log.info("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage());
                     	   return Mono.error(throwable);               		   
@@ -244,5 +230,4 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 						.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
 				.map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
 	}
-
 }

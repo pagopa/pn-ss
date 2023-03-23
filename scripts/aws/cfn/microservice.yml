@@ -185,15 +185,6 @@ Parameters:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
 
-  PnSsEventRuleArnNotificheExt1:
-    Type: String
-    Description: 'Regola Event Bridge per pubblicare gli eventi relativi al Gestore Disponibilita sulla code per le piattaforme esterne'
-  
-  PnSsEventRuleArnStagingBucket:
-    Type: String
-    Description: 'Regola Event Bridge per pubblicare gli eventi di creazione oggetti nel Bucket Staging'
-
-#### Parametri presenti nel file json di configurazione  ###
   PresignedUrlMinutesLifespan:
     Type: String
     Description: 'Minuti di validità dei pre-signed url prima della scadenza'
@@ -389,58 +380,6 @@ Resources:
             Resource:
               - !Sub '${PnSsEventBusArnExternalNotification}'
 
-  #####    Metrics and Alarms   ##### 
-  SafeStorageMicroserviceAlarm:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/microservice-alarm.yaml"
-      Parameters:
-        MicroserviceName: !Sub '${ProjectName}-safe-storage' # Must be identical to the one in the ecs-service stack
-        EvaluationPeriod: '10'
-        DatapointsToAlarm: '1'
-        Threshold: '1'
-
-  SafeStorageMicroserviceAlarmDashboard:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/microservice-cloudwatch-dashboard.yaml"
-      Parameters:
-        DashboardName: 'safe-storage-msvc'
-        AlarmArns: 
-          !Join
-          - ','
-          - - !GetAtt SafeStorageMicroserviceAlarm.Outputs.MicroserviceAlarmArn
-            - !GetAtt SafeStorageMicroservice.Outputs.FatalLogsMetricAlarmArn
-            # - !GetAtt SafeStorageMicroservice.Outputs.AutoScalingAlarmArn
-        DynamoDBTableNames:
-          !Join
-          - ','
-          - - !Ref PnSsTableNameAnagraficaClient
-            - !Ref PnSsTableNameTipologieDocumenti
-            - !Ref PnSsTableNameDocumenti
-        # RestApiStageArns:
-        # RestApiNames:
-        QueueArns:
-          !Join
-          - ','
-          - - !Ref PnSsQueueArnStagingBucket
-            - !Ref PnSsQueueArnGestoreBucketInvokeErrors
-            - !Ref PnSsQueueArnNotificheExt1
-        LambdaArns: !GetAtt PnSsGestoreBucket.Arn
-        # KinesisDataArns:
-        # KinesisFirehoseArns:
-        EventRuleArns:
-          !Join
-          - ','
-          - - !Ref PnSsEventRuleArnNotificheExt1
-            - !Ref PnSsEventRuleArnStagingBucket
-        BucketNames:
-          !Join
-          - ','
-          - - !Ref PnSsBucketName
-            - !Ref PnSsStagingBucketName
-
-  #####    Bucket + Queue Policies   ##### 
   PnSsStagingBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -474,8 +413,6 @@ Resources:
               Service:
                 - 'events.amazonaws.com'
   
-
-  #####    Gestore Bucket e risorse a lui afferenti    #####
   PnSsQueuePolicyGestoreBucketInvokeErrors:
     Type: AWS::SQS::QueuePolicy
     Properties: 

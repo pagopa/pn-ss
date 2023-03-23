@@ -11,4 +11,8 @@ public class InvalidNextStatusException extends RuntimeException{
                 documentStatusChange.getXPagopaExtchCxId(),
                 documentStatusChange.getProcessId()));
     }
+
+    public InvalidNextStatusException(String nextStatus, String fileKey) {
+        super(String.format("The status %s is not valid for the file key %s", nextStatus, fileKey));
+    }
 }

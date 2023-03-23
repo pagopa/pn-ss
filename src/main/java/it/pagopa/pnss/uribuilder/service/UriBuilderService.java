@@ -221,15 +221,15 @@ public class UriBuilderService extends CommonS3ObjectService {
         if (!listaTipologieDoc.contains(documentType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid");
         }
-        if (!status.equals("")) {
-            if (!listaStatus.contains(status)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status :" + status + " - Not valid ");
-            } else {
-                if (!(documentType.equals("PN_NOTIFICATION_ATTACHMENTS") && status.equals("PRELOADED"))) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status :" + status + " - Not valid for documentType");
-                }
-            }
-        }
+//        if (!status.equals("")) {
+//            if (!listaStatus.contains(status)) {
+//                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status :" + status + " - Not valid ");
+//            } else {
+//                if (!(documentType.equals("PN_NOTIFICATION_ATTACHMENTS") && status.equals("PRELOADED"))) {
+//                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status :" + status + " - Not valid for documentType");
+//                }
+//            }
+//        }
         return Mono.just(true);
     }
 

@@ -212,16 +212,15 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 				   })
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
 			   	   .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
-				   .onErrorResume(InvalidNextStatusException.class, throwable -> {
-					   log.error("patchDocument() : invalid next status : messaggio = {}", throwable.getMessage(), throwable);
-					   return Mono.error(throwable);
-				   })
                    .onErrorResume(RuntimeException.class, throwable -> {
                 	   if (throwable instanceof NullPointerException) {
                     	   log.error("patchDocument() : errore per valore null : messaggio = {}", throwable.getMessage(), throwable);
                     	   /*TOGLIERE*/log.info("patchDocument() : errore per valore null: messaggio = {}", throwable.getMessage());
                     	   return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
-                	   } else if (throwable instanceof DocumentKeyNotPresentException) {
+                	   } else if (throwable instanceof InvalidNextStatusException) {
+						   log.error("patchDocument() : invalid next status : messaggio = {}", throwable.getMessage(), throwable);
+						   return Mono.error(throwable);
+					   } else if (throwable instanceof DocumentKeyNotPresentException) {
                     	   log.error("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage(), throwable);
                     	   /*TOGLIERE*/log.info("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage());
                     	   return Mono.error(throwable);               		   

@@ -51,9 +51,12 @@ public class OrchestratorSignDocument {
                 .flatMap(voidMono -> documentClientCall.getdocument(key))
                 .flatMap(documentResponse -> {
                     try {
+                    	log.info("step 1");
                         ResponseBytes<GetObjectResponse> objectResponse = downloadObjectService.execute(key,bucketName);
                         byte[] fileInput = objectResponse.asByteArray();
                         Document doc = documentResponse.getDocument();
+                        log.info("step 2: doc = {}", doc);
+                        log.info("step 3: doc.getDocumentType().getDigitalSignature() = {}", doc.getDocumentType().getDigitalSignature());
 
                         if (!doc.getDocumentType().getDigitalSignature()){
                             return Mono.empty();
@@ -63,16 +66,17 @@ public class OrchestratorSignDocument {
                         SignReturnV2 signReturnV2 = null;
                         try {
                             if (contentType.equals(Constant.APPLICATION_PDF)) {
+                            	log.info("step 4: application pdf");
                                 signReturnV2 = signServiceSoap.singnPdfDocument(fileInput, marcatura);
                             } else {
+                            	log.info("step 4: not application pdf");
                                 signReturnV2 = signServiceSoap.pkcs7signV2(fileInput, marcatura);
                             }
+                            log.info("step 5: signReturnV2 = {}", signReturnV2);
+                            log.info("step 6: signReturnV2.getStatus() = {}", signReturnV2.getStatus());
 
-                        } catch (TypeOfTransportNotImplemented_Exception e) {
-                            throw new ArubaSignException(key);
-                        } catch (JAXBException e) {
-                            throw new ArubaSignException(key);
-                        } catch (MalformedURLException e) {
+                        } catch (TypeOfTransportNotImplemented_Exception|JAXBException|MalformedURLException e) {
+                        	log.error("step error",e);
                             throw new ArubaSignException(key);
                         }
                         log.debug("\n--- ARUBA RESPONSE "+
@@ -83,6 +87,7 @@ public class OrchestratorSignDocument {
                             throw new ArubaSignException(key);
                         }
                         byte[] fileSigned = signReturnV2.getBinaryoutput();
+                        log.info("step 7: fileSigned");
                         
                         return uploadObjectService.execute(key, fileSigned);
 
@@ -95,6 +100,8 @@ public class OrchestratorSignDocument {
 
                 })
                 .flatMap( response -> {
+                	
+                	log.info("step 8");
                     
                     DocumentChanges docChanges = new DocumentChanges();
                     docChanges.setDocumentState(Constant.AVAILABLE);

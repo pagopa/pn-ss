@@ -1,13 +1,5 @@
 package it.pagopa.pnss.common.client.impl;
 
-import static org.springframework.http.HttpStatus.FORBIDDEN;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-
 import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
@@ -17,8 +9,17 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.FORBIDDEN;
 
 @Service
 @Slf4j
@@ -77,6 +78,7 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
 				        		.header(xApiKey, authApiKey)
 				                .bodyValue(document)
 				                .retrieve()
+                                .onStatus(BAD_REQUEST::equals, clientResponse -> Mono.error(new InvalidNextStatusException(document.getDocumentState(), keyFile)))
 				                .bodyToMono(DocumentResponse.class)
 		                .onErrorResume(RuntimeException.class, e -> {
 		                	log.error("DocumentClientCallImpl.patchdocument() : errore generico = {}", e.getMessage(), e);

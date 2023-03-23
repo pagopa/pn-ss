@@ -12,6 +12,7 @@ import javax.xml.namespace.QName;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
 import it.pagopa.pnss.transformation.wsdl.ArubaSignServiceService;
@@ -19,26 +20,31 @@ import it.pagopa.pnss.transformation.wsdl.Auth;
 import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
 import lombok.extern.slf4j.Slf4j;
 
+@Service
 @Slf4j
 public abstract class CommonArubaService {
 
     public static final String ARUBA_RESP_OK = "OK";
 
-    ArubaSignServiceService arubaSignService = createArubaService(null);
+    @Autowired
+    ArubaSignServiceService arubaSignService;
 
     @Autowired
     private ArubaSecretValue arubaSecretValue;
 
 
     Auth identity;
+    
     @Value("${aruba.cert_id}")
-    public String certId = "AS0";
+    public String certId;
     @Value("${aruba.sign.wsdl.url}")
     public String arubaUrlWsdl;
-
     @Value("${aruba.enabled.log}")
     public Boolean enableArubaLog;
-
+    @Value("${aruba.qname}")
+    public String arubaQname;
+    @Value("${aruba.sign.service}")
+    public String arubaSignatureService; 
 
     protected CommonArubaService() throws MalformedURLException {
     }
@@ -61,13 +67,13 @@ public abstract class CommonArubaService {
 
     public ArubaSignServiceService createArubaService(String url) throws MalformedURLException {
     	log.info("CommonArubaService.createArubaService() : START");
-    	log.info("CommonArubaService.createArubaService() : url = {}", url);
+    	log.debug("CommonArubaService.createArubaService() : url = {}", url);
     	
         if (StringUtils.isEmpty(url)) {
-            url = "https://arss.demo.firma-automatica.it:443/ArubaSignService/ArubaSignService";
+            url = arubaUrlWsdl;
         }
         URL newEndpoint = new URL(url);
-        QName qname = new QName("http://arubasignservice.arubapec.it/", "ArubaSignServiceService");
+        QName qname = new QName(arubaQname, arubaSignatureService);
         return new ArubaSignServiceService(newEndpoint, qname);
 
     }

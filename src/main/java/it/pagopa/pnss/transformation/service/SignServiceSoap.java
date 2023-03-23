@@ -1,25 +1,34 @@
 package it.pagopa.pnss.transformation.service;
 
-import com.sun.xml.ws.encoding.xml.XMLMessage;
-import com.sun.xml.ws.util.ByteArrayDataSource;
-import com.sun.xml.ws.wsdl.parser.InaccessibleWSDLException;
-import it.pagopa.pnss.transformation.model.GenericFileSignRequestV2;
-import it.pagopa.pnss.transformation.model.GenericFileSignReturnV2;
-import it.pagopa.pnss.transformation.model.InputPdfFileSignRequestV2;
-import it.pagopa.pnss.transformation.model.PdfFileSignReturnV2;
-import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimemark;
-import it.pagopa.pnss.transformation.wsdl.*;
-import lombok.extern.slf4j.Slf4j;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.xml.bind.JAXBException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.xml.bind.JAXBException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
+import com.sun.xml.ws.encoding.xml.XMLMessage;
+import com.sun.xml.ws.util.ByteArrayDataSource;
+import com.sun.xml.ws.wsdl.parser.InaccessibleWSDLException;
+
+import it.pagopa.pnss.transformation.model.GenericFileSignRequestV2;
+import it.pagopa.pnss.transformation.model.GenericFileSignReturnV2;
+import it.pagopa.pnss.transformation.model.InputPdfFileSignRequestV2;
+import it.pagopa.pnss.transformation.model.PdfFileSignReturnV2;
+import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimemark;
+import it.pagopa.pnss.transformation.wsdl.ArubaSignService;
+import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
+import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
+import it.pagopa.pnss.transformation.wsdl.TsaAuth;
+import it.pagopa.pnss.transformation.wsdl.TypeOfTransportNotImplemented_Exception;
+import it.pagopa.pnss.transformation.wsdl.TypeTransport;
+import it.pagopa.pnss.transformation.wsdl.XmlSignatureParameter;
+import it.pagopa.pnss.transformation.wsdl.XmlSignatureType;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -44,6 +53,10 @@ public class SignServiceSoap extends CommonArubaService {
         signRequestV2.setRequiredmark(marcatura);
         signRequestV2.setBinaryinput(pdfFile);
         signRequestV2.setTransport(TypeTransport.BYNARYNET);
+        
+        log.debug("SignServiceSoap.singnPdfDocument() : userkUrl = {}", identitySecretTimemark.getUserTimemark());	
+        log.debug("SignServiceSoap.singnPdfDocument() : passwordkUrl = {}", identitySecretTimemark.getPasswordTimemark());	
+        log.debug("SignServiceSoap.singnPdfDocument() : timemarkUrl = {}", timemarkUrl);	
 
         var tsaAuth = new TsaAuth();
         tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
@@ -52,6 +65,8 @@ public class SignServiceSoap extends CommonArubaService {
         signRequestV2.setTsaIdentity(tsaAuth);
 
         logCallAruba(signRequestV2);
+        
+        log.debug("SignServiceSoap.singnPdfDocument() : arubaUrlWsdl = {}", arubaUrlWsdl);	
 
         ArubaSignService service = createArubaService(arubaUrlWsdl).getArubaSignServicePort();
         SignReturnV2 signReturnV2 = service.pdfsignatureV2(signRequestV2,null ,null,null ,null,null);
@@ -65,7 +80,7 @@ public class SignServiceSoap extends CommonArubaService {
     	log.info("SignServiceSoap.pkcs7signV2() : START");
     	
         SignRequestV2 signRequestV2 = new SignRequestV2();
-        signRequestV2.setCertID("AS0");
+        signRequestV2.setCertID(certId);
         signRequestV2.setIdentity(createIdentity(null));
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
@@ -89,7 +104,7 @@ public class SignServiceSoap extends CommonArubaService {
     	log.info("SignServiceSoap.xmlsignature() : START");
     	
         SignRequestV2 signRequestV2 = new SignRequestV2();
-        signRequestV2.setCertID("AS0");
+        signRequestV2.setCertID(certId);
         signRequestV2.setIdentity(createIdentity(null));
         DataSource dataSourceXml = XMLMessage.createDataSource( contentType,xml);
         signRequestV2.setStream(new DataHandler(dataSourceXml));

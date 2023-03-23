@@ -1,6 +1,7 @@
 package it.pagopa.pnss.configuration.http;
 
 import it.pagopa.pnss.common.configurationproperties.endpoint.internal.statemachine.StateMachineEndpointProperties;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.JettyClientHttpConnector;
@@ -14,6 +15,9 @@ public class WebClientConf {
 
     private final JettyHttpClientConf jettyHttpClientConf;
 
+    @Value("${internal.base.url}")
+    String internalBaseUrl;
+
     public WebClientConf(JettyHttpClientConf jettyHttpClientConf) {
         this.jettyHttpClientConf = jettyHttpClientConf;
     }
@@ -21,11 +25,18 @@ public class WebClientConf {
     private WebClient.Builder defaultWebClientBuilder() {
         return WebClient.builder().clientConnector(new JettyClientHttpConnector(jettyHttpClientConf.getJettyHttpClient()));
     }
+
     private WebClient.Builder defaultJsonWebClientBuilder() {
         return defaultWebClientBuilder().defaultHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE);
     }
+
     @Bean
     public WebClient stateMachineWebClient(StateMachineEndpointProperties stateMachineEndpointProperties) {
         return defaultJsonWebClientBuilder().baseUrl(stateMachineEndpointProperties.containerBaseUrl()).build();
+    }
+
+    @Bean
+    public WebClient ssWebClient() {
+        return defaultJsonWebClientBuilder().baseUrl(internalBaseUrl).build();
     }
 }

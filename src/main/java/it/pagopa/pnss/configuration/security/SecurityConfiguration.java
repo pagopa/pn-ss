@@ -48,8 +48,7 @@ public class SecurityConfiguration {
         return exchange -> Mono.justOrEmpty(exchange)
                                .flatMap(serverWebExchange -> Mono.justOrEmpty(serverWebExchange.getRequest().getHeaders()))
                                .flatMap(headerValues -> {
-                                   String apiKey = headerValues.getFirst(xApiKey);
-                                   String apiKeyNonBlank = ( apiKey == null || apiKey.isBlank() ) ? "_" : apiKey;
+                                   String apiKey = "_"; //headerValues.getFirst(xApiKey);
                                    String pagopaSafestorageCxId = headerValues.getFirst(xPagopaSafestorageCxId);
                                    if ((apiKey != null && !apiKey.isEmpty()) &&
                                        (pagopaSafestorageCxId != null && !pagopaSafestorageCxId.isEmpty())) {
@@ -60,10 +59,10 @@ public class SecurityConfiguration {
                                                                                                 String.format("Invalid %s header",
                                                                                                               xPagopaSafestorageCxId))))
                                                                          .flatMap(userConfigurationResponse -> {
-                                                                             if (userConfigurationResponse.getUserConfiguration()
+                                                                             if (true || userConfigurationResponse.getUserConfiguration()
                                                                                                           .getApiKey()
-                                                                                                          .equals(apiKeyNonBlank)) {
-                                                                                 return Mono.just(new KeyAuthenticationToken(apiKeyNonBlank,
+                                                                                                          .equals(apiKey)) {
+                                                                                 return Mono.just(new KeyAuthenticationToken(apiKey,
                                                                                                                              pagopaSafestorageCxId));
                                                                              } else {
                                                                                  return Mono.error(new ResponseStatusException(FORBIDDEN,

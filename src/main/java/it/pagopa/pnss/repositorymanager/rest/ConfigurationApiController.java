@@ -7,6 +7,8 @@ import org.springframework.web.server.ServerWebExchange;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import it.pagopa.pn.commons.log.PnAuditLogBuilder;
+import it.pagopa.pn.commons.log.PnAuditLogEvent;
 import it.pagopa.pn.template.rest.v1.api.CfgApi;
 import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
@@ -90,6 +92,10 @@ public class ConfigurationApiController implements CfgApi {
     	return Mono.just(clientId)
 	    		.flatMap(idClient -> {
 	    			log.info("ConfigurationApiController.getCurrentClientConfig() : START");
+	    			
+	    			PnAuditLogBuilder auditLogBuilder = new PnAuditLogBuilder();
+	    			PnAuditLogEvent logEvent = auditLogBuilder.before(null, clientId, null).build();
+	    			
 	    			return userConfigurationService.getUserConfiguration(clientId);
 	    		})
 	    		.map(userConfigurationInternal -> ResponseEntity.ok(objectMapper.convertValue(

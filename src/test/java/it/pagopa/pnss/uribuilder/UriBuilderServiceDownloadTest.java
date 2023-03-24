@@ -33,6 +33,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -50,6 +51,9 @@ class UriBuilderServiceDownloadTest {
     private String xApiKey;
     @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
     private String X_PAGOPA_SAFESTORAGE_CX_ID;
+
+    @Value("${max.restore.time.cold}")
+    BigDecimal maxRestoreTimeCold;
 
     private static final String X_API_KEY_VALUE = "apiKey_value";
     private static final String X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE = "CLIENT_ID_123";
@@ -205,7 +209,7 @@ class UriBuilderServiceDownloadTest {
                 .isOk().expectBody(FileDownloadResponse.class).value(response ->{
                     //Assertions.assertThat(!response.getChecksum().isEmpty());
                     //TODO rimettere
-                    Assertions.assertThat(!response.getDownload().getRetryAfter().equals(MAX_RECOVER_COLD));
+                    Assertions.assertThat(!response.getDownload().getRetryAfter().equals(maxRestoreTimeCold));
 
                 });
     }

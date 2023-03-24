@@ -1,6 +1,5 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
 import static it.pagopa.pnss.common.Constant.PN_AAR;
 import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
 import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
@@ -94,6 +93,9 @@ public class UriBuilderService extends CommonS3ObjectService {
     
     @Value("${queryParam.presignedUrl.traceId:#{null}}")
     String queryParamPresignedUrlTraceId;
+
+    @Value("${max.restore.time.cold}")
+    BigDecimal maxRestoreTimeCold;
 
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
@@ -480,8 +482,8 @@ public class UriBuilderService extends CommonS3ObjectService {
             // Check the restoration status of the object.
             ObjectMetadata response = s3Client.getObjectMetadata(bucketName, keyName);
             Boolean restoreFlag = response.getOngoingRestore();
-            log.info("--- RENTION DATE "+response.getHttpExpiresDate() +" DOCUMENT "+keyName);
-            log.info("Restoration status: %s.\n",restoreFlag ? "in progress" : "not in progress (finished or failed)");
+            log.info("--- RETENTION DATE "+response.getHttpExpiresDate() +" DOCUMENT "+keyName);
+            log.info("Restore status: %s.\n",restoreFlag ? "in progress" : "not in progress (finished or failed)");
         } catch (AmazonServiceException ase) {
             log.error(" Errore AMAZON AmazonServiceException", ase);
             if (!ase.getErrorCode().equalsIgnoreCase("RestoreAlreadyInProgress")){
@@ -496,7 +498,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 
         }
 
-        fdinfo.setRetryAfter(MAX_RECOVER_COLD);
+        fdinfo.setRetryAfter(maxRestoreTimeCold);
         return fdinfo;
     }
 

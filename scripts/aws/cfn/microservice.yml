@@ -473,6 +473,7 @@ Resources:
                 Action: 
                   - 'kms:GenerateDataKey'
                   - 'kms:Decrypt'
+                  - 'events:PutEvents'
                 Resource: '*'
                 Condition:
                   StringLike:
@@ -538,6 +539,7 @@ Resources:
           const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
           const STAGINGBUCKET = process.env.PnSsStagingBucketName;
           const s3 = new AWS.S3();
+          const EvtBridge = new AWS.EventBridge();
 
           exports.handler = async (event) => {
             let jsonDocument = {
@@ -545,7 +547,7 @@ Resources:
               documentState: "",
             };
 
-            console.log(JSON.stringify(event));
+            console.log("Event: ", JSON.stringify(event));
             let bucketName;
             console.log("Buket Name: " + event.Records[0].s3.bucket.name);
             console.log("Object Key: " + event.Records[0].s3.object.key);
@@ -580,6 +582,7 @@ Resources:
                       .createHash(doc.document.documentType.checksum)
                       .update(Body)
                       .digest("hex");
+                    
                   } catch (error) {
                     console.log(error);
                     const messageError = `Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}. Verificare che l'oggetto esiste nel bucket o sul database Dynamo.`;
@@ -587,7 +590,6 @@ Resources:
                     throw new Error(messageError);
                   }
                 }
-                console.log(jsonDocument);
                 break;
               case "ObjectCreated:Copy":
                 jsonDocument.documentState = "available";
@@ -610,15 +612,35 @@ Resources:
               default:
                 return;
             }
+            
+            console.log("Before dynamo update: ", JSON.stringify(jsonDocument));
+            
             try {
               const res = await updateDynamo(jsonDocument);
-              console.log(res);
+              console.log("Dynamo update response", res);
+              
+              const checksumBuf = Buffer.from(res.document.checkSum, "hex")
+              
+              const evtBody = {
+                  key: res.document.documentKey ,
+                  versionId: 'v1' ,
+                  documentType: res.document.documentType.tipoDocumento ,
+                  documentStatus: res.document.documentLogicalState ,
+                  contentType: res.document.contentType ,
+                  contentLength: res.document.contentLenght ,
+                  checksum: checksumBuf.toString('base64') ,
+                  retentionUntil: res.document.retentionUntil ,
+                  client_short_code: res.document.clientShortCode
+                }
+              console.log( "Event to be sent to EvtBridge", evtBody);
+              await sendSafeStorageEventBridge( evtBody );
+              
               console.log("############## EXIT  ####################");
               return res;
             } catch (err) {
-              console.log(err);
-              const retMessgeError = "Errore nella patch su DynamoDB.";
-              console.log(retMessgeError);
+              //console.log(err);
+              const retMessgeError = "Errore nella patch su DynamoDB o nella put di EventBridge.";
+              console.log(retMessgeError, err);
               throw new Error(retMessgeError);
             }
           };
@@ -669,16 +691,16 @@ Resources:
                   responseBody += chunk;
                 });
                 res.on("end", () => {
-                  resolve(JSON.parse(responseBody));
+                  //resolve(JSON.parse(responseBody));
                   switch (res.statusCode) {
                     case 200:
                       resolve(JSON.parse(responseBody));
                       break;
                     case 500:
-                      reject;
+                      reject( JSON.parse(responseBody) );
                       break;
                     default:
-                      reject;
+                      reject( JSON.parse(responseBody) );
                       break;
                   }
                 });
@@ -691,3 +713,29 @@ Resources:
               req.end();
             });
           }
+
+          function sendSafeStorageEventBridge( body ) {
+            
+            var params = {
+              Entries: [
+                {
+                  Detail: JSON.stringify( body ) ,
+                  DetailType: 'SafeStorageOutcomeEvent',
+                  Resources: [],
+                  Source: 'SafeStorageMock'
+                }
+              ]
+            };
+            
+            return new Promise( ( accept, reject) => {
+              EvtBridge.putEvents(params, (err, data) => {
+                if (err) {
+                  reject( err )
+                } else {
+                  accept( data );
+                }
+              });
+            });
+
+          }
+

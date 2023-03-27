@@ -89,7 +89,6 @@ public class SignServiceSoap extends CommonArubaService {
 
 
 
-
     public SignReturnV2 pkcs7signV2(byte[] buf, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID(certId);

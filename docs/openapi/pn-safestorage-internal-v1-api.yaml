@@ -645,8 +645,11 @@ components:
             See [information classification](https://pagopa.atlassian.net/wiki/spaces/EN/pages/357204284/Data+Classification+Handling#Classificazione)
           type: string
           enum: [ 'C', 'HC' ]
-        digitalSignature:
-          type: boolean
+        transformations:
+          type: array
+          items:
+            type: string
+            enum: ['NONE', 'SIGN_AND_TIMEMARK']
         timeStamped:
           type: string
           enum: [ 'NONE', 'STANDARD' ]

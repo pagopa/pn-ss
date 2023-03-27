@@ -197,7 +197,7 @@ public class OrchestratorSignDocumentTest {
 		
 		DocumentType documentType = new DocumentType();
 		documentType.setTipoDocumento(tipoDocumentoPnNotificationAttachments);
-		documentType.setDigitalSignature(true);
+		documentType.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
 		Document doc = new Document();
 		doc.setDocumentKey("111-DDD");
 		doc.setDocumentType(documentType);

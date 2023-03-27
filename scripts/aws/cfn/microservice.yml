@@ -255,6 +255,10 @@ Parameters:
 
   PnSsTsaIdentity:
     Type: String
+    Description: 'empty' 
+  
+  PnSsTimemarkUrl:
+    Type: String
     Description: 'empty'  
 
 Resources:

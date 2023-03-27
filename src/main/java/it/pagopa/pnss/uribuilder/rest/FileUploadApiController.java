@@ -36,18 +36,29 @@ public class FileUploadApiController implements FileUploadApi {
     	
         return fileCreationRequest.flatMap(request -> {
         								String checksumValue = null;
-        								if (request != null && request.getChecksumValue() != null && !request.getChecksumValue().isBlank()) {
-        									checksumValue = request.getChecksumValue();
-        								}
-        								else if (exchange != null && exchange.getRequest() != null 
-        										&& headerXChecksumValue != null && !headerXChecksumValue.isBlank()
-        										&& exchange.getRequest().getHeaders() !=null
-        										&& exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
-        									checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
-        								}
-        								if (checksumValue == null || checksumValue.isBlank()) {
-        									return Mono.error(new ChecksumException("Checksum value (header or in request) not present"));
-        								}
+
+//										old version
+//										if (request != null && request.getChecksumValue() != null && !request.getChecksumValue().isBlank()) {
+//											checksumValue = request.getChecksumValue();
+//										}
+//										else if (exchange != null && exchange.getRequest() != null
+//												&& headerXChecksumValue != null && !headerXChecksumValue.isBlank()
+//												&& exchange.getRequest().getHeaders() !=null
+//												&& exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
+//											checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
+//										}
+//										if (checksumValue == null || checksumValue.isBlank()) {
+//											return Mono.error(new ChecksumException("Checksum value (header or in request) not present"));
+//										}
+
+										if (headerXChecksumValue != null && !headerXChecksumValue.isBlank()) {
+											if (exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
+												checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
+											}
+											if (checksumValue == null || checksumValue.isBlank()) {
+												return Mono.error(new ChecksumException("Checksum value (header or in request) not present"));
+											}
+										}
         								return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId, 
         																				request,
         																				checksumValue);

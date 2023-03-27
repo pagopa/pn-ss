@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.util.List;
 
 import static it.pagopa.pnss.common.Constant.APPLICATION_PDF;
 import static org.junit.Assert.*;
@@ -67,7 +68,7 @@ public class OrchestratorSignDocumentReattempTest {
         Document doc =new Document();
         doc.setContentType(APPLICATION_PDF);
         DocumentType documentType = new DocumentType();
-        documentType.setDigitalSignature(true);
+        documentType.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
         doc.setDocumentType(documentType);
         docResp.setDocument(doc);
         Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).getdocument(Mockito.any());

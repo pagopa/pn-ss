@@ -119,7 +119,7 @@ public class DocumentInternalApiControllerTest {
 		docTypes.setInitialStatus("SAVED");
 		docTypes.setStatuses(statuses1);
 		docTypes.setInformationClassification(InformationClassificationEnum.HC);
-		docTypes.setDigitalSignature(true);
+		docTypes.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
 		docTypes.setTimeStamped(TimeStampedEnum.STANDARD);
 		log.info("execute createDocument() : docType : {}", docTypes);
 

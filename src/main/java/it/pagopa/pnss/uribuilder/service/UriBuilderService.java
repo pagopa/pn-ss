@@ -128,7 +128,6 @@ public class UriBuilderService extends CommonS3ObjectService {
 
         var contentType = request.getContentType();
         var documentType = request.getDocumentType();
-        var status = request.getStatus();
 
         // NOTA : in questo modo, sono immutabili
 //        var secret = List.of(generateSecret());
@@ -138,7 +137,7 @@ public class UriBuilderService extends CommonS3ObjectService {
         var metadata = new HashMap<String,String>();
         metadata.put("secret", secret.toString());
 
-        return Mono.fromCallable(() -> validationField(contentType, documentType, status))
+        return Mono.fromCallable(() -> validationField(contentType, documentType))
                    .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
                    .handle((userConfiguration, synchronousSink) -> {
                        if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
@@ -202,34 +201,17 @@ public class UriBuilderService extends CommonS3ObjectService {
                                    return response;
                                })
 
-                       
-//                       FileCreationResponse response = new FileCreationResponse();
-//                       response.setKey(insertedDocument.getDocument().getDocumentKey());
-//                       response.setSecret(secret.toString());
-//                       response.setUploadUrl(presignedPutObjectRequest.url().toString());
-//                       response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest().method()));
-//
-//                       return response;
                    )
                    .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "));
     }
 
-    private Mono<Boolean> validationField(String contentType, String documentType, String status) {
+    private Mono<Boolean> validationField(String contentType, String documentType) {
         if (!listaTipoDocumenti.contains(contentType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid");
         }
         if (!listaTipologieDoc.contains(documentType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid");
         }
-//        if (!status.equals("")) {
-//            if (!listaStatus.contains(status)) {
-//                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status :" + status + " - Not valid ");
-//            } else {
-//                if (!(documentType.equals("PN_NOTIFICATION_ATTACHMENTS") && status.equals("PRELOADED"))) {
-//                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status :" + status + " - Not valid for documentType");
-//                }
-//            }
-//        }
         return Mono.just(true);
     }
 
@@ -275,20 +257,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         			return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore generico"));
         		});
         
-//        try {
-//            response = signBucket(presigner, bucketName, keyName, documentState, documentType, contentType, secret);
-//        } catch (AmazonServiceException ase) {
-//            log.error(" Errore AMAZON AmazonServiceException", ase);
-//            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException ");
-//        } catch (SdkClientException sce) {
-//            log.error(" Errore AMAZON SdkClientException", sce);
-//            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON AmazonServiceException ");
-//        } catch (Exception e) {
-//            log.error(" Errore Generico", e);
-//            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico ");
-//        }
-//
-//        return response;
     }
 
     private Mono<PresignedPutObjectRequest> signBucket(S3Presigner s3Presigner, String bucketName, 

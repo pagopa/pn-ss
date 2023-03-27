@@ -4,6 +4,7 @@ import java.net.MalformedURLException;
 
 import javax.xml.bind.JAXBException;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import org.springframework.stereotype.Service;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
@@ -56,9 +57,9 @@ public class OrchestratorSignDocument {
                         byte[] fileInput = objectResponse.asByteArray();
                         Document doc = documentResponse.getDocument();
                         log.info("step 2: doc = {}", doc);
-                        log.info("step 3: doc.getDocumentType().getDigitalSignature() = {}", doc.getDocumentType().getDigitalSignature());
+                        log.info("step 3: doc.getDocumentType().getTransformations() = {}", doc.getDocumentType().getTransformations());
 
-                        if (!doc.getDocumentType().getDigitalSignature()){
+                        if (!doc.getDocumentType().getTransformations().contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)){
                             return Mono.empty();
                         }
 

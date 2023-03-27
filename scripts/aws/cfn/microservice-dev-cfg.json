@@ -14,6 +14,7 @@
     "PnSsArubaEnabledLog" : "false",
     "PnSsArubaSignWsdlUrl" : "https://asbr-pagopa.arubapec.it/ArubaSignService/ArubaSignService",
     "PnSsArubaQname" : "http://arubasignservice.arubapec.it/",
-    "PnSsArubaSignService" : "ArubaSignServiceService"
+    "PnSsArubaSignService" : "ArubaSignServiceService",
+    "tsaIdentity": "true"
   }
 }

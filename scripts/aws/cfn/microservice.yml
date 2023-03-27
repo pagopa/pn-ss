@@ -252,7 +252,10 @@ Parameters:
   PnSsArubaSignService:
     Type: String
     Description: 'Aruba param SignService'
-  
+
+  tsaIdentity:
+    Type: String
+    Description: 'empty'  
 
 Resources:
 
@@ -287,6 +290,7 @@ Resources:
         ContainerEnvEntry32: !Sub 'PnSsArubaSignWsdlUrl=${PnSsArubaSignWsdlUrl}'
         ContainerEnvEntry33: !Sub 'PnSsArubaQname=${PnSsArubaQname}'
         ContainerEnvEntry34: !Sub 'PnSsArubaSignService=${PnSsArubaSignService}'
+        ContainerEnvEntry35: !Sub 'tsaIdentity=${tsaIdentity}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'

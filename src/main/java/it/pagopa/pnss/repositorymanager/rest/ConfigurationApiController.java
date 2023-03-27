@@ -92,10 +92,6 @@ public class ConfigurationApiController implements CfgApi {
     	return Mono.just(clientId)
 	    		.flatMap(idClient -> {
 	    			log.info("ConfigurationApiController.getCurrentClientConfig() : START");
-	    			
-	    			PnAuditLogBuilder auditLogBuilder = new PnAuditLogBuilder();
-	    			PnAuditLogEvent logEvent = auditLogBuilder.before(null, clientId, null).build();
-	    			
 	    			return userConfigurationService.getUserConfiguration(clientId);
 	    		})
 	    		.map(userConfigurationInternal -> ResponseEntity.ok(objectMapper.convertValue(

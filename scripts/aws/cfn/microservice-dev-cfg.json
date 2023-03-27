@@ -2,8 +2,6 @@
   "Parameters": {
     "PnSsUriBuilderstayHotTime": "1",
     "PresignedUrlMinutesLifespan": "60",
-    "PnEcIdentityTimemark": "pn/identity/timemark",
-    "PnEcIdentitySignature": "pn/identity/signature",
     "PnVPCDefaultSecurityGroup": "sg-0f77fb87c5cf71631",
     "PnSsGestoreRepositoryProtocol" : "http",
     "PnSsGestoreRepositoryPort" : "8080",
@@ -14,6 +12,10 @@
     "PnSsArubaEnabledLog" : "false",
     "PnSsArubaSignWsdlUrl" : "https://asbr-pagopa.arubapec.it/ArubaSignService/ArubaSignService",
     "PnSsArubaQname" : "http://arubasignservice.arubapec.it/",
-    "PnSsArubaSignService" : "ArubaSignServiceService"
+    "PnSsArubaSignService" : "ArubaSignServiceService",
+    "PnSsTsaIdentity": "true",
+    "PnSsIdentityTimemark": "pn/identity/timemark",
+    "PnSsIdentitySignature": "pn/identity/signature",
+    "PnSsTimemarkUrl": "https://servizi.arubapec.it/tsa/ngrequest.php"
   }
 }

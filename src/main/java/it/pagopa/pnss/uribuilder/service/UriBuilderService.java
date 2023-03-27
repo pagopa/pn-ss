@@ -1,12 +1,5 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.APPLICATION_PDF;
-import static it.pagopa.pnss.common.Constant.APPLICATION_ZIP;
-import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_PDF;
-import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_TIFF;
-import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_ZIP;
-import static it.pagopa.pnss.common.Constant.IMAGE_TIFF;
-import static it.pagopa.pnss.common.Constant.MAX_RECOVER_COLD;
 import static it.pagopa.pnss.common.Constant.PN_AAR;
 import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
 import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
@@ -18,6 +11,13 @@ import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
 import static it.pagopa.pnss.common.Constant.technicalStatus_attached;
 import static it.pagopa.pnss.common.Constant.technicalStatus_available;
 import static it.pagopa.pnss.common.Constant.technicalStatus_freezed;
+import static it.pagopa.pnss.common.Constant.APPLICATION_PDF;
+import static it.pagopa.pnss.common.Constant.APPLICATION_ZIP;
+import static it.pagopa.pnss.common.Constant.IMAGE_TIFF;
+import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_PDF;
+import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_ZIP;
+import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_TIFF;
+
 import static java.util.Map.entry;
 
 import java.math.BigDecimal;
@@ -93,6 +93,9 @@ public class UriBuilderService extends CommonS3ObjectService {
     
     @Value("${queryParam.presignedUrl.traceId:#{null}}")
     String queryParamPresignedUrlTraceId;
+
+    @Value("${max.restore.time.cold}")
+    BigDecimal maxRestoreTimeCold;
 
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
@@ -502,7 +505,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 
         }
 
-        fdinfo.setRetryAfter(MAX_RECOVER_COLD);
+        fdinfo.setRetryAfter(maxRestoreTimeCold);
         return fdinfo;
     }
 

@@ -197,11 +197,11 @@ Parameters:
     Type: String
     Description: 'Minuti di validità dei pre-signed url prima della scadenza'
 
-  PnEcIdentityTimemark:
+  PnSsIdentityTimemark:
     Type: String
     Description: 'Secret ID for Identity Timemark'
 
-  PnEcIdentitySignature:
+  PnSsIdentitySignature:
     Type: String
     Description: 'Secret ID for Identity Signature'
 
@@ -253,7 +253,7 @@ Parameters:
     Type: String
     Description: 'Aruba param SignService'
 
-  tsaIdentity:
+  PnSsTsaIdentity:
     Type: String
     Description: 'empty'  
 
@@ -290,7 +290,10 @@ Resources:
         ContainerEnvEntry32: !Sub 'PnSsArubaSignWsdlUrl=${PnSsArubaSignWsdlUrl}'
         ContainerEnvEntry33: !Sub 'PnSsArubaQname=${PnSsArubaQname}'
         ContainerEnvEntry34: !Sub 'PnSsArubaSignService=${PnSsArubaSignService}'
-        ContainerEnvEntry35: !Sub 'tsaIdentity=${tsaIdentity}'
+        ContainerEnvEntry35: !Sub 'PnSsTsaIdentity=${PnSsTsaIdentity}'
+        ContainerEnvEntry36: !Sub 'PnSsIdentityTimemark=${PnSsIdentityTimemark}'
+        ContainerEnvEntry37: !Sub 'PnSsIdentitySignature=${PnSsIdentitySignature}'
+        ContainerEnvEntry38: !Sub 'PnSsTimemarkUrl=${PnSsTimemarkUrl}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'
@@ -377,8 +380,8 @@ Resources:
               - 'secretsmanager:DescribeSecret'
               - 'secretsmanager:GetSecretValue'
             Resource:
-              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnEcIdentityTimemark , '*']]
-              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnEcIdentitySignature , '*']]
+              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentityTimemark , '*']]
+              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentitySignature , '*']]
           - Effect: Allow
             Action:
               - 'kms:*'

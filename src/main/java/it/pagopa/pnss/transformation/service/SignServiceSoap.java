@@ -43,6 +43,9 @@ public class SignServiceSoap extends CommonArubaService {
     @Value("${TimemarkUrl:#{null}}")
     public String timemarkUrl;
 
+    @Value("${TsaIdentity:#{true}}")
+    public boolean tsaIdentity;
+
     protected SignServiceSoap(IdentitySecretTimemark identitySecretTimemark) throws MalformedURLException {
         this.identitySecretTimemark = identitySecretTimemark;
     }
@@ -57,13 +60,23 @@ public class SignServiceSoap extends CommonArubaService {
         
         log.debug("SignServiceSoap.singnPdfDocument() : userkUrl = {}", identitySecretTimemark.getUserTimemark());	
         log.debug("SignServiceSoap.singnPdfDocument() : passwordkUrl = {}", identitySecretTimemark.getPasswordTimemark());	
-        log.debug("SignServiceSoap.singnPdfDocument() : timemarkUrl = {}", timemarkUrl);	
+        log.debug("SignServiceSoap.singnPdfDocument() : timemarkUrl = {}", timemarkUrl);
 
-        var tsaAuth = new TsaAuth();
-        tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
-        tsaAuth.setPassword(identitySecretTimemark.getPasswordTimemark());
-        tsaAuth.setTsaurl(timemarkUrl);
-        signRequestV2.setTsaIdentity(tsaAuth);
+        if(marcatura) {
+            log.debug("SignServiceSoap.singnPdfDocument() : tsaIdentity = {}", tsaIdentity);
+
+            if (tsaIdentity) {
+                log.debug("SignServiceSoap.singnPdfDocument() : userkUrl = {}", identitySecretTimemark.getUserTimemark());
+                log.debug("SignServiceSoap.singnPdfDocument() : passwordkUrl = {}", identitySecretTimemark.getPasswordTimemark());
+                log.debug("SignServiceSoap.singnPdfDocument() : timemarkUrl = {}", timemarkUrl);
+
+                var tsaAuth = new TsaAuth();
+                tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
+                tsaAuth.setPassword(identitySecretTimemark.getPasswordTimemark());
+                tsaAuth.setTsaurl(timemarkUrl);
+                signRequestV2.setTsaIdentity(tsaAuth);
+            }
+        }
 
         logCallAruba(signRequestV2);
         
@@ -86,11 +99,21 @@ public class SignServiceSoap extends CommonArubaService {
         signRequestV2.setTransport(TypeTransport.STREAM);
         signRequestV2.setRequiredmark(marcatura);
 
-        var tsaAuth = new TsaAuth();
-        tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
-        tsaAuth.setPassword(identitySecretTimemark.getPasswordTimemark());
-        tsaAuth.setTsaurl(timemarkUrl);
-        signRequestV2.setTsaIdentity(tsaAuth);
+        if(marcatura) {
+            log.debug("SignServiceSoap.singnPdfDocument() : tsaIdentity = {}", tsaIdentity);
+
+            if (tsaIdentity) {
+                log.debug("SignServiceSoap.singnPdfDocument() : userkUrl = {}", identitySecretTimemark.getUserTimemark());
+                log.debug("SignServiceSoap.singnPdfDocument() : passwordkUrl = {}", identitySecretTimemark.getPasswordTimemark());
+                log.debug("SignServiceSoap.singnPdfDocument() : timemarkUrl = {}", timemarkUrl);
+
+                var tsaAuth = new TsaAuth();
+                tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
+                tsaAuth.setPassword(identitySecretTimemark.getPasswordTimemark());
+                tsaAuth.setTsaurl(timemarkUrl);
+                signRequestV2.setTsaIdentity(tsaAuth);
+            }
+        }
 
         logCallAruba(signRequestV2);
 

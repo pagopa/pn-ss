@@ -1,11 +1,5 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
-import static it.pagopa.pnss.common.Constant.listaStatus;
 import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
 import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
 import static it.pagopa.pnss.common.Constant.technicalStatus_attached;
@@ -18,8 +12,6 @@ import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_PDF;
 import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_ZIP;
 import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_TIFF;
 
-import static java.util.Map.entry;
-
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
@@ -29,9 +21,9 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
-import javax.annotation.PostConstruct;
-
+import it.pagopa.pnss.common.client.DocTypesClientCall;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -102,24 +94,31 @@ public class UriBuilderService extends CommonS3ObjectService {
     private final AwsConfigurationProperties awsConfigurationProperties;
     private final BucketName bucketName;
 
+    private final DocTypesClientCall docTypesClientCall;
+
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName
-                             ) {
+                             AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName,
+                             DocTypesClientCall docTypesClientCall) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.awsConfigurationProperties = awsConfigurationProperties;
         this.bucketName = bucketName;
+        this.docTypesClientCall = docTypesClientCall;
     }
 
-    private Map<String, String> mapDocumentTypeToBucket;
 
-    @PostConstruct
-    public void createMap() {
-        mapDocumentTypeToBucket = Map.ofEntries(entry(PN_NOTIFICATION_ATTACHMENTS, bucketName.ssHotName()),
-                                                entry(PN_AAR, bucketName.ssHotName()),
-                                                entry(PN_LEGAL_FACTS, bucketName.ssStageName()),
-                                                entry(PN_EXTERNAL_LEGAL_FACTS, bucketName.ssHotName()),
-                                                entry(PN_DOWNTIME_LEGAL_FACTS, bucketName.ssStageName()));
+    public String getBucketName(String docType) {
+        AtomicReference<String> finalBucketName = new AtomicReference<>("");
+        docTypesClientCall.getdocTypes(docType)
+                .map(documentTypeResponse ->
+                {
+                    var transformations = documentTypeResponse.getDocType().getTransformations();
+                    if (transformations == null || transformations.isEmpty()) {
+                        return bucketName.ssHotName();
+                    } else return bucketName.ssStageName();
+                }).subscribe(finalBucketName::set);
+
+        return finalBucketName.get();
     }
 
     public Mono<FileCreationResponse> createUriForUploadFile(
@@ -231,8 +230,8 @@ public class UriBuilderService extends CommonS3ObjectService {
 
         S3Presigner presigner = getS3Presigner();
         
-        return signBucket(presigner, 
-        				  mapDocumentTypeToBucket.get(documentType), 
+        return signBucket(presigner,
+                          getBucketName(documentType),
         				  documentKey, 
         				  documentState, 
         				  documentType, 
@@ -419,7 +418,7 @@ public class UriBuilderService extends CommonS3ObjectService {
         FileDownloadInfo fileDOwnloadInfo = null;
 
 
-            String bucketName = mapDocumentTypeToBucket.get(documentType);
+            String bucketName = getBucketName(documentType);
             log.info("INIZIO RECUPERO URL DOWLOAND ");
             if (!status.equalsIgnoreCase(technicalStatus_freezed)) {
                 fileDOwnloadInfo = getPresignedUrl( bucketName, fileKey);

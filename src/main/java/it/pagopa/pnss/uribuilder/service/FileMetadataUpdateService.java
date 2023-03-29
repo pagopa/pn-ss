@@ -121,7 +121,7 @@ public class FileMetadataUpdateService {
                        return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
                    })
 
-                   .onErrorResume(RuntimeException.class, e -> {
+                   .onErrorResume(e -> {
                        log.error("FileMetadataUpdateService.createUriForUploadFile() : errore generico = {}", e.getMessage(), e);
                        return Mono.error(e);
                    });

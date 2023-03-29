@@ -1,21 +1,7 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.ATTACHED;
-import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
-import static it.pagopa.pnss.common.Constant.PRELOADED;
-import static it.pagopa.pnss.common.Constant.SAVED;
-import static it.pagopa.pnss.common.Constant.technicalStatus_attached;
-import static it.pagopa.pnss.common.Constant.technicalStatus_available;
-import static java.util.Map.entry;
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Map;
-
-import javax.annotation.PostConstruct;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
@@ -27,6 +13,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.rest.v1.dto.OperationResultCodeResponse;
 import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
+import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
@@ -36,27 +23,19 @@ import reactor.core.publisher.Mono;
 @Service
 @Slf4j
 public class FileMetadataUpdateService {
+    
 	private final UserConfigurationClientCall userConfigClientCall;
+	
 	private final DocumentClientCall docClientCall;
-
-	private Map<String, String> mapDocumentTypeLogicalStateToIntStatus;
-
-	@PostConstruct
-	public void createMap() {
-		mapDocumentTypeLogicalStateToIntStatus = Map.ofEntries(
-				entry(PN_NOTIFICATION_ATTACHMENTS + "-" + PRELOADED, technicalStatus_available),
-				entry(PN_NOTIFICATION_ATTACHMENTS + "-" + ATTACHED, technicalStatus_attached),
-				entry(PN_EXTERNAL_LEGAL_FACTS + "-" + SAVED, technicalStatus_available),
-				entry(PN_LEGAL_FACTS + "-" + SAVED, technicalStatus_available),
-				entry(PN_AAR + "-" + SAVED, technicalStatus_available)
-
-		);
-	}
+	
+	private final DocTypesClientCall docTypesClientCall;
 
 	public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall,
-			DocumentClientCall documentClientCall) {
+	        DocumentClientCall documentClientCall,
+	        DocTypesClientCall docTypesClientCall) {
 		this.userConfigClientCall = userConfigurationClientCall;
 		this.docClientCall = documentClientCall;
+        this.docTypesClientCall = docTypesClientCall;
 	}
 
 	public Mono<OperationResultCodeResponse> createUriForUploadFile(String fileKey, String xPagopaSafestorageCxId,
@@ -72,18 +51,19 @@ public class FileMetadataUpdateService {
 												String documentType = document.getDocumentType().getTipoDocumento();
 												DocumentChanges docChanges = new DocumentChanges();
 	
-												return userConfigClientCall
-														.getUser(xPagopaSafestorageCxId)
-														.flatMap(userConfiguration -> {
-																	if (userConfiguration.getUserConfiguration().getCanModifyStatus() == null 
-																			|| !userConfiguration.getUserConfiguration().getCanModifyStatus().contains(documentType)) {
-																		String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
-																									  xPagopaSafestorageCxId, documentType);
-																		log.error("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
-																		throw new ResponseStatusException(
-																				HttpStatus.FORBIDDEN,
-																				errore);
-																	}
+												return Mono.zip(userConfigClientCall.getUser(xPagopaSafestorageCxId), checkLookUp(documentType, logicalState))
+														.flatMap(objects -> {
+		                                                            var userConfiguration = objects.getT1(); 
+		                                                            var technicalStatus = objects.getT2(); 
+		                                                            if (userConfiguration.getUserConfiguration().getCanModifyStatus() == null 
+                                                                            || !userConfiguration.getUserConfiguration().getCanModifyStatus().contains(documentType)) {
+                                                                        String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
+                                                                                                      xPagopaSafestorageCxId, documentType);
+                                                                        log.error("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
+                                                                        throw new ResponseStatusException(
+                                                                                HttpStatus.FORBIDDEN,
+                                                                                errore);
+                                                                    }
 
 																	boolean isStatusPresent = false;
 																	if (!StringUtils.isBlank(request.getStatus())) {
@@ -99,7 +79,6 @@ public class FileMetadataUpdateService {
 																					"Status not found for document key : " + fileKey);
 																		}
 																		
-																		String technicalStatus = checkLookUp(documentType, logicalState);
 																		if (StringUtils.isEmpty(technicalStatus)) {
 																			log.error("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found for document key {}",
 																					fileKey);
@@ -142,8 +121,9 @@ public class FileMetadataUpdateService {
 				   );
 	}
 
-	private String checkLookUp(String documentType, String logicalState) {
-		return mapDocumentTypeLogicalStateToIntStatus.get(documentType + "-" + logicalState);
+	private Mono<String> checkLookUp(String documentType, String logicalState) {
+	    return docTypesClientCall.getdocTypes(documentType)
+	            .map(item ->item.getDocType().getStatuses().get(logicalState).getTechnicalState());
 	}
 
 	private Mono<Boolean> validationField(

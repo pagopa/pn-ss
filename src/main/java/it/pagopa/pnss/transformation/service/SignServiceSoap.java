@@ -35,7 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SignServiceSoap extends CommonArubaService {
 	
     @Value("${aruba.cert_id}")
-    public String certId;
+    public String certificationID;
 
     @Autowired
     private IdentitySecretTimemark identitySecretTimemark;
@@ -46,29 +46,30 @@ public class SignServiceSoap extends CommonArubaService {
     @Value("${PnSsTsaIdentity:#{true}}")
     public boolean tsaIdentity;
 
+    private static final String USER_URL = "SignServiceSoap.singnPdfDocument() : userUrl = {}";
+    private static final String PASSWORD_URL = "SignServiceSoap.singnPdfDocument() : passwordUrl = {}";
+    private static final String TIMEMARK_URL = "SignServiceSoap.singnPdfDocument() : timemarkUrl = {}";
+    private static final String TSA_IDENTITY_URL = "SignServiceSoap.singnPdfDocument() : tsaIdentity = {}";
+
     protected SignServiceSoap(IdentitySecretTimemark identitySecretTimemark) throws MalformedURLException {
         this.identitySecretTimemark = identitySecretTimemark;
     }
 
     public SignReturnV2 singnPdfDocument(byte[] pdfFile, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
         SignRequestV2 signRequestV2 = new SignRequestV2();
-        signRequestV2.setCertID(certId);
+        signRequestV2.setCertID(certificationID);
         signRequestV2.setIdentity(createIdentity(null));
         signRequestV2.setRequiredmark(marcatura);
         signRequestV2.setBinaryinput(pdfFile);
         signRequestV2.setTransport(TypeTransport.BYNARYNET);
-        
-        log.debug("SignServiceSoap.singnPdfDocument() : userUrl = {}", identitySecretTimemark.getUserTimemark());	
-        log.debug("SignServiceSoap.singnPdfDocument() : passwordUrl = {}", identitySecretTimemark.getPasswordTimemark());	
-        log.debug("SignServiceSoap.singnPdfDocument() : timemarkUrl = {}", timemarkUrl);
 
         if(marcatura) {
-            log.debug("SignServiceSoap.singnPdfDocument() : tsaIdentity = {}", tsaIdentity);
+            log.debug(TSA_IDENTITY_URL, tsaIdentity);
 
             if (tsaIdentity) {
-                log.debug("SignServiceSoap.singnPdfDocument() : userUrl = {}", identitySecretTimemark.getUserTimemark());
-                log.debug("SignServiceSoap.singnPdfDocument() : passwordUrl = {}", identitySecretTimemark.getPasswordTimemark());
-                log.debug("SignServiceSoap.singnPdfDocument() : timemarkUrl = {}", timemarkUrl);
+                log.debug(USER_URL, identitySecretTimemark.getUserTimemark());
+                log.debug(PASSWORD_URL, identitySecretTimemark.getPasswordTimemark());
+                log.debug(TIMEMARK_URL, timemarkUrl);
 
                 var tsaAuth = new TsaAuth();
                 tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
@@ -91,7 +92,7 @@ public class SignServiceSoap extends CommonArubaService {
 
     public SignReturnV2 pkcs7signV2(byte[] buf, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
         SignRequestV2 signRequestV2 = new SignRequestV2();
-        signRequestV2.setCertID(certId);
+        signRequestV2.setCertID(certificationID);
         signRequestV2.setIdentity(createIdentity(null));
         DataSource source = new ByteArrayDataSource(buf, "application/octet-stream");
         signRequestV2.setStream(new DataHandler(source));
@@ -99,12 +100,12 @@ public class SignServiceSoap extends CommonArubaService {
         signRequestV2.setRequiredmark(marcatura);
 
         if(marcatura) {
-            log.debug("SignServiceSoap.singnPdfDocument() : tsaIdentity = {}", tsaIdentity);
+            log.debug(TSA_IDENTITY_URL, tsaIdentity);
 
             if (tsaIdentity) {
-                log.debug("SignServiceSoap.singnPdfDocument() : userUrl = {}", identitySecretTimemark.getUserTimemark());
-                log.debug("SignServiceSoap.singnPdfDocument() : passwordUrl = {}", identitySecretTimemark.getPasswordTimemark());
-                log.debug("SignServiceSoap.singnPdfDocument() : timemarkUrl = {}", timemarkUrl);
+                log.debug(USER_URL, identitySecretTimemark.getUserTimemark());
+                log.debug(PASSWORD_URL, identitySecretTimemark.getPasswordTimemark());
+                log.debug(TIMEMARK_URL, timemarkUrl);
 
                 var tsaAuth = new TsaAuth();
                 tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
@@ -123,7 +124,7 @@ public class SignServiceSoap extends CommonArubaService {
 
     public SignReturnV2 xmlsignature(String contentType, InputStream xml, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
         SignRequestV2 signRequestV2 = new SignRequestV2();
-        signRequestV2.setCertID(certId);
+        signRequestV2.setCertID(certificationID);
         signRequestV2.setIdentity(createIdentity(null));
         DataSource dataSourceXml = XMLMessage.createDataSource( contentType,xml);
         signRequestV2.setStream(new DataHandler(dataSourceXml));

@@ -82,13 +82,15 @@ public class FileMetadataUpdateTest {
 	@Autowired
 	private WebTestClient webClient;
 
-	@MockBean
-	UserConfigurationClientCall userConfigurationClientCall;
 	@Autowired
 	private UriBuilderService uriBuilderService;
 
+    @MockBean
+    UserConfigurationClientCall userConfigurationClientCall;
 	@MockBean
 	DocumentClientCall documentClientCall;
+    @MockBean
+    DocTypesClientCall docTypesClientCall;
 
 	private WebTestClient.ResponseSpec fileMetadataUpdateTestCall(
 			BodyInserter<UpdateFileMetadataRequest, ReactiveHttpOutputMessage> bodyInserter, String docuemntKey) {
@@ -141,10 +143,14 @@ public class FileMetadataUpdateTest {
 		documentType.setTipoDocumento(PN_AAR);
 		document.setDocumentType(documentType);
 		resp.setDocument(document);
-		Mono<DocumentResponse> monoResp = Mono.just(resp);
+		DocumentTypeResponse docTypeResp = new DocumentTypeResponse();
+		docTypeResp.setDocType(documentType);
 		Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
+        Mono<DocumentResponse> monoResp = Mono.just(resp);
+        Mono<DocumentTypeResponse> monoDocTypeResp = Mono.just(docTypeResp);
 		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
+        Mockito.doReturn(monoDocTypeResp).when(docTypesClientCall).getdocTypes(Mockito.any());
 
 		fileMetadataUpdateTestCall(BodyInserters.fromValue(req), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
 				.isBadRequest();

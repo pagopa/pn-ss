@@ -1,21 +1,7 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.ATTACHED;
-import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
-import static it.pagopa.pnss.common.Constant.PRELOADED;
-import static it.pagopa.pnss.common.Constant.SAVED;
-import static it.pagopa.pnss.common.Constant.technicalStatus_attached;
-import static it.pagopa.pnss.common.Constant.technicalStatus_available;
-import static java.util.Map.entry;
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Map;
-
-import javax.annotation.PostConstruct;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
@@ -23,40 +9,49 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.rest.v1.dto.OperationResultCodeResponse;
 import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Service
 @Slf4j
 public class FileMetadataUpdateService {
+    
 	private final UserConfigurationClientCall userConfigClientCall;
+	
 	private final DocumentClientCall docClientCall;
+	
+	private final DocTypesService docTypesService;
 
-	private Map<String, String> mapDocumentTypeLogicalStateToIntStatus;
-
-	@PostConstruct
-	public void createMap() {
-		mapDocumentTypeLogicalStateToIntStatus = Map.ofEntries(
-				entry(PN_NOTIFICATION_ATTACHMENTS + "-" + PRELOADED, technicalStatus_available),
-				entry(PN_NOTIFICATION_ATTACHMENTS + "-" + ATTACHED, technicalStatus_attached),
-				entry(PN_EXTERNAL_LEGAL_FACTS + "-" + SAVED, technicalStatus_available),
-				entry(PN_LEGAL_FACTS + "-" + SAVED, technicalStatus_available),
-				entry(PN_AAR + "-" + SAVED, technicalStatus_available)
-
-		);
-	}
+//	private Map<String, String> mapDocumentTypeLogicalStateToIntStatus;
+//
+//	@PostConstruct
+//	public void createMap() {
+//		mapDocumentTypeLogicalStateToIntStatus = Map.ofEntries(
+//				entry(PN_NOTIFICATION_ATTACHMENTS + "-" + PRELOADED, technicalStatus_available),
+//				entry(PN_NOTIFICATION_ATTACHMENTS + "-" + ATTACHED, technicalStatus_attached),
+//				entry(PN_EXTERNAL_LEGAL_FACTS + "-" + SAVED, technicalStatus_available),
+//				entry(PN_LEGAL_FACTS + "-" + SAVED, technicalStatus_available),
+//				entry(PN_AAR + "-" + SAVED, technicalStatus_available)
+//
+//		);
+//	}
 
 	public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall,
-			DocumentClientCall documentClientCall) {
+	        DocumentClientCall documentClientCall,
+	        DocTypesService docTypesService) {
 		this.userConfigClientCall = userConfigurationClientCall;
 		this.docClientCall = documentClientCall;
+        this.docTypesService = docTypesService;
 	}
 
 	public Mono<OperationResultCodeResponse> createUriForUploadFile(String fileKey, String xPagopaSafestorageCxId,
@@ -143,7 +138,10 @@ public class FileMetadataUpdateService {
 	}
 
 	private String checkLookUp(String documentType, String logicalState) {
-		return mapDocumentTypeLogicalStateToIntStatus.get(documentType + "-" + logicalState);
+	    Mono<DocumentType> docTypeMono = docTypesService.getDocType(documentType);
+	    DocumentType docType = docTypeMono.block();
+	    CurrentStatus cs = docType.getStatuses().get(logicalState);
+		return cs.getTechnicalState();
 	}
 
 	private Mono<Boolean> validationField(

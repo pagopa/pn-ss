@@ -260,7 +260,7 @@ class UriBuilderServiceDownloadTest {
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
-        d.setDocumentState(technicalStatus_available);
+        d.setDocumentState(TECHNICAL_STATUS_AVAILABLE);
 
         mockGetDocument(d, docId);
         fileDownloadTestCall(docId, false).expectStatus().isForbidden();
@@ -276,7 +276,7 @@ class UriBuilderServiceDownloadTest {
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
-        d.setDocumentState(technicalStatus_booked);
+        d.setDocumentState(TECHNICAL_STATUS_BOOKED);
 
         when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 

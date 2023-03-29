@@ -28,7 +28,6 @@ public class ArubaSecretValue {
         return "ArubaSecretValue{" +
                 "delegatedDomain='" + delegatedDomain + '\'' +
                 ", delegatedUser='" + delegatedUser + '\'' +
-                ", delegatedPassword='" + "*****" + '\'' +
                 ", otpPwd='" + otpPwd + '\'' +
                 ", typeOtpAuth='" + typeOtpAuth + '\'' +
                 ", user='" + user + '\'' +

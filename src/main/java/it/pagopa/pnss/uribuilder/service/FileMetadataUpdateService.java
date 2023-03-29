@@ -135,6 +135,7 @@ public class FileMetadataUpdateService {
 	}
 
 	private Mono<String> checkLookUp(String documentType, String logicalState) {
+        //return mapDocumentTypeLogicalStateToIntStatus.get(documentType + "-" + logicalState);
 	    return docTypesService.getDocType(documentType)
 	            .map(item->item.getStatuses().get(logicalState).getTechnicalState());
 	}

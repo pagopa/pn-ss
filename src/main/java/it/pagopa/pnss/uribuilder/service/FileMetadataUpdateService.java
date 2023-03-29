@@ -50,10 +50,10 @@ public class FileMetadataUpdateService {
 		   										Document document = documentResponse.getDocument();
 												String documentType = document.getDocumentType().getTipoDocumento();
 												DocumentChanges docChanges = new DocumentChanges();
-												return Mono.zip(userConfigClientCall.getUser(xPagopaSafestorageCxId), checkLookUp(documentType,logicalState))
+												return Mono.zip(userConfigClientCall.getUser(xPagopaSafestorageCxId), checkLookUp(documentType, logicalState))
 														.flatMap(objects -> {
-		                                                            var userConfiguration =objects .getT1(); 
-		                                                            var technicalStatus =objects .getT2(); 
+		                                                            var userConfiguration = objects.getT1(); 
+		                                                            var technicalStatus = objects.getT2(); 
 		                                                            if (userConfiguration.getUserConfiguration().getCanModifyStatus() == null 
                                                                             || !userConfiguration.getUserConfiguration().getCanModifyStatus().contains(documentType)) {
                                                                         String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",

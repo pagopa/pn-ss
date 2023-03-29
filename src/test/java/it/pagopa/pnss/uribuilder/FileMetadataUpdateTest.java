@@ -138,20 +138,26 @@ public class FileMetadataUpdateTest {
 		req.setStatus(PRELOADED);
 		DocumentResponse resp = new DocumentResponse();
 		Document document = new Document();
-		DocumentType documentType = new DocumentType();
-		documentType.setStatuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())));
-		documentType.setTipoDocumento(PN_AAR);
-		document.setDocumentType(documentType);
-		resp.setDocument(document);
-		DocumentTypeResponse docTypeResp = new DocumentTypeResponse();
-		docTypeResp.setDocType(documentType);
-		Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
+        DocumentType documentType = new DocumentType();
+        documentType.setStatuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())));
+        documentType.setTipoDocumento(PN_AAR);
+        document.setDocumentType(documentType);
+        resp.setDocument(document);
         Mono<DocumentResponse> monoResp = Mono.just(resp);
-        Mono<DocumentTypeResponse> monoDocTypeResp = Mono.just(docTypeResp);
-		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
-		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
-        Mockito.doReturn(monoDocTypeResp).when(docTypesClientCall).getdocTypes(Mockito.any());
-
+        Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
+        Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
+        Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
+        
+        CurrentStatus _cs = new CurrentStatus();
+        _cs.setTechnicalState("available");
+        DocumentType _documentType = new DocumentType();
+        _documentType.setStatuses(Map.ofEntries(Map.entry(PRELOADED, _cs)));
+        _documentType.setTipoDocumento(PN_AAR);
+        DocumentTypeResponse _docTypeResp = new DocumentTypeResponse();
+        _docTypeResp.setDocType(_documentType);
+        Mono<DocumentTypeResponse> _monoDocTypeResp = Mono.just(_docTypeResp);
+        Mockito.doReturn(_monoDocTypeResp).when(docTypesClientCall).getdocTypes(Mockito.any());        
+        
 		fileMetadataUpdateTestCall(BodyInserters.fromValue(req), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
 				.isBadRequest();
 
@@ -173,6 +179,16 @@ public class FileMetadataUpdateTest {
 		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 
 		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
+		
+        CurrentStatus _cs = new CurrentStatus();
+        _cs.setTechnicalState("available");
+        DocumentType _documentType = new DocumentType();
+        _documentType.setStatuses(Map.ofEntries(Map.entry(PRELOADED, _cs)));
+        _documentType.setTipoDocumento(PN_AAR);
+        DocumentTypeResponse _docTypeResp = new DocumentTypeResponse();
+        _docTypeResp.setDocType(_documentType);
+        Mono<DocumentTypeResponse> _monoDocTypeResp = Mono.just(_docTypeResp);
+        Mockito.doReturn(_monoDocTypeResp).when(docTypesClientCall).getdocTypes(Mockito.any());        
 
 		fileMetadataUpdateTestCall(BodyInserters.fromValue(req), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
 				.isBadRequest();
@@ -193,6 +209,16 @@ public class FileMetadataUpdateTest {
 		Mono<DocumentResponse> monoResp = Mono.just(resp);
 
 		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
+
+        CurrentStatus _cs = new CurrentStatus();
+        _cs.setTechnicalState("available");
+        DocumentType _documentType = new DocumentType();
+        _documentType.setStatuses(Map.ofEntries(Map.entry(PRELOADED, _cs)));
+        _documentType.setTipoDocumento(PN_AAR);
+        DocumentTypeResponse _docTypeResp = new DocumentTypeResponse();
+        _docTypeResp.setDocType(_documentType);
+        Mono<DocumentTypeResponse> _monoDocTypeResp = Mono.just(_docTypeResp);
+        Mockito.doReturn(_monoDocTypeResp).when(docTypesClientCall).getdocTypes(Mockito.any());        
 
 		WebTestClient.ResponseSpec responseSpec = fileMetadataUpdateTestCall(BodyInserters.fromValue(req),
 				X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isForbidden();
@@ -218,6 +244,16 @@ public class FileMetadataUpdateTest {
 		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 
 		Mockito.doReturn(monoResp).when(documentClientCall).patchdocument(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
+        CurrentStatus _cs = new CurrentStatus();
+        _cs.setTechnicalState("available");
+        DocumentType _documentType = new DocumentType();
+        _documentType.setStatuses(Map.ofEntries(Map.entry(PRELOADED, _cs)));
+        _documentType.setTipoDocumento(PN_AAR);
+        DocumentTypeResponse _docTypeResp = new DocumentTypeResponse();
+        _docTypeResp.setDocType(_documentType);
+        Mono<DocumentTypeResponse> _monoDocTypeResp = Mono.just(_docTypeResp);
+        Mockito.doReturn(_monoDocTypeResp).when(docTypesClientCall).getdocTypes(Mockito.any());        
 
 		WebTestClient.ResponseSpec responseSpec = fileMetadataUpdateTestCall(BodyInserters.fromValue(req),
 				X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isOk();

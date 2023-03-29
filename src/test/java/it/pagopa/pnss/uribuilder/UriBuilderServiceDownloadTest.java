@@ -74,11 +74,11 @@ class UriBuilderServiceDownloadTest {
     @MockBean
     DocumentClientCall documentClientCall;
 
-    @Value("${test.aws.s3.endpoint:#{null}}")
-    String testAwsS3Endpoint;
-
     @MockBean
     DocTypesClientCall docTypesClientCall;
+
+    @Value("${test.aws.s3.endpoint:#{null}}")
+    String testAwsS3Endpoint;
 
     @Autowired
     BucketName bucketName;
@@ -95,8 +95,6 @@ class UriBuilderServiceDownloadTest {
                 .header(HttpHeaders.ACCEPT, "application/json")
                 .attribute("metadataOnly", metadataOnly)
                 .exchange();
-
-
     }
 
     @BeforeEach
@@ -137,6 +135,8 @@ class UriBuilderServiceDownloadTest {
 
         mockGetDocument(d, docId);
 
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
         fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
 
@@ -153,6 +153,8 @@ class UriBuilderServiceDownloadTest {
         d.setCheckSum(CHECKSUM);
 
         mockGetDocument(d, docId);
+
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 
         fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
@@ -171,6 +173,8 @@ class UriBuilderServiceDownloadTest {
         d.setCheckSum(CHECKSUM);
 
         mockGetDocument(d, docId);
+
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 
         fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
@@ -196,31 +200,30 @@ class UriBuilderServiceDownloadTest {
                 });
     }
 
-//    @Test
-//    void testFileTrovatoBasketCold(){
-//        String docId = "1111-aaaa";
-//        mockUserConfiguration(List.of(PN_AAR));
-//
-//
-//        DocumentInput d = new DocumentInput();
-//        d.setDocumentType(PN_AAR);
-//        d.setDocumentState(FREEZED);
-//        d.setDocumentLogicalState(SAVED);
-//        d.setCheckSum("" );
-//        mockGetDocument(d, docId);
-//        addFileToBucket(docId);
-//
-//        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
-//
-//        //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
-//        fileDownloadTestCall( docId,false).expectStatus()
-//                .isOk().expectBody(FileDownloadResponse.class).value(response ->{
-//                    //Assertions.assertThat(!response.getChecksum().isEmpty());
-//                    //TODO rimettere
-//                    Assertions.assertThat(!response.getDownload().getRetryAfter().equals(maxRestoreTimeCold));
-//
-//                });
-//    }
+    @Test
+    void testFileTrovatoBasketCold() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(PN_AAR));
+
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(PN_AAR);
+        d.setDocumentState(FREEZED);
+        d.setDocumentLogicalState(SAVED);
+        d.setCheckSum("" );
+        mockGetDocument(d, docId);
+        addFileToBucket(docId);
+        //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
+        fileDownloadTestCall( docId,false).expectStatus()
+                .isOk().expectBody(FileDownloadResponse.class).value(response ->{
+                    //Assertions.assertThat(!response.getChecksum().isEmpty());
+                    //TODO rimettere
+                    Assertions.assertThat(!response.getDownload().getRetryAfter().equals(maxRestoreTimeCold));
+
+                });
+    }
 
     @Test
     void testFileNonTrovato() {
@@ -274,6 +277,8 @@ class UriBuilderServiceDownloadTest {
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
         d.setDocumentState(technicalStatus_booked);
+
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 
         mockGetDocument(d, docId);
         fileDownloadTestCall(docId, false).expectStatus().isBadRequest();

@@ -355,6 +355,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                     log.error("createUriForDownloadFile() : erroe generico = {}", throwable.getMessage(), throwable);
                     return Mono.error(throwable);
                 });
+
     }
 
     @NotNull

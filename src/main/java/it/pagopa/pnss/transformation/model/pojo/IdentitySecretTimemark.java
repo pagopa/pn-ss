@@ -19,4 +19,10 @@ public class IdentitySecretTimemark {
     @JsonProperty("password")
     String passwordTimemark;
 
+    @Override
+    public String toString() {
+        return "IdentitySecretTimemark{" +
+                "userTimemark='" + userTimemark + "'}";
+    }
+
 }

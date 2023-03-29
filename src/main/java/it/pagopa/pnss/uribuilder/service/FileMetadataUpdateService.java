@@ -13,10 +13,10 @@ import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.rest.v1.dto.OperationResultCodeResponse;
 import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
+import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
@@ -28,28 +28,14 @@ public class FileMetadataUpdateService {
 	
 	private final DocumentClientCall docClientCall;
 	
-	private final DocTypesService docTypesService;
-
-//	private Map<String, String> mapDocumentTypeLogicalStateToIntStatus;
-//
-//	@PostConstruct
-//	public void createMap() {
-//		mapDocumentTypeLogicalStateToIntStatus = Map.ofEntries(
-//				entry(PN_NOTIFICATION_ATTACHMENTS + "-" + PRELOADED, technicalStatus_available),
-//				entry(PN_NOTIFICATION_ATTACHMENTS + "-" + ATTACHED, technicalStatus_attached),
-//				entry(PN_EXTERNAL_LEGAL_FACTS + "-" + SAVED, technicalStatus_available),
-//				entry(PN_LEGAL_FACTS + "-" + SAVED, technicalStatus_available),
-//				entry(PN_AAR + "-" + SAVED, technicalStatus_available)
-//
-//		);
-//	}
+	private final DocTypesClientCall docTypesClientCall;
 
 	public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall,
 	        DocumentClientCall documentClientCall,
-	        DocTypesService docTypesService) {
+	        DocTypesClientCall docTypesClientCall) {
 		this.userConfigClientCall = userConfigurationClientCall;
 		this.docClientCall = documentClientCall;
-        this.docTypesService = docTypesService;
+        this.docTypesClientCall = docTypesClientCall;
 	}
 
 	public Mono<OperationResultCodeResponse> createUriForUploadFile(String fileKey, String xPagopaSafestorageCxId,
@@ -135,9 +121,8 @@ public class FileMetadataUpdateService {
 	}
 
 	private Mono<String> checkLookUp(String documentType, String logicalState) {
-        //return mapDocumentTypeLogicalStateToIntStatus.get(documentType + "-" + logicalState);
-	    return docTypesService.getDocType(documentType)
-	            .map(item->item.getStatuses().get(logicalState).getTechnicalState());
+	    return docTypesClientCall.getdocTypes(documentType)
+	            .map(item ->item.getDocType().getStatuses().get(logicalState).getTechnicalState());
 	}
 
 	private Mono<Boolean> validationField(

@@ -60,8 +60,8 @@ public class FileMetadataUpdateService {
                        var technicalStatus = objects.getT3();
                        var documentChanges = new DocumentChanges();
 
-                       if (userConfiguration != null && (userConfiguration.getCanModifyStatus() == null ||
-                                                         !userConfiguration.getCanModifyStatus().contains(tipoDocumento))) {
+                       if (userConfiguration.getCanModifyStatus() == null ||
+                           !userConfiguration.getCanModifyStatus().contains(tipoDocumento)) {
                            String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
                                                          xPagopaSafestorageCxId,
                                                          tipoDocumento);

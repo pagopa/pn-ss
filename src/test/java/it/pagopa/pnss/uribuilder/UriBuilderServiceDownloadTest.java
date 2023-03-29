@@ -22,7 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
 import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
-import org.testcontainers.shaded.org.bouncycastle.jcajce.provider.digest.SHA256;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -260,7 +259,7 @@ class UriBuilderServiceDownloadTest {
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
-        d.setDocumentState(technicalStatus_available);
+        d.setDocumentState(TECHNICAL_STATUS_AVAILABLE);
 
         mockGetDocument(d, docId);
         fileDownloadTestCall(docId, false).expectStatus().isForbidden();
@@ -276,7 +275,7 @@ class UriBuilderServiceDownloadTest {
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
-        d.setDocumentState(technicalStatus_booked);
+        d.setDocumentState(TECHNICAL_STATUS_BOOKED);
 
         when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 

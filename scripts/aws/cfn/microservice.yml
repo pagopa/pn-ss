@@ -652,7 +652,7 @@ Resources:
                     jsonDocument.checkSum = crypto
                       .createHash(doc.document.documentType.checksum)
                       .update(Body)
-                      .digest("hex");
+                      .digest("base64");
                   } catch (error) {
                     console.log(error);
                     const messageError = `Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}. Verificare che l'oggetto esiste nel bucket o sul database Dynamo.`;

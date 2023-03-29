@@ -2,6 +2,7 @@ package it.pagopa.pnss.transformation.configuration;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import it.pagopa.pnss.common.exception.JsonSecretFindingException;
 import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
 import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimemark;
 import lombok.extern.slf4j.Slf4j;
@@ -55,7 +56,7 @@ public class ArubaCredentialConf {
                 return arubaSecretValue;
             }
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new JsonSecretFindingException(ArubaSecretValue.class);
         }
     }
 
@@ -74,7 +75,7 @@ public class ArubaCredentialConf {
                 return identitySecretTimemark;
             }
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new JsonSecretFindingException(IdentitySecretTimemark.class);
         }
     }
 }

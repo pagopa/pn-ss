@@ -66,19 +66,19 @@ public class FileMetadataUpdateService {
 		   										Document document = documentResponse.getDocument();
 												String documentType = document.getDocumentType().getTipoDocumento();
 												DocumentChanges docChanges = new DocumentChanges();
-	
-												return userConfigClientCall
-														.getUser(xPagopaSafestorageCxId)
-														.flatMap(userConfiguration -> {
-																	if (userConfiguration.getUserConfiguration().getCanModifyStatus() == null 
-																			|| !userConfiguration.getUserConfiguration().getCanModifyStatus().contains(documentType)) {
-																		String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
-																									  xPagopaSafestorageCxId, documentType);
-																		log.error("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
-																		throw new ResponseStatusException(
-																				HttpStatus.FORBIDDEN,
-																				errore);
-																	}
+												return Mono.zip(userConfigClientCall.getUser(xPagopaSafestorageCxId), checkLookUp(documentType,logicalState))
+														.flatMap(objects -> {
+		                                                            var userConfiguration =objects .getT1(); 
+		                                                            var technicalStatus =objects .getT2(); 
+		                                                            if (userConfiguration.getUserConfiguration().getCanModifyStatus() == null 
+                                                                            || !userConfiguration.getUserConfiguration().getCanModifyStatus().contains(documentType)) {
+                                                                        String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
+                                                                                                      xPagopaSafestorageCxId, documentType);
+                                                                        log.error("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
+                                                                        throw new ResponseStatusException(
+                                                                                HttpStatus.FORBIDDEN,
+                                                                                errore);
+                                                                    }
 
 																	boolean isStatusPresent = false;
 																	if (!StringUtils.isBlank(request.getStatus())) {
@@ -94,7 +94,6 @@ public class FileMetadataUpdateService {
 																					"Status not found for document key : " + fileKey);
 																		}
 																		
-																		String technicalStatus = checkLookUp(documentType, logicalState);
 																		if (StringUtils.isEmpty(technicalStatus)) {
 																			log.error("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found for document key {}",
 																					fileKey);
@@ -137,11 +136,9 @@ public class FileMetadataUpdateService {
 				   );
 	}
 
-	private String checkLookUp(String documentType, String logicalState) {
-	    Mono<DocumentType> docTypeMono = docTypesService.getDocType(documentType);
-	    DocumentType docType = docTypeMono.block();
-	    CurrentStatus cs = docType.getStatuses().get(logicalState);
-		return cs.getTechnicalState();
+	private Mono<String> checkLookUp(String documentType, String logicalState) {
+	    return docTypesService.getDocType(documentType)
+	            .map(item->item.getStatuses().get(logicalState).getTechnicalState());
 	}
 
 	private Mono<Boolean> validationField(

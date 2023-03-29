@@ -138,15 +138,15 @@ public class FileMetadataUpdateTest {
 		req.setStatus(PRELOADED);
 		DocumentResponse resp = new DocumentResponse();
 		Document document = new Document();
-        DocumentType documentType = new DocumentType();
-        documentType.setStatuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())));
-        documentType.setTipoDocumento(PN_AAR);
-        document.setDocumentType(documentType);
-        resp.setDocument(document);
-        Mono<DocumentResponse> monoResp = Mono.just(resp);
-        Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
-        Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
-        Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
+		DocumentType documentType = new DocumentType();
+		documentType.setStatuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())));
+		documentType.setTipoDocumento(PN_AAR);
+		document.setDocumentType(documentType);
+		resp.setDocument(document);
+		Mono<DocumentResponse> monoResp = Mono.just(resp);
+		Mono<UserConfigurationResponse> userConfigurationResponse = mockUserConfiguration();
+		Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
+		Mockito.doReturn(monoResp).when(documentClientCall).getdocument(Mockito.any());
         
         CurrentStatus _cs = new CurrentStatus();
         _cs.setTechnicalState("available");

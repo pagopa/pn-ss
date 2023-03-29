@@ -9,10 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.rest.v1.dto.OperationResultCodeResponse;
 import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
 import it.pagopa.pnss.common.client.DocumentClientCall;

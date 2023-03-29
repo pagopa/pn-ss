@@ -2,6 +2,7 @@ package it.pagopa.pnss.uribuilder;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
+import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
@@ -73,6 +74,9 @@ class UriBuilderServiceDownloadTest {
     @MockBean
     DocumentClientCall documentClientCall;
 
+    @MockBean
+    DocTypesClientCall docTypesClientCall;
+
     @Value("${test.aws.s3.endpoint:#{null}}")
     String testAwsS3Endpoint;
 
@@ -91,8 +95,6 @@ class UriBuilderServiceDownloadTest {
                 .header(HttpHeaders.ACCEPT, "application/json")
                 .attribute("metadataOnly", metadataOnly)
                 .exchange();
-
-
     }
 
     @BeforeEach
@@ -133,6 +135,8 @@ class UriBuilderServiceDownloadTest {
 
         mockGetDocument(d, docId);
 
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
         fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
 
@@ -149,6 +153,8 @@ class UriBuilderServiceDownloadTest {
         d.setCheckSum(CHECKSUM);
 
         mockGetDocument(d, docId);
+
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 
         fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
@@ -168,6 +174,8 @@ class UriBuilderServiceDownloadTest {
 
         mockGetDocument(d, docId);
 
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
         fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
 
@@ -183,6 +191,7 @@ class UriBuilderServiceDownloadTest {
         d.setCheckSum("");
         mockGetDocument(d, docId);
         //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 
 
         fileDownloadTestCall( docId,false).expectStatus()
@@ -192,7 +201,7 @@ class UriBuilderServiceDownloadTest {
     }
 
     @Test
-    void testFileTrovatoBasketCold(){
+    void testFileTrovatoBasketCold() {
         String docId = "1111-aaaa";
         mockUserConfiguration(List.of(PN_AAR));
 
@@ -205,6 +214,8 @@ class UriBuilderServiceDownloadTest {
         mockGetDocument(d, docId);
         addFileToBucket(docId);
         //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
         fileDownloadTestCall( docId,false).expectStatus()
                 .isOk().expectBody(FileDownloadResponse.class).value(response ->{
                     //Assertions.assertThat(!response.getChecksum().isEmpty());
@@ -266,6 +277,8 @@ class UriBuilderServiceDownloadTest {
         DocumentInput d = new DocumentInput();
         d.setDocumentType(PN_AAR);
         d.setDocumentState(technicalStatus_booked);
+
+        when(docTypesClientCall.getdocTypes(PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 
         mockGetDocument(d, docId);
         fileDownloadTestCall(docId, false).expectStatus().isBadRequest();

@@ -1,11 +1,5 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import static it.pagopa.pnss.common.Constant.PN_AAR;
-import static it.pagopa.pnss.common.Constant.PN_DOWNTIME_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_EXTERNAL_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_LEGAL_FACTS;
-import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
-import static it.pagopa.pnss.common.Constant.listaStatus;
 import static it.pagopa.pnss.common.Constant.listaTipoDocumenti;
 import static it.pagopa.pnss.common.Constant.listaTipologieDoc;
 import static it.pagopa.pnss.common.Constant.technicalStatus_attached;
@@ -18,8 +12,6 @@ import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_PDF;
 import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_ZIP;
 import static it.pagopa.pnss.common.Constant.FILE_EXTENSION_TIFF;
 
-import static java.util.Map.entry;
-
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
@@ -30,9 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.PostConstruct;
-
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
@@ -104,18 +93,19 @@ public class UriBuilderService extends CommonS3ObjectService {
     private final AwsConfigurationProperties awsConfigurationProperties;
     private final BucketName bucketName;
 
-    private DocTypesClientCall docTypesClientCall;
+    private final DocTypesClientCall docTypesClientCall;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName
-    ) {
+                             AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName,
+                             DocTypesClientCall docTypesClientCall) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.awsConfigurationProperties = awsConfigurationProperties;
         this.bucketName = bucketName;
+        this.docTypesClientCall = docTypesClientCall;
     }
 
-    public Mono<String> getBucketName(String docType) {
+    private Mono<String> getBucketName(String docType) {
 
         return docTypesClientCall.getdocTypes(docType)
                 .map(documentTypeResponse ->
@@ -386,9 +376,12 @@ public class UriBuilderService extends CommonS3ObjectService {
                                 downloadResponse.setDocumentStatus("");
                             }
 
-                            downloadResponse.checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
+                            downloadResponse.download(fileDownloadInfo)
+                                    .checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
                                     .contentLength(contentLength).contentType(doc.getContentType())
-                                    .documentType(doc.getDocumentType().getTipoDocumento()).key(fileKey);
+                                    .documentType(doc.getDocumentType().getTipoDocumento())
+                                    .key(fileKey);
+
 
                             if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
                                 try {
@@ -412,6 +405,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                     " not has a valid state "));
                                 }
                             }
+
                             return downloadResponse;
                         });
     }
@@ -425,7 +419,7 @@ public class UriBuilderService extends CommonS3ObjectService {
         return getBucketName(documentType)
                 .map(buckName ->
                         {
-                            log.info("INIZIO RECUPERO URL DOWLOAND ");
+                            log.info("INIZIO RECUPERO URL DOWNLOAD ");
                             if (!status.equalsIgnoreCase(technicalStatus_freezed)) {
                                 return getPresignedUrl(buckName, fileKey);
                             } else {

@@ -11,6 +11,7 @@ import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,9 +39,17 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     @Value("${header.x-pagopa-safestorage-cx-id}")
     private String xPagopaSafestorageCxId;
 
+
+    @Autowired
+    private final WebClient ssWebClient;
+
+    public DocumentClientCallImpl(WebClient ssWebClient) {
+        this.ssWebClient = ssWebClient;
+    }
+
     @Override
     public Mono<DocumentResponse> getdocument(String keyFile) throws DocumentKeyNotPresentException {
-        return getWebClient().get()
+        return ssWebClient.get()
 			                .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
 			                .retrieve()
 			                .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
@@ -53,7 +62,7 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
 
     @Override
     public Mono<DocumentResponse> postDocument(DocumentInput document) throws DocumentkeyPresentException {
-        return    getWebClient().post()
+        return    ssWebClient.post()
 				                .uri(anagraficaDocumentiClientEndpointpost)
 				                .bodyValue(document)
 				                .retrieve()
@@ -69,7 +78,7 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
     public Mono<DocumentResponse> patchdocument(
     		String authPagopaSafestorageCxId, String authApiKey, 
     		String keyFile, DocumentChanges document) throws DocumentKeyNotPresentException {
-        return    getWebClient().patch()
+        return    ssWebClient.patch()
 				                .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
 				        		.header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
 				        		.header(xApiKey, authApiKey)
@@ -88,9 +97,5 @@ public class DocumentClientCallImpl extends CommonBaseClient implements Document
         return null;
     }
 
-    public WebClient getWebClient() {
-        WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
-        return builder.baseUrl(internalBaseUrl).build();
-    }
 
 }

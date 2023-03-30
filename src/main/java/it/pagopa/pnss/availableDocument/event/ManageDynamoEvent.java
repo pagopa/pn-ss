@@ -70,7 +70,7 @@ public class ManageDynamoEvent {
         return  PutEventsRequestEntry.builder()
                 .time(new Date().toInstant())
                 .source(GESTORE_DISPONIBILITA_EVENT_NAME)
-                .detailType(EVEN_BUS_SOURCE_AVAILABLE_DOCUMENT)
+                .detailType(EVENT_BUS_SOURCE_AVAILABLE_DOCUMENT)
                 .eventBusName(disponibilitaDocumentiEventBridge)
 
                 .detail(event).build();

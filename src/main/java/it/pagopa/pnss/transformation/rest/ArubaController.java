@@ -50,7 +50,7 @@ public class ArubaController {
         byte[] pdfDocument = readPdfDocoument();
 
 
-        SignReturnV2 response = signServiceSoap.singnPdfDocument(pdfDocument,marcatura);
+        SignReturnV2 response = signServiceSoap.signPdfDocument(pdfDocument,marcatura);
 
         return ResponseEntity.ok()
                 .body(response);
@@ -74,7 +74,7 @@ public class ArubaController {
 
         InputStream targetStream =  getClass().getResourceAsStream("/prova.xml");
 
-        SignReturnV2 response = signServiceSoap.xmlsignature(    "application/xml",targetStream,marcatura);
+        SignReturnV2 response = signServiceSoap.xmlSignature(    "application/xml",targetStream,marcatura);
 
         return ResponseEntity.ok()
                 .body(response.getStream().getDataSource().getInputStream().readAllBytes());

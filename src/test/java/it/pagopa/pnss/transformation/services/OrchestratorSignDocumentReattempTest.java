@@ -7,8 +7,6 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import it.pagopa.pnss.transformation.model.Oggetto;
-import it.pagopa.pnss.transformation.model.S3ObjectCreated;
 import it.pagopa.pnss.transformation.service.DownloadObjectService;
 import it.pagopa.pnss.transformation.service.OrchestratorSignDocument;
 import it.pagopa.pnss.transformation.service.SignServiceSoap;
@@ -20,12 +18,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import javax.xml.bind.JAXBException;
@@ -74,7 +69,7 @@ public class OrchestratorSignDocumentReattempTest {
         Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).getdocument(Mockito.any());
         addFileToBucket("666-DDD");
 
-        Mockito.doThrow(new JAXBException("")).when(signServiceSoap).singnPdfDocument(Mockito.any(), Mockito.any());
+        Mockito.doThrow(new JAXBException("")).when(signServiceSoap).signPdfDocument(Mockito.any(), Mockito.any());
 
 
         assertThrows( ArubaSignExceptionLimitCall.class,

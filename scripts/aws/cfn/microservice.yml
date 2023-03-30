@@ -156,29 +156,29 @@ Parameters:
     Type: String
     Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
 
-  PnSsQueueNameNotificheExt1:
-    Type: String
-    Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
+  # PnSsQueueNameNotificheExt1:
+  #   Type: String
+  #   Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
 
-  PnSsQueueArnNotificheExt1:
-    Type: String
-    Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
+  # PnSsQueueArnNotificheExt1:
+  #   Type: String
+  #   Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
 
-  PnSsQueueUrlNotificheExt1:
-    Type: String
-    Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
+  # PnSsQueueUrlNotificheExt1:
+  #   Type: String
+  #   Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
 
-  PnSsDLQueueNameNotificheExt1:
-    Type: String
-    Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
+  # PnSsDLQueueNameNotificheExt1:
+  #   Type: String
+  #   Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
 
-  PnSsDLQueueArnNotificheExt1:
-    Type: String
-    Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
+  # PnSsDLQueueArnNotificheExt1:
+  #   Type: String
+  #   Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
 
-  PnSsDLQueueUrlNotificheExt1:
-    Type: String
-    Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
+  # PnSsDLQueueUrlNotificheExt1:
+  #   Type: String
+  #   Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
 
   PnSsGestoreBucketLambdaName:
     Type: String
@@ -260,6 +260,10 @@ Parameters:
   PnSsTimemarkUrl:
     Type: String
     Description: 'empty'  
+
+  PnCoreTargetEventBus:
+    Type: String
+    Description: 'ARN of Pn Core Event Bus where to forward external notifications'  
 
 Resources:
 
@@ -399,6 +403,88 @@ Resources:
             Resource:
               - !Sub '${PnSsEventBusArnExternalNotification}'
 
+  #####    External notifications    #####
+
+  PnSsRoleExternalNotifications:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'sts:AssumeRole'
+            Principal:
+              Service: 
+                - 'events.amazonaws.com'
+      Description: 'Role for forwarding Events to Pn Core EventBus'
+      Policies:
+        - PolicyName: 'PutEventsInlinePolicy'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement:
+              - Sid: 'PutEventsOnTargetAccount'
+                Effect: Allow
+                Action:
+                  - 'events:PutEvents'
+                Resource:
+                  - !Ref PnCoreTargetEventBus
+      # RoleName: PnSsRole
+
+  PnSsEventsDLQueueExternalNotifications:
+    Type: AWS::SQS::Queue
+    Properties:
+      SqsManagedSseEnabled: True
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 0
+      VisibilityTimeout: 30
+
+  PnSsQueuePolicyExternalNotifications:
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !Ref PnSsEventsDLQueueExternalNotifications
+      PolicyDocument: 
+        Statement: 
+          - Sid: 'AllowAccessSameAccount'
+            Action: 
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt PnSsEventsDLQueueExternalNotifications.Arn
+            Principal: 
+              AWS: !Sub ${AWS::AccountId}
+          - Sid: 'AllowPutEventsFromEventRule'
+            Action: 
+              - "sqs:SendMessage"
+            Effect: "Allow"
+            Resource: !GetAtt PnSsEventsDLQueueExternalNotifications.Arn
+            Principal: 
+              Service:
+              - 'events.amazonaws.com'
+            Condition: 
+              ArnEquals:
+                aws:SourceArn: !GetAtt PnSsEventRuleExternalNotifications.Arn
+
+  PnSsEventRuleExternalNotifications:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref PnSsEventBusNameExternalNotification
+      Description: 'Rule forwarding events to Pn Core EventBus'
+      EventPattern:
+        source: 
+          - "GESTORE DISPONIBILITA"
+        account: 
+          - !Sub ${AWS::AccountId}
+        region: 
+          - !Sub ${AWS::Region}
+      State: 'ENABLED'
+      Targets:
+        - Arn: !Ref PnCoreTargetEventBus
+          Id: 'PnSsExternalNotificationTarget'
+          RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
+          DeadLetterConfig:
+            Arn: !GetAtt PnSsEventsDLQueueExternalNotifications.Arn
+
   #####    Metrics and Alarms   ##### 
   SafeStorageMicroserviceAlarm:
     Type: AWS::CloudFormation::Stack
@@ -415,7 +501,7 @@ Resources:
     Properties:
       TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/microservice-cloudwatch-dashboard.yaml"
       Parameters:
-        DashboardName: 'safe-storage-msvc'
+        DashboardName: !Sub '${ProjectName}-safe-storage'
         AlarmArns: 
           !Join
           - ','

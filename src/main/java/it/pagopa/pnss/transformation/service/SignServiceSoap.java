@@ -32,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class SignServiceSoap extends CommonArubaService {
-	
+
     @Value("${aruba.cert_id}")
     public String certificationID;
 
@@ -62,25 +62,11 @@ public class SignServiceSoap extends CommonArubaService {
         signRequestV2.setBinaryinput(pdfFile);
         signRequestV2.setTransport(TypeTransport.BYNARYNET);
 
-        if(marcatura) {
-            log.debug(TSA_IDENTITY_URL, tsaIdentity);
-
-            if (tsaIdentity) {
-                log.debug(USER_URL, identitySecretTimemark.getUserTimemark());
-                log.debug(PASSWORD_URL, identitySecretTimemark.getPasswordTimemark());
-                log.debug(TIMEMARK_URL, timemarkUrl);
-
-                var tsaAuth = new TsaAuth();
-                tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
-                tsaAuth.setPassword(identitySecretTimemark.getPasswordTimemark());
-                tsaAuth.setTsaurl(timemarkUrl);
-                signRequestV2.setTsaIdentity(tsaAuth);
-            }
-        }
+        setSignRequestTsaIdentity(signRequestV2, marcatura);
 
         logCallAruba(signRequestV2);
-        
-        log.debug("SignServiceSoap.singnPdfDocument() : arubaUrlWsdl = {}", arubaUrlWsdl);	
+
+        log.debug("SignServiceSoap.singnPdfDocument() : arubaUrlWsdl = {}", arubaUrlWsdl);
 
         ArubaSignService service = createArubaService(arubaUrlWsdl).getArubaSignServicePort();
         return service.pdfsignatureV2(signRequestV2,null ,null,null ,null,null);
@@ -97,21 +83,7 @@ public class SignServiceSoap extends CommonArubaService {
         signRequestV2.setTransport(TypeTransport.STREAM);
         signRequestV2.setRequiredmark(marcatura);
 
-        if(marcatura) {
-            log.debug(TSA_IDENTITY_URL, tsaIdentity);
-
-            if (tsaIdentity) {
-                log.debug(USER_URL, identitySecretTimemark.getUserTimemark());
-                log.debug(PASSWORD_URL, identitySecretTimemark.getPasswordTimemark());
-                log.debug(TIMEMARK_URL, timemarkUrl);
-
-                var tsaAuth = new TsaAuth();
-                tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
-                tsaAuth.setPassword(identitySecretTimemark.getPasswordTimemark());
-                tsaAuth.setTsaurl(timemarkUrl);
-                signRequestV2.setTsaIdentity(tsaAuth);
-            }
-        }
+        setSignRequestTsaIdentity(signRequestV2, marcatura);
 
         logCallAruba(signRequestV2);
 
@@ -188,6 +160,25 @@ public class SignServiceSoap extends CommonArubaService {
         }
         return response;
 
+    }
+
+    private void setSignRequestTsaIdentity(SignRequestV2 signRequestV2, boolean marcatura)
+    {
+        if(marcatura) {
+            log.debug(TSA_IDENTITY_URL, tsaIdentity);
+
+            if (tsaIdentity) {
+                log.debug(USER_URL, identitySecretTimemark.getUserTimemark());
+                log.debug(PASSWORD_URL, identitySecretTimemark.getPasswordTimemark());
+                log.debug(TIMEMARK_URL, timemarkUrl);
+
+                var tsaAuth = new TsaAuth();
+                tsaAuth.setUser(identitySecretTimemark.getUserTimemark());
+                tsaAuth.setPassword(identitySecretTimemark.getPasswordTimemark());
+                tsaAuth.setTsaurl(timemarkUrl);
+                signRequestV2.setTsaIdentity(tsaAuth);
+            }
+        }
     }
 
 

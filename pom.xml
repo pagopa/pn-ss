@@ -140,12 +140,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-webmvc</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
         <!-- Start SOAP dependencies -->
         <dependency>
             <groupId>jakarta.xml.bind</groupId>

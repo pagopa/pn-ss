@@ -5,15 +5,13 @@ import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
 import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimemark;
 import it.pagopa.pnss.transformation.wsdl.*;
 import jakarta.activation.DataHandler;
+import jakarta.mail.util.ByteArrayDataSource;
 import jakarta.xml.ws.AsyncHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
-
-
-import jakarta.mail.util.ByteArrayDataSource;
 
 import java.io.InputStream;
 
@@ -98,7 +96,8 @@ public class SignServiceSoap {
                        pdfsignatureV2.setSignRequestV2(signRequestV2);
                        return pdfsignatureV2;
                    })
-                   .flatMap(pdfsignatureV2 -> Mono.create(sink -> arubaSignService.pdfsignatureV2Async(pdfsignatureV2, sinkSuccessOrError(sink))))
+                   .flatMap(pdfsignatureV2 -> Mono.create(sink -> arubaSignService.pdfsignatureV2Async(pdfsignatureV2,
+                                                                                                       sinkSuccessOrError(sink))))
                    .cast(PdfsignatureV2Response.class)
                    .map(PdfsignatureV2Response::getReturn);
     }

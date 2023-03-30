@@ -65,6 +65,7 @@ Resources:
         SSEType: 'KMS'
       TableClass: 'STANDARD'
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
 
   PnSsTableTipologieDocumenti:
     Type: AWS::DynamoDB::Table
@@ -85,6 +86,7 @@ Resources:
         SSEType: 'KMS'
       TableClass: 'STANDARD'
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
 
   PnSsTableDocumenti:
     Type: AWS::DynamoDB::Table
@@ -107,6 +109,7 @@ Resources:
         SSEType: 'KMS'
       TableClass: 'STANDARD'
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
 
 ##### TEMPORARY POLICY TO AVOID DOUBLE DEPLOYS #####
 # Decommentare la seguente policy nel seguente scenario:

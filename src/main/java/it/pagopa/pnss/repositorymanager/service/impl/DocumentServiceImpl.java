@@ -251,6 +251,9 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                            /*TOGLIERE*/
                            log.info("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage());
                            return Mono.error(throwable);
+                       } else if (throwable instanceof IllegalDocumentStateException) {
+                           log.debug("Non ci sono status disponibili per il documento selezionato: {}", documentKey, throwable.getMessage());
+                           return Mono.error(throwable);
                        }
                        log.error("patchDocument() : errore generico : messaggio = {}", throwable.getMessage(), throwable);
                        /*TOGLIERE*/

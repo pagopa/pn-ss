@@ -114,7 +114,7 @@ public class SignServiceSoap extends CommonArubaService {
     }
 
 
-    public PdfFileSignReturnV2 callArubaSignPdfFile(InputPdfFileSignRequestV2 input) {
+    public GenericFileSignReturnV2 callArubaSignPdfFile(InputPdfFileSignRequestV2 input) {
     
         logCallAruba(input.getInfoTosigned());
 

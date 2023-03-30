@@ -156,41 +156,9 @@ Parameters:
     Type: String
     Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
 
-  PnSsQueueNameNotificheExt1:
-    Type: String
-    Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
-
-  PnSsQueueArnNotificheExt1:
-    Type: String
-    Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
-
-  PnSsQueueUrlNotificheExt1:
-    Type: String
-    Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
-
-  PnSsDLQueueNameNotificheExt1:
-    Type: String
-    Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
-
-  PnSsDLQueueArnNotificheExt1:
-    Type: String
-    Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
-
-  PnSsDLQueueUrlNotificheExt1:
-    Type: String
-    Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
-
   PnSsGestoreBucketLambdaName:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
-
-  PnSsEventRuleArnNotificheExt1:
-    Type: String
-    Description: 'Regola Event Bridge per pubblicare gli eventi relativi al Gestore Disponibilita sulla code per le piattaforme esterne'
-  
-  PnSsEventRuleArnStagingBucket:
-    Type: String
-    Description: 'Regola Event Bridge per pubblicare gli eventi di creazione oggetti nel Bucket Staging'
 
 #### Parametri presenti nel file json di configurazione  ###
   PresignedUrlMinutesLifespan:
@@ -260,6 +228,14 @@ Parameters:
   PnSsTimemarkUrl:
     Type: String
     Description: 'empty'  
+
+  PnCoreTargetEventBus:
+    Type: String
+    Description: 'ARN of Pn Core Event Bus where to forward external notifications'
+    Default: ''
+
+Conditions:
+  PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
 
 Resources:
 
@@ -377,7 +353,6 @@ Resources:
               - 'sqs:SendMessage'
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
-              - !Sub '${PnSsQueueArnNotificheExt1}'
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -399,6 +374,116 @@ Resources:
             Resource:
               - !Sub '${PnSsEventBusArnExternalNotification}'
 
+  #####    Staging Bucket Events Rule    #####
+  PnSsEventRuleStagingBucket:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: 'Rule catching object creation events in SS staging bucket'
+      EventPattern:   
+        source: 
+          - 'aws.s3' 
+        account: 
+          - !Sub ${AWS::AccountId}
+        region:
+          - !Sub ${AWS::Region}
+        detail-type: 
+          - 'Object Created'
+        detail:
+          bucket:
+            name: 
+              - !Ref PnSsStagingBucketName
+        resources:
+          - !Ref PnSsStagingBucketArn
+      State: 'ENABLED'
+      Targets:
+        - Arn: !Ref PnSsQueueArnStagingBucket
+          Id: "SQSTargetForStagingBucket"
+
+  #####    External notifications    #####
+  PnSsRoleExternalNotifications:
+    Type: AWS::IAM::Role
+    Condition: PnCoreTargetEventBusExists
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'sts:AssumeRole'
+            Principal:
+              Service: 
+                - 'events.amazonaws.com'
+      Description: 'Role for forwarding Events to Pn Core EventBus'
+      Policies:
+        - PolicyName: 'PutEventsInlinePolicy'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement:
+              - Sid: 'PutEventsOnTargetAccount'
+                Effect: Allow
+                Action:
+                  - 'events:PutEvents'
+                Resource:
+                  - !Ref PnCoreTargetEventBus
+      # RoleName: PnSsRole
+
+  PnSsEventsDLQueueExternalNotifications:
+    Type: AWS::SQS::Queue
+    Condition: PnCoreTargetEventBusExists
+    Properties:
+      SqsManagedSseEnabled: True
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 0
+      VisibilityTimeout: 30
+
+  PnSsQueuePolicyExternalNotifications:
+    Type: AWS::SQS::QueuePolicy
+    Condition: PnCoreTargetEventBusExists
+    Properties: 
+      Queues: 
+        - !Ref PnSsEventsDLQueueExternalNotifications
+      PolicyDocument: 
+        Statement: 
+          - Sid: 'AllowAccessSameAccount'
+            Action: 
+              - "SQS:*"
+            Effect: "Allow"
+            Resource: !GetAtt PnSsEventsDLQueueExternalNotifications.Arn
+            Principal: 
+              AWS: !Sub ${AWS::AccountId}
+          - Sid: 'AllowPutEventsFromEventRule'
+            Action: 
+              - "sqs:SendMessage"
+            Effect: "Allow"
+            Resource: !GetAtt PnSsEventsDLQueueExternalNotifications.Arn
+            Principal: 
+              Service:
+              - 'events.amazonaws.com'
+            Condition: 
+              ArnEquals:
+                aws:SourceArn: !GetAtt PnSsEventRuleExternalNotifications.Arn
+
+  PnSsEventRuleExternalNotifications:
+    Type: AWS::Events::Rule
+    Condition: PnCoreTargetEventBusExists
+    Properties:
+      EventBusName: !Ref PnSsEventBusNameExternalNotification
+      Description: 'Rule forwarding events to Pn Core EventBus'
+      EventPattern:
+        source: 
+          - "GESTORE DISPONIBILITA"
+        account: 
+          - !Sub ${AWS::AccountId}
+        region: 
+          - !Sub ${AWS::Region}
+      State: 'ENABLED'
+      Targets:
+        - Arn: !Ref PnCoreTargetEventBus
+          Id: 'PnSsExternalNotificationTarget'
+          RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
+          DeadLetterConfig:
+            Arn: !GetAtt PnSsEventsDLQueueExternalNotifications.Arn
+
   #####    Metrics and Alarms   ##### 
   SafeStorageMicroserviceAlarm:
     Type: AWS::CloudFormation::Stack
@@ -415,7 +500,7 @@ Resources:
     Properties:
       TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/microservice-cloudwatch-dashboard.yaml"
       Parameters:
-        DashboardName: 'safe-storage-msvc'
+        DashboardName: !Sub '${ProjectName}-safe-storage'
         AlarmArns: 
           !Join
           - ','
@@ -435,15 +520,13 @@ Resources:
           - ','
           - - !Ref PnSsQueueArnStagingBucket
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
-            - !Ref PnSsQueueArnNotificheExt1
         LambdaArns: !GetAtt PnSsGestoreBucket.Arn
         # KinesisDataArns:
         # KinesisFirehoseArns:
-        EventRuleArns:
-          !Join
-          - ','
-          - - !Ref PnSsEventRuleArnNotificheExt1
-            - !Ref PnSsEventRuleArnStagingBucket
+        EventRuleArns: !GetAtt PnSsEventRuleStagingBucket.Arn
+          # !Join
+          # - ','
+          # - - !Ref PnSsEventRuleArnStagingBucket
         BucketNames:
           !Join
           - ','

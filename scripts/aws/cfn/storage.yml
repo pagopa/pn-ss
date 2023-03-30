@@ -65,6 +65,7 @@ Resources:
         SSEType: 'KMS'
       TableClass: 'STANDARD'
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
 
   PnSsTableTipologieDocumenti:
     Type: AWS::DynamoDB::Table
@@ -85,6 +86,7 @@ Resources:
         SSEType: 'KMS'
       TableClass: 'STANDARD'
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
 
   PnSsTableDocumenti:
     Type: AWS::DynamoDB::Table
@@ -107,6 +109,7 @@ Resources:
         SSEType: 'KMS'
       TableClass: 'STANDARD'
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
 
 ##### TEMPORARY POLICY TO AVOID DOUBLE DEPLOYS #####
 # Decommentare la seguente policy nel seguente scenario:
@@ -279,30 +282,6 @@ Resources:
       ReceiveMessageWaitTimeSeconds: 20
       VisibilityTimeout: 30 
 
-  PnSsEventRuleStagingBucket:
-    Type: AWS::Events::Rule
-    Properties:
-      Description: Description
-      EventPattern:   
-        source: 
-          - 'aws.s3' 
-        account: 
-          - !Sub ${AWS::AccountId}
-        region:
-          - !Sub ${AWS::Region}
-        detail-type: 
-          - 'Object Created'
-        detail:
-          bucket:
-            name: 
-              - !Ref PnSsStagingBucket
-        resources:
-          - !GetAtt PnSsStagingBucket.Arn
-      State: 'ENABLED'
-      Targets:
-        - Arn: !GetAtt PnSsQueueStagingBucket.Arn
-          Id: "SQSTargetForStagingBucket"
-
 ########### GESTORE BUCKET INVOKE DLQ ###########
   PnSsQueueGestoreBucketInvokeErrors:
     Type: AWS::SQS::Queue
@@ -327,28 +306,6 @@ Resources:
       VisibilityTimeout: 30
 
 ########### GESTORE DISPONIBILITA' EXTERNAL NOTIFICATION ###########
-  PnSsQueueNotificheExt1:
-    Type: AWS::SQS::Queue
-    Properties:
-      # KmsDataKeyReusePeriodSeconds: 300
-      # KmsMasterKeyId: 'alias/aws/sqs'
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0      
-      RedrivePolicy:
-        deadLetterTargetArn : !GetAtt PnSsDLQueueNotificheExt1.Arn
-        maxReceiveCount : 10
-      VisibilityTimeout: 30
-
-  PnSsDLQueueNotificheExt1:
-    Type: AWS::SQS::Queue
-    Properties:
-      KmsDataKeyReusePeriodSeconds: 300
-      KmsMasterKeyId: 'alias/aws/sqs'
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0
-      VisibilityTimeout: 30
-
   PnSsEventBusExternalNotification: 
     Type: AWS::Events::EventBus
     Properties: 
@@ -411,49 +368,6 @@ Resources:
   #       Condition:
   #         StringNotEquals:
   #           aws:SourceAccount: !Sub '${AWS::AccountId}'
-
-  PnSsQueuePolicyNotificheExt1:
-    Type: AWS::SQS::QueuePolicy
-    Properties: 
-      Queues: 
-        - !Ref PnSsQueueNotificheExt1
-      PolicyDocument: 
-        Statement: 
-          - Sid: 'AllowAccessSameAccount'
-            Action: 
-              - "SQS:*"
-            Effect: "Allow"
-            Resource: !GetAtt PnSsQueueNotificheExt1.Arn
-            Principal: 
-              AWS: !Sub ${AWS::AccountId}
-          - Sid: 'AllowPutEventsFromEventRule'
-            Action: 
-              - "sqs:SendMessage"
-            Effect: "Allow"
-            Resource: !GetAtt PnSsQueueNotificheExt1.Arn
-            Principal: 
-              Service:
-              - 'events.amazonaws.com'
-            Condition: 
-              ArnEquals:
-                aws:SourceArn: !GetAtt PnSsEventRuleNotificheExt1.Arn
-
-  PnSsEventRuleNotificheExt1:
-    Type: AWS::Events::Rule
-    Properties:
-      EventBusName: !Ref PnSsEventBusExternalNotification
-      Description: Description
-      EventPattern:
-        source: 
-          - "GESTORE DISPONIBILITA"
-        account: 
-          - !Sub ${AWS::AccountId}
-        region: 
-          - !Sub ${AWS::Region}
-      State: 'ENABLED'
-      Targets:
-        - Arn: !GetAtt PnSsQueueNotificheExt1.Arn
-          Id: 'PnSsExt1QueueTargetForExtNotification'
 
 Outputs:
   PnSsTableNameAnagraficaClient:
@@ -543,35 +457,3 @@ Outputs:
   PnSsEventBusArnExternalNotification:
     Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
     Value: !GetAtt  PnSsEventBusExternalNotification.Arn
-
-  PnSsQueueNameNotificheExt1:
-    Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
-    Value: !GetAtt  PnSsQueueNotificheExt1.QueueName
-
-  PnSsQueueArnNotificheExt1:
-    Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
-    Value: !GetAtt  PnSsQueueNotificheExt1.Arn
-
-  PnSsQueueUrlNotificheExt1:
-    Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
-    Value: !Ref PnSsQueueNotificheExt1
-
-  PnSsDLQueueNameNotificheExt1:
-    Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
-    Value: !GetAtt  PnSsDLQueueNotificheExt1.QueueName
-
-  PnSsDLQueueArnNotificheExt1:
-    Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
-    Value: !GetAtt  PnSsDLQueueNotificheExt1.Arn
-
-  PnSsDLQueueUrlNotificheExt1:
-    Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
-    Value: !Ref PnSsDLQueueNotificheExt1
-
-  PnSsEventRuleArnNotificheExt1:
-    Description: 'Regola Event Bridge per pubblicare gli eventi relativi al Gestore Disponibilita sulla code per le piattaforme esterne'
-    Value: !GetAtt PnSsEventRuleNotificheExt1.Arn
-  
-  PnSsEventRuleArnStagingBucket:
-    Description: 'Regola Event Bridge per pubblicare gli eventi di creazione oggetti nel Bucket Staging'
-    Value: !GetAtt PnSsEventRuleStagingBucket.Arn

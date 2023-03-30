@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class CommonArubaService {
 
-    public static String ARUBA_RESP_OK = "OK";
+    public static final String ARUBA_RESP_OK = "OK";
 
     @Autowired
     ArubaSignServiceService arubaSignService;
@@ -81,15 +81,8 @@ public abstract class CommonArubaService {
         Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
         jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
         JAXBElement<SignRequestV2> jaxbElement
-                = new JAXBElement<SignRequestV2>(new QName("", "SignRequest"), SignRequestV2.class, signRequestV2);
-        if (enableArubaLog) {
-            //File file = new File("C:\\PROGETTI\\DGSPA\\workspace\\pn-ssfile.xml");
-
-            jaxbMarshaller.marshal(jaxbElement, System.out);
-//        jaxbMarshaller.marshal(jaxbElement, file);
-            //jaxbMarshaller.marshal(jaxbElement, file);
-
-        }
+                = new JAXBElement<>(new QName("", "SignRequest"), SignRequestV2.class, signRequestV2);
+        if (Boolean.TRUE.equals(enableArubaLog)) jaxbMarshaller.marshal(jaxbElement, System.out);
     }
 
     public ArubaSignServiceService getArubaSignService() {

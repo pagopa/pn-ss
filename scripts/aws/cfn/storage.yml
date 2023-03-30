@@ -330,6 +330,8 @@ Resources:
       VisibilityTimeout: 30
 
 ########### GESTORE DISPONIBILITA' EXTERNAL NOTIFICATION ###########
+
+#  DELETE
   # PnSsQueueNotificheExt1:
   #   Type: AWS::SQS::Queue
   #   Properties:
@@ -415,31 +417,32 @@ Resources:
   #         StringNotEquals:
   #           aws:SourceAccount: !Sub '${AWS::AccountId}'
 
-  PnSsQueuePolicyNotificheExt1:
-    Type: AWS::SQS::QueuePolicy
-    Properties: 
-      Queues: 
-        - !Ref PnSsQueueNotificheExt1
-      PolicyDocument: 
-        Statement: 
-          - Sid: 'AllowAccessSameAccount'
-            Action: 
-              - "SQS:*"
-            Effect: "Allow"
-            Resource: !GetAtt PnSsQueueNotificheExt1.Arn
-            Principal: 
-              AWS: !Sub ${AWS::AccountId}
-          - Sid: 'AllowPutEventsFromEventRule'
-            Action: 
-              - "sqs:SendMessage"
-            Effect: "Allow"
-            Resource: !GetAtt PnSsQueueNotificheExt1.Arn
-            Principal: 
-              Service:
-              - 'events.amazonaws.com'
-            Condition: 
-              ArnEquals:
-                aws:SourceArn: !GetAtt PnSsEventRuleNotificheExt1.Arn
+#    DELETE
+  # PnSsQueuePolicyNotificheExt1:
+  #   Type: AWS::SQS::QueuePolicy
+  #   Properties: 
+  #     Queues: 
+  #       - !Ref PnSsQueueNotificheExt1
+  #     PolicyDocument: 
+  #       Statement: 
+  #         - Sid: 'AllowAccessSameAccount'
+  #           Action: 
+  #             - "SQS:*"
+  #           Effect: "Allow"
+  #           Resource: !GetAtt PnSsQueueNotificheExt1.Arn
+  #           Principal: 
+  #             AWS: !Sub ${AWS::AccountId}
+  #         - Sid: 'AllowPutEventsFromEventRule'
+  #           Action: 
+  #             - "sqs:SendMessage"
+  #           Effect: "Allow"
+  #           Resource: !GetAtt PnSsQueueNotificheExt1.Arn
+  #           Principal: 
+  #             Service:
+  #             - 'events.amazonaws.com'
+  #           Condition: 
+  #             ArnEquals:
+  #               aws:SourceArn: !GetAtt PnSsEventRuleNotificheExt1.Arn
 
 Outputs:
   PnSsTableNameAnagraficaClient:
@@ -530,6 +533,8 @@ Outputs:
     Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
     Value: !GetAtt  PnSsEventBusExternalNotification.Arn
 
+
+#   DELETE
   # PnSsQueueNameNotificheExt1:
   #   Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
   #   Value: !GetAtt  PnSsQueueNotificheExt1.QueueName

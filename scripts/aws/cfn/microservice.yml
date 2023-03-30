@@ -156,41 +156,9 @@ Parameters:
     Type: String
     Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
 
-  # PnSsQueueNameNotificheExt1:
-  #   Type: String
-  #   Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
-
-  # PnSsQueueArnNotificheExt1:
-  #   Type: String
-  #   Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
-
-  # PnSsQueueUrlNotificheExt1:
-  #   Type: String
-  #   Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
-
-  # PnSsDLQueueNameNotificheExt1:
-  #   Type: String
-  #   Description: 'Nome coda per catturare eventi generati da Gestore Disponibilita'
-
-  # PnSsDLQueueArnNotificheExt1:
-  #   Type: String
-  #   Description: 'ARN coda per catturare eventi generati da Gestore Disponibilita'
-
-  # PnSsDLQueueUrlNotificheExt1:
-  #   Type: String
-  #   Description: 'URL coda per catturare eventi generati da Gestore Disponibilita'
-
   PnSsGestoreBucketLambdaName:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
-
-  # PnSsEventRuleArnNotificheExt1:
-  #   Type: String
-  #   Description: 'Regola Event Bridge per pubblicare gli eventi relativi al Gestore Disponibilita sulla code per le piattaforme esterne'
-  
-  PnSsEventRuleArnStagingBucket:
-    Type: String
-    Description: 'Regola Event Bridge per pubblicare gli eventi di creazione oggetti nel Bucket Staging'
 
 #### Parametri presenti nel file json di configurazione  ###
   PresignedUrlMinutesLifespan:
@@ -263,8 +231,8 @@ Parameters:
 
   PnCoreTargetEventBus:
     Type: String
-    Description: 'ARN of Pn Core Event Bus where to forward external notifications'  
-    Default: 'arn:aws:events:eu-central-1:063295570123:event-bus/default'
+    Description: 'ARN of Pn Core Event Bus where to forward external notifications'
+
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
 
@@ -405,8 +373,32 @@ Resources:
             Resource:
               - !Sub '${PnSsEventBusArnExternalNotification}'
 
-  #####    External notifications    #####
+  #####    Staging Bucket Events Rule    #####
+  PnSsEventRuleStagingBucket:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: 'Rule catching object creation events in SS staging bucket'
+      EventPattern:   
+        source: 
+          - 'aws.s3' 
+        account: 
+          - !Sub ${AWS::AccountId}
+        region:
+          - !Sub ${AWS::Region}
+        detail-type: 
+          - 'Object Created'
+        detail:
+          bucket:
+            name: 
+              - !Ref PnSsStagingBucketName
+        resources:
+          - !Ref PnSsStagingBucketArn
+      State: 'ENABLED'
+      Targets:
+        - Arn: !Ref PnSsQueueArnStagingBucket
+          Id: "SQSTargetForStagingBucket"
 
+  #####    External notifications    #####
   PnSsRoleExternalNotifications:
     Type: AWS::IAM::Role
     Condition: PnCoreTargetEventBusExists
@@ -530,7 +522,7 @@ Resources:
         LambdaArns: !GetAtt PnSsGestoreBucket.Arn
         # KinesisDataArns:
         # KinesisFirehoseArns:
-        EventRuleArns: !Ref PnSsEventRuleArnStagingBucket
+        EventRuleArns: !GetAtt PnSsEventRuleStagingBucket.Arn
           # !Join
           # - ','
           # - - !Ref PnSsEventRuleArnStagingBucket

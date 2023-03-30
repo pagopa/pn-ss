@@ -566,8 +566,7 @@ Resources:
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
               Service:
                 - 'events.amazonaws.com'
-  
-
+ 
   #####    Gestore Bucket e risorse a lui afferenti    #####
   PnSsQueuePolicyGestoreBucketInvokeErrors:
     Type: AWS::SQS::QueuePolicy
@@ -651,6 +650,34 @@ Resources:
       Principal: s3.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Ref PnSsStagingBucketArn
+
+  PnSsGestoreBucketSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: 'Security Group per la Lambda Gestore Bucket (SafeStorage)'
+      GroupName: 'safe-storage-gestore-bucket'
+      SecurityGroupEgress: 
+        - CidrIp: String
+          CidrIpv6: String
+          Description: String
+          DestinationPrefixListId: String
+          DestinationSecurityGroupId: String
+          FromPort: Integer
+          IpProtocol: String
+          ToPort: Integer
+      SecurityGroupIngress: 
+        - CidrIp: String
+          CidrIpv6: String
+          Description: String
+          FromPort: Integer
+          IpProtocol: String
+          SourcePrefixListId: String
+          SourceSecurityGroupId: String
+          SourceSecurityGroupName: String
+          SourceSecurityGroupOwnerId: String
+          ToPort: Integer
+      VpcId: !Ref VpcId
+
 
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function

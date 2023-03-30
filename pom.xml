@@ -18,7 +18,6 @@
         <tag>HEAD</tag>
     </scm>
     <properties>
-        <java.version>17</java.version>
         <logbackjackson.version>0.1.5</logbackjackson.version>
     </properties>
 
@@ -144,7 +143,6 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
-            <version>5.3.23</version>
             <scope>provided</scope>
         </dependency>
 

@@ -11,18 +11,11 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class IdentitySecretTimemark {
+public class IdentitySecretTimeMark {
 
     @JsonProperty("user")
-    String userTimemark;
+    String userTimeMark;
 
     @JsonProperty("password")
-    String passwordTimemark;
-
-    @Override
-    public String toString() {
-        return "IdentitySecretTimemark{" +
-                "userTimemark='" + userTimemark + "'}";
-    }
-
+    String passwordTimeMark;
 }

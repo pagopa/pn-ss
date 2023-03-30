@@ -3,16 +3,14 @@ package it.pagopa.pnss.repositorymanager.entity;
 import java.util.List;
 
 import it.pagopa.pnss.common.model.entity.DocumentVersion;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.*;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
 @DynamoDbBean
 @Data
 @ToString
+@EqualsAndHashCode(callSuper = true)
 public class UserConfigurationEntity extends DocumentVersion {
 	
 	@Getter(AccessLevel.NONE)

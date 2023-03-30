@@ -1,12 +1,11 @@
-package it.pagopa.pnss.availableDocument;
+package it.pagopa.pnss.availabledocument;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.StreamRecord;
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.RecordProcessorCheckpointer;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.model.Record;
-import it.pagopa.pnss.availableDocument.event.StreamsRecordProcessor;
+import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.jetbrains.annotations.NotNull;
@@ -21,8 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static it.pagopa.pnss.availableDocument.event.ManageDynamoEvent.*;
-import static it.pagopa.pnss.availableDocument.event.StreamsRecordProcessor.*;
+import static it.pagopa.pnss.availabledocument.event.ManageDynamoEvent.*;
+import static it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor.*;
 import static it.pagopa.pnss.common.Constant.*;
 
 @SpringBootTestWebEnv

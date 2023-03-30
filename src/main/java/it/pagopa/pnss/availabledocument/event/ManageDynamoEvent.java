@@ -1,10 +1,10 @@
-package it.pagopa.pnss.availableDocument.event;
+package it.pagopa.pnss.availabledocument.event;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import it.pagopa.pnss.availableDocument.dto.NotificationMessage;
+import it.pagopa.pnss.availabledocument.dto.NotificationMessage;
+import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.util.Date;
@@ -60,13 +60,13 @@ public class ManageDynamoEvent {
 
         try {
             String event = objMap.writeValueAsString(message);
-            return creatPutEventRequestEntry(event,docEntity.get(DOCUMENTKEY_KEY).getS(), disponibilitaDocumentiEventBridge );
+            return creatPutEventRequestEntry(event, disponibilitaDocumentiEventBridge );
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
     }
 
-    private PutEventsRequestEntry creatPutEventRequestEntry(String event, String detailType, String disponibilitaDocumentiEventBridge) {
+    private PutEventsRequestEntry creatPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge) {
         return  PutEventsRequestEntry.builder()
                 .time(new Date().toInstant())
                 .source(GESTORE_DISPONIBILITA_EVENT_NAME)

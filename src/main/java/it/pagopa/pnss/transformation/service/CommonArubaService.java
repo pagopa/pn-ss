@@ -76,8 +76,8 @@ public abstract class CommonArubaService {
 
     public void logCallAruba(SignRequestV2 signRequestV2) {
         if (Boolean.TRUE.equals(enableArubaLog)) {
-            var identity = signRequestV2.getIdentity();
-            log.info("<--- CALL TO ARUBA SIGN SERVICE ---> User : {}, Delegated domain : {}, Delegated User : {}, Type Otp Auth : {}, Otp Pwd : {}", identity.getUser(), identity.getDelegatedDomain(), identity.getDelegatedUser(), identity.getTypeOtpAuth(), identity.getOtpPwd());
+            var signRequestIdentity = signRequestV2.getIdentity();
+            log.info("<--- CALL TO ARUBA SIGN SERVICE ---> User : {}, Delegated domain : {}, Delegated User : {}, Type Otp Auth : {}, Otp Pwd : {}", signRequestIdentity.getUser(), signRequestIdentity.getDelegatedDomain(), signRequestIdentity.getDelegatedUser(), signRequestIdentity.getTypeOtpAuth(), signRequestIdentity.getOtpPwd());
         }
     }
 

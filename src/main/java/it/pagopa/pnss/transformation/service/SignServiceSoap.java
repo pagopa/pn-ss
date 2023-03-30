@@ -104,33 +104,41 @@ public class SignServiceSoap {
 
     public Mono<SignReturnV2> pkcs7signV2(byte[] buf, Boolean marcatura) {
         return Mono.fromCallable(() -> {
-            var signRequestV2 = createAuthenticatedSignRequestV2();
-            signRequestV2.setStream(new DataHandler(new ByteArrayDataSource(buf, APPLICATION_OCTET_STREAM_VALUE)));
-            signRequestV2.setTransport(TypeTransport.STREAM);
-            signRequestV2.setRequiredmark(marcatura);
-            setSignRequestV2WithTsaAuth(marcatura, signRequestV2);
-            return signRequestV2;
-        }).map(signRequestV2 -> {
-            var pkcs7SignV2 = new Pkcs7SignV2();
-            pkcs7SignV2.setSignRequestV2(signRequestV2);
-            return pkcs7SignV2;
-        }).flatMap(pkcs7SignV2 -> Mono.create(sink -> arubaSignService.pkcs7SignV2Async(pkcs7SignV2, sinkSuccessOrError(sink))));
+                       var signRequestV2 = createAuthenticatedSignRequestV2();
+                       signRequestV2.setStream(new DataHandler(new ByteArrayDataSource(buf, APPLICATION_OCTET_STREAM_VALUE)));
+                       signRequestV2.setTransport(TypeTransport.STREAM);
+                       signRequestV2.setRequiredmark(marcatura);
+                       setSignRequestV2WithTsaAuth(marcatura, signRequestV2);
+                       return signRequestV2;
+                   })
+                   .map(signRequestV2 -> {
+                       var pkcs7SignV2 = new Pkcs7SignV2();
+                       pkcs7SignV2.setSignRequestV2(signRequestV2);
+                       return pkcs7SignV2;
+                   })
+                   .flatMap(pkcs7SignV2 -> Mono.create(sink -> arubaSignService.pkcs7SignV2Async(pkcs7SignV2, sinkSuccessOrError(sink))))
+                   .cast(Pkcs7SignV2Response.class)
+                   .map(Pkcs7SignV2Response::getReturn);
     }
 
     public Mono<SignReturnV2> xmlSignature(String contentType, InputStream xml, Boolean marcatura) {
         return Mono.fromCallable(() -> {
-            var signRequestV2 = createAuthenticatedSignRequestV2();
-            signRequestV2.setStream(new DataHandler(XMLMessage.createDataSource(contentType, xml)));
-            signRequestV2.setTransport(TypeTransport.STREAM);
-            signRequestV2.setRequiredmark(marcatura);
-            return signRequestV2;
-        }).map(signRequestV2 -> {
-            var xmlsignature = new Xmlsignature();
-            var xmlSignatureParameter = new XmlSignatureParameter();
-            xmlSignatureParameter.setType(XMLENVELOPED);
-            xmlsignature.setSignRequestV2(signRequestV2);
-            xmlsignature.setParameter(xmlSignatureParameter);
-            return xmlsignature;
-        }).flatMap(xmlsignature -> Mono.create(sink -> arubaSignService.xmlsignature(xmlsignature, sinkSuccessOrError(sink))));
+                       var signRequestV2 = createAuthenticatedSignRequestV2();
+                       signRequestV2.setStream(new DataHandler(XMLMessage.createDataSource(contentType, xml)));
+                       signRequestV2.setTransport(TypeTransport.STREAM);
+                       signRequestV2.setRequiredmark(marcatura);
+                       return signRequestV2;
+                   })
+                   .map(signRequestV2 -> {
+                       var xmlsignature = new Xmlsignature();
+                       var xmlSignatureParameter = new XmlSignatureParameter();
+                       xmlSignatureParameter.setType(XMLENVELOPED);
+                       xmlsignature.setSignRequestV2(signRequestV2);
+                       xmlsignature.setParameter(xmlSignatureParameter);
+                       return xmlsignature;
+                   })
+                   .flatMap(xmlsignature -> Mono.create(sink -> arubaSignService.xmlsignature(xmlsignature, sinkSuccessOrError(sink))))
+                   .cast(XmlsignatureResponse.class)
+                   .map(XmlsignatureResponse::getReturn);
     }
 }

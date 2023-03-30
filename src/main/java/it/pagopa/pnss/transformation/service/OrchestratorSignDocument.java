@@ -68,7 +68,7 @@ public class OrchestratorSignDocument {
                         try {
                             if (contentType.equals(Constant.APPLICATION_PDF)) {
                             	log.info("step 4: application pdf");
-                                signReturnV2 = signServiceSoap.singnPdfDocument(fileInput, marcatura);
+                                signReturnV2 = signServiceSoap.signPdfDocument(fileInput, marcatura);
                             } else {
                             	log.info("step 4: not application pdf");
                                 signReturnV2 = signServiceSoap.pkcs7signV2(fileInput, marcatura);

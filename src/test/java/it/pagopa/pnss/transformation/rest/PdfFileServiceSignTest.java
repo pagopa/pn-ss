@@ -2,9 +2,8 @@ package it.pagopa.pnss.transformation.rest;
 
 import com.sun.xml.ws.util.ByteArrayDataSource;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.transformation.model.GenericFileSignReturnV2;
 import it.pagopa.pnss.transformation.model.InputPdfFileSignRequestV2;
-import it.pagopa.pnss.transformation.model.PdfFileSignReturnV2;
-import it.pagopa.pnss.transformation.service.OrchestratorSignDocument;
 import it.pagopa.pnss.transformation.service.SignServiceSoap;
 import it.pagopa.pnss.transformation.wsdl.Auth;
 import it.pagopa.pnss.transformation.wsdl.SignRequestV2;
@@ -15,12 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
@@ -30,8 +25,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -65,7 +58,7 @@ public class PdfFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
 
 
-        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        GenericFileSignReturnV2 response = service.callArubaSignPdfFile(input);
         Assertions.assertNotNull(response);
     }
 
@@ -95,7 +88,7 @@ public class PdfFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
 
 
-        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        GenericFileSignReturnV2 response = service.callArubaSignPdfFile(input);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(response.getCode(),"0002");
         Assertions.assertEquals(response.getDescription(),"STREAM EMPTY" );
@@ -116,7 +109,7 @@ public class PdfFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
 
 
-        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        GenericFileSignReturnV2 response = service.callArubaSignPdfFile(input);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(response.getCode(),"0005");
         Assertions.assertEquals(response.getDescription(),"Trasport Method not Valid");;
@@ -137,7 +130,7 @@ public class PdfFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
 
 
-        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        GenericFileSignReturnV2 response = service.callArubaSignPdfFile(input);
         Assertions.assertNotNull(response);
 
         Assertions.assertEquals(response.getCode(),"0003");
@@ -158,7 +151,7 @@ public class PdfFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
 
 
-        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        GenericFileSignReturnV2 response = service.callArubaSignPdfFile(input);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(response.getCode(),"0002");
         Assertions.assertEquals(response.getDescription(),"BYNARY INPUT EMPTY" );
@@ -178,7 +171,7 @@ public class PdfFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
         input.setUrl("http://localhost:8080");
 
-        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        GenericFileSignReturnV2 response = service.callArubaSignPdfFile(input);
         Assertions.assertNotNull(response);
         //TODO verificare
 //        Assertions.assertEquals(response.getCode(),"500");
@@ -199,7 +192,7 @@ public class PdfFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
 
 
-        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        GenericFileSignReturnV2 response = service.callArubaSignPdfFile(input);
         Assertions.assertNotNull(response);
         log.info("PdfFileServiceSignTest.testPDFFileCertIdNotcorrect: response.getCode() = {}",response.getCode());
         log.info("PdfFileServiceSignTest.testPDFFileCertIdNotcorrect: response.getDescription() = {}",response.getDescription());
@@ -224,7 +217,7 @@ public class PdfFileServiceSignTest {
         input.setInfoTosigned(signRequestV2);
 
 
-        PdfFileSignReturnV2 response = service.callArubaSignPdfFile(input);
+        GenericFileSignReturnV2 response = service.callArubaSignPdfFile(input);
         Assertions.assertNotNull(response);
     }
 

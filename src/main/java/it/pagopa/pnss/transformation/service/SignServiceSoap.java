@@ -144,7 +144,7 @@ public class SignServiceSoap extends CommonArubaService {
     }
 
 
-    public PdfFileSignReturnV2 callArubaSignPdfFile(InputPdfFileSignRequestV2 input) throws JAXBException, TypeOfTransportNotImplemented_Exception {
+    public PdfFileSignReturnV2 callArubaSignPdfFile(InputPdfFileSignRequestV2 input) {
         logCallAruba(input.getInfoTosigned());
 
         PdfFileSignReturnV2 response = new PdfFileSignReturnV2();
@@ -174,7 +174,7 @@ public class SignServiceSoap extends CommonArubaService {
 
         return  response;
     }
-    public GenericFileSignReturnV2 callGenericFile(GenericFileSignRequestV2 input) throws JAXBException, TypeOfTransportNotImplemented_Exception {
+    public GenericFileSignReturnV2 callGenericFile(GenericFileSignRequestV2 input) {
         logCallAruba(input.getInfoTosigned());
         GenericFileSignReturnV2 response = new GenericFileSignReturnV2();
 

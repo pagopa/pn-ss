@@ -34,7 +34,7 @@ public abstract class CommonArubaService {
 
 
     Auth identity;
-    
+
     @Value("${aruba.cert_id}")
     public String certId;
     @Value("${aruba.sign.wsdl.url}")
@@ -44,10 +44,9 @@ public abstract class CommonArubaService {
     @Value("${aruba.qname}")
     public String arubaQname;
     @Value("${aruba.sign.service}")
-    public String arubaSignatureService; 
+    public String arubaSignatureService;
 
-    protected CommonArubaService() throws MalformedURLException {
-//    	arubaSignService = createArubaService(null);
+    protected CommonArubaService() {
     }
 
     public Auth createIdentity(Auth auth) {
@@ -72,24 +71,14 @@ public abstract class CommonArubaService {
         URL newEndpoint = new URL(url);
         QName qname = new QName(arubaQname, arubaSignatureService);
         return new ArubaSignServiceService(newEndpoint, qname);
-
     }
 
 
-    public void logCallAruba(SignRequestV2 signRequestV2) throws JAXBException {
-        JAXBContext jaxbContext = JAXBContext.newInstance(SignRequestV2.class);
-        Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
-        jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-        JAXBElement<SignRequestV2> jaxbElement
-                = new JAXBElement<>(new QName("", "SignRequest"), SignRequestV2.class, signRequestV2);
-        if (Boolean.TRUE.equals(enableArubaLog)) jaxbMarshaller.marshal(jaxbElement, System.out);
+    public void logCallAruba(SignRequestV2 signRequestV2) {
+        if (Boolean.TRUE.equals(enableArubaLog)) {
+            var identity = signRequestV2.getIdentity();
+            log.info("<--- CALL TO ARUBA SIGN SERVICE ---> User : {}, Delegated domain : {}, Delegated User : {}, Type Otp Auth : {}, Otp Pwd : {}", identity.getUser(), identity.getDelegatedDomain(), identity.getDelegatedUser(), identity.getTypeOtpAuth(), identity.getOtpPwd());
+        }
     }
 
-    public ArubaSignServiceService getArubaSignService() {
-        return arubaSignService;
-    }
-
-    public void setArubaSignService(ArubaSignServiceService arubaSignService) {
-        this.arubaSignService = arubaSignService;
-    }
 }

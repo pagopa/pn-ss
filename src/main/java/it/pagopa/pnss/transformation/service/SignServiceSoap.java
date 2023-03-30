@@ -51,7 +51,7 @@ public class SignServiceSoap extends CommonArubaService {
     private static final String TIMEMARK_URL = "SignServiceSoap.singnPdfDocument() : timemarkUrl = {}";
     private static final String TSA_IDENTITY_URL = "SignServiceSoap.singnPdfDocument() : tsaIdentity = {}";
 
-    protected SignServiceSoap(IdentitySecretTimemark identitySecretTimemark) throws MalformedURLException {
+    protected SignServiceSoap(IdentitySecretTimemark identitySecretTimemark) {
         this.identitySecretTimemark = identitySecretTimemark;
     }
 
@@ -122,7 +122,7 @@ public class SignServiceSoap extends CommonArubaService {
         return  signReturnV2;
     }
 
-    public SignReturnV2 xmlsignature(String contentType, InputStream xml, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, JAXBException, MalformedURLException {
+    public SignReturnV2 xmlsignature(String contentType, InputStream xml, Boolean marcatura) throws TypeOfTransportNotImplemented_Exception, MalformedURLException {
         SignRequestV2 signRequestV2 = new SignRequestV2();
         signRequestV2.setCertID(certificationID);
         signRequestV2.setIdentity(createIdentity(null));
@@ -144,7 +144,7 @@ public class SignServiceSoap extends CommonArubaService {
     }
 
 
-    public PdfFileSignReturnV2 callArubaSignPdfFile(InputPdfFileSignRequestV2 input) throws JAXBException, TypeOfTransportNotImplemented_Exception {
+    public PdfFileSignReturnV2 callArubaSignPdfFile(InputPdfFileSignRequestV2 input) {
         logCallAruba(input.getInfoTosigned());
 
         PdfFileSignReturnV2 response = new PdfFileSignReturnV2();
@@ -174,7 +174,7 @@ public class SignServiceSoap extends CommonArubaService {
 
         return  response;
     }
-    public GenericFileSignReturnV2 callGenericFile(GenericFileSignRequestV2 input) throws JAXBException, TypeOfTransportNotImplemented_Exception {
+    public GenericFileSignReturnV2 callGenericFile(GenericFileSignRequestV2 input) {
         logCallAruba(input.getInfoTosigned());
         GenericFileSignReturnV2 response = new GenericFileSignReturnV2();
 

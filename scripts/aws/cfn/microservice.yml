@@ -264,6 +264,7 @@ Parameters:
   PnCoreTargetEventBus:
     Type: String
     Description: 'ARN of Pn Core Event Bus where to forward external notifications'  
+    Default: 'arn:aws:events:eu-central-1:063295570123:event-bus/default'
 
 Resources:
 

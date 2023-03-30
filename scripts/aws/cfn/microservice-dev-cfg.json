@@ -17,6 +17,6 @@
     "PnSsIdentityTimemark": "pn/identity/timemark",
     "PnSsIdentitySignature": "pn/identity/signature",
     "PnSsTimemarkUrl": "https://servizi.arubapec.it/tsa/ngrequest.php",
-    "PnCoreTargetEventBus": "arn:aws:events:eu-central-1:063295570123:event-bus/default"
+    "PnCoreTargetEventBus": ""
   }
 }

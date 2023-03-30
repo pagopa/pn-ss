@@ -232,6 +232,7 @@ Parameters:
   PnCoreTargetEventBus:
     Type: String
     Description: 'ARN of Pn Core Event Bus where to forward external notifications'
+    Default: ''
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]

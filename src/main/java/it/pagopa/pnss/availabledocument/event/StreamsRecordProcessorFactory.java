@@ -1,10 +1,7 @@
-package it.pagopa.pnss.availableDocument.event;
+package it.pagopa.pnss.availabledocument.event;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import org.springframework.stereotype.Service;
 
 public class StreamsRecordProcessorFactory implements IRecordProcessorFactory {
     private String disponibilitaDOcumentiEventBridge;

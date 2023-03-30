@@ -1,4 +1,4 @@
-package it.pagopa.pnss.availableDocument.event;
+package it.pagopa.pnss.availabledocument.event;
 
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor;

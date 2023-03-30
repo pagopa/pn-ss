@@ -1,4 +1,4 @@
-package it.pagopa.pnss.availableDocument.dto;
+package it.pagopa.pnss.availabledocument.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

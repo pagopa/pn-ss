@@ -184,9 +184,9 @@ Parameters:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
 
-  PnSsEventRuleArnNotificheExt1:
-    Type: String
-    Description: 'Regola Event Bridge per pubblicare gli eventi relativi al Gestore Disponibilita sulla code per le piattaforme esterne'
+  # PnSsEventRuleArnNotificheExt1:
+  #   Type: String
+  #   Description: 'Regola Event Bridge per pubblicare gli eventi relativi al Gestore Disponibilita sulla code per le piattaforme esterne'
   
   PnSsEventRuleArnStagingBucket:
     Type: String
@@ -265,6 +265,8 @@ Parameters:
     Type: String
     Description: 'ARN of Pn Core Event Bus where to forward external notifications'  
     Default: 'arn:aws:events:eu-central-1:063295570123:event-bus/default'
+Conditions:
+  PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
 
 Resources:
 
@@ -382,7 +384,6 @@ Resources:
               - 'sqs:SendMessage'
             Resource:
               - !Sub '${PnSsQueueArnStagingBucket}'
-              - !Sub '${PnSsQueueArnNotificheExt1}'
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -408,6 +409,7 @@ Resources:
 
   PnSsRoleExternalNotifications:
     Type: AWS::IAM::Role
+    Condition: PnCoreTargetEventBusExists
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -434,6 +436,7 @@ Resources:
 
   PnSsEventsDLQueueExternalNotifications:
     Type: AWS::SQS::Queue
+    Condition: PnCoreTargetEventBusExists
     Properties:
       SqsManagedSseEnabled: True
       MessageRetentionPeriod: 1209600
@@ -442,6 +445,7 @@ Resources:
 
   PnSsQueuePolicyExternalNotifications:
     Type: AWS::SQS::QueuePolicy
+    Condition: PnCoreTargetEventBusExists
     Properties: 
       Queues: 
         - !Ref PnSsEventsDLQueueExternalNotifications
@@ -468,6 +472,7 @@ Resources:
 
   PnSsEventRuleExternalNotifications:
     Type: AWS::Events::Rule
+    Condition: PnCoreTargetEventBusExists
     Properties:
       EventBusName: !Ref PnSsEventBusNameExternalNotification
       Description: 'Rule forwarding events to Pn Core EventBus'
@@ -522,15 +527,13 @@ Resources:
           - ','
           - - !Ref PnSsQueueArnStagingBucket
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
-            - !Ref PnSsQueueArnNotificheExt1
         LambdaArns: !GetAtt PnSsGestoreBucket.Arn
         # KinesisDataArns:
         # KinesisFirehoseArns:
-        EventRuleArns:
-          !Join
-          - ','
-          - - !Ref PnSsEventRuleArnNotificheExt1
-            - !Ref PnSsEventRuleArnStagingBucket
+        EventRuleArns: !Ref PnSsEventRuleArnStagingBucket
+          # !Join
+          # - ','
+          # - - !Ref PnSsEventRuleArnStagingBucket
         BucketNames:
           !Join
           - ','

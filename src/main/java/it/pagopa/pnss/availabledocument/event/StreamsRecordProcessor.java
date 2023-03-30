@@ -1,4 +1,4 @@
-package it.pagopa.pnss.availableDocument.event;
+package it.pagopa.pnss.availabledocument.event;
 
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor;
@@ -7,12 +7,12 @@ import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownInput;
 import com.amazonaws.services.kinesis.model.Record;
+import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
-import software.amazon.awssdk.services.eventbridge.model.PutEventsResponse;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -59,7 +59,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 PutEventsRequest eventsRequest = PutEventsRequest.builder()
                         .entries(requestEntries)
                         .build();
-                PutEventsResponse result = eventBridgeClient.putEvents(eventsRequest);
+                eventBridgeClient.putEvents(eventsRequest);
 
             }
         }catch (Exception e ){
@@ -71,12 +71,12 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     @NotNull
     public List<PutEventsRequestEntry> findEventSendToBridge (ProcessRecordsInput processRecordsInput) {
         List<PutEventsRequestEntry> requestEntries = new ArrayList<>();
-        for (Record record : processRecordsInput.getRecords()) {
-            String data = new String(record.getData().array(), Charset.forName("UTF-8"));
+        for (Record recordEvent : processRecordsInput.getRecords()) {
+            String data = new String(recordEvent.getData().array(), Charset.forName("UTF-8"));
             log.info(data);
             log.info("--- START ---");
-            if (record instanceof RecordAdapter) {
-                com.amazonaws.services.dynamodbv2.model.Record streamRecord = ((RecordAdapter) record)
+            if (recordEvent instanceof RecordAdapter) {
+                com.amazonaws.services.dynamodbv2.model.Record streamRecord = ((RecordAdapter) recordEvent)
                         .getInternalObject();
                 PutEventsRequestEntry putEventsRequestEntry = null;
                 try{
@@ -111,7 +111,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         }
         catch (Exception e) {
             log.error("Errore nella commit dell'evento non mando nessun evento nuovo",e );
-            throw new RuntimeException(e);
+            throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
         return requestEntries;
     }

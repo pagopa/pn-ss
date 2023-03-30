@@ -7,6 +7,7 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,8 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -138,6 +141,32 @@ class FileMetadataUpdateApiControllerTest {
 
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(SAVED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isForbidden();
 	}
+
+    @Test
+    void testErrorLookUpDocTypes() {
+        var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(PN_AAR);
+        var document = new Document().documentType(documentType1);
+        var documentResponse = new DocumentResponse().document(document);
+        when(documentClientCall.getdocument(anyString())).thenReturn(Mono.just(documentResponse));
+
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
+
+        fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(PRELOADED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isNotFound();
+    }
+
+    @Test
+    void testErrorLookUpStatus() {
+        var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(PN_AAR);
+        var document = new Document().documentType(documentType1);
+        var documentResponse = new DocumentResponse().document(document);
+        when(documentClientCall.getdocument(anyString())).thenReturn(Mono.just(documentResponse));
+
+        var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(ATTACHED, new CurrentStatus().technicalState("")))).tipoDocumento(PN_AAR);
+        var documentTypeResponse = new DocumentTypeResponse().docType(documentType2);
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));
+
+        fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(PRELOADED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isNotFound();
+    }
 
 	@Test
 	void testFileMetadataUpdateOk() {

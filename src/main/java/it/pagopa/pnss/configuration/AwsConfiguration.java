@@ -1,9 +1,5 @@
 package it.pagopa.pnss.configuration;
 
-import java.net.URI;
-import java.util.Collections;
-
-import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
@@ -22,16 +18,14 @@ import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.core.QueueMessagingTemplate;
-import it.pagopa.pnss.availableDocument.event.StreamsRecordProcessorFactory;
+import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessorFactory;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
+import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -53,6 +47,9 @@ import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
+
+import java.net.URI;
+import java.util.Collections;
 
 @Configuration
 public class AwsConfiguration {
@@ -88,10 +85,6 @@ public class AwsConfiguration {
 
     @Value("${test.event.bridge:#{null}}")
     private String testEventBridge;
-    @Autowired
-    DynamoEventStreamName dynamoEventStreamName;
-    @Autowired
-    AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
 
     private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
@@ -215,7 +208,7 @@ public class AwsConfiguration {
     }
 
     @Bean
-    public CommandLineRunner schedulingRunner(TaskExecutor executor) {
+    public CommandLineRunner schedulingRunner(TaskExecutor executor, DynamoEventStreamName dynamoEventStreamName, AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName) {
         return new CommandLineRunner() {
             public void run(String... args) throws Exception {
                 AWSCredentialsProvider awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();

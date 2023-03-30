@@ -48,7 +48,7 @@ public class OrchestratorSignDocument {
 
     public Mono<Void> incomingMessageFlow(String key, String bucketName, Boolean marcatura) {
         log.info("chiamo la document con keyname :"+key);
-        return Mono.fromCallable(() -> validationField())
+        return Mono.fromCallable(this::validationField)
                 .flatMap(voidMono -> documentClientCall.getdocument(key))
                 .flatMap(documentResponse -> {
                     try {
@@ -65,7 +65,6 @@ public class OrchestratorSignDocument {
 
                         String contentType = doc.getContentType();
                         SignReturnV2 signReturnV2 = null;
-                        try {
                             if (contentType.equals(Constant.APPLICATION_PDF)) {
                             	log.info("step 4: application pdf");
                                 signReturnV2 = signServiceSoap.singnPdfDocument(fileInput, marcatura);
@@ -76,10 +75,6 @@ public class OrchestratorSignDocument {
                             log.info("step 5: signReturnV2 = {}", signReturnV2);
                             log.info("step 6: signReturnV2.getStatus() = {}", signReturnV2.getStatus());
 
-                        } catch (TypeOfTransportNotImplemented_Exception|JAXBException|MalformedURLException e) {
-                        	log.error("step error",e);
-                            throw new ArubaSignException(key);
-                        }
                         log.info("\n--- ARUBA RESPONSE "+
                                  "\n--- ARUBA RETURN CODE : "+signReturnV2.getReturnCode()+
                                  "\n--- ARUBA STATUS      : "+signReturnV2.getStatus()+
@@ -96,6 +91,9 @@ public class OrchestratorSignDocument {
                         throw new S3BucketException.BucketNotPresentException(nsbe.getMessage());
                     }catch (NoSuchKeyException nske){
                         throw new S3BucketException.NoSuchKeyException(key);
+                    } catch (TypeOfTransportNotImplemented_Exception|JAXBException|MalformedURLException e) {
+                        log.error("step error",e);
+                        throw new ArubaSignException(key);
                     }
 
 

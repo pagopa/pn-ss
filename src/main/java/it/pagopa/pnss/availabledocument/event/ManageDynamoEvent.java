@@ -10,7 +10,7 @@ import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 import java.util.Date;
 import java.util.Map;
 
-import static it.pagopa.pnss.common.Constant.*;
+import static it.pagopa.pnss.common.constant.Constant.*;
 
 public class ManageDynamoEvent {
 

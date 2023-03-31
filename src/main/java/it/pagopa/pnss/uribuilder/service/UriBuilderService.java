@@ -140,6 +140,9 @@ public class UriBuilderService extends CommonS3ObjectService {
                            case IMAGE_TIFF:
                                documenKeyTmp += FILE_EXTENSION_TIFF;
                                break;
+                           case APPLICATION_XML:
+                               documenKeyTmp += FILE_EXTENSION_XML;
+                               break;
                            default:
                                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unrecognized Content Type"));
                        }

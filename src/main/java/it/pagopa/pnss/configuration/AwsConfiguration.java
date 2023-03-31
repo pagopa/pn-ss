@@ -18,6 +18,7 @@ import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.core.QueueMessagingTemplate;
+import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
 import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessorFactory;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
@@ -30,6 +31,7 @@ import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.handler.annotation.support.PayloadMethodArgumentResolver;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -52,6 +54,7 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 
 import java.net.URI;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
 public class AwsConfiguration {
@@ -88,8 +91,6 @@ public class AwsConfiguration {
     private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
 
-//  <-- spring-cloud-starter-aws-messaging -->
-
     public AwsConfiguration(AwsConfigurationProperties awsConfigurationProperties, DynamoEventStreamName dynamoEventStreamName,
                             AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName) {
         this.awsConfigurationProperties = awsConfigurationProperties;
@@ -97,22 +98,23 @@ public class AwsConfiguration {
         this.availabelDocumentEventBridgeName = availabelDocumentEventBridgeName;
     }
 
-    @Bean
-    public QueueMessagingTemplate queueMessagingTemplate(final AmazonSQSAsync amazonSQSAsync) {
-        return new QueueMessagingTemplate(amazonSQSAsync);
-    }
+    //  <-- spring-cloud-starter-aws-messaging -->
 
     @Bean
-    public QueueMessageHandlerFactory queueMessageHandlerFactory(final ObjectMapper objectMapper, final AmazonSQSAsync amazonSQSAsync) {
+    public QueueMessageHandlerFactory queueMessageHandlerFactory(ObjectMapper objectMapper, LocalValidatorFactoryBean validator) {
 
-        final var queueHandlerFactory = new QueueMessageHandlerFactory();
+        final var queueMessageHandlerFactory = new QueueMessageHandlerFactory();
         final var converter = new MappingJackson2MessageConverter();
 
-        queueHandlerFactory.setAmazonSqs(amazonSQSAsync);
         converter.setObjectMapper(objectMapper);
-        queueHandlerFactory.setArgumentResolvers(Collections.singletonList(new PayloadMethodArgumentResolver(converter)));
+        converter.setStrictContentTypeMatch(false);
 
-        return queueHandlerFactory;
+        final var acknowledgmentResolver = new AcknowledgmentHandlerMethodArgumentResolver("Acknowledgment");
+
+        queueMessageHandlerFactory.setArgumentResolvers(List.of(acknowledgmentResolver,
+                                                                new PayloadMethodArgumentResolver(converter, validator)));
+
+        return queueMessageHandlerFactory;
     }
 
 //  <-- AWS SDK for Java v2 -->

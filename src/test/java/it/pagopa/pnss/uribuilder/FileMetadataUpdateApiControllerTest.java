@@ -7,7 +7,6 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -149,7 +148,7 @@ class FileMetadataUpdateApiControllerTest {
         var documentResponse = new DocumentResponse().document(document);
         when(documentClientCall.getdocument(anyString())).thenReturn(Mono.just(documentResponse));
 
-        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.error(new WebClientResponseException(404, "Not Found", null, null, null)));
 
         fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(PRELOADED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isNotFound();
     }

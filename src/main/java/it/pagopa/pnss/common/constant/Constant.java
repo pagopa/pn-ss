@@ -1,4 +1,4 @@
-package it.pagopa.pnss.common;
+package it.pagopa.pnss.common.constant;
 
 import java.util.List;
 import java.util.Map;

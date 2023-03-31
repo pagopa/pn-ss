@@ -12,7 +12,10 @@ import lombok.experimental.FieldDefaults;
 public class CreationDetail {
 
     String version;
+
+    @JsonProperty("bucket")
     BucketOriginDetail bucketOriginDetail;
+
     S3Object object;
 
     @JsonProperty("request-id")

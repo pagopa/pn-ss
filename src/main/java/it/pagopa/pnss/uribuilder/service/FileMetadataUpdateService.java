@@ -131,9 +131,9 @@ public class FileMetadataUpdateService {
         return docTypesClientCall.getdocTypes(documentType)//
                 .map(item -> item.getDocType().getStatuses().get(logicalState).getTechnicalState())//
                 .onErrorResume(NullPointerException.class, e -> {
-                    String errorMsg = String.format("Status %s not found in DocumentType %s", logicalState, documentType);
-                    log.error("NullPointerException: {}", errorMsg);
-                    return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, errorMsg));
+					String errorMsg = String.format("Status %s is not valid for DocumentType %s", logicalState, documentType);
+					log.error("NullPointerException: {}", errorMsg);
+					return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg));
                 });
     }
 

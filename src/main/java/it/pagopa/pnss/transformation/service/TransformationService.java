@@ -5,7 +5,6 @@ import io.awspring.cloud.messaging.listener.Acknowledgment;
 import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pnss.common.Constant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
@@ -22,6 +21,7 @@ import reactor.util.retry.Retry;
 
 import static it.pagopa.pnss.common.utils.SqsUtils.logIncomingMessage;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 
 @Service
@@ -56,7 +56,8 @@ public class TransformationService {
                 return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
             })
             .doOnDiscard(CreatedS3ObjectDto.class,
-                         createdS3ObjectDto -> log.debug("The new staging bucket object with id {} was discarded", newStagingBucketObject.getId()))
+                         createdS3ObjectDto -> log.debug("The new staging bucket object with id {} was discarded",
+                                                         newStagingBucketObject.getId()))
             .flatMap(createdS3ObjectDto -> {
                 var detailObject = createdS3ObjectDto.getCreationDetailObject();
                 return objectTransformation(detailObject.getObject().getKey(), detailObject.getBucketOriginDetail().getName(), true);
@@ -80,13 +81,16 @@ public class TransformationService {
 
                        log.debug("Content type of document with key {}", document.getDocumentKey());
 
-                       if (document.getContentType().equals(APPLICATION_PDF_VALUE)) {
-                           return arubaSignServiceCall.signPdfDocument(s3ObjectBytes, marcatura);
-                       } else {
-                           return arubaSignServiceCall.pkcs7signV2(s3ObjectBytes, marcatura);
-                       }
-
+                       return switch (document.getContentType()) {
+                           case APPLICATION_PDF_VALUE -> arubaSignServiceCall.signPdfDocument(s3ObjectBytes, marcatura);
+                           case APPLICATION_XML_VALUE -> arubaSignServiceCall.xmlSignature(s3ObjectBytes, marcatura);
+                           default -> arubaSignServiceCall.pkcs7signV2(s3ObjectBytes, marcatura);
+                       };
                    })
+                   .doOnNext(signReturnV2 -> log.debug("Aruba sign service return status {}, return code {}, description {}",
+                                                       signReturnV2.getStatus(),
+                                                       signReturnV2.getReturnCode(),
+                                                       signReturnV2.getDescription()))
                    .flatMap(signReturnV2 -> changeFromStagingBucketToHotBucket(key, signReturnV2.getBinaryoutput(), stagingBucketName))
                    .retryWhen(Retry.max(10).filter(ArubaSignException.class::isInstance).onRetryExhaustedThrow((retrySpec, retrySignal) -> {
                        throw new ArubaSignExceptionLimitCall(key);

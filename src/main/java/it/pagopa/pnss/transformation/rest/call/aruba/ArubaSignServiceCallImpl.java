@@ -14,12 +14,13 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 
-import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 
 import static it.pagopa.pnss.transformation.wsdl.XmlSignatureType.XMLENVELOPED;
 import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @Service
 @Slf4j
@@ -93,7 +94,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
             var tsaAuth = new TsaAuth();
             tsaAuth.setUser(identitySecretTimemark.getUserTimeMark());
             tsaAuth.setPassword(identitySecretTimemark.getPasswordTimeMark());
-            tsaAuth.setTsaurl(timeMarkUrl);
+            tsaAuth.setTsaurl(timeMarkUrl != null ? timeMarkUrl : null);
             signRequestV2.setTsaIdentity(tsaAuth);
         }
     }
@@ -150,10 +151,11 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
     }
 
     @Override
-    public Mono<SignReturnV2> xmlSignature(String contentType, InputStream xml, Boolean marcatura) {
+    public Mono<SignReturnV2> xmlSignature(byte[] xmlBytes, Boolean marcatura) {
         return Mono.fromCallable(() -> {
                        var signRequestV2 = createAuthenticatedSignRequestV2();
-                       signRequestV2.setStream(new DataHandler(XMLMessage.createDataSource(contentType, xml)));
+                       signRequestV2.setStream(new DataHandler(XMLMessage.createDataSource(APPLICATION_XML_VALUE,
+                                                                                           new ByteArrayInputStream(xmlBytes))));
                        signRequestV2.setTransport(TypeTransport.STREAM);
                        signRequestV2.setRequiredmark(marcatura);
                        return signRequestV2;

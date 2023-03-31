@@ -18,7 +18,6 @@ import reactor.core.publisher.Mono;
 import reactor.util.function.Tuples;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
 
 @Service
 @Slf4j
@@ -50,7 +49,6 @@ public class FileMetadataUpdateService {
 					   } else {
 						   checkedStatus = Mono.just("");
 					   }
-
 					   return Mono.zip(userConfigClientCall.getUser(xPagopaSafestorageCxId), checkedStatus)
 							   .map(objects -> Tuples.of(document, objects.getT1(), objects.getT2()));
 				   })

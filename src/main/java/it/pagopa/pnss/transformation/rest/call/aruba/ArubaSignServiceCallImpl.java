@@ -41,7 +41,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
 
     private final Long arubaSignTimeout;
 
-    UnaryOperator<Mono<SignReturnV2>> checkIfResponseIsOk = f -> f.handle((signRequestV2, sink) -> {
+    private static final UnaryOperator<Mono<SignReturnV2>> CHECK_IF_RESPONSE_IS_OK = f -> f.handle((signRequestV2, sink) -> {
         if (signRequestV2.getStatus().equals("KO")) {
             sink.error(new ArubaSignException());
         } else {
@@ -124,7 +124,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                                                                                                                                         res))))
                    .cast(PdfsignatureV2Response.class)
                    .map(PdfsignatureV2Response::getReturn)
-                   .transform(checkIfResponseIsOk);
+                   .transform(CHECK_IF_RESPONSE_IS_OK);
     }
 
     @Override
@@ -147,7 +147,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                                                                                                                                   res))))
                    .cast(Pkcs7SignV2Response.class)
                    .map(Pkcs7SignV2Response::getReturn)
-                   .transform(checkIfResponseIsOk);
+                   .transform(CHECK_IF_RESPONSE_IS_OK);
     }
 
     @Override
@@ -173,6 +173,6 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                                                                                                                                     res))))
                    .cast(XmlsignatureResponse.class)
                    .map(XmlsignatureResponse::getReturn)
-                   .transform(checkIfResponseIsOk);
+                   .transform(CHECK_IF_RESPONSE_IS_OK);
     }
 }

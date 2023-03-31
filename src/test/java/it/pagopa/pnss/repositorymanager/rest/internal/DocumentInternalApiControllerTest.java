@@ -1,8 +1,8 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
-import static it.pagopa.pnss.common.Constant.AVAILABLE;
-import static it.pagopa.pnss.common.Constant.FREEZED;
-import static it.pagopa.pnss.common.Constant.PN_NOTIFICATION_ATTACHMENTS;
+import static it.pagopa.pnss.common.constant.Constant.AVAILABLE;
+import static it.pagopa.pnss.common.constant.Constant.FREEZED;
+import static it.pagopa.pnss.common.constant.Constant.PN_NOTIFICATION_ATTACHMENTS;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.io.ByteArrayOutputStream;

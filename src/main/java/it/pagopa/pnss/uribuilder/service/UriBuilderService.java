@@ -44,7 +44,7 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.*;
 
-import static it.pagopa.pnss.common.Constant.*;
+import static it.pagopa.pnss.common.constant.Constant.*;
 
 @Service
 @Slf4j

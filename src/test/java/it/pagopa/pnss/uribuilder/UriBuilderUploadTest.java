@@ -1,6 +1,6 @@
 package it.pagopa.pnss.uribuilder;
 
-import static it.pagopa.pnss.common.Constant.*;
+import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -11,7 +11,6 @@ import java.util.List;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import org.apache.logging.log4j.core.util.Assert;
 import org.junit.jupiter.api.Test;

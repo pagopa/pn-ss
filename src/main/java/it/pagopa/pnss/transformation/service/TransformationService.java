@@ -21,6 +21,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import static it.pagopa.pnss.common.utils.SqsUtils.logIncomingMessage;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 
 @Service
@@ -79,7 +80,7 @@ public class TransformationService {
 
                        log.debug("Content type of document with key {}", document.getDocumentKey());
 
-                       if (document.getContentType().equals(Constant.APPLICATION_PDF)) {
+                       if (document.getContentType().equals(APPLICATION_PDF_VALUE)) {
                            return arubaSignServiceCall.signPdfDocument(s3ObjectBytes, marcatura);
                        } else {
                            return arubaSignServiceCall.pkcs7signV2(s3ObjectBytes, marcatura);

@@ -107,7 +107,7 @@ public class UriBuilderUploadTest {
     	log.debug("UriBulderUploadTest.testUrlGenStatusPre() : decommentare");
     	
         FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setContentType(IMAGE_TIFF);
+        fcr.setContentType(IMAGE_TIFF_VALUE);
         fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
         fcr.setStatus(PRELOADED);
         FileCreationResponse fcresp = new FileCreationResponse();
@@ -177,7 +177,7 @@ public class UriBuilderUploadTest {
     	log.debug("UriBulderUploadTest.testUrlGenerato() : decommentare");
     	
         FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setContentType(IMAGE_TIFF);
+        fcr.setContentType(IMAGE_TIFF_VALUE);
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("");
         FileCreationResponse fcresp = new FileCreationResponse();
@@ -276,7 +276,7 @@ public class UriBuilderUploadTest {
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
 
         FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setContentType(IMAGE_TIFF);
+        fcr.setContentType(IMAGE_TIFF_VALUE);
         fcr.setDocumentType("VALUE_FAULT");
         fcr.setStatus(PRELOADED);
         fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
@@ -344,7 +344,7 @@ public class UriBuilderUploadTest {
     void testIdClienteNonTrovatoUpload() {
 
         FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setContentType(IMAGE_TIFF);
+        fcr.setContentType(IMAGE_TIFF_VALUE);
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("");
 
@@ -360,7 +360,7 @@ public class UriBuilderUploadTest {
     @Test
     void testIdClienteNoPermessiUpload() {
         FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setContentType(IMAGE_TIFF);
+        fcr.setContentType(IMAGE_TIFF_VALUE);
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("");
         UserConfigurationResponse userConfig = new UserConfigurationResponse();

@@ -140,24 +140,6 @@ Resources:
       #   IntelligentTieringConfigurations
       # InventoryConfigurations:
       #   InventoryConfigurations
-      CorsConfiguration:  
-        CorsRules:
-          - AllowedHeaders:
-              - '*'
-            AllowedMethods:
-              - 'GET'
-            AllowedOrigins:
-              - '*'
-            MaxAge: 3600
-            Id: 'CORSRuleGET'
-          - AllowedHeaders:
-              - '*'
-            AllowedMethods:
-              - 'PUT'
-            AllowedOrigins:
-              - '*'
-            MaxAge: 3600
-            Id: 'CORSRulePUT'
       LifecycleConfiguration:
         Rules:
           - Id: 'PnSsAbortIncompleteMultipartUpload'

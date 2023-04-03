@@ -68,6 +68,11 @@ Parameters:
     Type: String
     Description: 'keep track of used projects commitIds'
 
+  PnCoreTargetEventBus:
+    Type: String
+    Description: 'ARN of Pn Core Event Bus where to forward external notifications'
+    Default: ''
+
   PnSsTableNameAnagraficaClient:
     Type: String
     Description: 'Nome della tabella SS Anagrafica Client'
@@ -230,10 +235,14 @@ Parameters:
     Type: String
     Description: 'empty'  
 
-  PnCoreTargetEventBus:
+  PnSsDefaultSecurityGroupNameSafeStorage:
     Type: String
-    Description: 'ARN of Pn Core Event Bus where to forward external notifications'
-    Default: ''
+    Description: 'Dummy default Security Group' 
+  
+  PnSsSecurityGroupNameSafeStorage:
+    Type: String
+    Description: 'GestoreBucket Security Group'  
+
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
@@ -567,8 +576,7 @@ Resources:
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
               Service:
                 - 'events.amazonaws.com'
-  
-
+ 
   #####    Gestore Bucket e risorse a lui afferenti    #####
   PnSsQueuePolicyGestoreBucketInvokeErrors:
     Type: AWS::SQS::QueuePolicy
@@ -653,6 +661,26 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Ref PnSsStagingBucketArn
 
+  PnSsDefaultSecurityGroupSafeStorage:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: 'Security Group per la Lambda Gestore Bucket (SafeStorage)'
+      GroupName: !Ref PnSsDefaultSecurityGroupNameSafeStorage
+      SecurityGroupIngress: 
+          - IpProtocol: -1
+            SourceSecurityGroupName: !Ref PnSsDefaultSecurityGroupNameSafeStorage
+      VpcId: !Ref VpcId
+
+  PnSsSecurityGroupSafeStorage:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: 'Dummy default Security Group per la Lambda Gestore Bucket (SafeStorage)'
+      GroupName: !Ref PnSsSecurityGroupNameSafeStorage
+      SecurityGroupIngress: 
+          - IpProtocol: -1
+            SourceSecurityGroupId: !GetAtt PnSsDefaultSecurityGroupSafeStorage.GroupId
+      VpcId: !Ref VpcId
+
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function
     Properties:
@@ -671,7 +699,7 @@ Resources:
           - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
           - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
         SecurityGroupIds:
-          - !Ref PnVPCDefaultSecurityGroup
+          - !GetAtt PnSsSecurityGroupSafeStorage.GroupId
       Environment:
         Variables:
           PnSsHostname: !Ref ApplicationLoadBalancerDomain

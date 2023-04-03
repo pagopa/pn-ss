@@ -1,18 +1,16 @@
 package it.pagopa.pnss.uribuilder;
 
-import static it.pagopa.pnss.common.constant.Constant.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
+import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
+import it.pagopa.pnss.common.client.DocTypesClientCall;
+import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.configurationproperties.BucketName;
-import org.apache.logging.log4j.core.util.Assert;
+import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.uribuilder.service.UriBuilderService;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,32 +25,28 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.server.ResponseStatusException;
-
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
-import it.pagopa.pnss.common.client.DocTypesClientCall;
-import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import it.pagopa.pnss.uribuilder.service.UriBuilderService;
-import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+
+import static it.pagopa.pnss.common.constant.Constant.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @Slf4j
-public class UriBuilderUploadTest {
+class UriBuilderUploadTest {
 
     @Value("${header.x-api-key:#{null}}")
     private String xApiKey;
     @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
     private String X_PAGOPA_SAFESTORAGE_CX_ID;
-//    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
+    //    public static final String X_PAGOPA_SAFESTORAGE_CX_ID = "x-pagopa-safestorage-cx-id";
     @Value("${header.x-checksum-value:#{null}}")
     private String headerChecksumValue;
 
@@ -102,9 +96,9 @@ public class UriBuilderUploadTest {
 
     @Test
     void testUrlGenStatusPre() throws Exception {
-    	
-    	log.debug("UriBulderUploadTest.testUrlGenStatusPre() : decommentare");
-    	
+
+        log.debug("UriBulderUploadTest.testUrlGenStatusPre() : decommentare");
+
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF_VALUE);
         fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
@@ -145,9 +139,7 @@ public class UriBuilderUploadTest {
                 responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
         FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
 
-        Assert.isNonEmpty(resp.getUploadUrl());
-
-
+        Assertions.assertFalse(resp.getUploadUrl().isEmpty());
     }
 
 //    @Test
@@ -172,9 +164,9 @@ public class UriBuilderUploadTest {
 
     @Test
     void testUrlGenerato() throws InterruptedException {
-    	
-    	log.debug("UriBulderUploadTest.testUrlGenerato() : decommentare");
-    	
+
+        log.debug("UriBulderUploadTest.testUrlGenerato() : decommentare");
+
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF_VALUE);
         fcr.setDocumentType(PN_AAR);
@@ -218,9 +210,7 @@ public class UriBuilderUploadTest {
 
 
         FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-        Assert.isNonEmpty(resp.getUploadUrl());
-
-
+        Assertions.assertFalse(resp.getUploadUrl().isEmpty());
     }
 
 //    @Test

@@ -664,8 +664,10 @@ Resources:
       GroupDescription: 'Security Group per la Lambda Gestore Bucket (SafeStorage)'
       GroupName: !Ref PnSsSecurityGroupNameSafeStorage
       SecurityGroupIngress: 
-          - IpProtocol: -1
-            SourceSecurityGroupName: !Ref PnSsSecurityGroupNameSafeStorage
+        - CidrIp: '0.0.0.0/0'
+          IpProtocol: 'TCP'
+          FromPort: 8080
+          ToPort: 8080
       VpcId: !Ref VpcId
 
   PnSsGestoreBucket:

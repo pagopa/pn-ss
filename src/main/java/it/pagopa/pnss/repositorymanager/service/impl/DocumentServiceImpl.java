@@ -7,12 +7,14 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.PatchDocumentExcetpion;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
+import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
@@ -32,10 +34,11 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static it.pagopa.pnss.common.Constant.STORAGE_TYPE;
+import static it.pagopa.pnss.common.constant.Constant.STORAGE_TYPE;
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
 
 
@@ -132,23 +135,43 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .zipWhen(documentEntity -> {
-                       var documentStatusChange = new DocumentStatusChange();
-                       documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
-                       documentStatusChange.setProcessId("SS");
-                       documentStatusChange.setCurrentStatus(documentEntity.getDocumentState().toLowerCase());
-                       documentStatusChange.setNextStatus(documentChanges.getDocumentState().toLowerCase());
-                       return callMacchinaStati.statusValidation(documentStatusChange);
+
+                       if(!documentChanges.getDocumentState().isBlank()) {
+                           var documentStatusChange = new DocumentStatusChange();
+                           documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
+                           documentStatusChange.setProcessId("SS");
+                           documentStatusChange.setCurrentStatus(documentEntity.getDocumentState().toLowerCase());
+                           documentStatusChange.setNextStatus(documentChanges.getDocumentState().toLowerCase());
+                           return callMacchinaStati.statusValidation(documentStatusChange);
+                       } else {
+                           return Mono.just(new MacchinaStatiValidateStatoResponseDto());
+                       }
                    })
                    .map(tuple -> {
                        DocumentEntity documentEntityStored = tuple.getT1();
                        log.info("patchDocument() : (recupero documentEntity dal DB) documentEntityStored = {}", documentEntityStored);
-                       if (documentChanges.getDocumentState() != null) {
+                       if (documentChanges.getDocumentState() != null && !documentChanges.getDocumentState().isBlank()) {
                            // il vecchio stato viene considerato nella gestione della retentionUntil
                            oldState.set(documentEntityStored.getDocumentState());
-
+                           boolean statusFound= false;
                            documentEntityStored.setDocumentState(documentChanges.getDocumentState());
 
-                           if (documentChanges.getDocumentState().equalsIgnoreCase("available")) {
+                           if(documentEntityStored.getDocumentType().getStatuses() != null){
+                               for (Map.Entry<String, CurrentStatusEntity> entry : documentEntityStored.getDocumentType().getStatuses().entrySet()) {
+                                   if (entry.getValue().getTechnicalState().equals(documentChanges.getDocumentState())) {
+                                       documentEntityStored.setDocumentLogicalState(entry.getKey());
+                                       statusFound=true;
+                                       break;
+                                   }
+                               }
+                               if(!statusFound){
+                                   log.debug("New status inserted is invalid for the documentType, DocumentLogicalState was not updated");
+                               }
+                           } else {
+                               throw new IllegalDocumentStateException("Cannot read statuses of Document cause statuses is null, therefore new status inserted is invalid");
+                           }
+
+                           /*if (documentChanges.getDocumentState().equalsIgnoreCase("available")) {
                                if (documentEntityStored.getDocumentType()
                                                        .getTipoDocumento()
                                                        .equalsIgnoreCase("PN_NOTIFICATION_ATTACHMENTS")) {
@@ -164,7 +187,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                                } else {
                                    throw new IllegalDocumentStateException("Document State inserted is invalid for present document type");
                                }
-                           }
+                           }*/
                        }
                        if (documentChanges.getRetentionUntil() != null && !documentChanges.getRetentionUntil().isBlank()) {
                            documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
@@ -210,11 +233,15 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        return documentEntityStored;
                    })
                    .flatMap(documentEntityStored -> {
-                       return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
-                                                                                        authApiKey,
-                                                                                        documentChanges,
-                                                                                        documentEntityStored,
-                                                                                        oldState.get());
+                       if(documentChanges.getDocumentState() != null && !documentChanges.getDocumentState().isBlank()) {
+                           return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
+                                   authApiKey,
+                                   documentChanges,
+                                   documentEntityStored,
+                                   oldState.get());
+                       } else {
+                           return Mono.just(documentEntityStored);
+                       }
                    })
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
                    .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
@@ -233,6 +260,9 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                                      throwable);
                            /*TOGLIERE*/
                            log.info("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage());
+                           return Mono.error(throwable);
+                       } else if (throwable instanceof IllegalDocumentStateException) {
+                           log.debug("Non ci sono status disponibili per il documento selezionato: {}", documentKey, throwable.getMessage());
                            return Mono.error(throwable);
                        }
                        log.error("patchDocument() : errore generico : messaggio = {}", throwable.getMessage(), throwable);

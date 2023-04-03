@@ -18,7 +18,6 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.ChecksumException;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
-import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
@@ -45,7 +44,7 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.*;
 
-import static it.pagopa.pnss.common.Constant.*;
+import static it.pagopa.pnss.common.constant.Constant.*;
 
 @Service
 @Slf4j
@@ -74,17 +73,15 @@ public class UriBuilderService extends CommonS3ObjectService {
 
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
-    private final AwsConfigurationProperties awsConfigurationProperties;
     private final BucketName bucketName;
 
     private final DocTypesClientCall docTypesClientCall;
+    private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             AwsConfigurationProperties awsConfigurationProperties, BucketName bucketName,
-                             DocTypesClientCall docTypesClientCall) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
-        this.awsConfigurationProperties = awsConfigurationProperties;
         this.bucketName = bucketName;
         this.docTypesClientCall = docTypesClientCall;
     }
@@ -106,8 +103,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         var documentType = request.getDocumentType();
 
         // NOTA : in questo modo, sono immutabili
-//        var secret = List.of(generateSecret());
-//        var metadata = Map.of("secret", secret.toString());
         var secret = new ArrayList<String>();
         secret.add(generateSecret());
         var metadata = new HashMap<String, String>();
@@ -123,32 +118,20 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                                       "type '%s'",
                                                                                       xPagopaSafestorageCxId,
                                                                                       documentType))));
+                       } else if (!MEDIA_TYPE_WITH_EXTENSION_MAP.containsKey(contentType)) {
+                           synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unrecognized Content Type"));
                        } else {
                            synchronousSink.next(userConfiguration);
                        }
                    })
                    .doOnSuccess(object -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
                    .flatMap(unused -> {
-                       String documenKeyTmp = GenerateRandoKeyFile.getInstance().createKeyName(documentType);
-                       switch (contentType) {
-                           case APPLICATION_PDF:
-                               documenKeyTmp += FILE_EXTENSION_PDF;
-                               break;
-                           case APPLICATION_ZIP:
-                               documenKeyTmp += FILE_EXTENSION_ZIP;
-                               break;
-                           case IMAGE_TIFF:
-                               documenKeyTmp += FILE_EXTENSION_TIFF;
-                               break;
-                           case APPLICATION_XML:
-                               documenKeyTmp += FILE_EXTENSION_XML;
-                               break;
-                           default:
-                               return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unrecognized Content Type"));
-                       }
-                       log.info("createUriForUploadFile(): documenKeyTmp = {} : ", documenKeyTmp);
+                       var documentKeyTmp = String.format("%s%s",
+                                                          GenerateRandoKeyFile.getInstance().createKeyName(documentType),
+                                                          MEDIA_TYPE_WITH_EXTENSION_MAP.get(contentType));
+                       log.info("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
                        return documentClientCall.postDocument(new DocumentInput().contentType(request.getContentType())
-                                                                                 .documentKey(documenKeyTmp)
+                                                                                 .documentKey(documentKeyTmp)
                                                                                  .documentState(initialNewDocumentState)
                                                                                  .clientShortCode(xPagopaSafestorageCxId)
                                                                                  .documentType(request.getDocumentType()))
@@ -238,13 +221,11 @@ public class UriBuilderService extends CommonS3ObjectService {
                                               return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                                                                             throvable.getMessage()));
                                           }).onErrorResume(AmazonServiceException.class, throvable -> {
-                    log.error("buildsUploadUrl() : Errore AMAZON AmazonServiceException = {}", throvable.getMessage(), throvable);
-                    return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                                                                  "Errore AMAZON AmazonServiceException"));
+                    log.error("buildsUploadUrl() : " + AMAZONERROR + "= {}", throvable.getMessage(), throvable);
+                    return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR));
                 }).onErrorResume(ResponseStatusException.class, throvable -> {
                     log.error("buildsUploadUrl() : Errore AMAZON SdkClientException = {}", throvable.getMessage(), throvable);
-                    return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                                                                  "Errore AMAZON AmazonServiceException "));
+                    return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR));
                 }).onErrorResume(Exception.class, throvable -> {
                     log.error("buildsUploadUrl() : Errore generico: {}", throvable.getMessage(), throvable);
                     return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore generico"));
@@ -292,7 +273,6 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                             .build());
                        } else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank() && secret != null &&
                                   ChecksumEnum.SHA256.name().equals(checksumTypeToEvaluate.name())) {
-                           // secret.put(headerChecksumSha256, checksumValue);
                            return Mono.just(PutObjectRequest.builder()
                                                             .bucket(bucketName)
                                                             .key(documentKey)
@@ -318,13 +298,13 @@ public class UriBuilderService extends CommonS3ObjectService {
     }
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly) {
-        return Mono.fromCallable(() -> validationFieldCreateUri(fileKey, xPagopaSafestorageCxId))
+        return Mono.fromCallable(this::validationFieldCreateUri)
                    .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
                    .doOnSuccess(o -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
                    .flatMap(userConfigurationResponse -> {
                        List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
-                       return documentClientCall.getdocument(fileKey)
+                       return documentClientCall.getDocument(fileKey)
                                                 .onErrorResume(DocumentKeyNotPresentException.class,
                                                                throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                                                                                    "Document key Not " +
@@ -361,7 +341,6 @@ public class UriBuilderService extends CommonS3ObjectService {
             BigDecimal contentLength = doc.getContentLenght();
 
             // NOTA: deve essere restituito lo stato logico, piuttosto che lo stato tecnico
-            //downloadResponse.setDocumentStatus(doc.getDocumentState().getValue());
             if (doc.getDocumentLogicalState() != null) {
                 downloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
             } else {
@@ -388,20 +367,24 @@ public class UriBuilderService extends CommonS3ObjectService {
 
             downloadResponse.setVersionId(null);
 
-            if (Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) {
-                if (doc.getDocumentState() == null || !(doc.getDocumentState().equalsIgnoreCase(TECHNICAL_STATUS_AVAILABLE) ||
-                                                        doc.getDocumentState().equalsIgnoreCase(TECHNICAL_STATUS_ATTACHED) ||
-                                                        doc.getDocumentState().equalsIgnoreCase(TECHNICAL_STATUS_FREEZED))) {
-                    throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                       "Document : " + doc.getDocumentKey() + " not has a valid state "));
-                }
+            if ((Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) && (doc.getDocumentState() == null || !(doc.getDocumentState()
+                                                                                                                        .equalsIgnoreCase(
+                                                                                                                                TECHNICAL_STATUS_AVAILABLE) ||
+                                                                                                                     doc.getDocumentState()
+                                                                                                                        .equalsIgnoreCase(
+                                                                                                                                TECHNICAL_STATUS_ATTACHED) ||
+                                                                                                                     doc.getDocumentState()
+                                                                                                                        .equalsIgnoreCase(
+                                                                                                                                TECHNICAL_STATUS_FREEZED)))) {
+                throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                   "Document : " + doc.getDocumentKey() + " not has a valid state "));
             }
 
             return downloadResponse;
         });
     }
 
-    private Mono<Boolean> validationFieldCreateUri(String fileKey, String xPagopaSafestorageCxId) {
+    private Mono<Boolean> validationFieldCreateUri() {
         return Mono.just(true);
     }
 
@@ -440,8 +423,7 @@ public class UriBuilderService extends CommonS3ObjectService {
         } catch (AmazonServiceException ase) {
             log.error(" Errore AMAZON AmazonServiceException", ase);
             if (!ase.getErrorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                                                  "Errore AMAZON AmazonServiceException - " + ase.getErrorMessage());
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR + "- " + ase.getErrorMessage());
             }
         } catch (SdkClientException sce) {
             log.error(" Errore AMAZON SdkClientException", sce);

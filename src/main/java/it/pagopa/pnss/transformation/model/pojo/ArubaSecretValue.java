@@ -22,15 +22,4 @@ public class ArubaSecretValue {
     String otpPwd;
     String typeOtpAuth;
     String user;
-
-    @Override
-    public String toString() {
-        return "ArubaSecretValue{" +
-                "delegatedDomain='" + delegatedDomain + '\'' +
-                ", delegatedUser='" + delegatedUser + '\'' +
-                ", otpPwd='" + otpPwd + '\'' +
-                ", typeOtpAuth='" + typeOtpAuth + '\'' +
-                ", user='" + user + '\'' +
-                '}';
-    }
 }

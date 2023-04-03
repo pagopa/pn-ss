@@ -17,7 +17,7 @@
     "PnSsIdentityTimemark": "pn/identity/timemark",
     "PnSsIdentitySignature": "pn/identity/signature",
     "PnSsTimemarkUrl": "https://servizi.arubapec.it/tsa/ngrequest.php",
-    "PnSsDefaultSecurityGroupNameSafeStorage" : "default-safe-storage-gestore-bucket",
+    "PnSsDefaultSecurityGroupNameSafeStorage" : "pn-ss-default-sec-group-gestore-bucket",
     "PnSsSecurityGroupNameSafeStorage" : "pn-ss-gestore-bucket-sec-group"
   }
 }

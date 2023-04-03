@@ -13,13 +13,13 @@ import reactor.core.publisher.Mono;
 
 public interface DocumentClientCall {
 
-    Mono<DocumentResponse> getdocument(String keyFile) throws DocumentKeyNotPresentException;
+    Mono<DocumentResponse> getDocument(String keyFile) throws DocumentKeyNotPresentException;
     
     Mono<DocumentResponse> postDocument(DocumentInput documentInput) throws DocumentkeyPresentException;
     
-    Mono<DocumentResponse> patchdocument(
+    Mono<DocumentResponse> patchDocument(
     		String authPagopaSafestorageCxId, String authApiKey, 
     		String keyFile, DocumentChanges document) throws DocumentKeyNotPresentException;
     
-    ResponseEntity<Document> deletedocument(String keyFile) throws IdClientNotFoundException;
+    ResponseEntity<Document> deleteDocument(String keyFile) throws IdClientNotFoundException;
 }

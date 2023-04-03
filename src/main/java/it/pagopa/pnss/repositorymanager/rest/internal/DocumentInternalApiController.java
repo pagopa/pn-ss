@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 
-import feign.Logger;
 import it.pagopa.pn.template.internal.rest.v1.api.DocumentInternalApi;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;

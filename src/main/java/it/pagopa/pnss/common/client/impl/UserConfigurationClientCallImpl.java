@@ -1,6 +1,6 @@
 package it.pagopa.pnss.common.client.impl;
 
-import it.pagopa.pn.commons.pnclients.CommonBaseClient;
+//import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;

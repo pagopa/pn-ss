@@ -1,6 +1,6 @@
 package it.pagopa.pnss.common.client.impl;
 
-import it.pagopa.pn.commons.pnclients.CommonBaseClient;
+//import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;

@@ -1,6 +1,6 @@
 package it.pagopa.pnss.common.client.impl;
 
-import it.pagopa.pn.commons.pnclients.CommonBaseClient;
+//import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
 import org.springframework.beans.factory.annotation.Autowired;

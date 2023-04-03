@@ -304,7 +304,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                    .flatMap(userConfigurationResponse -> {
                        List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
-                       return documentClientCall.getdocument(fileKey)
+                       return documentClientCall.getDocument(fileKey)
                                                 .onErrorResume(DocumentKeyNotPresentException.class,
                                                                throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                                                                                    "Document key Not " +

@@ -40,7 +40,7 @@ public class FileMetadataUpdateService {
 
 		return Mono.fromCallable(() -> validationField(retentionUntil, fileKey, logicalState, xPagopaSafestorageCxId))
 
-				   .flatMap(unused -> docClientCall.getdocument(fileKey))
+				   .flatMap(unused -> docClientCall.getDocument(fileKey))
 
 				   .flatMap(documentResponse -> {
 					   var document = documentResponse.getDocument();
@@ -92,7 +92,7 @@ public class FileMetadataUpdateService {
 						   documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
 					   }
 
-					   return docClientCall.patchdocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges).flatMap(documentResponsePatch -> {
+					   return docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges).flatMap(documentResponsePatch -> {
 						   OperationResultCodeResponse resp = new OperationResultCodeResponse();
 						   resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
 						   resp.setResultDescription(ResultCodeWithDescription.OK.getDescription());

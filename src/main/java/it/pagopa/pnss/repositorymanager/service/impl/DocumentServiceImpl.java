@@ -7,6 +7,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.PatchDocumentExcetpion;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
+import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
@@ -134,17 +135,22 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .zipWhen(documentEntity -> {
-                       var documentStatusChange = new DocumentStatusChange();
-                       documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
-                       documentStatusChange.setProcessId("SS");
-                       documentStatusChange.setCurrentStatus(documentEntity.getDocumentState().toLowerCase());
-                       documentStatusChange.setNextStatus(documentChanges.getDocumentState().toLowerCase());
-                       return callMacchinaStati.statusValidation(documentStatusChange);
+
+                       if(!documentChanges.getDocumentState().isBlank()) {
+                           var documentStatusChange = new DocumentStatusChange();
+                           documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
+                           documentStatusChange.setProcessId("SS");
+                           documentStatusChange.setCurrentStatus(documentEntity.getDocumentState().toLowerCase());
+                           documentStatusChange.setNextStatus(documentChanges.getDocumentState().toLowerCase());
+                           return callMacchinaStati.statusValidation(documentStatusChange);
+                       } else {
+                           return Mono.just(new MacchinaStatiValidateStatoResponseDto());
+                       }
                    })
                    .map(tuple -> {
                        DocumentEntity documentEntityStored = tuple.getT1();
                        log.info("patchDocument() : (recupero documentEntity dal DB) documentEntityStored = {}", documentEntityStored);
-                       if (documentChanges.getDocumentState() != null) {
+                       if (documentChanges.getDocumentState() != null && !documentChanges.getDocumentState().isBlank()) {
                            // il vecchio stato viene considerato nella gestione della retentionUntil
                            oldState.set(documentEntityStored.getDocumentState());
                            boolean statusFound= false;
@@ -227,11 +233,15 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        return documentEntityStored;
                    })
                    .flatMap(documentEntityStored -> {
-                       return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
-                                                                                        authApiKey,
-                                                                                        documentChanges,
-                                                                                        documentEntityStored,
-                                                                                        oldState.get());
+                       if(documentChanges.getDocumentState() != null && !documentChanges.getDocumentState().isBlank()) {
+                           return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
+                                   authApiKey,
+                                   documentChanges,
+                                   documentEntityStored,
+                                   oldState.get());
+                       } else {
+                           return Mono.just(documentEntityStored);
+                       }
                    })
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
                    .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)

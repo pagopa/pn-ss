@@ -62,7 +62,7 @@ public class LocalStackTestConfig {
             SQS,
             DYNAMODB,
             S3,
-            SECRETSMANAGER).withEnv("DEFAULT_REGION", "eu-central-1").withEnv("AWS_DEFAULT_REGION", "eu-central-1");
+            SECRETSMANAGER).withEnv("AWS_DEFAULT_REGION", "eu-central-1");
 
     static {
         localStackContainer.start();

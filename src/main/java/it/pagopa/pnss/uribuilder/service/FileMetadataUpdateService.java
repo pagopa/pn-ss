@@ -37,7 +37,7 @@ public class FileMetadataUpdateService {
 		var retentionUntil = request.getRetentionUntil();
 		var logicalState = request.getStatus();
 
-		return docClientCall.getdocument(fileKey)
+		return docClientCall.getDocument(fileKey)
 
 				   .flatMap(documentResponse -> {
 					   var document = documentResponse.getDocument();
@@ -52,7 +52,6 @@ public class FileMetadataUpdateService {
 					   return Mono.zip(userConfigClientCall.getUser(xPagopaSafestorageCxId), checkedStatus)
 							   .map(objects -> Tuples.of(document, objects.getT1(), objects.getT2()));
 				   })
-
 				   .flatMap(objects -> {
 					   var document = objects.getT1();
 					   var documentType = document.getDocumentType();

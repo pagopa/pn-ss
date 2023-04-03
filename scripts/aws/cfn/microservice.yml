@@ -167,17 +167,14 @@ Parameters:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
 
 #### Parametri presenti nel file json di configurazione  ###
+  
+  PnSsUriBuilderstayHotTime:
+    Type: String
+    Description: 'Days parameter for restoring of Staging Buckets objects in Glacier archive'
+    
   PresignedUrlMinutesLifespan:
     Type: String
     Description: 'Minuti di validità dei pre-signed url prima della scadenza'
-
-  PnSsIdentityTimemark:
-    Type: String
-    Description: 'Secret ID for Identity Timemark'
-
-  PnSsIdentitySignature:
-    Type: String
-    Description: 'Secret ID for Identity Signature'
 
   PnVPCDefaultSecurityGroup:
     Type: String
@@ -198,10 +195,6 @@ Parameters:
   PnSsGestoreRepositoryPathPatchDocument:
     Type: String
     Description: 'Path for PatchDocument towards pn-ss Gestore Respository'
-  
-  PnSsUriBuilderstayHotTime:
-    Type: String
-    Description: 'Days parameter for restoring of Staging Buckets objects in Glacier archive'
 
   PnSsTableDocumentiStreamMetadatiTable:
     Type: String
@@ -229,15 +222,19 @@ Parameters:
 
   PnSsTsaIdentity:
     Type: String
-    Description: 'empty' 
+    Description: 'TsaIdentity' 
+    
+  PnSsIdentityTimemark:
+    Type: String
+    Description: 'Secret ID for Identity Timemark'
+
+  PnSsIdentitySignature:
+    Type: String
+    Description: 'Secret ID for Identity Signature'
   
   PnSsTimemarkUrl:
     Type: String
-    Description: 'empty'  
-
-  PnSsDefaultSecurityGroupNameSafeStorage:
-    Type: String
-    Description: 'Dummy default Security Group' 
+    Description: 'TimemarkUrl'  
   
   PnSsSecurityGroupNameSafeStorage:
     Type: String
@@ -661,24 +658,14 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Ref PnSsStagingBucketArn
 
-  PnSsDefaultSecurityGroupSafeStorage:
-    Type: AWS::EC2::SecurityGroup
-    Properties: 
-      GroupDescription: 'Security Group per la Lambda Gestore Bucket (SafeStorage)'
-      GroupName: !Ref PnSsDefaultSecurityGroupNameSafeStorage
-      SecurityGroupIngress: 
-          - IpProtocol: -1
-            SourceSecurityGroupName: !Ref PnSsDefaultSecurityGroupNameSafeStorage
-      VpcId: !Ref VpcId
-
   PnSsSecurityGroupSafeStorage:
     Type: AWS::EC2::SecurityGroup
     Properties: 
-      GroupDescription: 'Dummy default Security Group per la Lambda Gestore Bucket (SafeStorage)'
+      GroupDescription: 'Security Group per la Lambda Gestore Bucket (SafeStorage)'
       GroupName: !Ref PnSsSecurityGroupNameSafeStorage
       SecurityGroupIngress: 
           - IpProtocol: -1
-            SourceSecurityGroupId: !GetAtt PnSsDefaultSecurityGroupSafeStorage.GroupId
+            SourceSecurityGroupName: !Ref PnSsSecurityGroupNameSafeStorage
       VpcId: !Ref VpcId
 
   PnSsGestoreBucket:

@@ -83,7 +83,7 @@ class FileMetadataUpdateApiControllerTest {
 
 	@Test
 	void testDocumentKeyNotPresent() {
-		when(documentClientCall.getdocument(anyString())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
+		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest(), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isNotFound();
 	}
 
@@ -92,7 +92,7 @@ class FileMetadataUpdateApiControllerTest {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(PN_AAR);
 		var document = new Document().documentType(documentType1);
 		var documentResponse = new DocumentResponse().document(document);
-		when(documentClientCall.getdocument(anyString())).thenReturn(Mono.just(documentResponse));
+		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus().technicalState(""))))
 											  .tipoDocumento(PN_AAR);
@@ -108,7 +108,7 @@ class FileMetadataUpdateApiControllerTest {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(PN_AAR);
 		var document = new Document().documentType(documentType1);
 		var documentResponse = new DocumentResponse().document(document);
-		when(documentClientCall.getdocument(anyString())).thenReturn(Mono.just(documentResponse));
+		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(ATTACHED, new CurrentStatus().technicalState(""))))
 											  .tipoDocumento(PN_AAR);
@@ -129,7 +129,7 @@ class FileMetadataUpdateApiControllerTest {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus()))).tipoDocumento(PN_AAR);
 		var document = new Document().documentType(documentType1);
 		var documentResponse = new DocumentResponse().document(document);
-		when(documentClientCall.getdocument(anyString())).thenReturn(Mono.just(documentResponse));
+		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED,
 																				new CurrentStatus().technicalState(Constant.TECHNICAL_STATUS_AVAILABLE))))
@@ -145,7 +145,7 @@ class FileMetadataUpdateApiControllerTest {
         var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(PN_AAR);
         var document = new Document().documentType(documentType1);
         var documentResponse = new DocumentResponse().document(document);
-        when(documentClientCall.getdocument(anyString())).thenReturn(Mono.just(documentResponse));
+        when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
         when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
 
@@ -157,7 +157,7 @@ class FileMetadataUpdateApiControllerTest {
         var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(PN_AAR);
         var document = new Document().documentType(documentType1);
         var documentResponse = new DocumentResponse().document(document);
-        when(documentClientCall.getdocument(anyString())).thenReturn(Mono.just(documentResponse));
+        when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
         var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(ATTACHED, new CurrentStatus().technicalState("")))).tipoDocumento(PN_AAR);
         var documentTypeResponse = new DocumentTypeResponse().docType(documentType2);
@@ -171,8 +171,8 @@ class FileMetadataUpdateApiControllerTest {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus()))).tipoDocumento(PN_AAR);
 		var document = new Document().documentType(documentType1);
 		var documentResponse = new DocumentResponse().document(document);
-		when(documentClientCall.getdocument(anyString())).thenReturn(Mono.just(documentResponse));
-		when(documentClientCall.patchdocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
+		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
+		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED,
 																				new CurrentStatus().technicalState(Constant.TECHNICAL_STATUS_AVAILABLE))))

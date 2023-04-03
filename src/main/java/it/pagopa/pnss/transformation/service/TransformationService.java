@@ -68,7 +68,7 @@ public class TransformationService {
     }
 
     private Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
-        return Mono.zip(documentClientCall.getdocument(key), s3Service.getObject(key, stagingBucketName))
+        return Mono.zip(documentClientCall.getDocument(key), s3Service.getObject(key, stagingBucketName))
                    .filter(objects -> {
                        var document = objects.getT1().getDocument();
                        var transformations = document.getDocumentType().getTransformations();

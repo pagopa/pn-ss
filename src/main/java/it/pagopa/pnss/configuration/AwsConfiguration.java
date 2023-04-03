@@ -14,15 +14,14 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcess
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
-import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
-import io.awspring.cloud.messaging.core.QueueMessagingTemplate;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
 import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessorFactory;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -53,7 +52,6 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.List;
 
 @Configuration
@@ -80,7 +78,7 @@ public class AwsConfiguration {
     String snsLocalStackEndpoint;
 
     @Value("${test.aws.secretsmanager.endpoint:#{null}}")
-    String secretsmanagerLocalStackEndpoint;
+    String secretsManagerLocalStackEndpoint;
 
     @Value("${test.event.bridge:#{null}}")
     private String testEventBridge;
@@ -211,8 +209,8 @@ public class AwsConfiguration {
                                                                                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
                                                                                .region(Region.of(awsConfigurationProperties.regionCode()));
 
-        if (secretsmanagerLocalStackEndpoint != null) {
-            secretsManagerClient.endpointOverride(URI.create(secretsmanagerLocalStackEndpoint));
+        if (secretsManagerLocalStackEndpoint != null) {
+            secretsManagerClient.endpointOverride(URI.create(secretsManagerLocalStackEndpoint));
         }
 
         return secretsManagerClient.build();
@@ -225,7 +223,7 @@ public class AwsConfiguration {
     }
 
     @Bean
-    public CommandLineRunner schedulingRunner(TaskExecutor executor) {
+    public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor) {
         return args -> {
             AWSCredentialsProvider awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
             AmazonDynamoDB amazonDynamoDB =
@@ -245,7 +243,7 @@ public class AwsConfiguration {
                                                                                                                          5000)
                                                                                                                  .withMaxLeasesForWorker(
                                                                                                                          5000)
-                                                                                                                 .withMaxRecords(1000)
+                                                                                                                .withMaxRecords(1000)
                                                                                                                  .withIdleTimeBetweenReadsInMillis(
                                                                                                                          500)
                                                                                                                  .withInitialPositionInStream(

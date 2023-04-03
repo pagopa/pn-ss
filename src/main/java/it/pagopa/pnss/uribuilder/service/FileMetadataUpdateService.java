@@ -82,6 +82,14 @@ public class FileMetadataUpdateService {
 							   return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
 									   "Status not found for document key : " + fileKey));
 						   }
+
+						   if (StringUtils.isEmpty(technicalStatus)) {
+							   log.error("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found " +
+									   "for document key {}", fileKey);
+							   return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+									   "Technical status not found for document key : " + fileKey));
+						   }
+
 					   }
 						   documentChanges.setDocumentState(technicalStatus);
 

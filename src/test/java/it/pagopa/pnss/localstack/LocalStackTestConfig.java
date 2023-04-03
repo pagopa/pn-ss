@@ -1,6 +1,6 @@
 package it.pagopa.pnss.localstack;
 
-import static it.pagopa.pnss.common.QueueNameConstant.ALL_QUEUE_NAME_LIST;
+import static it.pagopa.pnss.common.constant.QueueNameConstant.ALL_QUEUE_NAME_LIST;
 import static it.pagopa.pnss.localstack.LocalStackUtils.DEFAULT_LOCAL_STACK_TAG;
 import static java.util.Map.entry;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.*;
@@ -8,7 +8,6 @@ import static org.testcontainers.containers.localstack.LocalStackContainer.Servi
 import static software.amazon.awssdk.services.dynamodb.model.TableStatus.ACTIVE;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;

@@ -22,7 +22,8 @@ import java.util.Map;
 
 import static it.pagopa.pnss.availabledocument.event.ManageDynamoEvent.*;
 import static it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor.*;
-import static it.pagopa.pnss.common.Constant.*;
+import static it.pagopa.pnss.common.constant.Constant.*;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
@@ -103,7 +104,7 @@ public class StreamsRecordProcessorTest {
         image.put(DOCUMENTTYPE_KEY, createAttributeM());
         image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(PN_NOTIFICATION_ATTACHMENTS));
         image.put(DOCUMENTLOGICALSTATE_KEY, createAttributeS(documentStateOld));
-        image.put(CONTENTTYPE_KEY, createAttributeS(APPLICATION_PDF));
+        image.put(CONTENTTYPE_KEY, createAttributeS(APPLICATION_PDF_VALUE));
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));
         image.put(RETENTIONUNTIL_KEY, createAttributeS("80"));
         image.put(CLIENTSHORTCODE_KEY, createAttributeS("pn-delivery"));
@@ -115,7 +116,7 @@ public class StreamsRecordProcessorTest {
         image.put(DOCUMENTTYPE_KEY, createAttributeM());
         image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(PN_NOTIFICATION_ATTACHMENTS));
         image.put(DOCUMENTLOGICALSTATE_KEY, createAttributeS(SAVED));
-        image.put(CONTENTTYPE_KEY, createAttributeS(APPLICATION_PDF));
+        image.put(CONTENTTYPE_KEY, createAttributeS(APPLICATION_PDF_VALUE));
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));
         image.put(RETENTIONUNTIL_KEY, createAttributeS("80"));
         image.put(CLIENTSHORTCODE_KEY, createAttributeS("pn-delivery"));

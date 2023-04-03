@@ -11,15 +11,11 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class ArubaSecretValue {
+public class IdentitySecretTimeMark {
 
-    @JsonProperty("delegated_domain")
-    String delegatedDomain;
-    @JsonProperty("delegated_user")
-    String delegatedUser;
-    @JsonProperty("delegated_password")
-    String delegatedPassword;
-    String otpPwd;
-    String typeOtpAuth;
-    String user;
+    @JsonProperty("user")
+    String userTimeMark;
+
+    @JsonProperty("password")
+    String passwordTimeMark;
 }

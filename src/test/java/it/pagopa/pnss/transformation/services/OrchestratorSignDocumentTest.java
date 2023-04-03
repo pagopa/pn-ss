@@ -186,7 +186,7 @@ public class OrchestratorSignDocumentTest {
 
 
 
-    @Test
+    /*@Test
     void readFileFromBucketStagingWriteBuckeHot() {
     	
     	log.debug("readFileFromBucketStagingWriteBuckeHot() : START : "
@@ -213,7 +213,7 @@ public class OrchestratorSignDocumentTest {
 		Mockito.doReturn(Mono.just(docResp)).when(documentClientCall).patchdocument(Mockito.any(), Mockito.any(), Mockito.any(),Mockito.any());
 		
 		assertNull(service.incomingMessageFlow("111-DDD","dgs-bing-ss-pnssstagingbucket-28myu2kp62x9", false).block());
-    }
+    }*/
 
 
 

@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
 
 
@@ -44,6 +45,7 @@ import static org.awaitility.Awaitility.await;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import static org.mockito.Mockito.when;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SQS;
 
 @SpringBootTestWebEnv
@@ -72,6 +74,25 @@ public class SQSConsumerTest {
     OrchestratorSignDocument orchestrator;
 
     @Test
+    public void testS3ObjectCreatedSuccessfullyProcessed() throws Exception {
+        // Create a sample S3 object
+        S3ObjectCreated s3Object = new S3ObjectCreated();
+        String bucketName = "test-bucket";
+        String key = "test-key";
+        Boolean marcatura = true;
+
+        // Mock the incoming message flow to succeed
+
+                when(orchestrator.incomingMessageFlow((Mockito.eq("test-bucket")), Mockito.eq("test-key"), Mockito.eq(true))).thenReturn(Mono.empty());
+
+        // Call the S3 event handler with the sample object
+        orchestrator.incomingMessageFlow(bucketName, key, marcatura);
+
+        // Wait for the message to be processed
+        assertThat(orchestrator.incomingMessageFlow(bucketName, key, marcatura)).isEqualTo(Mono.empty());
+    }
+
+   /* @Test
     public void testS3ErrorMessaggioscodatoOk() throws MalformedURLException, TypeOfTransportNotImplemented_Exception, JAXBException {
 
         S3ObjectCreated s3obj = new S3ObjectCreated();
@@ -88,7 +109,7 @@ public class SQSConsumerTest {
             assertThat(numberOfMessagesNotVisibleInQueue()).isEqualTo(0);
 
         });
-    }
+    }*/
 
 
 

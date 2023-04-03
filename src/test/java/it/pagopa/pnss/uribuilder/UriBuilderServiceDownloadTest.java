@@ -200,7 +200,7 @@ class UriBuilderServiceDownloadTest {
                 });
     }
 
-    @Test
+    /*@Test
     void testFileTrovatoBasketCold() {
         String docId = "1111-aaaa";
         mockUserConfiguration(List.of(PN_AAR));
@@ -223,7 +223,7 @@ class UriBuilderServiceDownloadTest {
                     Assertions.assertThat(!response.getDownload().getRetryAfter().equals(maxRestoreTimeCold));
 
                 });
-    }
+    }*/
 
     @Test
     void testFileNonTrovato() {

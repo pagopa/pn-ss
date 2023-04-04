@@ -78,10 +78,11 @@ public class StreamsRecordProcessor implements IRecordProcessor {
             if (recordEvent instanceof RecordAdapter) {
                 com.amazonaws.services.dynamodbv2.model.Record streamRecord = ((RecordAdapter) recordEvent)
                         .getInternalObject();
-                PutEventsRequestEntry putEventsRequestEntry = null;
+                PutEventsRequestEntry putEventsRequestEntry;
                 try{
                     switch (streamRecord.getEventName()) {
                         case INSERT_EVENT:
+                        case REMOVE_EVENT:
                             break;
                         case MODIFY_EVENT:
                             ManageDynamoEvent mde = new ManageDynamoEvent();
@@ -91,8 +92,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                                 requestEntries.add(putEventsRequestEntry);
                             }
                             break;
-                        case REMOVE_EVENT:
-                            break;
+                        default: log.debug("--- Nome evento non gestito  ---");
                     }
 
                     log.info("--- COMPLETATO CON SUCCESSO  ---");

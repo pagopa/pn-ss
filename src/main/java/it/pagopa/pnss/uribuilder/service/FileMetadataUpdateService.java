@@ -1,12 +1,16 @@
 package it.pagopa.pnss.uribuilder.service;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.OperationResultCodeResponse;
 import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -40,8 +44,8 @@ public class FileMetadataUpdateService {
 		return docClientCall.getDocument(fileKey)
 
 				   .flatMap(documentResponse -> {
-					   var document = documentResponse.getDocument();
-					   var documentType = document.getDocumentType().getTipoDocumento();
+					   Document document = documentResponse.getDocument();
+					   String documentType = document.getDocumentType().getTipoDocumento();
 
 					   Mono<String> checkedStatus;
 					   if (logicalState != null && !logicalState.isBlank()) {
@@ -53,12 +57,12 @@ public class FileMetadataUpdateService {
 							   .map(objects -> Tuples.of(document, objects.getT1(), objects.getT2()));
 				   })
 				   .flatMap(objects -> {
-					   var document = objects.getT1();
-					   var documentType = document.getDocumentType();
-					   var tipoDocumento = documentType.getTipoDocumento();
-					   var userConfiguration = objects.getT2().getUserConfiguration();
-					   var technicalStatus = objects.getT3();
-					   var documentChanges = new DocumentChanges();
+					   Document document = objects.getT1();
+					   DocumentType documentType = document.getDocumentType();
+					   String tipoDocumento = documentType.getTipoDocumento();
+					   UserConfiguration userConfiguration = objects.getT2().getUserConfiguration();
+					   String technicalStatus = objects.getT3();
+					   DocumentChanges documentChanges = new DocumentChanges();
 
 					   if (userConfiguration.getCanModifyStatus() == null || !userConfiguration.getCanModifyStatus().contains(tipoDocumento)) {
 						   String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
@@ -70,7 +74,7 @@ public class FileMetadataUpdateService {
 
 					   boolean isStatusPresent = false;
 
-					   if (!StringUtils.isBlank(request.getStatus()) || request.getStatus() == null) {
+					   if (request.getStatus() != null && !StringUtils.isBlank(request.getStatus())) {
 						   log.info("FileMetadataUpdateService.createUriForUploadFile() : request.getStatus() isn't blank or null:" + " CONTINUO");
 						   if (documentType.getStatuses() != null) {
 							   isStatusPresent = documentType.getStatuses().containsKey(logicalState);
@@ -118,6 +122,12 @@ public class FileMetadataUpdateService {
 								 " = " + "{}", e.getMessage(), e);
 					   return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
 				   })
+
+					.onErrorResume(InvalidNextStatusException.class, e -> {
+						log.error("FileMetadataUpdateService.createUriForUploadFile() : rilevata una InvalidNextStatusException : errore" +
+								" = " + "{}", e.getMessage(), e);
+						return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage()));
+					})
 
 				   .onErrorResume(e -> {
 					   log.error("FileMetadataUpdateService.createUriForUploadFile() : errore generico = {}", e.getMessage(), e);

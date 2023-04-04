@@ -240,10 +240,6 @@ Parameters:
     Type: String
     Description: 'GestoreBucket Security Group'
 
-  PnSsPROVAPARAMETRO:
-    Type: String
-    Default: 'NO_INPUT_FILE'
-
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
 

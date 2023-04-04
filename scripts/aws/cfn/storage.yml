@@ -43,8 +43,6 @@ Conditions:
   IsProdEnv: !Equals ['PROD', !Ref DeployEnv]
 
 Resources:
-  # NullResource:
-  #     Type: AWS::CloudFormation::WaitConditionHandle
 
   PnSsTableAnagraficaClient:
     Type: AWS::DynamoDB::Table
@@ -55,8 +53,6 @@ Resources:
       KeySchema: 
         - AttributeName: 'name'
           KeyType: 'HASH'
-      #KinesisStreamSpecification:
-      #  StreamArn: 'String'
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
@@ -76,8 +72,6 @@ Resources:
       KeySchema: 
         - AttributeName: 'tipoDocumento'
           KeyType: 'HASH'
-      #KinesisStreamSpecification:
-      #  StreamArn: 'String'
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
@@ -99,8 +93,6 @@ Resources:
           KeyType: 'HASH'
       StreamSpecification:
           StreamViewType: 'NEW_AND_OLD_IMAGES'
-      #KinesisStreamSpecification:
-      #  StreamArn: 'String'
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5

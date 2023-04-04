@@ -4,6 +4,8 @@ import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.internal.rest.v1.dto.Error;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.PatchDocumentExcetpion;
+import it.pagopa.pnss.common.client.exception.RetentionException;
+import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +22,7 @@ import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 @RestController
 @Slf4j
@@ -86,7 +89,15 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 			String errorMsg = "Document type invalide";
 			log.error("getResponse() : error DocumentTypeNotPresentException");
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMsg);
-		} else {
+		} else if (throwable instanceof InvalidNextStatusException) {
+			log.error("getResponse() : error InvalidNextStatusException {}", throwable.getMessage());
+			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
+		}
+		else if (throwable instanceof RetentionException) {
+			log.error("getResponse() : error RetentionException {}", throwable.getMessage());
+			return buildErrorResponse(HttpStatus.NOT_FOUND, throwable);
+		}
+		else {
 			log.info("getErrorResponse() : other");
 			log.error("errore", throwable);
 			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);

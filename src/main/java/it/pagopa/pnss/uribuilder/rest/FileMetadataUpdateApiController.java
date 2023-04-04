@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono;
 @RestController
 public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
 
-    final FileMetadataUpdateService service;
+    final FileMetadataUpdateService fileMetadataUpdateService;
 
     @Value("${header.x-api-key}")
     private String apiKey;
@@ -21,8 +21,8 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
     @Value("${header.x-pagopa-safestorage-cx-id}")
     private String pagopaSafestorageCxId;
 
-    public FileMetadataUpdateApiController(FileMetadataUpdateService service) {
-        this.service = service;
+    public FileMetadataUpdateApiController(FileMetadataUpdateService fileMetadataUpdateService) {
+        this.fileMetadataUpdateService = fileMetadataUpdateService;
     }
 
     @Override
@@ -33,10 +33,10 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
         String pagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(pagopaSafestorageCxId);
         String apiKeyValue = exchange.getRequest().getHeaders().getFirst(apiKey);
 
-        return updateFileMetadataRequest.flatMap(request -> service.createUriForUploadFile(fileKey,
-                                                                                           xPagopaSafestorageCxId,
-                                                                                           request,
-                                                                                           pagopaSafestorageCxIdValue,
-                                                                                           apiKeyValue)).map(ResponseEntity::ok);
+        return updateFileMetadataRequest.flatMap(request -> fileMetadataUpdateService.updateMetadata(fileKey,
+                                                                                                     xPagopaSafestorageCxId,
+                                                                                                     request,
+                                                                                                     pagopaSafestorageCxIdValue,
+                                                                                                     apiKeyValue)).map(ResponseEntity::ok);
     }
 }

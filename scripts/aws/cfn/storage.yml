@@ -136,10 +136,6 @@ Resources:
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               #  KMSMasterKeyID: KMS-KEY-AR
-      # IntelligentTieringConfigurations:
-      #   IntelligentTieringConfigurations
-      # InventoryConfigurations:
-      #   InventoryConfigurations
       CorsConfiguration:  
         CorsRules:
           - AllowedHeaders:
@@ -169,40 +165,29 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_TEMPORARY_DOCUMENT'
           - Id: 'PnSsNotificationAttachment'
-            ExpirationInDays: 4
+            ExpirationInDays: 120
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'
-                Value: 'PN_NOTIFIED_DOCUMENT'
-            Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
-              - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 1
+                Value: 'PN_NOTIFIED_DOCUMENTS'
           - Id: 'PnSsAar'
-            ExpirationInDays: 15
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
-              - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+              - StorageClass: 'DEEP_ARCHIVE'
+                TransitionInDays: 120
           - Id: 'PnSsLegalFacts'
-            ExpirationInDays: 15
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
               - StorageClass: 'DEEP_ARCHIVE'
-              # - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 1
-      #LoggingConfiguration:
-      #  DestinationBucketName: 'String'
-      #  LogFilePrefix: 'String'
-      # MetricsConfigurations:
-      #  MetricsConfigurations
+                TransitionInDays: 120
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
@@ -250,11 +235,6 @@ Resources:
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               #  KMSMasterKeyID: KMS-KEY-AR
-      #LoggingConfiguration:
-      #  DestinationBucketName: 'String'
-      #  LogFilePrefix: 'String'
-      #MetricsConfigurations:
-      #  MetricsConfigurations
       LifecycleConfiguration:
         Rules:
           - Id: 'PnSsStagingAbortIncompleteMultipartUpload'

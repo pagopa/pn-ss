@@ -70,26 +70,26 @@ public class FileMetadataUpdateService {
 
 					   boolean isStatusPresent = false;
 
-//					   if (!StringUtils.isBlank(request.getStatus()) || request.getStatus() == null) {
-//						   log.info("FileMetadataUpdateService.createUriForUploadFile() : request.getStatus() isn't blank or null:" + " CONTINUO");
-//						   if (documentType.getStatuses() != null) {
-//							   isStatusPresent = documentType.getStatuses().containsKey(logicalState);
-//						   }
-//						   if (!isStatusPresent) {
-//							   log.error("FileMetadataUpdateService.createUriForUploadFile() : Status not found for document" + " key {}",
-//									   fileKey);
-//							   return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-//									   "Status not found for document key : " + fileKey));
-//						   }
-//
-//						   if (StringUtils.isEmpty(technicalStatus)) {
-//							   log.error("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found " +
-//									   "for document key {}", fileKey);
-//							   return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-//									   "Technical status not found for document key : " + fileKey));
-//						   }
-//
-//					   }
+					   if (request.getStatus() != null && !StringUtils.isBlank(request.getStatus())) {
+						   log.info("FileMetadataUpdateService.createUriForUploadFile() : request.getStatus() isn't blank or null:" + " CONTINUO");
+						   if (documentType.getStatuses() != null) {
+							   isStatusPresent = documentType.getStatuses().containsKey(logicalState);
+						   }
+						   if (!isStatusPresent) {
+							   log.error("FileMetadataUpdateService.createUriForUploadFile() : Status not found for document" + " key {}",
+									   fileKey);
+							   return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+									   "Status not found for document key : " + fileKey));
+						   }
+
+						   if (StringUtils.isEmpty(technicalStatus)) {
+							   log.error("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found " +
+									   "for document key {}", fileKey);
+							   return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+									   "Technical status not found for document key : " + fileKey));
+						   }
+
+					   }
 						   documentChanges.setDocumentState(technicalStatus);
 
 					   if (retentionUntil != null) {

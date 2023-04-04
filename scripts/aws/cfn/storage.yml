@@ -117,7 +117,7 @@ Resources:
 # - il bucket principale (PnSsBucket) deve essere ricreato a causa di modifiche di alcune proprietà (object lock, replication ...)
 
   # PnSsGestoreBucketALLNotificationPermission:
-  #   Type: AWS::Lambda::Permission
+  #   Type: AWS::Lambda::Permission  
   #   Properties:
   #     FunctionName: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
   #     Action: lambda:InvokeFunction
@@ -140,6 +140,22 @@ Resources:
       #   IntelligentTieringConfigurations
       # InventoryConfigurations:
       #   InventoryConfigurations
+      CorsConfiguration:  
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - 'GET'
+              - 'PUT'
+              - 'HEAD'
+              - 'POST'
+              - 'DELETE'
+            AllowedOrigins:
+              - '*'
+            ExposedHeaders:
+              - 'x-amz-version-id'
+            MaxAge: 3600
+            Id: 'CORSRuleSafeStorage'
       LifecycleConfiguration:
         Rules:
           - Id: 'PnSsAbortIncompleteMultipartUpload'

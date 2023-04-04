@@ -6,6 +6,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.PatchDocumentExcetpion;
+import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
@@ -31,6 +32,7 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 
@@ -133,6 +135,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
         AtomicReference<String> oldState = new AtomicReference<>();
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
+                .doOnNext(x -> log.info("prova do on next"))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .zipWhen(documentEntity -> {
 
@@ -232,17 +235,11 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        }
                        return documentEntityStored;
                    })
-                   .flatMap(documentEntityStored -> {
-                       if(documentChanges.getDocumentState() != null && !documentChanges.getDocumentState().isBlank()) {
-                           return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
-                                   authApiKey,
-                                   documentChanges,
-                                   documentEntityStored,
-                                   oldState.get());
-                       } else {
-                           return Mono.just(documentEntityStored);
-                       }
-                   })
+                   .flatMap(documentEntityStored -> retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
+                           authApiKey,
+                           documentChanges,
+                           documentEntityStored,
+                           oldState.get()))
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
                    .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
                    .onErrorResume(RuntimeException.class, throwable -> {
@@ -251,9 +248,6 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                            /*TOGLIERE*/
                            log.info("patchDocument() : errore per valore null: messaggio = {}", throwable.getMessage());
                            return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
-                       } else if (throwable instanceof InvalidNextStatusException) {
-                           log.error("patchDocument() : invalid next status : messaggio = {}", throwable.getMessage(), throwable);
-                           return Mono.error(throwable);
                        } else if (throwable instanceof DocumentKeyNotPresentException) {
                            log.error("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}",
                                      throwable.getMessage(),
@@ -261,14 +255,19 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                            /*TOGLIERE*/
                            log.info("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage());
                            return Mono.error(throwable);
+                       } else if (throwable instanceof InvalidNextStatusException) {
+                           log.error("patchDocument() : invalid next status : messaggio = {}", throwable.getMessage(), throwable);
+                           return Mono.error(throwable);
                        } else if (throwable instanceof IllegalDocumentStateException) {
-                           log.debug("Non ci sono status disponibili per il documento selezionato: {}", documentKey, throwable.getMessage());
+                           log.debug("Non ci sono status disponibili per il documento selezionato: {}", documentKey);
+                           return Mono.error(throwable);
+                       } else if (throwable instanceof RetentionException) {
                            return Mono.error(throwable);
                        }
-                       log.error("patchDocument() : errore generico : messaggio = {}", throwable.getMessage(), throwable);
-                       /*TOGLIERE*/
-                       log.info("patchDocument() : errore generico: messaggio = {}", throwable.getMessage());
-                       return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
+                           log.error("patchDocument() : errore generico : messaggio = {}", throwable.getMessage(), throwable);
+                           /*TOGLIERE*/
+                           log.info("patchDocument() : errore generico: messaggio = {}", throwable.getMessage());
+                           return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
                    })
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
     }

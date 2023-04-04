@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pnss.common.constant.*;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.PatchDocumentExcetpion;
 import it.pagopa.pnss.common.client.exception.RetentionException;
@@ -204,34 +205,38 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        log.info("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}",
                                 documentEntityStored);
 
-                       log.info("patchDocument() : START Tagging");
-                       Region region = Region.of(awsConfigurationProperties.regionCode());
-                       S3AsyncClient s3 = S3AsyncClient.builder().region(region).build();
-                       String storageType;
-                       PutObjectTaggingRequest putObjectTaggingRequest;
-                       if (documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
-                           if (documentEntityStored.getDocumentType()
-                                                   .getStatuses()
-                                                   .containsKey(documentEntityStored.getDocumentLogicalState())) {
-                               storageType = documentEntityStored.getDocumentType()
-                                                                 .getStatuses()
-                                                                 .get(documentEntityStored.getDocumentLogicalState())
-                                                                 .getStorage();
-                               putObjectTaggingRequest = PutObjectTaggingRequest.builder()
-                                                                                .bucket(bucketName.ssHotName())
-                                                                                .key(documentKey)
-                                                                                .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
-                                                                                    setTag.key(STORAGE_TYPE);
-                                                                                    setTag.value(storageType);
-                                                                                }))
-                                                                                .build();
-                               CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse =
-                                       s3.putObjectTagging(putObjectTaggingRequest);
-                               log.info("patchDocument() : Tagging : storageType {}", storageType);
-                           } else {
-                               log.info("patchDocument() : Tagging : storageTypeEmpty");
-                           }
-                           log.info("patchDocument() : END Tagging");
+                       if ( documentChanges.getDocumentState() != null && 
+                    		   !documentChanges.getDocumentState().toLowerCase().equals(Constant.STAGED) &&
+                    		   !documentChanges.getDocumentState().toLowerCase().equals(Constant.BOOKED)) {
+	                       log.info("patchDocument() : START Tagging");
+	                       Region region = Region.of(awsConfigurationProperties.regionCode());
+	                       S3AsyncClient s3 = S3AsyncClient.builder().region(region).build();
+	                       String storageType;
+	                       PutObjectTaggingRequest putObjectTaggingRequest;
+	                       if (documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
+	                           if (documentEntityStored.getDocumentType()
+	                                                   .getStatuses()
+	                                                   .containsKey(documentEntityStored.getDocumentLogicalState())) {
+	                               storageType = documentEntityStored.getDocumentType()
+	                                                                 .getStatuses()
+	                                                                 .get(documentEntityStored.getDocumentLogicalState())
+	                                                                 .getStorage();
+	                               putObjectTaggingRequest = PutObjectTaggingRequest.builder()
+	                                                                                .bucket(bucketName.ssHotName())
+	                                                                                .key(documentKey)
+	                                                                                .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
+	                                                                                    setTag.key(STORAGE_TYPE);
+	                                                                                    setTag.value(storageType);
+	                                                                                }))
+	                                                                                .build();
+	                               CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse =
+	                                       s3.putObjectTagging(putObjectTaggingRequest);
+	                               log.info("patchDocument() : Tagging : storageType {}", storageType);
+	                           } else {
+	                               log.info("patchDocument() : Tagging : storageTypeEmpty");
+	                           }
+	                           log.info("patchDocument() : END Tagging");
+	                       }
                        }
                        return documentEntityStored;
                    })

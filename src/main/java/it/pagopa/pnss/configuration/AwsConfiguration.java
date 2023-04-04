@@ -36,12 +36,14 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
@@ -50,9 +52,14 @@ import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
+import software.amazon.kinesis.common.ConfigsBuilder;
+import software.amazon.kinesis.common.KinesisClientUtil;
+import software.amazon.kinesis.coordinator.Scheduler;
+import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 @Configuration
 public class AwsConfiguration {
@@ -225,7 +232,32 @@ public class AwsConfiguration {
     @Bean
     public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor) {
         return args -> {
-            AWSCredentialsProvider awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
+
+            KinesisAsyncClient kinesisClient = KinesisClientUtil.createKinesisAsyncClient(KinesisAsyncClient.builder().region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()));
+            DynamoDbAsyncClient dynamoClient = DynamoDbAsyncClient.builder().region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()).build();
+            CloudWatchAsyncClient cloudWatchClient = CloudWatchAsyncClient.builder().region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()).build();
+
+            ConfigsBuilder configsBuilder = new ConfigsBuilder(streamName, applicationName, kinesisClient, dynamoClient, cloudWatchClient, UUID.randomUUID().toString(), new SampleRecordProcessorFactory());
+
+            ShardRecordProcessorFactory recordProcessorFactory =
+                    (ShardRecordProcessorFactory) new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());
+
+            Scheduler scheduler = new Scheduler(
+                    configsBuilder.checkpointConfig(),
+                    configsBuilder.coordinatorConfig(),
+                    configsBuilder.leaseManagementConfig(),
+                    configsBuilder.lifecycleConfig(),
+                    configsBuilder.metricsConfig(),
+                    configsBuilder.processorConfig(),
+                    configsBuilder.retrievalConfig()
+            );
+
+            if (testEventBridge == null) {
+                executor.execute(scheduler);
+            }
+
+
+            /*AWSCredentialsProvider awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
             AmazonDynamoDB amazonDynamoDB =
                     AmazonDynamoDBClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
             AmazonCloudWatch cloudWatchClient =
@@ -235,6 +267,7 @@ public class AwsConfiguration {
                                                                                                     DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()
                                                                                                                                      .id())
                                                                                             .build();
+
             AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
             KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(dynamoEventStreamName.tableMetadata(),
                                                                                            dynamoEventStreamName.documentName(),
@@ -258,7 +291,7 @@ public class AwsConfiguration {
                                                                              cloudWatchClient);
             if (testEventBridge == null) {
                 executor.execute(worker);
-            }
+            }*/
         };
     }
 }

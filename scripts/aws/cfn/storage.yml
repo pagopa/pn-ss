@@ -41,10 +41,9 @@ Parameters:
 
 Conditions:
   IsProdEnv: !Equals ['PROD', !Ref DeployEnv]
+  IsDevEnv: !Equals [!Ref 'AWS::AccountId', '063295570123']
 
 Resources:
-  # NullResource:
-  #     Type: AWS::CloudFormation::WaitConditionHandle
 
   PnSsTableAnagraficaClient:
     Type: AWS::DynamoDB::Table
@@ -365,7 +364,32 @@ Resources:
           AWS: !Sub '${AWS::AccountId}'
         Condition:
           StringEqualsIfExists:
-            events:creatorAccount: !Sub '${AWS::AccountId}'   
+            events:creatorAccount: !Sub '${AWS::AccountId}'
+
+  PnSsQueueNotificheExt1:
+    Type: AWS::SQS::Queue
+    Condition: IsDevEnv
+    Properties:
+      SqsManagedSseEnabled: True
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 0      
+      VisibilityTimeout: 30
+    
+  PnSsEventRuleNotificheExt1:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref PnSsEventBusExternalNotification
+      EventPattern:
+        source: 
+          - "GESTORE DISPONIBILITA"
+        account: 
+          - !Sub ${AWS::AccountId}
+        region: 
+          - !Sub ${AWS::Region}
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt PnSsQueueNotificheExt1.Arn
+          Id: 'PnSsExt1QueueTargetForExtNotification'
 
   # ####### DENY POLICY FROM OUTSIDE ACCOUNT ########
   # PnSsEventBusPolicyDenyExternalNotification:

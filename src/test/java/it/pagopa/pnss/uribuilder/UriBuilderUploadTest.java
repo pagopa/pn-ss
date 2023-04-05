@@ -3,6 +3,7 @@ package it.pagopa.pnss.uribuilder;
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
+import it.pagopa.pnss.common.ConstantTest;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
@@ -101,7 +102,7 @@ class UriBuilderUploadTest {
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF_VALUE);
-        fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
+        fcr.setDocumentType(ConstantTest.PN_NOTIFICATION_ATTACHMENTS);
         fcr.setStatus(PRELOADED);
         FileCreationResponse fcresp = new FileCreationResponse();
         fcresp.setUploadUrl("http://host:9090/urlFile");
@@ -110,7 +111,7 @@ class UriBuilderUploadTest {
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(xPagoPaSafestorageCxIdValue);
         userConfiguration.setApiKey(xApiKeyValue);
-        userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
+        userConfiguration.setCanCreate(List.of(ConstantTest.PN_NOTIFICATION_ATTACHMENTS));
         userConfig.setUserConfiguration(userConfiguration);
 
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
@@ -118,7 +119,7 @@ class UriBuilderUploadTest {
 
         DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
         DocumentType documentType = new DocumentType();
-        documentType.setTipoDocumento(PN_LEGAL_FACTS);
+        documentType.setTipoDocumento(ConstantTest.PN_LEGAL_FACTS);
         documentTypeResponse.setDocType(documentType);
 
         Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
@@ -169,7 +170,7 @@ class UriBuilderUploadTest {
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF_VALUE);
-        fcr.setDocumentType(PN_AAR);
+        fcr.setDocumentType(ConstantTest.PN_AAR);
         fcr.setStatus("");
         FileCreationResponse fcresp = new FileCreationResponse();
         fcresp.setUploadUrl("http://host:9090/urlFile");
@@ -179,7 +180,7 @@ class UriBuilderUploadTest {
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(xPagoPaSafestorageCxIdValue);
         userConfiguration.setApiKey(xApiKeyValue);
-        userConfiguration.setCanCreate(List.of(PN_AAR));
+        userConfiguration.setCanCreate(List.of(ConstantTest.PN_AAR));
         userConfig.setUserConfiguration(userConfiguration);
 
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
@@ -188,7 +189,7 @@ class UriBuilderUploadTest {
 
         DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
         DocumentType documentType = new DocumentType();
-        documentType.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
+        documentType.setTipoDocumento(ConstantTest.PN_NOTIFICATION_ATTACHMENTS);
         documentTypeResponse.setDocType(documentType);
 
         Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
@@ -247,7 +248,7 @@ class UriBuilderUploadTest {
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType("VALUE_FAULT");
-        fcr.setDocumentType(PN_AAR);
+        fcr.setDocumentType(ConstantTest.PN_AAR);
         fcr.setStatus(PRELOADED);
         fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
     }
@@ -304,7 +305,7 @@ class UriBuilderUploadTest {
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
 
         FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setDocumentType(PN_AAR);
+        fcr.setDocumentType(ConstantTest.PN_AAR);
         fcr.setStatus("VALUE_FAULT");
 
         fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
@@ -323,7 +324,7 @@ class UriBuilderUploadTest {
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
 
         FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setDocumentType(PN_AAR);
+        fcr.setDocumentType(ConstantTest.PN_AAR);
         fcr.setStatus("VALUE_FAULT");
 
         fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
@@ -334,7 +335,7 @@ class UriBuilderUploadTest {
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF_VALUE);
-        fcr.setDocumentType(PN_AAR);
+        fcr.setDocumentType(ConstantTest.PN_AAR);
         fcr.setStatus("");
 
         Mono<UserConfigurationResponse> userConfigurationEntity = Mono.empty();
@@ -350,7 +351,7 @@ class UriBuilderUploadTest {
     void testIdClienteNoPermessiUpload() {
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF_VALUE);
-        fcr.setDocumentType(PN_AAR);
+        fcr.setDocumentType(ConstantTest.PN_AAR);
         fcr.setStatus("");
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();

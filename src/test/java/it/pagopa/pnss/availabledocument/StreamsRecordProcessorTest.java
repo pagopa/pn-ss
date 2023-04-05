@@ -6,6 +6,7 @@ import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.model.Record;
 import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor;
+import it.pagopa.pnss.common.ConstantTest;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.jetbrains.annotations.NotNull;
@@ -102,7 +103,7 @@ public class StreamsRecordProcessorTest {
 
         image.put(DOCUMENTSTATE_KEY, createAttributeS(documentStateNew));
         image.put(DOCUMENTTYPE_KEY, createAttributeM());
-        image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(PN_NOTIFICATION_ATTACHMENTS));
+        image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(ConstantTest.PN_NOTIFICATION_ATTACHMENTS));
         image.put(DOCUMENTLOGICALSTATE_KEY, createAttributeS(documentStateOld));
         image.put(CONTENTTYPE_KEY, createAttributeS(APPLICATION_PDF_VALUE));
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));
@@ -114,7 +115,7 @@ public class StreamsRecordProcessorTest {
         image.put(DOCUMENTKEY_KEY, createAttributeS("111"));
         image.put(DOCUMENTSTATE_KEY, createAttributeS(documentStateOld));
         image.put(DOCUMENTTYPE_KEY, createAttributeM());
-        image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(PN_NOTIFICATION_ATTACHMENTS));
+        image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(ConstantTest.PN_NOTIFICATION_ATTACHMENTS));
         image.put(DOCUMENTLOGICALSTATE_KEY, createAttributeS(SAVED));
         image.put(CONTENTTYPE_KEY, createAttributeS(APPLICATION_PDF_VALUE));
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));

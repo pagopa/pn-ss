@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.RestoreObjectRequest;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
@@ -20,6 +21,7 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -74,16 +76,21 @@ public class UriBuilderService extends CommonS3ObjectService {
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
-
     private final DocTypesClientCall docTypesClientCall;
+    private final DocTypesService docTypesService;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
 
-    public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall) {
+    public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall
+            , DocumentClientCall documentClientCall
+            , BucketName bucketName
+            , DocTypesClientCall docTypesClientCall
+            , DocTypesService docTypesService
+            ) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.docTypesClientCall = docTypesClientCall;
+        this.docTypesService = docTypesService;
     }
 
     private Mono<String> getBucketName(String docType) {
@@ -169,9 +176,21 @@ public class UriBuilderService extends CommonS3ObjectService {
         if (!LISTA_TIPO_DOCUMENTI.contains(contentType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid");
         }
-        if (!LISTA_TIPOLOGIE_DOC.contains(documentType)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid");
-        }
+
+        //        if (!LISTA_TIPOLOGIE_DOC.contains(documentType)) {
+        //            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid");
+        //        }
+
+        docTypesService.getAllDocumentType()//
+                .doOnNext(lista -> {
+                    if (!lista.stream()//
+                            .filter(item -> item.getTipoDocumento().equals(documentType))//
+                            .findFirst()//
+                            .isPresent()) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid");
+                    }
+                });
+
         return Mono.just(true);
     }
 

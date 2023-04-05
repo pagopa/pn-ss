@@ -6,7 +6,7 @@ import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.model.Record;
 import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor;
-import it.pagopa.pnss.common.ConstantTest;
+import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.jetbrains.annotations.NotNull;
@@ -28,13 +28,13 @@ import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-public class StreamsRecordProcessorTest {
+class StreamsRecordProcessorTest {
 
 
     @Autowired
     AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
     @Test
-    public void testSendMessageEventBridgeOk(){
+    void testSendMessageEventBridgeOk(){
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
@@ -49,7 +49,7 @@ public class StreamsRecordProcessorTest {
     }
 
     @Test
-    public void testSendMessageEventBridgeInsert(){
+    void testSendMessageEventBridgeInsert(){
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
@@ -64,7 +64,7 @@ public class StreamsRecordProcessorTest {
     }
 
     @Test
-    public void testSendMessageEventBridgeDelete(){
+    void testSendMessageEventBridgeDelete(){
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
@@ -79,7 +79,7 @@ public class StreamsRecordProcessorTest {
     }
 
     @Test
-    public void testSendMessageEventOldNewSameState(){
+    void testSendMessageEventOldNewSameState(){
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
@@ -103,7 +103,7 @@ public class StreamsRecordProcessorTest {
 
         image.put(DOCUMENTSTATE_KEY, createAttributeS(documentStateNew));
         image.put(DOCUMENTTYPE_KEY, createAttributeM());
-        image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(ConstantTest.PN_NOTIFICATION_ATTACHMENTS));
+        image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS));
         image.put(DOCUMENTLOGICALSTATE_KEY, createAttributeS(documentStateOld));
         image.put(CONTENTTYPE_KEY, createAttributeS(APPLICATION_PDF_VALUE));
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));
@@ -115,7 +115,7 @@ public class StreamsRecordProcessorTest {
         image.put(DOCUMENTKEY_KEY, createAttributeS("111"));
         image.put(DOCUMENTSTATE_KEY, createAttributeS(documentStateOld));
         image.put(DOCUMENTTYPE_KEY, createAttributeM());
-        image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(ConstantTest.PN_NOTIFICATION_ATTACHMENTS));
+        image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS));
         image.put(DOCUMENTLOGICALSTATE_KEY, createAttributeS(SAVED));
         image.put(CONTENTTYPE_KEY, createAttributeS(APPLICATION_PDF_VALUE));
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));

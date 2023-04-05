@@ -33,7 +33,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
-import it.pagopa.pnss.common.ConstantTest;
+import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
@@ -80,7 +80,7 @@ public class DocumentInternalApiControllerTest {
 		log.info("execute insertDocumentEntity()");
 
 		DocTypeEntity docTypeEntity = new DocTypeEntity();
-		docTypeEntity.setTipoDocumento(ConstantTest.PN_NOTIFICATION_ATTACHMENTS);
+		docTypeEntity.setTipoDocumento(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS);
 		log.info("execute insertDocumentEntity() : docTypeEntity : {}", docTypeEntity);
 
 		var documentEntity = new DocumentEntity();
@@ -114,7 +114,7 @@ public class DocumentInternalApiControllerTest {
 		statuses1.put("PRELOADED", currentStatus1);
 
 		DocumentType docTypes = new DocumentType();
-		docTypes.setTipoDocumento(ConstantTest.PN_NOTIFICATION_ATTACHMENTS);
+		docTypes.setTipoDocumento(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS);
 		docTypes.setChecksum(DocumentType.ChecksumEnum.SHA256);
 		docTypes.setInitialStatus("SAVED");
 		docTypes.setStatuses(statuses1);

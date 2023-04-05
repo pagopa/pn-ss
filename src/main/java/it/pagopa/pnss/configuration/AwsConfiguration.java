@@ -84,10 +84,10 @@ public class AwsConfiguration {
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
 
-    @Value("${test.aws.kinesis.endpoint:#{null}")
+    @Value("${test.aws.kinesis.endpoint:#{null}}")
     private String testKinesisEndPoint;
 
-    @Value("${test.aws.cloudwatch.endpoint:#{null}")
+    @Value("${test.aws.cloudwatch.endpoint:#{null}}")
     private String testCloudWatchEndPoint;
 
     private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
@@ -241,7 +241,9 @@ public class AwsConfiguration {
     public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor, DynamoDbAsyncClient dynamoDbAsyncClient, KinesisAsyncClient kinesisAsyncClient) {
         return args -> {
 
-            CloudWatchAsyncClient cloudWatchClient = CloudWatchAsyncClient.builder().region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()).build();
+            CloudWatchAsyncClient cloudWatchClient = CloudWatchAsyncClient.builder()
+                                                            .region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion())
+                                                            .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).build();
             ConfigsBuilder configsBuilder = new ConfigsBuilder(dynamoEventStreamName.tableMetadata(), dynamoEventStreamName.documentName(), kinesisAsyncClient, dynamoDbAsyncClient, cloudWatchClient, UUID.randomUUID().toString(), new SampleRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName()));
 
             Scheduler scheduler = new Scheduler(
@@ -257,43 +259,6 @@ public class AwsConfiguration {
             if (testEventBridge == null) {
                 executor.execute(scheduler);
             }
-
-
-            /*AWSCredentialsProvider awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
-            AmazonDynamoDB amazonDynamoDB =
-                    AmazonDynamoDBClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonCloudWatch cloudWatchClient =
-                    AmazonCloudWatchClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonDynamoDBStreams dynamoDBStreamsClient = AmazonDynamoDBStreamsClientBuilder.standard()
-                                                                                            .withRegion(
-                                                                                                    DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()
-                                                                                                                                     .id())
-                                                                                            .build();
-
-            AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
-            KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(dynamoEventStreamName.tableMetadata(),
-                                                                                           dynamoEventStreamName.documentName(),
-                                                                                           awsCredentialsProvider,
-                                                                                           "streams-demo-worker").withMaxLeaseRenewalThreads(
-                                                                                                                         5000)
-                                                                                                                 .withMaxLeasesForWorker(
-                                                                                                                         5000)
-                                                                                                                .withMaxRecords(1000)
-                                                                                                                 .withIdleTimeBetweenReadsInMillis(
-                                                                                                                         500)
-                                                                                                                 .withInitialPositionInStream(
-                                                                                                                         InitialPositionInStream.TRIM_HORIZON);
-
-            IRecordProcessorFactory recordProcessorFactory =
-                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());
-            Worker worker = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory,
-                                                                             workerConfig,
-                                                                             adapterClient,
-                                                                             amazonDynamoDB,
-                                                                             cloudWatchClient);
-            if (testEventBridge == null) {
-                executor.execute(worker);
-            }*/
         };
     }
 }

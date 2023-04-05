@@ -170,7 +170,7 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
+              - StorageClass: 'GLACIER'
                 TransitionInDays: 120
           - Id: 'PnSsLegalFacts'
             ExpirationInDays: 3655
@@ -179,8 +179,26 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
+              - StorageClass: 'GLACIER'
                 TransitionInDays: 120
+          - Id: 'PnSsLogsArchiveAudit5Y'
+            ExpirationInDays: 1830
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storageType'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT5Y'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
+          - Id: 'PnSsLogsArchiveAudit10Y'
+            ExpirationInDays: 3655
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storageType'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'

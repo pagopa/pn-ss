@@ -68,6 +68,11 @@ Parameters:
     Type: String
     Description: 'keep track of used projects commitIds'
 
+  PnCoreTargetEventBus:
+    Type: String
+    Description: 'ARN of Pn Core Event Bus where to forward external notifications'
+    Default: ''
+
   PnSsTableNameAnagraficaClient:
     Type: String
     Description: 'Nome della tabella SS Anagrafica Client'
@@ -162,17 +167,14 @@ Parameters:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
 
 #### Parametri presenti nel file json di configurazione  ###
+  
+  PnSsUriBuilderstayHotTime:
+    Type: String
+    Description: 'Days parameter for restoring of Staging Buckets objects in Glacier archive'
+    
   PresignedUrlMinutesLifespan:
     Type: String
     Description: 'Minuti di validità dei pre-signed url prima della scadenza'
-
-  PnSsIdentityTimemark:
-    Type: String
-    Description: 'Secret ID for Identity Timemark'
-
-  PnSsIdentitySignature:
-    Type: String
-    Description: 'Secret ID for Identity Signature'
 
   PnVPCDefaultSecurityGroup:
     Type: String
@@ -193,10 +195,6 @@ Parameters:
   PnSsGestoreRepositoryPathPatchDocument:
     Type: String
     Description: 'Path for PatchDocument towards pn-ss Gestore Respository'
-  
-  PnSsUriBuilderstayHotTime:
-    Type: String
-    Description: 'Days parameter for restoring of Staging Buckets objects in Glacier archive'
 
   PnSsTableDocumentiStreamMetadatiTable:
     Type: String
@@ -224,16 +222,23 @@ Parameters:
 
   PnSsTsaIdentity:
     Type: String
-    Description: 'empty' 
+    Description: 'TsaIdentity' 
+    
+  PnSsIdentityTimemark:
+    Type: String
+    Description: 'Secret ID for Identity Timemark'
+
+  PnSsIdentitySignature:
+    Type: String
+    Description: 'Secret ID for Identity Signature'
   
   PnSsTimemarkUrl:
     Type: String
-    Description: 'empty'  
-
-  PnCoreTargetEventBus:
+    Description: 'TimemarkUrl'  
+  
+  PnSsSecurityGroupNameSafeStorage:
     Type: String
-    Description: 'ARN of Pn Core Event Bus where to forward external notifications'
-    Default: ''
+    Description: 'GestoreBucket Security Group'
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
@@ -567,8 +572,7 @@ Resources:
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
               Service:
                 - 'events.amazonaws.com'
-  
-
+ 
   #####    Gestore Bucket e risorse a lui afferenti    #####
   PnSsQueuePolicyGestoreBucketInvokeErrors:
     Type: AWS::SQS::QueuePolicy
@@ -653,6 +657,16 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Ref PnSsStagingBucketArn
 
+  PnSsSecurityGroupSafeStorage:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: 'Security Group per la Lambda Gestore Bucket (SafeStorage)'
+      GroupName: !Ref PnSsSecurityGroupNameSafeStorage
+      SecurityGroupIngress: 
+        - IpProtocol: -1
+          SourceSecurityGroupId: !Ref PnVPCDefaultSecurityGroup
+      VpcId: !Ref VpcId
+
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function
     Properties:
@@ -671,7 +685,7 @@ Resources:
           - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
           - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
         SecurityGroupIds:
-          - !Ref PnVPCDefaultSecurityGroup
+          - !GetAtt PnSsSecurityGroupSafeStorage.GroupId
       Environment:
         Variables:
           PnSsHostname: !Ref ApplicationLoadBalancerDomain

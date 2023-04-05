@@ -55,7 +55,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
     /*
      * Controlla: StorageConfigurationsImpl.formatInYearsDays()
      */
-    private Integer getRetentionPeriodInDays(String retentionPeriod) throws RetentionException {
+    public Integer getRetentionPeriodInDays(String retentionPeriod) throws RetentionException {
         log.info("getRetentionPeriodInDays() : START : retentionPeriod '{}'", retentionPeriod);
 
         if (retentionPeriod == null || retentionPeriod.isBlank() || retentionPeriod.length() < 2) {
@@ -66,27 +66,28 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
         final String dayRef = "d";
         final String yearRef = "y";
 
+        String retentionPeriodStr = retentionPeriod.replaceAll(" ", "").toLowerCase();
+
         try {
-            int yearsValue = retentionPeriod.contains(yearRef) ? Integer.parseInt(retentionPeriod.substring(0,
-                                                                                                            retentionPeriod.indexOf(yearRef) -
-                                                                                                            1)) : 0;
+            int yearsValue = retentionPeriodStr.contains(yearRef) ? Integer.parseInt(retentionPeriodStr.substring(0,
+                    retentionPeriodStr.indexOf(yearRef))) : 0;
             int daysValue = 0;
-            log.info("getRetentionPeriodInDays() : yearsValue {} : daysValue {}", yearsValue, daysValue);
+            log.debug("getRetentionPeriodInDays() : yearsValue {} : daysValue {}", yearsValue, daysValue);
             if (yearsValue > 0) {
                 daysValue =
-                        retentionPeriod.contains(dayRef) ? Integer.parseInt(retentionPeriod.substring(retentionPeriod.indexOf(dayRef) + 1)
-                                                                                           .trim()) : 0;
+                        retentionPeriodStr.contains(dayRef) ? Integer.parseInt(retentionPeriodStr.substring(retentionPeriodStr.indexOf(yearRef) + 1,
+                                retentionPeriodStr.indexOf(dayRef))) : 0;
             } else {
-                daysValue = retentionPeriod.contains(dayRef) ? Integer.parseInt(retentionPeriod.substring(0,
-                                                                                                          retentionPeriod.indexOf(dayRef))) : 0;
+                daysValue = retentionPeriodStr.contains(dayRef) ? Integer.parseInt(retentionPeriodStr.substring(0,
+                        retentionPeriodStr.indexOf(dayRef))) : 0;
             }
-            log.info("getRetentionPeriodInDays() : retentionPeriod '{}' : daysValue {} - before : yearsValue {} - before",
-                     retentionPeriod,
+            log.debug("getRetentionPeriodInDays() : retentionPeriod '{}' : daysValue {} - before : yearsValue {} - before",
+                    retentionPeriodStr,
                      daysValue,
                      yearsValue);
 
             Integer days = (yearsValue > 0) ? yearsValue * 365 + daysValue : daysValue;
-            log.info("getRetentionPeriodInDays() : retentionPeriod '{}' : days {} - after", retentionPeriod, days);
+            log.debug("getRetentionPeriodInDays() : retentionPeriod '{}' : days {} - after", retentionPeriodStr, days);
             return days;
         } catch (Exception e) {
             log.error("getRetentionPeriodInDays() : errore di conversione", e);
@@ -342,11 +343,11 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
                                  documentEntity.getDocumentKey(),
                                  throwable.getMessage(),
                                  throwable);
-                       if (documentChanges.getDocumentState() != null && documentChanges.getDocumentState().equalsIgnoreCase(STAGED)) {
-                           log.info("setRetentionPeriodInBucketObjectMetadata() : stato di arrivo per il documento = {} -> " +
-                                    "documento non presente in bucket hot -> scarto l'errore", documentChanges.getDocumentState());
-                           return Mono.just(documentEntity);
-                       }
+//                       if (documentChanges.getDocumentState() != null && (documentChanges.getDocumentState().isBlank() || documentChanges.getDocumentState().isEmpty() || documentChanges.getDocumentState().equalsIgnoreCase(STAGED))) {
+//                           log.info("setRetentionPeriodInBucketObjectMetadata() : stato di arrivo per il documento = {} -> " +
+//                                    "documento non presente in bucket hot -> scarto l'errore", documentChanges.getDocumentState());
+//                           return Mono.just(documentEntity);
+//                       }
                        return Mono.error(new RetentionException(throwable.getMessage()));
                    })
                    .onErrorResume(DateTimeException.class, throwable -> {

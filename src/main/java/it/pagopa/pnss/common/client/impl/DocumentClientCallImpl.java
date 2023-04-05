@@ -17,8 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.FORBIDDEN;
+import static org.springframework.http.HttpStatus.*;
 
 @Service
 @Slf4j
@@ -82,6 +81,8 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                           .retrieve()
                           .onStatus(BAD_REQUEST::equals,
                                     clientResponse -> Mono.error(new InvalidNextStatusException(document.getDocumentState(), keyFile)))
+                          .onStatus(NOT_FOUND::equals,
+                                    clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
                           .bodyToMono(DocumentResponse.class)
                           .onErrorResume(RuntimeException.class, e -> {
                               log.error("DocumentClientCallImpl.patchDocument() : errore generico = {}", e.getMessage(), e);

@@ -173,6 +173,15 @@ public class UriBuilderService extends CommonS3ObjectService {
     }
 
     private Mono<Boolean> validationField(String contentType, String documentType) {
+
+        if (contentType == null || contentType.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing");
+        }
+
+        if (documentType == null || documentType.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing");
+        }
+
         if (!LISTA_TIPO_DOCUMENTI.contains(contentType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid");
         }

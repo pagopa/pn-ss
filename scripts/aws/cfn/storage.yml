@@ -41,10 +41,9 @@ Parameters:
 
 Conditions:
   IsProdEnv: !Equals ['PROD', !Ref DeployEnv]
+  IsDevEnv: !Equals [!Ref 'AWS::AccountId', '063295570123']
 
 Resources:
-  # NullResource:
-  #     Type: AWS::CloudFormation::WaitConditionHandle
 
   PnSsTableAnagraficaClient:
     Type: AWS::DynamoDB::Table
@@ -55,8 +54,6 @@ Resources:
       KeySchema: 
         - AttributeName: 'name'
           KeyType: 'HASH'
-      #KinesisStreamSpecification:
-      #  StreamArn: 'String'
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
@@ -76,8 +73,6 @@ Resources:
       KeySchema: 
         - AttributeName: 'tipoDocumento'
           KeyType: 'HASH'
-      #KinesisStreamSpecification:
-      #  StreamArn: 'String'
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
@@ -99,8 +94,6 @@ Resources:
           KeyType: 'HASH'
       StreamSpecification:
           StreamViewType: 'NEW_AND_OLD_IMAGES'
-      #KinesisStreamSpecification:
-      #  StreamArn: 'String'
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
@@ -136,10 +129,7 @@ Resources:
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               #  KMSMasterKeyID: KMS-KEY-AR
-      # IntelligentTieringConfigurations:
-      #   IntelligentTieringConfigurations
-      # InventoryConfigurations:
-      #   InventoryConfigurations
+
       CorsConfiguration:  
         CorsRules:
           - AllowedHeaders:
@@ -169,40 +159,47 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_TEMPORARY_DOCUMENT'
           - Id: 'PnSsNotificationAttachment'
-            ExpirationInDays: 4
+            ExpirationInDays: 120
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'
-                Value: 'PN_NOTIFIED_DOCUMENT'
-            Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
-              - StorageClass: 'GLACIER_IR'
-                TransitionInDays: 1
+                Value: 'PN_NOTIFIED_DOCUMENTS'
           - Id: 'PnSsAar'
-            ExpirationInDays: 15
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
-              # - StorageClass: 'DEEP_ARCHIVE'
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+                TransitionInDays: 120
           - Id: 'PnSsLegalFacts'
-            ExpirationInDays: 15
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
-              # - StorageClass: 'GLACIER_IR'
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 120
+          - Id: 'PnSsLogsArchiveAudit5Y'
+            ExpirationInDays: 1830
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storageType'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT5Y'
+            Transitions: 
+              - StorageClass: 'GLACIER'
                 TransitionInDays: 1
-      #LoggingConfiguration:
-      #  DestinationBucketName: 'String'
-      #  LogFilePrefix: 'String'
-      # MetricsConfigurations:
-      #  MetricsConfigurations
+          - Id: 'PnSsLogsArchiveAudit10Y'
+            ExpirationInDays: 3655
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storageType'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
@@ -250,11 +247,6 @@ Resources:
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               #  KMSMasterKeyID: KMS-KEY-AR
-      #LoggingConfiguration:
-      #  DestinationBucketName: 'String'
-      #  LogFilePrefix: 'String'
-      #MetricsConfigurations:
-      #  MetricsConfigurations
       LifecycleConfiguration:
         Rules:
           - Id: 'PnSsStagingAbortIncompleteMultipartUpload'
@@ -279,8 +271,6 @@ Resources:
   PnSsQueueStagingBucket:
     Type: AWS::SQS::Queue
     Properties:
-      # KmsDataKeyReusePeriodSeconds: 300
-      # KmsMasterKeyId: 'alias/aws/sqs'
       SqsManagedSseEnabled: True
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20      
@@ -292,8 +282,7 @@ Resources:
   PnSsDLQueueStagingBucket:
     Type: AWS::SQS::Queue
     Properties:
-      KmsDataKeyReusePeriodSeconds: 300
-      KmsMasterKeyId: 'alias/aws/sqs'
+      SqsManagedSseEnabled: True
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20
       VisibilityTimeout: 30 
@@ -302,9 +291,7 @@ Resources:
   PnSsQueueGestoreBucketInvokeErrors:
     Type: AWS::SQS::Queue
     Properties:
-      KmsDataKeyReusePeriodSeconds: 300
-      KmsMasterKeyId: 'alias/aws/sqs'
-      # SqsManagedSseEnabled: True
+      SqsManagedSseEnabled: True
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 0      
       RedrivePolicy:
@@ -315,8 +302,7 @@ Resources:
   PnSsDLQueueGestoreBucketInvokeErrors:
     Type: AWS::SQS::Queue
     Properties:
-      KmsDataKeyReusePeriodSeconds: 300
-      KmsMasterKeyId: 'alias/aws/sqs'
+      SqsManagedSseEnabled: True
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 0
       VisibilityTimeout: 30
@@ -365,7 +351,32 @@ Resources:
           AWS: !Sub '${AWS::AccountId}'
         Condition:
           StringEqualsIfExists:
-            events:creatorAccount: !Sub '${AWS::AccountId}'   
+            events:creatorAccount: !Sub '${AWS::AccountId}'
+
+  PnSsQueueNotificheExt1:
+    Type: AWS::SQS::Queue
+    Condition: IsDevEnv
+    Properties:
+      SqsManagedSseEnabled: True
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 0      
+      VisibilityTimeout: 30
+    
+  PnSsEventRuleNotificheExt1:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref PnSsEventBusExternalNotification
+      EventPattern:
+        source: 
+          - "GESTORE DISPONIBILITA"
+        account: 
+          - !Sub ${AWS::AccountId}
+        region: 
+          - !Sub ${AWS::Region}
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt PnSsQueueNotificheExt1.Arn
+          Id: 'PnSsExt1QueueTargetForExtNotification'
 
   # ####### DENY POLICY FROM OUTSIDE ACCOUNT ########
   # PnSsEventBusPolicyDenyExternalNotification:

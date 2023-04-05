@@ -33,7 +33,7 @@ public class FileUploadApiController implements FileUploadApi {
     public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId,
                                                                  Mono<FileCreationRequest> fileCreationRequest,
                                                                  final ServerWebExchange exchange) {
-    	
+
         return fileCreationRequest.flatMap(request -> {
         								String checksumValue = null;
 
@@ -59,7 +59,7 @@ public class FileUploadApiController implements FileUploadApi {
 												return Mono.error(new ChecksumException("Checksum value (header or in request) not present"));
 											}
 										}
-        								return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId, 
+        								return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
         																				request,
         																				checksumValue);
         						  })

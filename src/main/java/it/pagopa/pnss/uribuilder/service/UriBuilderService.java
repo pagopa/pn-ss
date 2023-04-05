@@ -7,7 +7,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.RestoreObjectRequest;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
@@ -80,12 +79,8 @@ public class UriBuilderService extends CommonS3ObjectService {
     private final DocTypesService docTypesService;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
 
-    public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall
-            , DocumentClientCall documentClientCall
-            , BucketName bucketName
-            , DocTypesClientCall docTypesClientCall
-            , DocTypesService docTypesService
-            ) {
+    public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, DocTypesService docTypesService) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
@@ -173,34 +168,21 @@ public class UriBuilderService extends CommonS3ObjectService {
     }
 
     private Mono<Boolean> validationField(String contentType, String documentType) {
-
-        if (contentType == null || contentType.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing");
-        }
-
-        if (documentType == null || documentType.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing");
-        }
-
-        if (!LISTA_TIPO_DOCUMENTI.contains(contentType)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid");
-        }
-
-        //        if (!LISTA_TIPOLOGIE_DOC.contains(documentType)) {
-        //            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid");
-        //        }
-
-        docTypesService.getAllDocumentType()//
-                .doOnNext(lista -> {
-                    if (!lista.stream()//
-                            .filter(item -> item.getTipoDocumento().equals(documentType))//
-                            .findFirst()//
-                            .isPresent()) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid");
-                    }
-                });
-
-        return Mono.just(true);
+        return Mono.just(contentType).handle((s, sink) -> {
+            if (contentType.isBlank()) {
+                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing"));
+            } else if (documentType == null || documentType.isBlank()) {
+                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
+            } else if (!LISTA_TIPO_DOCUMENTI.contains(contentType)) {
+                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid"));
+            } else {
+                sink.next(contentType);
+            }
+        }).flatMap(mono -> docTypesService.getAllDocumentType()).handle((documentTypes, sink) -> {
+            if (documentTypes.stream().noneMatch(item -> item.getTipoDocumento().equals(documentType))) {
+                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid"));
+            }
+        }).thenReturn(true);
     }
 
     private FileCreationResponse.UploadMethodEnum extractUploadMethod(SdkHttpMethod method) {

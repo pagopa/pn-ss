@@ -20,6 +20,7 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -74,16 +75,17 @@ public class UriBuilderService extends CommonS3ObjectService {
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
-
     private final DocTypesClientCall docTypesClientCall;
+    private final DocTypesService docTypesService;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, DocTypesService docTypesService) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.docTypesClientCall = docTypesClientCall;
+        this.docTypesService = docTypesService;
     }
 
     private Mono<String> getBucketName(String docType) {
@@ -108,71 +110,95 @@ public class UriBuilderService extends CommonS3ObjectService {
         var metadata = new HashMap<String, String>();
         metadata.put("secret", secret.toString());
 
-        return Mono.fromCallable(() -> validationField(contentType, documentType))
-                   .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
-                   .handle((userConfiguration, synchronousSink) -> {
-                       if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
-                           synchronousSink.error((new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                                                              String.format(
-                                                                                      "Client '%s' not has privilege for upload document " +
-                                                                                      "type '%s'",
-                                                                                      xPagopaSafestorageCxId,
-                                                                                      documentType))));
-                       } else if (!MEDIA_TYPE_WITH_EXTENSION_MAP.containsKey(contentType)) {
-                           synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unrecognized Content Type"));
-                       } else {
-                           synchronousSink.next(userConfiguration);
-                       }
-                   })
-                   .doOnSuccess(object -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
-                   .flatMap(unused -> {
-                       var documentKeyTmp = String.format("%s%s",
-                                                          GenerateRandoKeyFile.getInstance().createKeyName(documentType),
-                                                          MEDIA_TYPE_WITH_EXTENSION_MAP.get(contentType));
-                       log.info("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
-                       return documentClientCall.postDocument(new DocumentInput().contentType(request.getContentType())
-                                                                                 .documentKey(documentKeyTmp)
-                                                                                 .documentState(initialNewDocumentState)
-                                                                                 .clientShortCode(xPagopaSafestorageCxId)
-                                                                                 .documentType(request.getDocumentType()))
-                                                .retryWhen(Retry.max(10)
-                                                                .filter(DocumentkeyPresentException.class::isInstance)
-                                                                .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
-                                                                    throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                                                                                      "Non e' stato possibile " +
-                                                                                                      "produrre una chiave per " + "user " +
-                                                                                                      xPagopaSafestorageCxId);
-                                                                }));
-                   })
-                   .flatMap(insertedDocument ->
+        return validationField(contentType,
+                               documentType).flatMap(booleanMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
+                                            .handle((userConfiguration, synchronousSink) -> {
+                                                if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
+                                                    synchronousSink.error((new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                                                                                       String.format(
+                                                                                                               "Client '%s' not has " +
+                                                                                                               "privilege for upload " +
+                                                                                                               "document " +
+                                                                                                               "type '%s'",
+                                                                                                               xPagopaSafestorageCxId,
+                                                                                                               documentType))));
+                                                } else if (!MEDIA_TYPE_WITH_EXTENSION_MAP.containsKey(contentType)) {
+                                                    synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                                                                      "Unrecognized Content Type"));
+                                                } else {
+                                                    synchronousSink.next(userConfiguration);
+                                                }
+                                            })
+                                            .doOnSuccess(object -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
+                                            .flatMap(unused -> {
+                                                var documentKeyTmp = String.format("%s%s",
+                                                                                   GenerateRandoKeyFile.getInstance()
+                                                                                                       .createKeyName(documentType),
+                                                                                   MEDIA_TYPE_WITH_EXTENSION_MAP.get(contentType));
+                                                log.info("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
+                                                return documentClientCall.postDocument(new DocumentInput().contentType(request.getContentType())
+                                                                                                          .documentKey(documentKeyTmp)
+                                                                                                          .documentState(
+                                                                                                                  initialNewDocumentState)
+                                                                                                          .clientShortCode(
+                                                                                                                  xPagopaSafestorageCxId)
+                                                                                                          .documentType(request.getDocumentType()))
+                                                                         .retryWhen(Retry.max(10)
+                                                                                         .filter(DocumentkeyPresentException.class::isInstance)
+                                                                                         .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
+                                                                                             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                                                                                                               "Non e' " +
+                                                                                                                               "stato " +
+                                                                                                                               "possibile" +
+                                                                                                                               " " +
+                                                                                                                               "produrre " +
+                                                                                                                               "una " +
+                                                                                                                               "chiave " +
+                                                                                                                               "per " +
+                                                                                                                               "user " +
+                                                                                                                               xPagopaSafestorageCxId);
+                                                                                         }));
+                                            })
+                                            .flatMap(insertedDocument ->
 //                       PresignedPutObjectRequest presignedPutObjectRequest =
-                                    buildsUploadUrl(documentType,
-                                                    insertedDocument.getDocument().getDocumentState(),
-                                                    insertedDocument.getDocument().getDocumentKey(),
-                                                    contentType,
-                                                    metadata,
-                                                    insertedDocument.getDocument().getDocumentType().getChecksum(),
-                                                    checksumValue).map(presignedPutObjectRequest -> {
-                                        FileCreationResponse response = new FileCreationResponse();
-                                        response.setKey(insertedDocument.getDocument().getDocumentKey());
-                                        response.setSecret(secret.toString());
-                                        response.setUploadUrl(presignedPutObjectRequest.url().toString());
-                                        response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest().method()));
-                                        return response;
-                                    })
+                                                             buildsUploadUrl(documentType,
+                                                                             insertedDocument.getDocument().getDocumentState(),
+                                                                             insertedDocument.getDocument().getDocumentKey(),
+                                                                             contentType,
+                                                                             metadata,
+                                                                             insertedDocument.getDocument().getDocumentType().getChecksum(),
+                                                                             checksumValue).map(presignedPutObjectRequest -> {
+                                                                 FileCreationResponse response = new FileCreationResponse();
+                                                                 response.setKey(insertedDocument.getDocument().getDocumentKey());
+                                                                 response.setSecret(secret.toString());
+                                                                 response.setUploadUrl(presignedPutObjectRequest.url().toString());
+                                                                 response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest()
+                                                                                                                                       .method()));
+                                                                 return response;
+                                                             })
 
-                           )
-                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "));
+                                                    )
+                                            .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "));
     }
 
     private Mono<Boolean> validationField(String contentType, String documentType) {
-        if (!LISTA_TIPO_DOCUMENTI.contains(contentType)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid");
-        }
-        if (!LISTA_TIPOLOGIE_DOC.contains(documentType)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid");
-        }
-        return Mono.just(true);
+        return Mono.justOrEmpty(contentType).handle((s, sink) -> {
+            if (contentType.isBlank()) {
+                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing"));
+            } else if (documentType == null || documentType.isBlank()) {
+                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
+            } else if (!LISTA_TIPO_DOCUMENTI.contains(contentType)) {
+                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid"));
+            } else {
+                sink.next(contentType);
+            }
+        }).flatMap(mono -> docTypesService.getAllDocumentType()).handle((documentTypes, sink) -> {
+            if (documentTypes.stream().noneMatch(item -> item.getTipoDocumento().equals(documentType))) {
+                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid"));
+            } else {
+                sink.next(documentTypes);
+            }
+        }).map(o -> true).switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing")));
     }
 
     private FileCreationResponse.UploadMethodEnum extractUploadMethod(SdkHttpMethod method) {

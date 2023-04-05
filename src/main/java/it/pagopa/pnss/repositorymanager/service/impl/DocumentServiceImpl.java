@@ -40,6 +40,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import static it.pagopa.pnss.common.constant.Constant.STORAGE_TYPE;
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
@@ -72,7 +73,6 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
     }
 
     private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
-        log.error("getErrorIdDocNotFoundException() : document with documentKey \"{}\" not found", documentKey);
         return Mono.error(new DocumentKeyNotPresentException(documentKey));
     }
 

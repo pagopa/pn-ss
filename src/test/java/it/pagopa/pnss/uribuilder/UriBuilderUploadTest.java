@@ -8,9 +8,12 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
+
+import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -68,6 +71,8 @@ class UriBuilderUploadTest {
     UserConfigurationClientCall userConfigurationClientCall;
     @Autowired
     private UriBuilderService uriBuilderService;
+    @MockBean
+    private DocTypesService docTypesService;
 
     @MockBean
     DocumentClientCall documentClientCall;
@@ -261,9 +266,15 @@ class UriBuilderUploadTest {
         userConfiguration.setName(xPagoPaSafestorageCxIdValue);
         userConfiguration.setApiKey(xApiKeyValue);
         userConfig.setUserConfiguration(userConfiguration);
+        
+        DocumentType documentType = new DocumentType();
+        documentType.setTipoDocumento(ConstantTest.PN_NOTIFICATION_ATTACHMENTS);
+        List<DocumentType> documentTypeList = new ArrayList<>();
+        documentTypeList.add(documentType);
 
         when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        when(docTypesService.getAllDocumentType()).thenReturn(Mono.just(documentTypeList));
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType(IMAGE_TIFF_VALUE);

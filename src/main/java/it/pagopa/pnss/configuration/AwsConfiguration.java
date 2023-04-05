@@ -2,28 +2,16 @@ package it.pagopa.pnss.configuration;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBStreams;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBStreamsClientBuilder;
-import com.amazonaws.services.dynamodbv2.streamsadapter.AmazonDynamoDBStreamsAdapterClient;
-import com.amazonaws.services.dynamodbv2.streamsadapter.StreamsWorkerFactory;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
-import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessorFactory;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
@@ -44,6 +32,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
@@ -54,7 +43,9 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 import software.amazon.kinesis.common.ConfigsBuilder;
 import software.amazon.kinesis.common.KinesisClientUtil;
+import software.amazon.kinesis.common.StreamIdentifier;
 import software.amazon.kinesis.coordinator.Scheduler;
+import software.amazon.kinesis.processor.ShardRecordProcessor;
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
 
 import java.net.URI;
@@ -92,6 +83,12 @@ public class AwsConfiguration {
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
+
+    @Value("${test.aws.kinesis.endpoint:#{null}")
+    private String testKinesisEndPoint;
+
+    @Value("${test.aws.cloudwatch.endpoint:#{null}")
+    private String testCloudWatchEndPoint;
 
     private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
@@ -223,6 +220,17 @@ public class AwsConfiguration {
         return secretsManagerClient.build();
     }
 
+    @Bean
+    public KinesisAsyncClient kinesisAsyncClient(){
+        KinesisAsyncClientBuilder kinesisAsyncClientBuilder =
+                KinesisAsyncClient.builder().region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()).credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+
+        if(testKinesisEndPoint != null){
+            kinesisAsyncClientBuilder.endpointOverride(URI.create(testKinesisEndPoint));
+        }
+        return KinesisClientUtil.createKinesisAsyncClient(kinesisAsyncClientBuilder);
+    }
+
 
     @Bean
     public TaskExecutor taskExecutor() {
@@ -230,17 +238,11 @@ public class AwsConfiguration {
     }
 
     @Bean
-    public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor) {
+    public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor, DynamoDbAsyncClient dynamoDbAsyncClient, KinesisAsyncClient kinesisAsyncClient) {
         return args -> {
 
-            KinesisAsyncClient kinesisClient = KinesisClientUtil.createKinesisAsyncClient(KinesisAsyncClient.builder().region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()));
-            DynamoDbAsyncClient dynamoClient = DynamoDbAsyncClient.builder().region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()).build();
             CloudWatchAsyncClient cloudWatchClient = CloudWatchAsyncClient.builder().region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()).build();
-
-            ConfigsBuilder configsBuilder = new ConfigsBuilder(streamName, applicationName, kinesisClient, dynamoClient, cloudWatchClient, UUID.randomUUID().toString(), new SampleRecordProcessorFactory());
-
-            ShardRecordProcessorFactory recordProcessorFactory =
-                    (ShardRecordProcessorFactory) new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());
+            ConfigsBuilder configsBuilder = new ConfigsBuilder(dynamoEventStreamName.tableMetadata(), dynamoEventStreamName.documentName(), kinesisAsyncClient, dynamoDbAsyncClient, cloudWatchClient, UUID.randomUUID().toString(), new SampleRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName()));
 
             Scheduler scheduler = new Scheduler(
                     configsBuilder.checkpointConfig(),

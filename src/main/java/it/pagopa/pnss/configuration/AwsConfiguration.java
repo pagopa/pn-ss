@@ -2,29 +2,16 @@ package it.pagopa.pnss.configuration;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBStreams;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBStreamsClientBuilder;
-import com.amazonaws.services.dynamodbv2.streamsadapter.AmazonDynamoDBStreamsAdapterClient;
-import com.amazonaws.services.dynamodbv2.streamsadapter.StreamsWorkerFactory;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
-import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
-import io.awspring.cloud.messaging.core.QueueMessagingTemplate;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
-import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessorFactory;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
@@ -37,12 +24,15 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
@@ -51,10 +41,16 @@ import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
+import software.amazon.kinesis.common.ConfigsBuilder;
+import software.amazon.kinesis.common.KinesisClientUtil;
+import software.amazon.kinesis.common.StreamIdentifier;
+import software.amazon.kinesis.coordinator.Scheduler;
+import software.amazon.kinesis.processor.ShardRecordProcessor;
+import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Configuration
 public class AwsConfiguration {
@@ -80,13 +76,19 @@ public class AwsConfiguration {
     String snsLocalStackEndpoint;
 
     @Value("${test.aws.secretsmanager.endpoint:#{null}}")
-    String secretsmanagerLocalStackEndpoint;
+    String secretsManagerLocalStackEndpoint;
 
     @Value("${test.event.bridge:#{null}}")
     private String testEventBridge;
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
+
+    @Value("${test.aws.kinesis.endpoint:#{null}}")
+    private String testKinesisEndPoint;
+
+    @Value("${test.aws.cloudwatch.endpoint:#{null}}")
+    private String testCloudWatchEndPoint;
 
     private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
@@ -211,11 +213,22 @@ public class AwsConfiguration {
                                                                                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
                                                                                .region(Region.of(awsConfigurationProperties.regionCode()));
 
-        if (secretsmanagerLocalStackEndpoint != null) {
-            secretsManagerClient.endpointOverride(URI.create(secretsmanagerLocalStackEndpoint));
+        if (secretsManagerLocalStackEndpoint != null) {
+            secretsManagerClient.endpointOverride(URI.create(secretsManagerLocalStackEndpoint));
         }
 
         return secretsManagerClient.build();
+    }
+
+    @Bean
+    public KinesisAsyncClient kinesisAsyncClient(){
+        KinesisAsyncClientBuilder kinesisAsyncClientBuilder =
+                KinesisAsyncClient.builder().region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()).credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+
+        if(testKinesisEndPoint != null){
+            kinesisAsyncClientBuilder.endpointOverride(URI.create(testKinesisEndPoint));
+        }
+        return KinesisClientUtil.createKinesisAsyncClient(kinesisAsyncClientBuilder);
     }
 
 
@@ -225,41 +238,26 @@ public class AwsConfiguration {
     }
 
     @Bean
-    public CommandLineRunner schedulingRunner(TaskExecutor executor) {
+    public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor, DynamoDbAsyncClient dynamoDbAsyncClient, KinesisAsyncClient kinesisAsyncClient) {
         return args -> {
-            AWSCredentialsProvider awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
-            AmazonDynamoDB amazonDynamoDB =
-                    AmazonDynamoDBClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonCloudWatch cloudWatchClient =
-                    AmazonCloudWatchClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonDynamoDBStreams dynamoDBStreamsClient = AmazonDynamoDBStreamsClientBuilder.standard()
-                                                                                            .withRegion(
-                                                                                                    DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()
-                                                                                                                                     .id())
-                                                                                            .build();
-            AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
-            KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(dynamoEventStreamName.tableMetadata(),
-                                                                                           dynamoEventStreamName.documentName(),
-                                                                                           awsCredentialsProvider,
-                                                                                           "streams-demo-worker").withMaxLeaseRenewalThreads(
-                                                                                                                         5000)
-                                                                                                                 .withMaxLeasesForWorker(
-                                                                                                                         5000)
-                                                                                                                 .withMaxRecords(1000)
-                                                                                                                 .withIdleTimeBetweenReadsInMillis(
-                                                                                                                         500)
-                                                                                                                 .withInitialPositionInStream(
-                                                                                                                         InitialPositionInStream.TRIM_HORIZON);
 
-            IRecordProcessorFactory recordProcessorFactory =
-                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());
-            Worker worker = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory,
-                                                                             workerConfig,
-                                                                             adapterClient,
-                                                                             amazonDynamoDB,
-                                                                             cloudWatchClient);
+            CloudWatchAsyncClient cloudWatchClient = CloudWatchAsyncClient.builder()
+                                                            .region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion())
+                                                            .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).build();
+            ConfigsBuilder configsBuilder = new ConfigsBuilder(dynamoEventStreamName.tableMetadata(), dynamoEventStreamName.documentName(), kinesisAsyncClient, dynamoDbAsyncClient, cloudWatchClient, UUID.randomUUID().toString(), new SampleRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName()));
+
+            Scheduler scheduler = new Scheduler(
+                    configsBuilder.checkpointConfig(),
+                    configsBuilder.coordinatorConfig(),
+                    configsBuilder.leaseManagementConfig(),
+                    configsBuilder.lifecycleConfig(),
+                    configsBuilder.metricsConfig(),
+                    configsBuilder.processorConfig(),
+                    configsBuilder.retrievalConfig()
+            );
+
             if (testEventBridge == null) {
-                executor.execute(worker);
+                executor.execute(scheduler);
             }
         };
     }

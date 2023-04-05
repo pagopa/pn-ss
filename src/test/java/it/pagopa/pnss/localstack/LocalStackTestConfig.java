@@ -62,7 +62,9 @@ public class LocalStackTestConfig {
             SQS,
             DYNAMODB,
             S3,
-            SECRETSMANAGER).withEnv("AWS_DEFAULT_REGION", "eu-central-1");
+            SECRETSMANAGER,
+            KINESIS,
+            CLOUDWATCH).withEnv("AWS_DEFAULT_REGION", "eu-central-1");
 
     static {
         localStackContainer.start();
@@ -85,6 +87,8 @@ public class LocalStackTestConfig {
         System.setProperty("aws.secret.key", localStackContainer.getSecretKey());
         System.setProperty("test.event.bridge", "true");
         System.setProperty("test.aws.secretsmanager.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SECRETSMANAGER)));
+        System.setProperty("test.aws.kinesis.endpoint", String.valueOf(localStackContainer.getEndpointOverride(KINESIS)));
+        System.setProperty("test.aws.cloudwatch.endpoint", String.valueOf(localStackContainer.getEndpointOverride(CLOUDWATCH)));
 
 
 //        System.setProperty("PnSsStagingBucketName","PnSsStagingBucketName");

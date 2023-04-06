@@ -1,4 +1,4 @@
-/*
+
 package it.pagopa.pnss.availabledocument.event;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -78,4 +78,4 @@ public class ManageDynamoEvent {
 
     }
 }
-*/
+

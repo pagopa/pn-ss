@@ -1,16 +1,18 @@
-/*
 package it.pagopa.pnss.availabledocument.event;
 
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
+import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor;
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
+import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
+import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
+import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownInput;
+import com.amazonaws.services.kinesis.model.Record;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
-import software.amazon.kinesis.lifecycle.ShutdownInput;
-import software.amazon.kinesis.lifecycle.events.InitializationInput;
-import software.amazon.kinesis.lifecycle.events.ProcessRecordsInput;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -126,4 +128,4 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         }
 
     }
-}*/
+}

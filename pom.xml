@@ -70,15 +70,11 @@
             <artifactId>apigateway</artifactId>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.amazonaws/amazon-kinesis-client -->
         <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>kinesis</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>software.amazon.kinesis</groupId>
+            <groupId>com.amazonaws</groupId>
             <artifactId>amazon-kinesis-client</artifactId>
-            <version>2.3.5</version>
+            <version>1.14.10</version>
         </dependency>
 
         <dependency>
@@ -86,23 +82,6 @@
             <artifactId>dynamodb-streams-kinesis-adapter</artifactId>
             <version>1.6.0</version>
         </dependency>
-
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-log4j2</artifactId>
-            <version>1.5.1</version>
-        </dependency>
-
-        <!-- da valutare -->
-
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>amazon-kinesis-client</artifactId>
-            <version>1.14.10</version>
-        </dependency>
-
-
-        <!-- da valutare -->
 
         <dependency>
             <groupId>io.swagger</groupId>
@@ -375,14 +354,6 @@
                     </execution>
 
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>17</source>
-                    <target>17</target>
-                </configuration>
             </plugin>
         </plugins>
     </build>

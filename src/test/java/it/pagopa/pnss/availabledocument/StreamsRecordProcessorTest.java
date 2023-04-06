@@ -1,4 +1,3 @@
-/*
 package it.pagopa.pnss.availabledocument;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -6,6 +5,7 @@ import com.amazonaws.services.dynamodbv2.model.StreamRecord;
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.model.Record;
+import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static it.pagopa.pnss.availabledocument.event.ManageDynamoEvent.*;
+import static it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor.*;
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
@@ -143,4 +145,4 @@ class StreamsRecordProcessorTest {
     }
 
 }
-*/
+

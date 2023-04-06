@@ -3,7 +3,6 @@ package it.pagopa.pnss.uribuilder.service;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.OperationResultCodeResponse;
 import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
@@ -19,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
-import reactor.util.function.Tuples;
 
 import java.text.SimpleDateFormat;
 
@@ -42,9 +40,24 @@ public class FileMetadataUpdateService {
         var logicalState = request.getStatus();
 
         return docClientCall.getDocument(fileKey)
+                .flatMap( documentResponse -> Mono.zip(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
+                .handle(((objects, synchronousSink) -> {
 
-                            .flatMap(documentResponse -> {
-                                Document document = documentResponse.getDocument();
+                    var userConfiguration = objects.getT1().getUserConfiguration();
+                    var document = objects.getT2().getDocument();
+                    var tipoDocumento = document.getDocumentType().getTipoDocumento();
+
+                    if (userConfiguration == null || userConfiguration.getCanModifyStatus() == null || !userConfiguration.getCanModifyStatus().contains(tipoDocumento)) {
+                        String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
+                                xPagopaSafestorageCxId,
+                                tipoDocumento);
+                        log.error("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
+                        synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, errore));
+                    } else synchronousSink.next(document);
+
+                }))
+                            .flatMap(object -> {
+                                Document document = (Document) object;
                                 String documentType = document.getDocumentType().getTipoDocumento();
 
                                 Mono<String> checkedStatus;
@@ -53,23 +66,13 @@ public class FileMetadataUpdateService {
                                 } else {
                                     checkedStatus = Mono.just("");
                                 }
-                                return Mono.zip(userConfigClientCall.getUser(xPagopaSafestorageCxId), checkedStatus)
-                                           .map(objects -> Tuples.of(document, objects.getT1(), objects.getT2()));
+                                return Mono.zip(Mono.just(document),  checkedStatus);
                             }).flatMap(objects -> {
+
                     Document document = objects.getT1();
                     DocumentType documentType = document.getDocumentType();
-                    String tipoDocumento = documentType.getTipoDocumento();
-                    UserConfiguration userConfiguration = objects.getT2().getUserConfiguration();
-                    String technicalStatus = objects.getT3();
+                    String technicalStatus = objects.getT2();
                     DocumentChanges documentChanges = new DocumentChanges();
-
-                    if (userConfiguration.getCanModifyStatus() == null || !userConfiguration.getCanModifyStatus().contains(tipoDocumento)) {
-                        String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
-                                                      xPagopaSafestorageCxId,
-                                                      tipoDocumento);
-                        log.error("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
-                        return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, errore));
-                    }
 
                     boolean isStatusPresent = false;
 

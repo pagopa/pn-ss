@@ -1,7 +1,5 @@
 package it.pagopa.pnss.configuration;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
@@ -11,7 +9,6 @@ import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
@@ -43,10 +40,7 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 import software.amazon.kinesis.common.ConfigsBuilder;
 import software.amazon.kinesis.common.KinesisClientUtil;
-import software.amazon.kinesis.common.StreamIdentifier;
 import software.amazon.kinesis.coordinator.Scheduler;
-import software.amazon.kinesis.processor.ShardRecordProcessor;
-import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
 
 import java.net.URI;
 import java.util.List;
@@ -244,7 +238,7 @@ public class AwsConfiguration {
             CloudWatchAsyncClient cloudWatchClient = CloudWatchAsyncClient.builder()
                                                             .region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion())
                                                             .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).build();
-            ConfigsBuilder configsBuilder = new ConfigsBuilder(dynamoEventStreamName.tableMetadata(), dynamoEventStreamName.documentName(), kinesisAsyncClient, dynamoDbAsyncClient, cloudWatchClient, UUID.randomUUID().toString(), new SampleRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName()));
+            ConfigsBuilder configsBuilder = new ConfigsBuilder(dynamoEventStreamName.tableMetadata(), dynamoEventStreamName.documentName(), kinesisAsyncClient, dynamoDbAsyncClient, cloudWatchClient, UUID.randomUUID().toString(), new RecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName()));
 
             Scheduler scheduler = new Scheduler(
                     configsBuilder.checkpointConfig(),

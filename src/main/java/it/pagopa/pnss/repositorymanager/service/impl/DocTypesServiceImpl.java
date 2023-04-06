@@ -40,7 +40,6 @@ public class DocTypesServiceImpl implements DocTypesService {
     }
 
     private Mono<DocTypeEntity> getErrorIdDocTypeNotFoundException(String typeId) {
-        log.error("getErrorIdDocTypeNotFoundException() : docType with typeId \"{}\" not found", typeId);
         return Mono.error(new DocumentTypeNotPresentException(typeId));
     }
     

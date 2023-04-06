@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +22,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.common.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;

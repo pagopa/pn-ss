@@ -1,11 +1,11 @@
-package it.pagopa.pnss.configuration;
+package it.pagopa.pnss.common.configuration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
-import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
-import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
-import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
+import it.pagopa.pnss.common.configurationproperties.AvailabelDocumentEventBridgeName;
+import it.pagopa.pnss.common.configurationproperties.AwsConfigurationProperties;
+import it.pagopa.pnss.common.configurationproperties.DynamoEventStreamName;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;

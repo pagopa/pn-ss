@@ -17,17 +17,4 @@ public class NotificationMessage {
     String retentionUntil;
     @JsonProperty("client_short_code")
     String clientShortCode;
-    @Override
-    public String toString() {
-        return "NotificationMessage{" +
-                "key='" + key + '\'' +
-                ", versionId='" + versionId + '\'' +
-                ", documentType='" + documentType + '\'' +
-                ", documentStatus='" + documentStatus + '\'' +
-                ", contentType='" + contentType + '\'' +
-                ", checksum='" + checksum + '\'' +
-                ", retentionUntil='" + retentionUntil + '\'' +
-                ", clientShortCode='" + clientShortCode + '\'' +
-                '}';
-    }
 }

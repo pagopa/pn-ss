@@ -7,7 +7,7 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.common.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;

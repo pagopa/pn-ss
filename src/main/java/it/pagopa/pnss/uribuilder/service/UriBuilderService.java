@@ -18,7 +18,7 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.ChecksumException;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.common.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;

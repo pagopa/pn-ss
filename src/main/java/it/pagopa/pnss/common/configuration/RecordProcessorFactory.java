@@ -1,4 +1,4 @@
-package it.pagopa.pnss.configuration;
+package it.pagopa.pnss.common.configuration;
 
 import software.amazon.kinesis.processor.ShardRecordProcessor;
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory;

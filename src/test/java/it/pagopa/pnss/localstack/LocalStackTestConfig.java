@@ -19,8 +19,8 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.common.configurationproperties.BucketName;
+import it.pagopa.pnss.common.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;

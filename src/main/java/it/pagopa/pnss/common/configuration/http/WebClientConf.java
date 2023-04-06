@@ -1,4 +1,4 @@
-package it.pagopa.pnss.configuration.http;
+package it.pagopa.pnss.common.configuration.http;
 
 import it.pagopa.pnss.common.configurationproperties.endpoint.internal.statemachine.StateMachineEndpointProperties;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,4 +1,4 @@
-package it.pagopa.pnss.configuration;
+package it.pagopa.pnss.common.configuration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

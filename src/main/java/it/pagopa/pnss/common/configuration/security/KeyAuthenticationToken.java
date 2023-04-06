@@ -1,4 +1,4 @@
-package it.pagopa.pnss.configuration.security;
+package it.pagopa.pnss.common.configuration.security;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;

@@ -1,4 +1,4 @@
-package it.pagopa.pnss.configuration.security;
+package it.pagopa.pnss.common.configuration.security;
 
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;

@@ -1,7 +1,7 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
 import it.pagopa.pnss.common.client.dto.LifecycleRuleDTO;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.common.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;

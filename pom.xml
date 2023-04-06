@@ -46,6 +46,11 @@
         </dependency>
 
         <dependency>
+            <groupId>io.awspring.cloud</groupId>
+            <artifactId>spring-cloud-starter-aws-messaging</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
         </dependency>
@@ -82,29 +87,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>dynamodb-streams-kinesis-adapter</artifactId>
-            <version>1.6.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-log4j2</artifactId>
-            <version>1.5.1</version>
-        </dependency>
-
-        <!-- da valutare -->
-
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>amazon-kinesis-client</artifactId>
-            <version>1.14.10</version>
-        </dependency>
-
-
-        <!-- da valutare -->
-
-        <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-annotations</artifactId>
             <version>1.6.5</version>
@@ -130,11 +112,6 @@
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-test</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.awspring.cloud</groupId>
-            <artifactId>spring-cloud-starter-aws-messaging</artifactId>
         </dependency>
 
         <dependency>
@@ -375,7 +352,7 @@
                     </execution>
 
                 </executions>
-            </plugin>   
+            </plugin>
         </plugins>
     </build>
 </project>

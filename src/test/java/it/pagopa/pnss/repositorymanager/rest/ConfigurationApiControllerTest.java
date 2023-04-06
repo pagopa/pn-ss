@@ -22,7 +22,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.common.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;

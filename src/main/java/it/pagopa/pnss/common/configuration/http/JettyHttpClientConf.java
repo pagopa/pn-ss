@@ -1,4 +1,4 @@
-package it.pagopa.pnss.configuration.http;
+package it.pagopa.pnss.common.configuration.http;
 
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jetty.client.HttpClient;

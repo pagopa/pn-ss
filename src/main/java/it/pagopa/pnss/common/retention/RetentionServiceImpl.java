@@ -5,7 +5,7 @@ import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.StorageConfiguration;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.RetentionException;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.common.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;

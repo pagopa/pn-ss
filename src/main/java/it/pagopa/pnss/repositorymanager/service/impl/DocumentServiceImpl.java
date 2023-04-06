@@ -13,9 +13,9 @@ import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
-import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
-import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.common.configurationproperties.AwsConfigurationProperties;
+import it.pagopa.pnss.common.configurationproperties.BucketName;
+import it.pagopa.pnss.common.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
@@ -33,14 +33,12 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 import static it.pagopa.pnss.common.constant.Constant.STORAGE_TYPE;
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;

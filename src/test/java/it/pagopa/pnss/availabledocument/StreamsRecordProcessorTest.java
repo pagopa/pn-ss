@@ -7,7 +7,7 @@ import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.model.Record;
 import it.pagopa.pnss.common.DocTypesConstant;
-import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
+import it.pagopa.pnss.common.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;

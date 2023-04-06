@@ -5,12 +5,11 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.common.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;

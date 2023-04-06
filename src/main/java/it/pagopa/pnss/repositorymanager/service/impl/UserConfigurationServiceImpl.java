@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
 import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationChanges;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.common.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;

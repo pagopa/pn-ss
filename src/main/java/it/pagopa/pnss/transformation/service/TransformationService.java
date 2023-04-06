@@ -8,7 +8,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.common.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;

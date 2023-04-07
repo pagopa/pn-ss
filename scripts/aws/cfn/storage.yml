@@ -104,6 +104,7 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
+  #  TODO DA CANCELLARE
 ##### TEMPORARY POLICY TO AVOID DOUBLE DEPLOYS #####
 # Decommentare la seguente policy nel seguente scenario:
 # - la stack microservice è stata rilasciata e con essa la lambda 'gestore-bucket'
@@ -200,17 +201,17 @@ Resources:
               - StorageClass: 'GLACIER'
                 TransitionInDays: 1
       NotificationConfiguration:
-        LambdaConfigurations:
+        QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
           - Event: 's3:ObjectRemoved:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
           - Event: 's3:ObjectRestore:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
           - Event: 's3:LifecycleExpiration:Delete'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
           - Event: 's3:LifecycleTransition'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
           # - Event: 's3:Replication'
             # Function: !GetAtt PnSsGestoreBucket.Arn
       ObjectLockEnabled: true
@@ -285,6 +286,28 @@ Resources:
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20
       VisibilityTimeout: 30 
+
+########### GESTORE BUCKET INVOKE QUEUE ###########
+  PnSsQueueGestoreBucketInvoke:
+    Type: AWS::SQS::Queue
+    Properties:
+      SqsManagedSseEnabled: True
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 0      
+      RedrivePolicy:
+        deadLetterTargetArn : !GetAtt PnSsDLQueueGestoreBucketInvoke.Arn
+        maxReceiveCount : 10
+      VisibilityTimeout: 30
+
+  PnSsDLQueueGestoreBucketInvoke:
+    Type: AWS::SQS::Queue
+    Properties:
+      SqsManagedSseEnabled: True
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 0
+      VisibilityTimeout: 30
+
+# TODO: creare la policy qui?
 
 ########### GESTORE BUCKET INVOKE DLQ ###########
   PnSsQueueGestoreBucketInvokeErrors:
@@ -472,6 +495,22 @@ Outputs:
   PnSsDLQueueNameGestoreBucketInvokeErrors:
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
     Value: !GetAtt PnSsDLQueueGestoreBucketInvokeErrors.QueueName
+
+  PnSsQueueNameGestoreBucketInvoke:
+    Description: 'Nome coda per pubblicazione notifiche di eventi sul bucket SS'
+    Value: !GetAtt  PnSsQueueGestoreBucketInvoke.QueueName
+
+  PnSsQueueArnGestoreBucketInvoke:
+    Description: 'ARN coda per pubblicazione notifiche di eventi sul bucket SS'
+    Value: !GetAtt  PnSsQueueGestoreBucketInvoke.Arn
+
+  PnSsQueueUrlGestoreBucketInvoke:
+    Description: 'URL coda per pubblicazione notifiche di eventi sul bucket SS'
+    Value: !Ref PnSsQueueGestoreBucketInvoke
+
+  PnSsDLQueueNameGestoreBucketInvoke:
+    Description: 'Nome coda DLQ per pubblicazione notifiche di eventi sul bucket SS'
+    Value: !GetAtt PnSsDLQueueGestoreBucketInvoke.QueueName
 
   PnSsGestoreBucketLambdaName:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'

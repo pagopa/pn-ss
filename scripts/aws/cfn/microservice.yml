@@ -149,6 +149,22 @@ Parameters:
     Type: String
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
   
+  PnSsQueueNameGestoreBucketInvoke:
+    Type: String
+    Description: 'Nome coda per pubblicazione notifiche di eventi dal bucket SS'
+
+  PnSsQueueArnGestoreBucketInvoke:
+    Type: String
+    Description: 'ARN coda per pubblicazione notifiche di eventi dal bucket SS'
+
+  PnSsQueueUrlGestoreBucketInvoke:
+    Type: String
+    Description: 'URL coda per pubblicazione notifiche di eventi dal bucket SS'
+
+  PnSsDLQueueNameGestoreBucketInvoke:
+    Type: String
+    Description: 'Nome coda DLQ per pubblicazione notifiche di eventi dal bucket SS'
+
   PnSsManagedPolicyName:
     Type: String
     Description: 'Nome della managed policy associata alla state machine'
@@ -677,23 +693,24 @@ Resources:
                   StringLike:
                     kms:RequestAlias: 'alias/aws/sqs'
 
-  PnSsGestoreBucketHotNotificationPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt PnSsGestoreBucket.Arn
-      Action: lambda:InvokeFunction
-      Principal: s3.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Ref PnSsBucketArn
+  #  TODO DA CANCELLARE
+  # PnSsGestoreBucketHotNotificationPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !GetAtt PnSsGestoreBucket.Arn
+  #     Action: lambda:InvokeFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref 'AWS::AccountId'
+  #     SourceArn: !Ref PnSsBucketArn
 
-  PnSsGestoreBucketStagingNotificationPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt PnSsGestoreBucket.Arn
-      Action: lambda:InvokeFunction
-      Principal: s3.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Ref PnSsStagingBucketArn
+  # PnSsGestoreBucketStagingNotificationPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !GetAtt PnSsGestoreBucket.Arn
+  #     Action: lambda:InvokeFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref 'AWS::AccountId'
+  #     SourceArn: !Ref PnSsStagingBucketArn
 
   PnSsSecurityGroupSafeStorage:
     Type: AWS::EC2::SecurityGroup
@@ -704,6 +721,20 @@ Resources:
         - IpProtocol: -1
           SourceSecurityGroupId: !Ref PnVPCDefaultSecurityGroup
       VpcId: !Ref VpcId
+
+  PnSsGestoreBucketInputQueue:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties: 
+      BatchSize: 10 # 10 is default
+      Enabled: True
+      EventSourceArn: !Ref PnSsQueueArnGestoreBucketInvoke
+      FunctionName: !Ref PnSsGestoreBucket
+      FunctionResponseTypes: 
+        - ReportBatchItemFailures
+      MaximumBatchingWindowInSeconds: 0 #default value
+      ScalingConfig: 
+        MaximumConcurrency: 100
+
 
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function

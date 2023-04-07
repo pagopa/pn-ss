@@ -222,6 +222,7 @@ public class AwsConfiguration {
         return new SimpleAsyncTaskExecutor(); // Or use another one of your liking
     }
 
+    // TODO: Rifare completamente questa parte riguardante la disponibilità documenti
     @Bean
     public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor) {
         return args -> {
@@ -230,20 +231,35 @@ public class AwsConfiguration {
                     AmazonDynamoDBClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
             AmazonCloudWatch cloudWatchClient =
                     AmazonCloudWatchClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonDynamoDBStreams dynamoDBStreamsClient = AmazonDynamoDBStreamsClientBuilder.standard()
-                                                                                            .withRegion(
-                                                                                                    DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()
-                                                                                                                                     .id())
-                                                                                            .build();
+            AmazonDynamoDBStreams dynamoDBStreamsClient =
+                    AmazonDynamoDBStreamsClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
             AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
             KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(dynamoEventStreamName.tableMetadata(),
                                                                                            dynamoEventStreamName.documentName(),
                                                                                            awsCredentialsProvider,
                                                                                            "streams-demo-worker").withMaxLeaseRenewalThreads(
                                                                                                                          5000)
+
                                                                                                                  .withMaxLeasesForWorker(
                                                                                                                          5000)
-                                                                                                                .withMaxRecords(1000)
+
+//                                                                                                               Fix temporanea per non
+//                                                                                                               fare andare in errore
+//                                                                                                               EventBridge.
+//                                                                                                               Questo stream Kinesis,
+//                                                                                                               agganciato a
+//                                                                                                               DynamoDbStreams,
+//                                                                                                               notifica a EventBridge
+//                                                                                                               determinati eventi
+//                                                                                                               provenienti dalla
+//                                                                                                               tabella documenti. Dato
+//                                                                                                               che la pubblicazione su
+//                                                                                                               EventBridge accetta massimo
+//                                                                                                               10 elementi, il numero
+//                                                                                                               di eventi Kinesis è
+//                                                                                                               impostato anch'esso a 10
+                                                                                                                 .withMaxRecords(10)
+
                                                                                                                  .withIdleTimeBetweenReadsInMillis(
                                                                                                                          500)
                                                                                                                  .withInitialPositionInStream(

@@ -251,7 +251,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
 		                           oldState.get());
                        }
                        else {
-                    	   return Mono.empty();
+                    	   return Mono.just(documentEntityStored);
                        }
                    })
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))

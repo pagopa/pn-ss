@@ -121,7 +121,7 @@ Resources:
 
   PnSsBucket:
     Type: AWS::S3::Bucket
-    DependsOn: PnSsQueueGestoreBucketInvoke 
+    DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
     Properties:
       AccessControl: 'Private'
       BucketEncryption:

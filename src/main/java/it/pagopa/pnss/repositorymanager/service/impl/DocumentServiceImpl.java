@@ -240,11 +240,20 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        }
                        return documentEntityStored;
                    })
-                   .flatMap(documentEntityStored -> retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
-                           authApiKey,
-                           documentChanges,
-                           documentEntityStored,
-                           oldState.get()))
+                   .flatMap(documentEntityStored -> { 
+                       if ( documentChanges.getDocumentState() != null && 
+                    		   !documentChanges.getDocumentState().toUpperCase().equals(Constant.STAGED) &&
+                    		   !documentChanges.getDocumentState().toUpperCase().equals(Constant.BOOKED)) {
+		                   return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
+		                           authApiKey,
+		                           documentChanges,
+		                           documentEntityStored,
+		                           oldState.get());
+                       }
+                       else {
+                    	   return Mono.just(documentEntityStored);
+                       }
+                   })
                    .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
                    .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
                    .onErrorResume(RuntimeException.class, throwable -> {

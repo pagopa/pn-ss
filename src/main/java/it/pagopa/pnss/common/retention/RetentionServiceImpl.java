@@ -66,7 +66,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
         final String dayRef = "d";
         final String yearRef = "y";
 
-        String retentionPeriodStr = retentionPeriod.replaceAll(" ", "").toLowerCase();
+        String retentionPeriodStr =  retentionPeriod.replace(" ", "").toLowerCase();
 
         try {
             int yearsValue = retentionPeriodStr.contains(yearRef) ? Integer.parseInt(retentionPeriodStr.substring(0,

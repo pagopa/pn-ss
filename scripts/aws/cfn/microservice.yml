@@ -145,7 +145,7 @@ Parameters:
     Type: String
     Description: 'URL coda per pubblicazione errori del Gestore Bucket'
 
-  PnSsDLQueueGestoreBucketInvokeErrors:
+  PnSsDLQueueNameGestoreBucketInvokeErrors:
     Type: String
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
   
@@ -490,7 +490,43 @@ Resources:
           DeadLetterConfig:
             Arn: !GetAtt PnSsEventsDLQueueExternalNotifications.Arn
 
-  #####    Metrics and Alarms   ##### 
+  #####    Metrics and Alarms  -  Queues #####
+
+  PnSsDLQueueNameStagingBucketAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      #AlarmName: !Sub "${PnSsDLQueueNameStagingBucket}Alarm"
+      AlarmDescription: !Sub 'Allarme per segnalare la presenza di messaggi nella DLQ ${PnSsDLQueueNameStagingBucket}'
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !Ref PnSsDLQueueNameStagingBucket
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: missing
+
+  PnSsDLQueueNameGestoreBucketInvokeErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      #AlarmName: !Sub "${PnSsDLQueueNameGestoreBucketInvokeErrors}Alarm"
+      AlarmDescription: !Sub 'Allarme per segnalare la presenza di messaggi nella DLQ ${PnSsDLQueueNameGestoreBucketInvokeErrors}'
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !Ref PnSsDLQueueNameGestoreBucketInvokeErrors
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: missing
+
+  #####    Metrics and Alarms  -  Microservice ##### 
   SafeStorageMicroserviceAlarm:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -512,6 +548,8 @@ Resources:
           - ','
           - - !GetAtt SafeStorageMicroserviceAlarm.Outputs.MicroserviceAlarmArn
             - !GetAtt SafeStorageMicroservice.Outputs.FatalLogsMetricAlarmArn
+            - !GetAtt PnSsDLQueueNameStagingBucketAlarm.Arn
+            - !GetAtt PnSsDLQueueNameGestoreBucketInvokeErrorsAlarm.Arn
             # - !GetAtt SafeStorageMicroservice.Outputs.AutoScalingAlarmArn
         DynamoDBTableNames:
           !Join

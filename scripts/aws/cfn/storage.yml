@@ -469,7 +469,7 @@ Outputs:
     Description: 'URL coda per pubblicazione errori del Gestore Bucket'
     Value: !Ref PnSsQueueGestoreBucketInvokeErrors
 
-  PnSsDLQueueGestoreBucketInvokeErrors:
+  PnSsDLQueueNameGestoreBucketInvokeErrors:
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
     Value: !GetAtt PnSsDLQueueGestoreBucketInvokeErrors.QueueName
 

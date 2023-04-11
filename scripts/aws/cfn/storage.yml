@@ -104,21 +104,6 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
-  #  TODO DA CANCELLARE
-##### TEMPORARY POLICY TO AVOID DOUBLE DEPLOYS #####
-# Decommentare la seguente policy nel seguente scenario:
-# - la stack microservice è stata rilasciata e con essa la lambda 'gestore-bucket'
-# - il bucket principale (PnSsBucket) deve essere ricreato a causa di modifiche di alcune proprietà (object lock, replication ...)
-
-  # PnSsGestoreBucketALLNotificationPermission:
-  #   Type: AWS::Lambda::Permission
-  #   Properties:
-  #     FunctionName: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
-  #     Action: lambda:InvokeFunction
-  #     Principal: s3.amazonaws.com
-  #     SourceAccount: !Ref 'AWS::AccountId'
-  #     SourceArn: 'arn:aws:s3:::*'
-
   PnSsBucket:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
@@ -299,7 +284,7 @@ Resources:
       RedrivePolicy:
         deadLetterTargetArn : !GetAtt PnSsDLQueueGestoreBucketInvoke.Arn
         maxReceiveCount : 10
-      VisibilityTimeout: 30 # currently ReceiveMessageWaitTimeSeconds + 6 times the timeout of Lambda Fun Gestore Bucket 
+      VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket 
 
   PnSsDLQueueGestoreBucketInvoke:
     Type: AWS::SQS::Queue

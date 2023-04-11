@@ -121,7 +121,7 @@ Resources:
 
   PnSsBucket:
     Type: AWS::S3::Bucket
-    # DependsOn: PnSsGestoreBucketALLNotificationPermission 
+    DependsOn: PnSsQueueGestoreBucketInvoke 
     Properties:
       AccessControl: 'Private'
       BucketEncryption:
@@ -288,6 +288,8 @@ Resources:
       VisibilityTimeout: 30 
 
 ########### GESTORE BUCKET INVOKE QUEUE ###########
+# La coda PnSsQueueGestoreBucketInvoke è il target delle S3 notifications provenienti dal bucket principale #
+# visibility timeout docs https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html#events-sqs-queueconfig 
   PnSsQueueGestoreBucketInvoke:
     Type: AWS::SQS::Queue
     Properties:
@@ -297,7 +299,7 @@ Resources:
       RedrivePolicy:
         deadLetterTargetArn : !GetAtt PnSsDLQueueGestoreBucketInvoke.Arn
         maxReceiveCount : 10
-      VisibilityTimeout: 30
+      VisibilityTimeout: 30 # currently ReceiveMessageWaitTimeSeconds + 6 times the timeout of Lambda Fun Gestore Bucket 
 
   PnSsDLQueueGestoreBucketInvoke:
     Type: AWS::SQS::Queue
@@ -307,9 +309,23 @@ Resources:
       ReceiveMessageWaitTimeSeconds: 0
       VisibilityTimeout: 30
 
-# TODO: creare la policy qui?
+  PnSsQueuePolicyGestoreBucketInvoke:
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !Ref PnSsQueueGestoreBucketInvoke
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement: 
+          - Action: 
+            - 'SQS:*'
+            Effect: "Allow"
+            Resource: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Principal:
+              Service: 's3.amazonaws.com'
 
 ########### GESTORE BUCKET INVOKE DLQ ###########
+# La coda PnSsQueueGestoreBucketInvokeErrors è la DLQ configurata per la risorsa Gestore Bucket (Lambda) #
   PnSsQueueGestoreBucketInvokeErrors:
     Type: AWS::SQS::Queue
     Properties:

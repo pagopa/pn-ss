@@ -305,6 +305,7 @@ Resources:
         Statement: 
           - Action: 
             - 'SQS:*'
+            - 'SQS:SendMessage'
             Effect: "Allow"
             Resource: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
             Principal:

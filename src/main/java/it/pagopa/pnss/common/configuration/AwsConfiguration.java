@@ -3,12 +3,8 @@ package it.pagopa.pnss.common.configuration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
-import it.pagopa.pnss.common.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.common.configurationproperties.AwsConfigurationProperties;
-import it.pagopa.pnss.common.configurationproperties.DynamoEventStreamName;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
@@ -22,10 +18,13 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
+import software.amazon.awssdk.services.dynamodb.streams.DynamoDbStreamsAsyncClient;
+import software.amazon.awssdk.services.dynamodb.streams.DynamoDbStreamsAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
@@ -38,27 +37,19 @@ import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
-import software.amazon.kinesis.common.ConfigsBuilder;
 import software.amazon.kinesis.common.KinesisClientUtil;
-import software.amazon.kinesis.coordinator.Scheduler;
 
 import java.net.URI;
 import java.util.List;
-import java.util.UUID;
 
 @Configuration
 public class AwsConfiguration {
 
-    private final DynamoEventStreamName dynamoEventStreamName;
-    private final AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
     private final AwsConfigurationProperties awsConfigurationProperties;
 
     /*
      * Set in LocalStackTestConfig
      */
-
-    @Value("${test.aws.region:#{null}}")
-    String localStackRegion;
 
     @Value("${test.aws.sqs.endpoint:#{null}}")
     String sqsLocalStackEndpoint;
@@ -72,26 +63,23 @@ public class AwsConfiguration {
     @Value("${test.aws.secretsmanager.endpoint:#{null}}")
     String secretsManagerLocalStackEndpoint;
 
-    @Value("${test.event.bridge:#{null}}")
-    private String testEventBridge;
-
     @Value("${test.aws.s3.endpoint:#{null}}")
-    private String testAwsS3Endpoint;
+    private String s3LocalStackEndpoint;
 
     @Value("${test.aws.kinesis.endpoint:#{null}}")
-    private String testKinesisEndPoint;
+    private String kinesisLocalstackEndpoint;
 
     @Value("${test.aws.cloudwatch.endpoint:#{null}}")
-    private String testCloudWatchEndPoint;
+    private String cloudWatchLocalstackEndpoint;
+
+    @Value("${test.aws.dynamodbstreams.endpoint:#{null}}")
+    private String dynamoDbStreamsLocalstackEndpoint;
 
     private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
 
-    public AwsConfiguration(AwsConfigurationProperties awsConfigurationProperties, DynamoEventStreamName dynamoEventStreamName,
-                            AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName) {
+    public AwsConfiguration(AwsConfigurationProperties awsConfigurationProperties) {
         this.awsConfigurationProperties = awsConfigurationProperties;
-        this.dynamoEventStreamName = dynamoEventStreamName;
-        this.availabelDocumentEventBridgeName = availabelDocumentEventBridgeName;
     }
 
     //  <-- spring-cloud-starter-aws-messaging -->
@@ -117,12 +105,12 @@ public class AwsConfiguration {
 
     @Bean
     public SqsAsyncClient sqsAsyncClient() {
-        SqsAsyncClientBuilder sqsAsyncClientBuilder = SqsAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+        SqsAsyncClientBuilder sqsAsyncClientBuilder = SqsAsyncClient.builder()
+                                                                    .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                                                                    .region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (sqsLocalStackEndpoint != null) {
-            sqsAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(sqsLocalStackEndpoint));
-        } else {
-            sqsAsyncClientBuilder.region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion());
+            sqsAsyncClientBuilder.endpointOverride(URI.create(sqsLocalStackEndpoint));
         }
 
         return sqsAsyncClientBuilder.build();
@@ -130,12 +118,12 @@ public class AwsConfiguration {
 
     @Bean
     public DynamoDbClient dynamoDbClient() {
-        DynamoDbClientBuilder dynamoDbClientBuilder = DynamoDbClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+        DynamoDbClientBuilder dynamoDbClientBuilder = DynamoDbClient.builder()
+                                                                    .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                                                                    .region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (dynamoDbLocalStackEndpoint != null) {
-            dynamoDbClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
-        } else {
-            dynamoDbClientBuilder.region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion());
+            dynamoDbClientBuilder.endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
         }
 
         return dynamoDbClientBuilder.build();
@@ -153,13 +141,12 @@ public class AwsConfiguration {
 
     @Bean
     public DynamoDbAsyncClient dynamoDbAsyncClient() {
-        DynamoDbAsyncClientBuilder dynamoDbAsyncClientBuilder =
-                DynamoDbAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+        DynamoDbAsyncClientBuilder dynamoDbAsyncClientBuilder = DynamoDbAsyncClient.builder()
+                                                                                   .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                                                                                   .region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (dynamoDbLocalStackEndpoint != null) {
-            dynamoDbAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
-        } else {
-            dynamoDbAsyncClientBuilder.region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion());
+            dynamoDbAsyncClientBuilder.endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
         }
 
         return dynamoDbAsyncClientBuilder.build();
@@ -177,12 +164,12 @@ public class AwsConfiguration {
 
     @Bean
     public SnsAsyncClient snsClient() {
-        SnsAsyncClientBuilder snsAsyncClientBuilder = SnsAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+        SnsAsyncClientBuilder snsAsyncClientBuilder = SnsAsyncClient.builder()
+                                                                    .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                                                                    .region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (snsLocalStackEndpoint != null) {
-            snsAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(snsLocalStackEndpoint));
-        } else {
-            snsAsyncClientBuilder.region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion());
+            snsAsyncClientBuilder.endpointOverride(URI.create(snsLocalStackEndpoint));
         }
 
         return snsAsyncClientBuilder.build();
@@ -194,8 +181,8 @@ public class AwsConfiguration {
                                                      .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
                                                      .region(Region.of(awsConfigurationProperties.regionCode()));
 
-        if (testAwsS3Endpoint != null) {
-            s3Client.endpointOverride(URI.create(testAwsS3Endpoint));
+        if (s3LocalStackEndpoint != null) {
+            s3Client.endpointOverride(URI.create(s3LocalStackEndpoint));
         }
 
         return s3Client.build();
@@ -215,44 +202,46 @@ public class AwsConfiguration {
     }
 
     @Bean
-    public KinesisAsyncClient kinesisAsyncClient(){
-        KinesisAsyncClientBuilder kinesisAsyncClientBuilder =
-                KinesisAsyncClient.builder().region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion()).credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+    public KinesisAsyncClient kinesisAsyncClient() {
+        KinesisAsyncClientBuilder kinesisAsyncClientBuilder = KinesisAsyncClient.builder()
+                                                                                .region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion())
+                                                                                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
 
-        if(testKinesisEndPoint != null){
-            kinesisAsyncClientBuilder.endpointOverride(URI.create(testKinesisEndPoint));
+        if (kinesisLocalstackEndpoint != null) {
+            kinesisAsyncClientBuilder.endpointOverride(URI.create(kinesisLocalstackEndpoint));
         }
+
         return KinesisClientUtil.createKinesisAsyncClient(kinesisAsyncClientBuilder);
     }
 
-
     @Bean
-    public TaskExecutor taskExecutor() {
-        return new SimpleAsyncTaskExecutor(); // Or use another one of your liking
+    public CloudWatchAsyncClient cloudWatchAsyncClient() {
+        CloudWatchAsyncClientBuilder cloudWatchAsyncClientBuilder = CloudWatchAsyncClient.builder()
+                                                                                         .region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion())
+                                                                                         .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+
+        if (cloudWatchLocalstackEndpoint != null) {
+            cloudWatchAsyncClientBuilder.endpointOverride(URI.create(cloudWatchLocalstackEndpoint));
+        }
+
+        return cloudWatchAsyncClientBuilder.build();
     }
 
     @Bean
-    public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor, DynamoDbAsyncClient dynamoDbAsyncClient, KinesisAsyncClient kinesisAsyncClient) {
-        return args -> {
+    public DynamoDbStreamsAsyncClient dynamoDbStreamsAsyncClient() {
+        DynamoDbStreamsAsyncClientBuilder dynamoDbStreamsAsyncClientBuilder = DynamoDbStreamsAsyncClient.builder()
+                                                                                         .region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion())
+                                                                                         .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
 
-            CloudWatchAsyncClient cloudWatchClient = CloudWatchAsyncClient.builder()
-                                                            .region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion())
-                                                            .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).build();
-            ConfigsBuilder configsBuilder = new ConfigsBuilder(dynamoEventStreamName.tableMetadata(), dynamoEventStreamName.documentName(), kinesisAsyncClient, dynamoDbAsyncClient, cloudWatchClient, UUID.randomUUID().toString(), new RecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName()));
+        if (dynamoDbStreamsLocalstackEndpoint != null) {
+            dynamoDbStreamsAsyncClientBuilder.endpointOverride(URI.create(dynamoDbStreamsLocalstackEndpoint));
+        }
 
-            Scheduler scheduler = new Scheduler(
-                    configsBuilder.checkpointConfig(),
-                    configsBuilder.coordinatorConfig(),
-                    configsBuilder.leaseManagementConfig(),
-                    configsBuilder.lifecycleConfig(),
-                    configsBuilder.metricsConfig(),
-                    configsBuilder.processorConfig(),
-                    configsBuilder.retrievalConfig()
-            );
+        return dynamoDbStreamsAsyncClientBuilder.build();
+    }
 
-            if (testEventBridge == null) {
-                executor.execute(scheduler);
-            }
-        };
+    @Bean
+    public TaskExecutor taskExecutor() {
+        return new SimpleAsyncTaskExecutor();
     }
 }

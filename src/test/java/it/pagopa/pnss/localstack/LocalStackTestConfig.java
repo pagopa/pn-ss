@@ -61,6 +61,7 @@ public class LocalStackTestConfig {
     static LocalStackContainer localStackContainer = new LocalStackContainer(DockerImageName.parse(DEFAULT_LOCAL_STACK_TAG)).withServices(
             SQS,
             DYNAMODB,
+            DYNAMODB_STREAMS,
             S3,
             SECRETSMANAGER,
             KINESIS,
@@ -68,8 +69,6 @@ public class LocalStackTestConfig {
 
     static {
         localStackContainer.start();
-
-        System.setProperty("test.aws.region", localStackContainer.getRegion());
 
 //      <-- Override spring-cloud-starter-aws-messaging endpoints for testing -->
         System.setProperty("cloud.aws.sqs.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SQS)));
@@ -85,18 +84,15 @@ public class LocalStackTestConfig {
         System.setProperty("aws.region", localStackContainer.getRegion());
         System.setProperty("aws.access.key", localStackContainer.getAccessKey());
         System.setProperty("aws.secret.key", localStackContainer.getSecretKey());
-        System.setProperty("test.event.bridge", "true");
         System.setProperty("test.aws.secretsmanager.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SECRETSMANAGER)));
         System.setProperty("test.aws.kinesis.endpoint", String.valueOf(localStackContainer.getEndpointOverride(KINESIS)));
         System.setProperty("test.aws.cloudwatch.endpoint", String.valueOf(localStackContainer.getEndpointOverride(CLOUDWATCH)));
-
-
-//        System.setProperty("PnSsStagingBucketName","PnSsStagingBucketName");
-
+        System.setProperty("test.aws.dynamodbstreams.endpoint", String.valueOf(localStackContainer.getEndpointOverride(DYNAMODB_STREAMS)));
         System.setProperty("PnSsStagingBucketArn", "PnSsStagingBucketArn");
-//        System.setProperty("PnSsBucketName","PnSsBucketName");
         System.setProperty("PnSsBucketArn", "PnSsBucketArn");
 
+//      Disabling the availabledocument microservice and the related Kinesis stream
+        System.setProperty("enable.availabledocument", "false");
 
         try {
             //Set Aruba secret credentials.

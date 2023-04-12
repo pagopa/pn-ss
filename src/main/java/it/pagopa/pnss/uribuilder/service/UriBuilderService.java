@@ -101,7 +101,7 @@ public class UriBuilderService extends CommonS3ObjectService {
     }
 
     public Mono<FileCreationResponse> createUriForUploadFile(String xPagopaSafestorageCxId, FileCreationRequest request,
-                                                             String checksumValue) {
+                                                             String checksumValue, String xTraceIdValue) {
 
         var contentType = request.getContentType();
         var documentType = request.getDocumentType();
@@ -112,8 +112,8 @@ public class UriBuilderService extends CommonS3ObjectService {
         var metadata = new HashMap<String, String>();
         metadata.put("secret", secret.toString());
 
-        return validationField(contentType,
-                               documentType).flatMap(booleanMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
+        return validationField(contentType, documentType, xTraceIdValue)
+                .flatMap(booleanMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
                                             .handle((userConfiguration, synchronousSink) -> {
                                                 if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
                                                     synchronousSink.error((new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -169,7 +169,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                              contentType,
                                                                              metadata,
                                                                              insertedDocument.getDocument().getDocumentType().getChecksum(),
-                                                                             checksumValue).map(presignedPutObjectRequest -> {
+                                                                             checksumValue, xTraceIdValue).map(presignedPutObjectRequest -> {
                                                                  FileCreationResponse response = new FileCreationResponse();
                                                                  response.setKey(insertedDocument.getDocument().getDocumentKey());
                                                                  response.setSecret(secret.toString());
@@ -183,12 +183,14 @@ public class UriBuilderService extends CommonS3ObjectService {
                                             .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "));
     }
 
-    private Mono<Boolean> validationField(String contentType, String documentType) {
+    private Mono<Boolean> validationField(String contentType, String documentType, String xTraceIdValue) {
         return Mono.justOrEmpty(contentType).handle((s, sink) -> {
             if (contentType.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing"));
             } else if (documentType == null || documentType.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
+            } else if (xTraceIdValue == null || xTraceIdValue.isBlank()) {
+                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, queryParamPresignedUrlTraceId + " : Is missing"));
             } else if (!LISTA_TIPO_DOCUMENTI.contains(contentType)) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid"));
             } else {
@@ -212,7 +214,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 
     private Mono<PresignedPutObjectRequest> buildsUploadUrl(String documentType, String documentState, String documentKey,
                                                             String contentType, Map<String, String> secret, ChecksumEnum checksumType,
-                                                            String checksumValue) {
+                                                            String checksumValue, String xTraceIdValue) {
         log.info("buildsUploadUrl() : START : " + "documentType {} : documentState {} : documentKey {} : " +
                  "contentType {} : secret {} : checksumType {} : checksumValue {}",
                  documentType,
@@ -232,7 +234,8 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                           contentType,
                                                                           secret,
                                                                           checksumType,
-                                                                          checksumValue))
+                                                                          checksumValue,
+                                                                          xTraceIdValue))
 //        return signBucket(presigner,
 //        				  getBucketName(documentType),
 //        				  documentKey,
@@ -263,7 +266,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 
     private Mono<PresignedPutObjectRequest> signBucket(S3Presigner s3Presigner, String bucketName, String documentKey,
                                                        String documentState, String documentType, String contenType,
-                                                       Map<String, String> secret, ChecksumEnum checksumType, String checksumValue) {
+                                                       Map<String, String> secret, ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
 
         log.debug("signBucket() : START : s3Presigner IN : " + "bucketName {} : keyName {} : " +
                   "documentState {} : documentType {} : contenType {} : " + "secret {} : checksumType{} : checksumValue {}",
@@ -297,7 +300,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                             // Aggiungere queryParam custom alle presigned URL di upload e download
                                                             .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
                                                                     queryParamPresignedUrlTraceId,
-                                                                    documentKey))
+                                                                    xTraceIdValue))
                                                             .build());
                        } else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank() && secret != null &&
                                   ChecksumEnum.SHA256.name().equals(checksumTypeToEvaluate.name())) {
@@ -311,7 +314,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                             // Aggiungere queryParam custom alle presigned URL di upload e download
                                                             .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
                                                                     queryParamPresignedUrlTraceId,
-                                                                    documentKey))
+                                                                    xTraceIdValue))
                                                             .build());
                        } else {
                            return Mono.error(new ChecksumException(

@@ -628,22 +628,6 @@ Resources:
                 - 'events.amazonaws.com'
  
   #####    Gestore Bucket e risorse a lui afferenti    #####
-  PnSsQueuePolicyGestoreBucketInvoke:
-    Type: AWS::SQS::QueuePolicy
-    Properties: 
-      Queues: 
-        - !Sub '${PnSsQueueUrlGestoreBucketInvoke}'
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement: 
-          - Action: 
-              - 'SQS:*'
-            Effect: "Allow"
-            Resource: !Sub ${PnSsQueueArnGestoreBucketInvoke}
-            Principal:  
-              AWS: 
-                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !Ref PnSsGestoreBucketRole]]
-
   PnSsQueuePolicyGestoreBucketInvokeErrors:
       Type: AWS::SQS::QueuePolicy
       Properties: 

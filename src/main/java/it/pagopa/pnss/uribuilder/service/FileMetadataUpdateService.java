@@ -40,7 +40,7 @@ public class FileMetadataUpdateService {
         var logicalState = request.getStatus();
 
         return docClientCall.getDocument(fileKey)
-                .flatMap( documentResponse -> Mono.zip(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
+                .flatMap( documentResponse -> Mono.zipDelayError(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
                 .handle(((objects, synchronousSink) -> {
 
                     var userConfiguration = objects.getT1().getUserConfiguration();
@@ -66,7 +66,7 @@ public class FileMetadataUpdateService {
                                 } else {
                                     checkedStatus = Mono.just("");
                                 }
-                                return Mono.zip(Mono.just(document),  checkedStatus);
+                                return Mono.zipDelayError(Mono.just(document),  checkedStatus);
                             }).flatMap(objects -> {
 
                     Document document = objects.getT1();

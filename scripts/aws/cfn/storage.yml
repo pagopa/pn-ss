@@ -223,8 +223,8 @@ Resources:
       #    -
 
   PnSsStagingBucket:
-    DependsOn: PnSsQueuePolicyGestoreBucketInvoke
     Type: AWS::S3::Bucket
+    DependsOn: PnSsQueuePolicyGestoreBucketInvoke
     Properties:
       AccessControl: 'Private'
       BucketEncryption:

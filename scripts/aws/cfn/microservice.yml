@@ -647,7 +647,7 @@ Resources:
   PnSsGestoreBucketRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Join [ '', [!Sub 'PnSsGestoreBucketLambdaName', '-role-name']]
+      RoleName: !Join [ '', [!Sub '${PnSsGestoreBucketLambdaName}', '-role-name']]
       Description: 'Ruolo della Lambda che implementa la funzionalità del Gestore Bucket'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'

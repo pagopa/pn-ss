@@ -305,11 +305,19 @@ Resources:
         Statement: 
           - Action: 
             - 'SQS:*'
-            - 'SQS:SendMessage'
             Effect: "Allow"
             Resource: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
             Principal:
               Service: 's3.amazonaws.com'
+          - Action: 
+            - 'SQS:*'
+            Effect: "Allow"
+            Resource: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Principal:
+              AWS:
+                - !Join [ '', [!Sub '${PnSsGestoreBucketLambdaNameIn}', '-role-name']]
+
+
 
 ########### GESTORE BUCKET INVOKE DLQ ###########
 # La coda PnSsQueueGestoreBucketInvokeErrors è la DLQ configurata per la risorsa Gestore Bucket (Lambda) #

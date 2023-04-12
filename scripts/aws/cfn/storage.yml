@@ -315,8 +315,7 @@ Resources:
             Resource: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
             Principal:
               AWS:
-                - !Join [ '', [!Sub '${PnSsGestoreBucketLambdaNameIn}', '-role-name']]
-
+                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !Ref PnSsGestoreBucketLambdaNameIn , '-role-name']]
 
 
 ########### GESTORE BUCKET INVOKE DLQ ###########

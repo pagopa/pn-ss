@@ -223,6 +223,7 @@ Resources:
       #    -
 
   PnSsStagingBucket:
+    DependsOn: PnSsQueuePolicyGestoreBucketInvoke
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: 'Private'
@@ -241,9 +242,9 @@ Resources:
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
-        LambdaConfigurations:
+        QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
-            Function: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${PnSsGestoreBucketLambdaNameIn}'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced

@@ -682,7 +682,17 @@ Resources:
                 Action: 
                   - 'sqs:SendMessage'
                 Resource:
-                  - !Sub '${PnSsQueueArnGestoreBucketInvokeErrors}'
+                  - !Ref PnSsQueueArnGestoreBucketInvokeErrors
+              - Sid: 'GetInvokeSQS'
+                Effect: 'Allow'
+                Action: 
+                  - 'sqs:ReceiveMessage'
+                  - 'sqs:DeleteMessage'
+                  - 'sqs:Get*'
+                  - 'sqs:List*'
+                  - 'sqs:SendMessage'
+                Resource:
+                  - !Ref PnSsQueueArnGestoreBucketInvoke
               - Sid: 'DefaultKMSGrantRead'
                 Effect: 'Allow'
                 Action: 

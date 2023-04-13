@@ -77,7 +77,8 @@ Resources:
         SSEEnabled: true
         SSEType: 'KMS'
       TableClass: 'STANDARD'
-      PointInTimeRecoveryEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 

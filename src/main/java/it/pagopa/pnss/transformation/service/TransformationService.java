@@ -67,8 +67,8 @@ public class TransformationService {
             .subscribe();
     }
 
-    private Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
-        return Mono.zip(documentClientCall.getDocument(key), s3Service.getObject(key, stagingBucketName))
+    public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
+        return Mono.zipDelayError(documentClientCall.getDocument(key), s3Service.getObject(key, stagingBucketName))
                    .filter(objects -> {
                        var document = objects.getT1().getDocument();
                        var transformations = document.getDocumentType().getTransformations();

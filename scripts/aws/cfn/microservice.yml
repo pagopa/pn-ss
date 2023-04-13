@@ -153,6 +153,22 @@ Parameters:
     Type: String
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
   
+  PnSsQueueNameGestoreBucketInvoke:
+    Type: String
+    Description: 'Nome coda per pubblicazione notifiche di eventi dal bucket SS'
+
+  PnSsQueueArnGestoreBucketInvoke:
+    Type: String
+    Description: 'ARN coda per pubblicazione notifiche di eventi dal bucket SS'
+
+  PnSsQueueUrlGestoreBucketInvoke:
+    Type: String
+    Description: 'URL coda per pubblicazione notifiche di eventi dal bucket SS'
+
+  PnSsDLQueueNameGestoreBucketInvoke:
+    Type: String
+    Description: 'Nome coda DLQ per pubblicazione notifiche di eventi dal bucket SS'
+
   PnSsManagedPolicyName:
     Type: String
     Description: 'Nome della managed policy associata alla state machine'
@@ -617,25 +633,25 @@ Resources:
  
   #####    Gestore Bucket e risorse a lui afferenti    #####
   PnSsQueuePolicyGestoreBucketInvokeErrors:
-    Type: AWS::SQS::QueuePolicy
-    Properties: 
-      Queues: 
-        - !Sub '${PnSsQueueUrlGestoreBucketInvokeErrors}'
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement: 
-          - Action: 
-              - 'SQS:*'
-            Effect: "Allow"
-            Resource: !Sub ${PnSsQueueArnGestoreBucketInvokeErrors}
-            Principal:  
-              AWS: 
-                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !Ref PnSsGestoreBucketRole]]
+      Type: AWS::SQS::QueuePolicy
+      Properties: 
+        Queues: 
+          - !Sub '${PnSsQueueUrlGestoreBucketInvokeErrors}'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement: 
+            - Action: 
+                - 'SQS:*'
+              Effect: "Allow"
+              Resource: !Sub ${PnSsQueueArnGestoreBucketInvokeErrors}
+              Principal:  
+                AWS: 
+                  - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !Ref PnSsGestoreBucketRole]]
   
   PnSsGestoreBucketRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Join [ '', [!Sub 'PnSsGestoreBucketLambdaName', '-role-name']]
+      RoleName: !Join [ '', [!Sub '${PnSsGestoreBucketLambdaName}', '-role-name']]
       Description: 'Ruolo della Lambda che implementa la funzionalità del Gestore Bucket'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
@@ -670,7 +686,17 @@ Resources:
                 Action: 
                   - 'sqs:SendMessage'
                 Resource:
-                  - !Sub '${PnSsQueueArnGestoreBucketInvokeErrors}'
+                  - !Ref PnSsQueueArnGestoreBucketInvokeErrors
+              - Sid: 'GetInvokeSQS'
+                Effect: 'Allow'
+                Action: 
+                  - 'sqs:ReceiveMessage'
+                  - 'sqs:DeleteMessage'
+                  - 'sqs:Get*'
+                  - 'sqs:List*'
+                  - 'sqs:SendMessage'
+                Resource:
+                  - !Ref PnSsQueueArnGestoreBucketInvoke
               - Sid: 'DefaultKMSGrantRead'
                 Effect: 'Allow'
                 Action: 
@@ -681,24 +707,6 @@ Resources:
                   StringLike:
                     kms:RequestAlias: 'alias/aws/sqs'
 
-  PnSsGestoreBucketHotNotificationPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt PnSsGestoreBucket.Arn
-      Action: lambda:InvokeFunction
-      Principal: s3.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Ref PnSsBucketArn
-
-  PnSsGestoreBucketStagingNotificationPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt PnSsGestoreBucket.Arn
-      Action: lambda:InvokeFunction
-      Principal: s3.amazonaws.com
-      SourceAccount: !Ref 'AWS::AccountId'
-      SourceArn: !Ref PnSsStagingBucketArn
-
   PnSsSecurityGroupSafeStorage:
     Type: AWS::EC2::SecurityGroup
     Properties: 
@@ -708,6 +716,19 @@ Resources:
         - IpProtocol: -1
           SourceSecurityGroupId: !Ref PnVPCDefaultSecurityGroup
       VpcId: !Ref VpcId
+
+  PnSsGestoreBucketInputQueue:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties: 
+      BatchSize: 10 # 10 is default
+      Enabled: True
+      EventSourceArn: !Ref PnSsQueueArnGestoreBucketInvoke
+      FunctionName: !Ref PnSsGestoreBucket
+      FunctionResponseTypes: 
+        - ReportBatchItemFailures
+      MaximumBatchingWindowInSeconds: 0 #default value
+      ScalingConfig: 
+        MaximumConcurrency: 100
 
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function
@@ -750,90 +771,116 @@ Resources:
           const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
           const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
           const STAGINGBUCKET = process.env.PnSsStagingBucketName;
-          const s3 = new AWS.S3();
 
           exports.handler = async (event) => {
-            let jsonDocument = {
-              documentKey: "",
-              documentState: "",
-            };
-
+            const s3 = new AWS.S3();
+            let failedMessageIds = [];
             console.log(JSON.stringify(event));
-            let bucketName;
-            console.log("Buket Name: " + event.Records[0].s3.bucket.name);
-            console.log("Object Key: " + event.Records[0].s3.object.key);
-            console.log("Object Size: " + event.Records[0].s3.object.size);
-            let params = {
-              Bucket: "",
-              Key: "",
-            };
-            bucketName = event.Records[0].s3.bucket.name;
-            jsonDocument.documentKey = event.Records[0].s3.object.key;
-            switch (event.Records[0].eventName) {
-              case "ObjectCreated:*":
-                break;
-              case "ObjectCreated:Put":
-                if (bucketName === STAGINGBUCKET) {
-                  jsonDocument.documentState = "staged";
-                } else {
-                  jsonDocument.contentLenght = event.Records[0].s3.object.size;
-                  jsonDocument.documentState = "available";
-                  params.Bucket = bucketName;
-                  params.Key = jsonDocument.documentKey;
-                  try {
-                    const { Body } = await s3.getObject(params).promise();
-                    console.log(Body);
-                    const doc = await getDocumentFromDB(jsonDocument.documentKey);
 
-                    console.log(doc.document);
-                    console.log(doc.document.documentType.checksum);
-                    console.log(JSON.stringify(doc.document.documentType.checksum));
+            await Promise.allSettled(
+              event.Records.map(async (record) => {
+                const bodyData = JSON.parse(record.body);
 
-                    jsonDocument.checkSum = crypto
-                      .createHash(doc.document.documentType.checksum)
-                      .update(Body)
-                      .digest("base64");
-                  } catch (error) {
-                    console.log(error);
-                    const messageError = `Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}. Verificare che l'oggetto esiste nel bucket o sul database Dynamo.`;
-                    console.log(messageError);
-                    throw new Error(messageError);
-                  }
+                console.log("Processing " + record.messageId);
+
+                let jsonDocument = {
+                  documentKey: "",
+                  documentState: "",
+                };
+
+                let bucketName;
+                console.log("Buket Name: " + bodyData.Records[0].s3.bucket.name);
+                console.log("Object Key: " + bodyData.Records[0].s3.object.key);
+                console.log("Object Size: " + bodyData.Records[0].s3.object.size);
+                let params = {
+                  Bucket: "",
+                  Key: "",
+                };
+                bucketName = bodyData.Records[0].s3.bucket.name;
+                jsonDocument.documentKey = bodyData.Records[0].s3.object.key;
+                switch (bodyData.Records[0].eventName) {
+                  case "ObjectCreated:*":
+                    break;
+                  case "ObjectCreated:Put":
+                    if (bucketName === STAGINGBUCKET) {
+                      jsonDocument.documentState = "staged";
+                    } else {
+                      jsonDocument.contentLenght = bodyData.Records[0].s3.object.size;
+                      jsonDocument.documentState = "available";
+                      params.Bucket = bucketName;
+                      params.Key = jsonDocument.documentKey;
+                      try {
+                        const { Body } = await s3
+                          .getObject(params)
+                          .promise();
+                        console.log(Body);
+                        const doc = await getDocumentFromDB(jsonDocument.documentKey);
+
+                        console.log(doc.document);
+                        console.log(doc.document.documentType.checksum);
+                        console.log(JSON.stringify(doc.document.documentType.checksum));
+
+                        jsonDocument.checkSum = crypto
+                          .createHash(doc.document.documentType.checksum)
+                          .update(Body)
+                          .digest("base64");
+                      } catch (error) {
+                        console.log(error);
+                        const messageError = `Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}. Verificare che l'oggetto esiste nel bucket o sul database Dynamo.`;
+                        console.log(messageError);
+                        failedMessageIds.push(record.messageId);
+                        return;
+                        //throw new Error(messageError);
+                      }
+                    }
+                    console.log(jsonDocument);
+                    break;
+                  case "ObjectCreated:Copy":
+                    jsonDocument.documentState = "available";
+                    break;
+                  case "ObjectRestore:Completed":
+                    jsonDocument.documentState = "available";
+                    break;
+                  case "LifecycleTransition":
+                    jsonDocument.documentState = "freezed";
+                    break;
+                  case "ObjectRestore:Delete":
+                    jsonDocument.documentState = "freezed";
+                    break;
+                  case "LifecycleExpiration:Delete":
+                    jsonDocument.documentState = "deleted";
+                    break;
+                  case "ObjectRemoved:DeleteMarkerCreated":
+                    jsonDocument.documentState = "deleted";
+                    break;
+                  default:
+                    return;
                 }
-                console.log(jsonDocument);
-                break;
-              case "ObjectCreated:Copy":
-                jsonDocument.documentState = "available";
-                break;
-              case "ObjectRestore:Completed":
-                jsonDocument.documentState = "available";
-                break;
-              case "LifecycleTransition":
-                jsonDocument.documentState = "freezed";
-                break;
-              case "ObjectRestore:Delete":
-                jsonDocument.documentState = "freezed";
-                break;
-              case "LifecycleExpiration:Delete":
-                jsonDocument.documentState = "deleted";
-                break;
-              case "ObjectRemoved:DeleteMarkerCreated":
-                jsonDocument.documentState = "deleted";
-                break;
-              default:
-                return;
-            }
-            try {
-              const res = await updateDynamo(jsonDocument);
-              console.log(res);
-              console.log("############## EXIT  ####################");
-              return res;
-            } catch (err) {
-              console.log(err);
-              const retMessgeError = "Errore nella patch su DynamoDB.";
-              console.log(retMessgeError);
-              throw new Error(retMessgeError);
-            }
+                try {
+                  const res = await updateDynamo(jsonDocument);
+                  console.log(res);
+                  console.log("############## EXIT  ####################");
+                  return;
+                  //return response;
+                } catch (err) {
+                  console.log(err);
+                  const retMessgeError = "Errore nella patch su DynamoDB.";
+                  console.log(retMessgeError);
+                  failedMessageIds.push(record.messageId);
+                  return;
+                  //throw new Error(retMessgeError);
+                }
+              })
+            );
+            console.log("FINE LAVORAZIONE EVENTO");
+            return {
+              batchItemFailures: failedMessageIds.map((id) => {
+                console.log("MESSAGE_ID: " + id);
+                return {
+                  itemIdentifier: id,
+                };
+              }),
+            };
           };
           function getDocumentFromDB(docKey) {
             const options = {

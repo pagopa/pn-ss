@@ -52,12 +52,15 @@ class UriBuilderServiceDownloadTest {
     private String xApiKey;
     @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
     private String X_PAGOPA_SAFESTORAGE_CX_ID;
+    @Value("${queryParam.presignedUrl.traceId:#{null}}")
+    private String queryParamPresignedUrlTraceId;
 
     @Value("${max.restore.time.cold}")
     BigDecimal maxRestoreTimeCold;
 
     private static final String X_API_KEY_VALUE = "apiKey_value";
     private static final String X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE = "CLIENT_ID_123";
+    private static final String X_QUERY_PARAM_URL_VALUE= "queryParamPresignedUrlTraceId_value";
 
     private static final UserConfigurationResponse USER_CONFIGURATION_RESPONSE =
             new UserConfigurationResponse().userConfiguration(new UserConfiguration().apiKey(X_API_KEY_VALUE));
@@ -92,6 +95,7 @@ class UriBuilderServiceDownloadTest {
                         .build(requestIdx))
                 .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
+                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
                 .header(HttpHeaders.ACCEPT, "application/json")
                 .attribute("metadataOnly", metadataOnly)
                 .exchange();

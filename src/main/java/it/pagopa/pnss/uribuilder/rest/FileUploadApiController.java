@@ -21,7 +21,10 @@ public class FileUploadApiController implements FileUploadApi {
 	
 	@Value("${header.x-checksum-value:#{null}}")
 	private String headerXChecksumValue;
-	
+
+    @Value("${queryParam.presignedUrl.traceId}")
+    private String xTraceId;
+
     private final UriBuilderService uriBuilderService;
 
     public FileUploadApiController(UriBuilderService uriBuilderService) {
@@ -34,6 +37,7 @@ public class FileUploadApiController implements FileUploadApi {
                                                                  Mono<FileCreationRequest> fileCreationRequest,
                                                                  final ServerWebExchange exchange) {
 
+        String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
         return fileCreationRequest.flatMap(request -> {
         								String checksumValue = null;
 
@@ -61,7 +65,8 @@ public class FileUploadApiController implements FileUploadApi {
 										}
         								return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
         																				request,
-        																				checksumValue);
+        																				checksumValue,
+        																				xTraceIdValue);
         						  })
         						  .onErrorResume(ChecksumException.class, throwable -> {
         							  log.error("FileUploadApiController.createFile() : errore checksum = {}", throwable.getMessage(), throwable);

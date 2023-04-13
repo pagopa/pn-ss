@@ -54,9 +54,7 @@ Resources:
       KeySchema: 
         - AttributeName: 'name'
           KeyType: 'HASH'
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+      BillingMode: 'PAY_PER_REQUEST'
       SSESpecification:
         SSEEnabled: true
         SSEType: 'KMS'
@@ -73,9 +71,7 @@ Resources:
       KeySchema: 
         - AttributeName: 'tipoDocumento'
           KeyType: 'HASH'
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+      BillingMode: 'PAY_PER_REQUEST'
       SSESpecification:
         SSEEnabled: true
         SSEType: 'KMS'
@@ -94,9 +90,7 @@ Resources:
           KeyType: 'HASH'
       StreamSpecification:
           StreamViewType: 'NEW_AND_OLD_IMAGES'
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+      BillingMode: 'PAY_PER_REQUEST'
       SSESpecification:
         SSEEnabled: true
         SSEType: 'KMS'

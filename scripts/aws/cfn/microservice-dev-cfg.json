@@ -2,7 +2,6 @@
   "Parameters": {
     "PnSsUriBuilderstayHotTime": "1",
     "PresignedUrlMinutesLifespan": "60",
-    "PnVPCDefaultSecurityGroup": "sg-0edd50b1733dcf45b",
     "PnSsGestoreRepositoryProtocol" : "http",
     "PnSsGestoreRepositoryPort" : "8080",
     "PnSsGestoreRepositoryPathGetDocument" : "/safestorage/internal/v1/documents",

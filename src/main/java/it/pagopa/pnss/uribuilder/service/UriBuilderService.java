@@ -425,15 +425,12 @@ public class UriBuilderService extends CommonS3ObjectService {
     }
 
     private Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, String documentType) {
-
-        return getBucketName(documentType).map(buckName -> {
             log.info("INIZIO RECUPERO URL DOWNLOAD ");
             if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
-                return getPresignedUrl(buckName, fileKey, xTraceIdValue);
+                return Mono.just( getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue));
             } else {
-                return recoverDocumentFromBucket(buckName, fileKey);
+                return Mono.just( recoverDocumentFromBucket(bucketName.ssHotName(), fileKey) );
             }
-        });
     }
 
     private FileDownloadInfo recoverDocumentFromBucket(String bucketName, String keyName) {

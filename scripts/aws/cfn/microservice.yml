@@ -73,6 +73,22 @@ Parameters:
     Description: 'ARN of Pn Core Event Bus where to forward external notifications'
     Default: ''
 
+  TrailName:
+    Type: String
+    Description: 'Presigned Url usage trail name'
+    Default: 'pn-ss-presigned-url-usage'
+
+  PnCoreLogsBucketName:
+    Type: String
+    Description: 'pn-core log bucket name'
+    Default: '-'
+
+  PnCoreLogsBucketPathPrefix:
+    Type: String
+    Description: 'Destination path into bucket name'
+    Default: 'safeStorageObjectPutAndGetTracing'
+
+#### Parametri provenienti dal Template della Stack SS-Storage ####
   PnSsTableNameAnagraficaClient:
     Type: String
     Description: 'Nome della tabella SS Anagrafica Client'
@@ -167,7 +183,7 @@ Parameters:
 
   PnSsManagedPolicyName:
     Type: String
-    Description: 'Nome della managed policy associata alla state machine'
+    Description: 'Nome della managed policy de lmicroservizio Safe Storage'
     Default: 'PnSsManagedPolicyName'
 
   PnSsEventBusNameExternalNotification:
@@ -258,6 +274,7 @@ Parameters:
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
+  HasPnCoreLogsBucketName: !Not [ !Equals [!Ref PnCoreTargetEventBus, '-' ] ]
 
 Resources:
 
@@ -627,6 +644,10 @@ Resources:
               Service:
                 - 'events.amazonaws.com'
  
+
+  #####   Cloud Trail   #####
+  
+  
   #####    Gestore Bucket e risorse a lui afferenti    #####
   PnSsQueuePolicyGestoreBucketInvokeErrors:
       Type: AWS::SQS::QueuePolicy

@@ -274,7 +274,7 @@ Parameters:
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
-  HasPnCoreLogsBucketName: !Not [ !Equals [!Ref PnCoreTargetEventBus, '-' ] ]
+  HasPnCoreLogsBucketName: !Not [ !Equals [!Ref PnCoreLogsBucketName, '-' ] ]
 
 Resources:
 

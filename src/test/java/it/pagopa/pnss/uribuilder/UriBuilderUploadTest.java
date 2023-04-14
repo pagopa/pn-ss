@@ -60,6 +60,9 @@ class UriBuilderUploadTest {
     @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
     private String X_PAGOPA_SAFESTORAGE_CX_ID;
 
+    @Value("${queryParam.presignedUrl.traceId:#{null}}")
+    private String queryParamPresignedUrlTraceId;
+
     @Value("${header.x-checksum-value:#{null}}")
     private String headerChecksumValue;
 
@@ -69,6 +72,7 @@ class UriBuilderUploadTest {
     private static final String xApiKeyValue = "apiKey_value";
     private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
     private static final String xChecksumValue = "checkSumValue";
+    private static final String X_QUERY_PARAM_URL_VALUE= "queryParamPresignedUrlTraceId_value";
     private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey"));
 
     private WebTestClient.ResponseSpec fileUploadTestCall(FileCreationRequest fileCreationRequest) {
@@ -79,6 +83,7 @@ class UriBuilderUploadTest {
                              .bodyValue(fileCreationRequest)
                              .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
                              .header(xApiKey, xApiKeyValue)
+                             .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
                              .header(headerChecksumValue, xChecksumValue)
                              .exchange();
     }

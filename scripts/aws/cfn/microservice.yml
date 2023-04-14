@@ -645,10 +645,60 @@ Resources:
                 - 'events.amazonaws.com'
  
 
-  #####   Cloud Trail   #####
+  #####   Cloud Trail  +  Logging   #####
+  CloudTrailLocalDestinationLogGroup:
+    Condition: HasPnCoreLogsBucketName
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: '/trail/pn-ss-access'
+      RetentionInDays: 3
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+
+  SafeStorageCloudTrail:
+    Condition: HasPnCoreLogsBucketName
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      TrailName: !Ref TrailName
+      IsMultiRegionTrail: false
+      IsOrganizationTrail: false
+      EnableLogFileValidation: false
+      EventSelectors:
+        - DataResources:
+          - Type: AWS::S3::Object
+            Values:
+              - !Sub "arn:${AWS::Partition}:s3"
+            IncludeManagementEvents: false
+            ReadWriteType: All
+      S3BucketName: !Ref PnCoreLogsBucketName
+      S3KeyPrefix: !Ref PnCoreLogsBucketPathPrefix
+      IsLogging: true
+      CloudWatchLogsLogGroupArn: !GetAtt CloudTrailLocalDestinationLogGroup.Arn
+      CloudWatchLogsRoleArn: !GetAtt CloudTrailDestinationLogGroupWriteRole.Arn
+
+  CloudTrailDestinationLogGroupWriteRole:
+    Condition: HasPnCoreLogsBucketName
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: 'pn-ss-cloudtrail-log-group-writer-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+      Policies:    
+        - PolicyName: 'pn-ss-cloudtrail-log-group-writer-role-policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: all
+                Effect: Allow
+                Action: '*'
+                Resource: '*' 
   
-  
-  #####    Gestore Bucket e risorse a lui afferenti    #####
+#####    Gestore Bucket e risorse a lui afferenti    #####
   PnSsQueuePolicyGestoreBucketInvokeErrors:
       Type: AWS::SQS::QueuePolicy
       Properties: 

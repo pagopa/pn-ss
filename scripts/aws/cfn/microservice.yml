@@ -665,11 +665,11 @@ Resources:
       EnableLogFileValidation: false
       EventSelectors:
         - DataResources:
-          - Type: AWS::S3::Object
-            Values:
-              - !Sub "arn:${AWS::Partition}:s3"
-            IncludeManagementEvents: false
-            ReadWriteType: All
+            - Type: AWS::S3::Object
+              Values:
+                - !Sub "arn:${AWS::Partition}:s3"
+          IncludeManagementEvents: false
+          ReadWriteType: All
       S3BucketName: !Ref PnCoreLogsBucketName
       S3KeyPrefix: !Ref PnCoreLogsBucketPathPrefix
       IsLogging: true

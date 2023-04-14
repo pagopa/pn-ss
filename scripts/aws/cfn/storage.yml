@@ -38,9 +38,9 @@ Parameters:
     Type: String 
     Description: 'Nome del Event Bus che raccoglie gli eventi del microservizio Gestore Disponibilita'
     Default: 'Pn-Ss-Notifications-Bus'
-
+  
 Conditions:
-  IsProdEnv: !Equals ['PROD', !Ref DeployEnv]
+  # IsProdEnv: !Equals ['PROD', !Ref DeployEnv]
   IsDevEnv: !Equals [!Ref 'AWS::AccountId', '063295570123']
 
 Resources:

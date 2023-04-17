@@ -73,6 +73,22 @@ Parameters:
     Description: 'ARN of Pn Core Event Bus where to forward external notifications'
     Default: ''
 
+  TrailName:
+    Type: String
+    Description: 'Presigned Url usage trail name'
+    Default: 'pn-ss-presigned-url-usage'
+
+  PnCoreLogsBucketName:
+    Type: String
+    Description: 'pn-core log bucket name'
+    Default: '-'
+
+  PnCoreLogsBucketPathPrefix:
+    Type: String
+    Description: 'Destination path into bucket name'
+    Default: 'safeStorageObjectPutAndGetTracing'
+
+#### Parametri provenienti dal Template della Stack SS-Storage ####
   PnSsTableNameAnagraficaClient:
     Type: String
     Description: 'Nome della tabella SS Anagrafica Client'
@@ -167,7 +183,7 @@ Parameters:
 
   PnSsManagedPolicyName:
     Type: String
-    Description: 'Nome della managed policy associata alla state machine'
+    Description: 'Nome della managed policy de lmicroservizio Safe Storage'
     Default: 'PnSsManagedPolicyName'
 
   PnSsEventBusNameExternalNotification:
@@ -258,6 +274,7 @@ Parameters:
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
+  HasPnCoreLogsBucketName: !Not [ !Equals [!Ref PnCoreLogsBucketName, '-' ] ]
 
 Resources:
 
@@ -627,7 +644,61 @@ Resources:
               Service:
                 - 'events.amazonaws.com'
  
-  #####    Gestore Bucket e risorse a lui afferenti    #####
+
+  #####   Cloud Trail  +  Logging   #####
+  CloudTrailLocalDestinationLogGroup:
+    Condition: HasPnCoreLogsBucketName
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: '/trail/pn-ss-access'
+      RetentionInDays: 3
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+
+  SafeStorageCloudTrail:
+    Condition: HasPnCoreLogsBucketName
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      TrailName: !Ref TrailName
+      IsMultiRegionTrail: false
+      IsOrganizationTrail: false
+      EnableLogFileValidation: false
+      EventSelectors:
+        - DataResources:
+            - Type: AWS::S3::Object
+              Values:
+                - !Sub "arn:${AWS::Partition}:s3"
+          IncludeManagementEvents: false
+          ReadWriteType: All
+      S3BucketName: !Ref PnCoreLogsBucketName
+      S3KeyPrefix: !Ref PnCoreLogsBucketPathPrefix
+      IsLogging: true
+      CloudWatchLogsLogGroupArn: !GetAtt CloudTrailLocalDestinationLogGroup.Arn
+      CloudWatchLogsRoleArn: !GetAtt CloudTrailDestinationLogGroupWriteRole.Arn
+
+  CloudTrailDestinationLogGroupWriteRole:
+    Condition: HasPnCoreLogsBucketName
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: 'pn-ss-cloudtrail-log-group-writer-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+      Policies:    
+        - PolicyName: 'pn-ss-cloudtrail-log-group-writer-role-policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: all
+                Effect: Allow
+                Action: '*'
+                Resource: '*' 
+  
+#####    Gestore Bucket e risorse a lui afferenti    #####
   PnSsQueuePolicyGestoreBucketInvokeErrors:
       Type: AWS::SQS::QueuePolicy
       Properties: 

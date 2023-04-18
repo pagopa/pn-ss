@@ -78,15 +78,14 @@ Parameters:
     Description: 'Presigned Url usage trail name'
     Default: 'pn-ss-presigned-url-usage'
 
-  PnCoreLogsBucketName:
+  SafeStorageFileAccessLogsBucketName:
     Type: String
-    Description: 'pn-core log bucket name'
     Default: '-'
+    Description: 'presigned url usage log bucket name'
 
-  PnCoreLogsBucketPathPrefix:
+  SafeStorageFileAccessLogsBucketPathPrefix:
     Type: String
     Description: 'Destination path into bucket name'
-    Default: 'safeStorageObjectPutAndGetTracing'
 
 #### Parametri provenienti dal Template della Stack SS-Storage ####
   PnSsTableNameAnagraficaClient:
@@ -274,7 +273,7 @@ Parameters:
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
-  HasPnCoreLogsBucketName: !Not [ !Equals [!Ref PnCoreLogsBucketName, '-' ] ]
+  HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
 
 Resources:
 
@@ -646,17 +645,8 @@ Resources:
  
 
   #####   Cloud Trail  +  Logging   #####
-  CloudTrailLocalDestinationLogGroup:
-    Condition: HasPnCoreLogsBucketName
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: '/trail/pn-ss-access'
-      RetentionInDays: 3
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
-
   SafeStorageCloudTrail:
-    Condition: HasPnCoreLogsBucketName
+    Condition: HasCloudTrailLogsBucketName
     Type: AWS::CloudTrail::Trail
     Properties:
       TrailName: !Ref TrailName
@@ -670,33 +660,9 @@ Resources:
                 - !Sub "arn:${AWS::Partition}:s3"
           IncludeManagementEvents: false
           ReadWriteType: All
-      S3BucketName: !Ref PnCoreLogsBucketName
-      S3KeyPrefix: !Ref PnCoreLogsBucketPathPrefix
-      IsLogging: true
-      CloudWatchLogsLogGroupArn: !GetAtt CloudTrailLocalDestinationLogGroup.Arn
-      CloudWatchLogsRoleArn: !GetAtt CloudTrailDestinationLogGroupWriteRole.Arn
-
-  CloudTrailDestinationLogGroupWriteRole:
-    Condition: HasPnCoreLogsBucketName
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: 'pn-ss-cloudtrail-log-group-writer-role'
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: cloudtrail.amazonaws.com
-      Policies:    
-        - PolicyName: 'pn-ss-cloudtrail-log-group-writer-role-policy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Sid: all
-                Effect: Allow
-                Action: '*'
-                Resource: '*' 
+      S3BucketName: !Ref SafeStorageFileAccessLogsBucketName
+      S3KeyPrefix: !Ref SafeStorageFileAccessLogsBucketPathPrefix
+      IsLogging: false
   
 #####    Gestore Bucket e risorse a lui afferenti    #####
   PnSsQueuePolicyGestoreBucketInvokeErrors:

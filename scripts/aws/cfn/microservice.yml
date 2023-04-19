@@ -662,7 +662,7 @@ Resources:
           ReadWriteType: All
       S3BucketName: !Ref SafeStorageFileAccessLogsBucketName
       S3KeyPrefix: !Ref SafeStorageFileAccessLogsBucketPathPrefix
-      IsLogging: false
+      IsLogging: true
   
 #####    Gestore Bucket e risorse a lui afferenti    #####
   PnSsQueuePolicyGestoreBucketInvokeErrors:

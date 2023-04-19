@@ -19,6 +19,9 @@
     </scm>
     <properties>
         <logbackjackson.version>0.1.5</logbackjackson.version>
+        <sonar.coverage.exclusions>
+          src/test/java/**
+        </sonar.coverage.exclusions>
     </properties>
 
     <dependencies>

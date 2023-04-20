@@ -658,7 +658,7 @@ Resources:
         - DataResources:
             - Type: AWS::S3::Object
               Values:
-                - !Sub "arn:${AWS::Partition}:s3:::${PnSsBucketName}"  
+                - !Sub "arn:${AWS::Partition}:s3:::${PnSsBucketName}/"  
           IncludeManagementEvents: false
           ReadWriteType: All
       S3BucketName: !Ref SafeStorageFileAccessLogsBucketName

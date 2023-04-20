@@ -39,6 +39,10 @@ Parameters:
     Type: String
     Description: subnets where to install PN-CONFIDENTIAL-INFO
 
+  SubnetsIds:
+    Type: String
+    Description: 'subnets ids comma separated list. Where to deploy the microservice'
+
   VpcId:
     Type: String
     Description: 'VpcId where the microservice is going to be deployed'
@@ -778,9 +782,9 @@ Resources:
         TargetArn: !Ref PnSsQueueArnGestoreBucketInvokeErrors
       VpcConfig:
         SubnetIds:
-          - !Select [ 0, !Split [ ",", !Ref VpcEgressSubnetsIds ] ]
-          - !Select [ 1, !Split [ ",", !Ref VpcEgressSubnetsIds ] ]
-          - !Select [ 2, !Split [ ",", !Ref VpcEgressSubnetsIds ] ]
+          - !Select [ 0, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
         SecurityGroupIds:
           - !GetAtt PnSsSecurityGroupSafeStorage.GroupId
       Environment:

@@ -35,9 +35,9 @@ Parameters:
     Type: String
     Description: 'The name of the ECS cluster where the microservice is going to be deployed'
 
-  SubnetsIds:
+  VpcEgressSubnetsIds:
     Type: String
-    Description: 'subnets ids comma separated list. Where to deploy the microservice'
+    Description: subnets where to install PN-CONFIDENTIAL-INFO
 
   VpcId:
     Type: String
@@ -317,7 +317,7 @@ Resources:
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
-        Subnets: !Ref SubnetsIds
+        Subnets: !Ref VpcEgressSubnetsIds
         VpcId: !Ref VpcId
         EcsDefaultSecurityGroup: !Ref EcsDefaultSecurityGroup
         LoadBalancerListenerArn: !Ref ApplicationLoadBalancerListenerArn
@@ -778,9 +778,9 @@ Resources:
         TargetArn: !Ref PnSsQueueArnGestoreBucketInvokeErrors
       VpcConfig:
         SubnetIds:
-          - !Select [ 0, !Split [ ",", !Ref SubnetsIds ] ]
-          - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
-          - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 0, !Split [ ",", !Ref VpcEgressSubnetsIds ] ]
+          - !Select [ 1, !Split [ ",", !Ref VpcEgressSubnetsIds ] ]
+          - !Select [ 2, !Split [ ",", !Ref VpcEgressSubnetsIds ] ]
         SecurityGroupIds:
           - !GetAtt PnSsSecurityGroupSafeStorage.GroupId
       Environment:

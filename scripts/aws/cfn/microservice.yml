@@ -85,6 +85,7 @@ Parameters:
 
   SafeStorageFileAccessLogsBucketPathPrefix:
     Type: String
+    Default: 'safeStorageObjectPutAndGetTracing'
     Description: 'Destination path into bucket name'
 
 #### Parametri provenienti dal Template della Stack SS-Storage ####
@@ -657,7 +658,7 @@ Resources:
         - DataResources:
             - Type: AWS::S3::Object
               Values:
-                - !Sub "arn:${AWS::Partition}:s3"
+                - !Sub "arn:${AWS::Partition}:s3:::${PnSsBucketName}"  
           IncludeManagementEvents: false
           ReadWriteType: All
       S3BucketName: !Ref SafeStorageFileAccessLogsBucketName

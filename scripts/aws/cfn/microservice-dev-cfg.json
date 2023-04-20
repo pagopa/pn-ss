@@ -17,6 +17,7 @@
     "PnSsIdentityTimemark": "pn/identity/timemark",
     "PnSsIdentitySignature": "pn/identity/signature",
     "PnSsTimemarkUrl": "https://servizi.arubapec.it/tsa/ngrequest.php",
-    "PnSsSecurityGroupNameSafeStorage" : "pn-ss-gestore-bucket-sec-group"
+    "PnSsSecurityGroupNameSafeStorage" : "pn-ss-gestore-bucket-sec-group",
+    "PnCoreTargetEventBus": "arn:aws:events:eu-south-1:558518206506:event-bus/pn-CoreEventBus"
   }
 }

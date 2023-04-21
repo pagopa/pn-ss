@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.availabledocument.dto.NotificationMessage;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.util.Date;
@@ -13,6 +14,7 @@ import java.util.Map;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 
+@Slf4j
 public class ManageDynamoEvent {
 
 
@@ -41,7 +43,7 @@ public class ManageDynamoEvent {
     }
 
     public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge){
-
+        log.debug("DBStream: publish evento for {}", docEntity.get(DOCUMENTKEY_KEY).getS());
         NotificationMessage message = new NotificationMessage();
 
         message.setKey(docEntity.get(DOCUMENTKEY_KEY).getS());

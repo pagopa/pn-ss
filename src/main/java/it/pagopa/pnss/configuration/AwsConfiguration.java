@@ -261,7 +261,7 @@ public class AwsConfiguration {
                                                                                                                  .withMaxRecords(10)
 
                                                                                                                  .withIdleTimeBetweenReadsInMillis(
-                                                                                                                         500)
+                                                                                                                         50)
                                                                                                                  .withInitialPositionInStream(
                                                                                                                          InitialPositionInStream.TRIM_HORIZON);
 

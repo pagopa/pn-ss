@@ -63,7 +63,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
             }
         }catch (Exception e ){
-            log.error("Errore generico ",e);
+            log.error("DBStream: Errore generico ",e);
         }
 
     }
@@ -73,8 +73,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         List<PutEventsRequestEntry> requestEntries = new ArrayList<>();
         for (Record recordEvent : processRecordsInput.getRecords()) {
             String data = new String(recordEvent.getData().array(), Charset.forName("UTF-8"));
-            log.info(data);
-            log.info("--- START ---");
+            log.debug("DBStream: {}", data);
             if (recordEvent instanceof RecordAdapter) {
                 com.amazonaws.services.dynamodbv2.model.Record streamRecord = ((RecordAdapter) recordEvent)
                         .getInternalObject();
@@ -95,11 +94,10 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                             break;
                     }
 
-                    log.info("--- COMPLETATO CON SUCCESSO  ---");
+                    log.debug("DBStream Ok: {}", recordEvent.getPartitionKey());
 
                 }catch (Exception ex){
-                    log.error("Errore generico nella gestione dell'evento ",ex );
-                    log.info("--- COMPLETATO CON ERRORE  ---");
+                    log.error("DBStream: Errore generico nella gestione dell'evento su {} - {}",recordEvent.getPartitionKey(), ex );
                 }
             }
 
@@ -110,7 +108,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
             }
         }
         catch (Exception e) {
-            log.error("Errore nella commit dell'evento non mando nessun evento nuovo",e );
+            log.error("DBStream: Errore nel settaggio del checkpoint",e );
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
         return requestEntries;
@@ -123,7 +121,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 shutdownInput.getCheckpointer().checkpoint();
             }
             catch (Exception e) {
-                log.error("Errore durante il processo di shutDown", e);
+                log.error("DBStream: Errore durante il processo di shutDown", e);
             }
         }
 

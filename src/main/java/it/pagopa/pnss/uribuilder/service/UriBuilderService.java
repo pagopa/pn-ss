@@ -34,8 +34,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
 import reactor.util.retry.Retry;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -130,10 +128,6 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                                                                xPagopaSafestorageCxId,
                                                                                                                documentType))));
                                                 }
-//                                                else if (!MEDIA_TYPE_WITH_EXTENSION_MAP.containsKey(contentType)) {
-//                                                    synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-//                                                                                                      "Unrecognized Content Type"));
-//                                                }
                                                 else {
                                                     synchronousSink.next(userConfiguration);
                                                 }
@@ -195,13 +189,13 @@ public class UriBuilderService extends CommonS3ObjectService {
         return Mono.justOrEmpty(contentType).handle((s, sink) -> {
             if (contentType.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing"));
-            } else if (documentType == null || documentType.isBlank()) {
+            } else 
+            	if (documentType == null || documentType.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
             } else if (xTraceIdValue == null || xTraceIdValue.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, queryParamPresignedUrlTraceId + " : Is missing"));
-            } else if (!LISTA_TIPO_DOCUMENTI.contains(contentType)) {
-                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid"));
-            } else {
+            } 
+            else {
                 sink.next(contentType);
             }
         }).flatMap(mono -> docTypesService.getAllDocumentType()).handle((documentTypes, sink) -> {
@@ -537,7 +531,12 @@ public class UriBuilderService extends CommonS3ObjectService {
     private String getFileExtension(String contentType)
     {
         try {
-            return MimeTypes.getDefaultMimeTypes().getRegisteredMimeType(contentType).getExtension();
+        	String mime = MimeTypes.getDefaultMimeTypes().getRegisteredMimeType(contentType).getExtension();
+        	if(mime == null) {
+        		mime = "";
+        	}
+        	
+        	return mime;
         }
         catch(MimeTypeException exception)
         {

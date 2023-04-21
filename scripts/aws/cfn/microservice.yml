@@ -881,7 +881,7 @@ Resources:
                   case "ObjectRestore:Delete":
                     jsonDocument.documentState = "freezed";
                     break;
-                  case "LifecycleExpiration:Delete":
+                  case "LifecycleExpiration:DeleteMarkerCreated":
                     jsonDocument.documentState = "deleted";
                     break;
                   case "ObjectRemoved:DeleteMarkerCreated":

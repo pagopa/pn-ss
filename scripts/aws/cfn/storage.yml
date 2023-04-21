@@ -193,7 +193,7 @@ Resources:
             Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
           - Event: 's3:ObjectRestore:*'
             Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
-          - Event: 's3:LifecycleExpiration:Delete'
+          - Event: 's3:LifecycleExpiration:DeleteMarkerCreated'
             Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
           - Event: 's3:LifecycleTransition'
             Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
@@ -314,7 +314,7 @@ Resources:
             Effect: "Allow"
             Resource: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
             Principal:
-              AWS: !Sub '${AWS::AccountId}'
+              AWS: '*'
 
 ########### GESTORE BUCKET INVOKE DLQ ###########
 # La coda PnSsQueueGestoreBucketInvokeErrors è la DLQ configurata per la risorsa Gestore Bucket (Lambda) #

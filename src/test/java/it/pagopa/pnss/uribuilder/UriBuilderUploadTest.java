@@ -1,9 +1,10 @@
 package it.pagopa.pnss.uribuilder;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TransformationsEnum;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
-import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
@@ -73,7 +74,7 @@ class UriBuilderUploadTest {
     private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
     private static final String xChecksumValue = "checkSumValue";
     private static final String X_QUERY_PARAM_URL_VALUE= "queryParamPresignedUrlTraceId_value";
-    private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey"));
+    private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey").documentType(new DocumentType().checksum(ChecksumEnum.MD5)));
 
     private WebTestClient.ResponseSpec fileUploadTestCall(FileCreationRequest fileCreationRequest) {
         return this.webClient.post()
@@ -126,26 +127,6 @@ class UriBuilderUploadTest {
 //        fcr.setStatus(PRELOADED);
 //        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
 //    }
-
-
-    @Test
-    void testErroreInserimentoContentType() {
-
-        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-        UserConfiguration userConfiguration = new UserConfiguration();
-        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-        userConfiguration.setApiKey(xApiKeyValue);
-        userConfig.setUserConfiguration(userConfiguration);
-
-        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-
-        FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setContentType("VALUE_FAULT");
-        fcr.setDocumentType(PN_AAR);
-        fcr.setStatus(PRELOADED);
-        fileUploadTestCall(fcr).expectStatus().isBadRequest();
-    }
 
 //    @Test
 //    void testErroreInserimentoStatus() {
@@ -362,6 +343,28 @@ class UriBuilderUploadTest {
             fcr.setDocumentType("VALUE_FAULT");
             fcr.setStatus(PRELOADED);
             fileUploadTestCall(fcr).expectStatus().isBadRequest();
+        }
+        
+        @Test
+        void testUploadSignedPdfContentTypeOk() {
+
+            UserConfigurationResponse userConfig = new UserConfigurationResponse();
+            UserConfiguration userConfiguration = new UserConfiguration();
+            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setCanCreate(List.of(PN_AAR));
+            userConfig.setUserConfiguration(userConfiguration);
+
+            when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
+
+            FileCreationRequest fcr = new FileCreationRequest();
+//            fcr.setContentType("VALUE_FAULT");
+            fcr.setContentType("application/pdf");
+            fcr.setDocumentType(PN_AAR);
+            fcr.setStatus(PRELOADED);
+            fileUploadTestCall(fcr).expectStatus().isOk();
         }
     }
 }

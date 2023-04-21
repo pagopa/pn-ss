@@ -18,6 +18,7 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.ChecksumException;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
+import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
@@ -25,6 +26,8 @@ import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tika.mime.MimeTypeException;
+import org.apache.tika.mime.MimeTypes;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -124,19 +127,18 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                                                                "type '%s'",
                                                                                                                xPagopaSafestorageCxId,
                                                                                                                documentType))));
-                                                } else if (!MEDIA_TYPE_WITH_EXTENSION_MAP.containsKey(contentType)) {
-                                                    synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                                                                      "Unrecognized Content Type"));
-                                                } else {
+                                                }
+                                                else {
                                                     synchronousSink.next(userConfiguration);
                                                 }
                                             })
-                                            .doOnSuccess(object -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
-                                            .flatMap(unused -> {
+                                            .map(unused-> getFileExtension(contentType))
+                                            .onErrorResume(ContentTypeNotFoundException.class, e-> Mono.just(""))
+                                            .flatMap(fileExtension -> {
                                                 var documentKeyTmp = String.format("%s%s",
                                                                                    GenerateRandoKeyFile.getInstance()
                                                                                                        .createKeyName(documentType),
-                                                                                   MEDIA_TYPE_WITH_EXTENSION_MAP.get(contentType));
+                                                                                                        fileExtension);
                                                 log.info("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
                                                 return documentClientCall.postDocument(new DocumentInput().contentType(request.getContentType())
                                                                                                           .documentKey(documentKeyTmp)
@@ -187,13 +189,13 @@ public class UriBuilderService extends CommonS3ObjectService {
         return Mono.justOrEmpty(contentType).handle((s, sink) -> {
             if (contentType.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing"));
-            } else if (documentType == null || documentType.isBlank()) {
+            } else 
+            	if (documentType == null || documentType.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
             } else if (xTraceIdValue == null || xTraceIdValue.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, queryParamPresignedUrlTraceId + " : Is missing"));
-            } else if (!LISTA_TIPO_DOCUMENTI.contains(contentType)) {
-                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType :" + contentType + " - Not valid"));
-            } else {
+            } 
+            else {
                 sink.next(contentType);
             }
         }).flatMap(mono -> docTypesService.getAllDocumentType()).handle((documentTypes, sink) -> {
@@ -524,5 +526,21 @@ public class UriBuilderService extends CommonS3ObjectService {
         random.nextBytes(bytes);
         Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
         return encoder.encodeToString(bytes);
+    }
+
+    private String getFileExtension(String contentType)
+    {
+        try {
+        	String mime = MimeTypes.getDefaultMimeTypes().getRegisteredMimeType(contentType).getExtension();
+        	if(mime == null) {
+        		mime = "";
+        	}
+        	
+        	return mime;
+        }
+        catch(MimeTypeException exception)
+        {
+            throw new ContentTypeNotFoundException(contentType);
+        }
     }
 }

@@ -48,6 +48,7 @@ Resources:
   PnSsTableAnagraficaClient:
     Type: AWS::DynamoDB::Table
     Properties:
+      TableName: 'pn-SsAnagraficaClient'
       AttributeDefinitions:
         - AttributeName: 'name'
           AttributeType: 'S'
@@ -67,6 +68,7 @@ Resources:
   PnSsTableTipologieDocumenti:
     Type: AWS::DynamoDB::Table
     Properties:
+      TableName: 'pn-SsTipologieDocumenti'
       AttributeDefinitions:
         - AttributeName: 'tipoDocumento'
           AttributeType: 'S'
@@ -86,6 +88,7 @@ Resources:
   PnSsTableDocumenti:
     Type: AWS::DynamoDB::Table
     Properties:
+      TableName: 'pn-SsDocumenti'
       AttributeDefinitions:
         - AttributeName: 'documentKey'
           AttributeType: 'S'
@@ -108,6 +111,7 @@ Resources:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
     Properties:
+      BucketName: !Sub ${ProjectName}-safestorage-${AWS::Region}-${AWS::AccountId}
       AccessControl: 'Private'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -226,6 +230,7 @@ Resources:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke
     Properties:
+      BucketName: !Sub ${ProjectName}-safestorage-staging-${AWS::Region}-${AWS::AccountId}
       AccessControl: 'Private'
       BucketEncryption:
         ServerSideEncryptionConfiguration:

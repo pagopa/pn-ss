@@ -111,6 +111,7 @@ Resources:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
     Properties:
+      BucketName: !Sub ${ProjectName}-safestorage-${AWS::AccountId}-${AWS::Region}
       AccessControl: 'Private'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -229,6 +230,7 @@ Resources:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke
     Properties:
+      BucketName: !Sub ${ProjectName}-safestorage-staging-${AWS::AccountId}-${AWS::Region}
       AccessControl: 'Private'
       BucketEncryption:
         ServerSideEncryptionConfiguration:

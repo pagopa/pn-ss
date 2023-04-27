@@ -25,6 +25,8 @@ public final class Constant {
     public static final String FREEZED = "FREEZED";
     public static final String AVAILABLE = "AVAILABLE";
     public static final String STAGED = "STAGED";
+    public static final String DELETED = "DELETED";
+
     public static final String STORAGE_TYPE = "storageType";
     public static final List<String> LISTA_TIPO_DOCUMENTI =
             List.of(APPLICATION_PDF_VALUE, APPLICATION_ZIP_VALUE, APPLICATION_XML_VALUE, IMAGE_TIFF_VALUE);

@@ -360,10 +360,20 @@ public class UriBuilderService extends CommonS3ObjectService {
 
                                                     return documentResponse.getDocument();
                                                 })
-                                                .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
+                               .handle((document, sink)->
+                               {
+                                   if(document.getDocumentState().equalsIgnoreCase(DELETED))
+                                   {
+                                       sink.error(new ResponseStatusException(HttpStatus.GONE));
+                                   }
+                                   else {
+                                       sink.next(document);
+                                   }
+                               })
+                               .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
                    })
-                   .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly))
-                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "))
+                   .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue,(Document) doc, metadataOnly))
+                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "))
                    .onErrorResume(RuntimeException.class, throwable -> {
                        log.error("createUriForDownloadFile() : erroe generico = {}", throwable.getMessage(), throwable);
                        return Mono.error(throwable);
@@ -374,52 +384,109 @@ public class UriBuilderService extends CommonS3ObjectService {
     @NotNull
     private Mono<FileDownloadResponse> getFileDownloadResponse(String fileKey, String xTraceIdValue, Document doc, Boolean metadataOnly) {
 
-        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), doc.getDocumentType().getTipoDocumento()).map(fileDownloadInfo -> {
-            FileDownloadResponse downloadResponse = new FileDownloadResponse();
-            BigDecimal contentLength = doc.getContentLenght();
+        FileDownloadResponse fileDownloadResponse = new FileDownloadResponse();
 
-            // NOTA: deve essere restituito lo stato logico, piuttosto che lo stato tecnico
-            if (doc.getDocumentLogicalState() != null) {
-                downloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
-            } else {
-                downloadResponse.setDocumentStatus("");
-            }
+        return Mono.just(fileDownloadResponse)
+                .map(unused ->
+                {
+                    BigDecimal contentLength = doc.getContentLenght();
 
-            downloadResponse.download(fileDownloadInfo)
+                    // NOTA: deve essere restituito lo stato logico, piuttosto che lo stato tecnico
+                    if (doc.getDocumentLogicalState() != null) {
+                        fileDownloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
+                    } else {
+                        fileDownloadResponse.setDocumentStatus("");
+                    }
+
+                    if ((Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) && (doc.getDocumentState() == null || !(doc.getDocumentState()
+                            .equalsIgnoreCase(
+                                    TECHNICAL_STATUS_AVAILABLE) ||
+                            doc.getDocumentState()
+                                    .equalsIgnoreCase(
+                                            TECHNICAL_STATUS_ATTACHED) ||
+                            doc.getDocumentState()
+                                    .equalsIgnoreCase(
+                                            TECHNICAL_STATUS_FREEZED)))) {
+                        throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "Document : " + doc.getDocumentKey() + " not has a valid state "));
+                    }
+
+                    if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
+                        try {
+                            final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+                            fileDownloadResponse.setRetentionUntil(new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()));
+                        } catch (Exception e) {
+                            log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
+                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+                        }
+                    }
+
+                    return fileDownloadResponse
                             .checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
                             .contentLength(contentLength)
                             .contentType(doc.getContentType())
                             .documentType(doc.getDocumentType().getTipoDocumento())
-                            .key(fileKey);
+                            .key(fileKey)
+                            .versionId(null);
+
+                })
+                .flatMap(unused ->
+                        {
+                            if (!metadataOnly)
+                                return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), doc.getDocumentType().getTipoDocumento());
+                            else return Mono.empty();
+                        }
+                )
+                .map(fileDownloadResponse::download)
+                .switchIfEmpty(Mono.just(fileDownloadResponse));
 
 
-            if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
-                try {
-                    final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
-                    downloadResponse.setRetentionUntil(new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()));
-                } catch (Exception e) {
-                    log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-                }
-            }
-
-            downloadResponse.setVersionId(null);
-
-            if ((Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) && (doc.getDocumentState() == null || !(doc.getDocumentState()
-                                                                                                                        .equalsIgnoreCase(
-                                                                                                                                TECHNICAL_STATUS_AVAILABLE) ||
-                                                                                                                     doc.getDocumentState()
-                                                                                                                        .equalsIgnoreCase(
-                                                                                                                                TECHNICAL_STATUS_ATTACHED) ||
-                                                                                                                     doc.getDocumentState()
-                                                                                                                        .equalsIgnoreCase(
-                                                                                                                                TECHNICAL_STATUS_FREEZED)))) {
-                throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                   "Document : " + doc.getDocumentKey() + " not has a valid state "));
-            }
-
-            return downloadResponse;
-        });
+//        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), doc.getDocumentType().getTipoDocumento()).map(fileDownloadInfo -> {
+//            FileDownloadResponse downloadResponse = new FileDownloadResponse();
+//            BigDecimal contentLength = doc.getContentLenght();
+//
+//            // NOTA: deve essere restituito lo stato logico, piuttosto che lo stato tecnico
+//            if (doc.getDocumentLogicalState() != null) {
+//                downloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
+//            } else {
+//                downloadResponse.setDocumentStatus("");
+//            }
+//
+//            downloadResponse
+//                            .checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
+//                            .contentLength(contentLength)
+//                            .contentType(doc.getContentType())
+//                            .documentType(doc.getDocumentType().getTipoDocumento())
+//                            .key(fileKey);
+//
+//
+//            if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
+//                try {
+//                    final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+//                    downloadResponse.setRetentionUntil(new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()));
+//                } catch (Exception e) {
+//                    log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
+//                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+//                }
+//            }
+//
+//            downloadResponse.setVersionId(null);
+//
+//            if ((Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) && (doc.getDocumentState() == null || !(doc.getDocumentState()
+//                                                                                                                        .equalsIgnoreCase(
+//                                                                                                                                TECHNICAL_STATUS_AVAILABLE) ||
+//                                                                                                                     doc.getDocumentState()
+//                                                                                                                        .equalsIgnoreCase(
+//                                                                                                                                TECHNICAL_STATUS_ATTACHED) ||
+//                                                                                                                     doc.getDocumentState()
+//                                                                                                                        .equalsIgnoreCase(
+//                                                                                                                                TECHNICAL_STATUS_FREEZED)))) {
+//                throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
+//                                                   "Document : " + doc.getDocumentKey() + " not has a valid state "));
+//            }
+//
+//            return downloadResponse;
+//        });
     }
 
     private Mono<Boolean> validationFieldCreateUri() {

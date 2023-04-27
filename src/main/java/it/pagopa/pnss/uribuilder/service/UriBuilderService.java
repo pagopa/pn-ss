@@ -372,7 +372,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                                })
                                .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
                    })
-                   .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue,(Document) doc, metadataOnly))
+                   .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue,(Document) doc, metadataOnly != null && metadataOnly))
                    .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "))
                    .onErrorResume(RuntimeException.class, throwable -> {
                        log.error("createUriForDownloadFile() : erroe generico = {}", throwable.getMessage(), throwable);
@@ -491,13 +491,13 @@ public class UriBuilderService extends CommonS3ObjectService {
 
     private Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly ) {
             log.info("INIZIO RECUPERO URL DOWNLOAD ");
-            if (metadataOnly)
+            if (Boolean.TRUE.equals(metadataOnly))
                 return Mono.empty();
             if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
-                return Mono.just( getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue));
-            } else {
-                return Mono.just( recoverDocumentFromBucket(bucketName.ssHotName(), fileKey) );
-            }
+                    return Mono.just( getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue));
+                } else {
+                    return Mono.just( recoverDocumentFromBucket(bucketName.ssHotName(), fileKey) );
+                }
     }
 
     private FileDownloadInfo recoverDocumentFromBucket(String bucketName, String keyName) {
@@ -600,7 +600,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         	if(mime == null) {
         		mime = "";
         	}
-
         	return mime;
         }
         catch(MimeTypeException exception)

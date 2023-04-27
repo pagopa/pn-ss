@@ -189,12 +189,12 @@ public class UriBuilderService extends CommonS3ObjectService {
         return Mono.justOrEmpty(contentType).handle((s, sink) -> {
             if (contentType.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing"));
-            } else 
+            } else
             	if (documentType == null || documentType.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
             } else if (xTraceIdValue == null || xTraceIdValue.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, queryParamPresignedUrlTraceId + " : Is missing"));
-            } 
+            }
             else {
                 sink.next(contentType);
             }
@@ -384,10 +384,12 @@ public class UriBuilderService extends CommonS3ObjectService {
     @NotNull
     private Mono<FileDownloadResponse> getFileDownloadResponse(String fileKey, String xTraceIdValue, Document doc, Boolean metadataOnly) {
 
-        FileDownloadResponse fileDownloadResponse = new FileDownloadResponse();
-
-        return Mono.just(fileDownloadResponse)
-                .map(unused ->
+        // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
+        // non viene creata e viene ritornato un Mono.empty()
+        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly)
+                .map(fileDownloadInfo -> new FileDownloadResponse().download(fileDownloadInfo))
+                .switchIfEmpty(Mono.just(new FileDownloadResponse()))
+                .map(fileDownloadResponse ->
                 {
                     BigDecimal contentLength = doc.getContentLenght();
 
@@ -398,29 +400,6 @@ public class UriBuilderService extends CommonS3ObjectService {
                         fileDownloadResponse.setDocumentStatus("");
                     }
 
-                    if ((Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) && (doc.getDocumentState() == null || !(doc.getDocumentState()
-                            .equalsIgnoreCase(
-                                    TECHNICAL_STATUS_AVAILABLE) ||
-                            doc.getDocumentState()
-                                    .equalsIgnoreCase(
-                                            TECHNICAL_STATUS_ATTACHED) ||
-                            doc.getDocumentState()
-                                    .equalsIgnoreCase(
-                                            TECHNICAL_STATUS_FREEZED)))) {
-                        throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                "Document : " + doc.getDocumentKey() + " not has a valid state "));
-                    }
-
-                    if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
-                        try {
-                            final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
-                            fileDownloadResponse.setRetentionUntil(new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()));
-                        } catch (Exception e) {
-                            log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
-                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-                        }
-                    }
-
                     return fileDownloadResponse
                             .checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
                             .contentLength(contentLength)
@@ -428,17 +407,34 @@ public class UriBuilderService extends CommonS3ObjectService {
                             .documentType(doc.getDocumentType().getTipoDocumento())
                             .key(fileKey)
                             .versionId(null);
-
                 })
-                .flatMap(unused ->
-                        {
-                            if (!metadataOnly)
-                                return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), doc.getDocumentType().getTipoDocumento());
-                            else return Mono.empty();
+                .handle((fileDownloadResponse, synchronousSink) ->
+                {
+                    if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
+                        try {
+                            final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+                            synchronousSink.next(fileDownloadResponse.retentionUntil((new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()))));
+                        } catch (Exception e) {
+                            log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
+                            synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage()));
                         }
-                )
-                .map(fileDownloadResponse::download)
-                .switchIfEmpty(Mono.just(fileDownloadResponse));
+                    } else synchronousSink.next(fileDownloadResponse);
+                })
+                .cast(FileDownloadResponse.class)
+                .handle((fileDownloadResponse, synchronousSink) ->
+                {
+                    if (Boolean.FALSE.equals(metadataOnly) && (doc.getDocumentState() == null || !(doc.getDocumentState()
+                            .equalsIgnoreCase(
+                                    TECHNICAL_STATUS_AVAILABLE) || doc.getDocumentState()
+                            .equalsIgnoreCase(
+                                    TECHNICAL_STATUS_ATTACHED) || doc.getDocumentState()
+                            .equalsIgnoreCase(
+                                    TECHNICAL_STATUS_FREEZED)))) {
+                        synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "Document : " + doc.getDocumentKey() + " not has a valid state "));
+                    } else synchronousSink.next(fileDownloadResponse);
+                })
+                .cast(FileDownloadResponse.class);
 
 
 //        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), doc.getDocumentType().getTipoDocumento()).map(fileDownloadInfo -> {
@@ -493,8 +489,10 @@ public class UriBuilderService extends CommonS3ObjectService {
         return Mono.just(true);
     }
 
-    private Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, String documentType) {
+    private Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly ) {
             log.info("INIZIO RECUPERO URL DOWNLOAD ");
+            if (metadataOnly)
+                return Mono.empty();
             if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
                 return Mono.just( getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue));
             } else {
@@ -602,7 +600,7 @@ public class UriBuilderService extends CommonS3ObjectService {
         	if(mime == null) {
         		mime = "";
         	}
-        	
+
         	return mime;
         }
         catch(MimeTypeException exception)

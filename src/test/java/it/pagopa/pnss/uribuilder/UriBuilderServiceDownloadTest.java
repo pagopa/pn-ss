@@ -7,8 +7,10 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.S3BucketException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,11 +20,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
 import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
+
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -40,8 +44,8 @@ import java.time.Duration;
 import java.util.List;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
@@ -79,6 +83,9 @@ class UriBuilderServiceDownloadTest {
 
     @MockBean
     DocTypesClientCall docTypesClientCall;
+    
+    @SpyBean
+    UriBuilderService uriBuilderService;
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     String testAwsS3Endpoint;
@@ -114,7 +121,7 @@ class UriBuilderServiceDownloadTest {
         userConfig.setUserConfiguration(userConfiguration);
 
         Mono<UserConfigurationResponse> userConfigurationResponse = Mono.just(userConfig);
-        Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
+        doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 
         log.info("createUserConfiguration() : END");
     }
@@ -202,6 +209,60 @@ class UriBuilderServiceDownloadTest {
                 .isOk().expectBody(FileDownloadResponse.class).value(response ->{
                     Assertions.assertThat(StringUtils.isNotEmpty(response.getDownload().getUrl()));
                 });
+    }
+
+
+    @Test
+    void testUrlStatusDeleted() {
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(DELETED);
+        d.setCheckSum(CHECKSUM);
+
+        mockGetDocument(d, docId);
+
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE);
+    }
+    
+    @Test
+    void testDocumentMissingFromBucket() {
+
+        doThrow(new S3BucketException.NoSuchKeyException("")).when(uriBuilderService).createFileDownloadInfo(any(), any(), any(), anyBoolean());
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+    	
+    	String docId = "1111-aaaa"; mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+    	DocumentInput d = new DocumentInput(); d.setDocumentType(DocTypesConstant.PN_AAR);
+    	d.setDocumentState(TECHNICAL_STATUS_BOOKED);
+    	
+    	when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+    	
+    	mockGetDocument(d, docId);
+    	fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.GONE);
+    }
+
+    @Test void testDocumentMissingFromBucketFreezed() {
+
+        doThrow(new S3BucketException.NoSuchKeyException("")).when(uriBuilderService).createFileDownloadInfo(any(), any(), any(), anyBoolean());
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
+        String docId = "1111-aaaa"; mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+        DocumentInput d = new DocumentInput(); d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(TECHNICAL_STATUS_FREEZED);
+
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
+        mockGetDocument(d, docId);
+        fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.GONE);
     }
 
    /* @Test
@@ -298,7 +359,7 @@ class UriBuilderServiceDownloadTest {
         doc.setDocumentLogicalState(d.getDocumentLogicalState());
         documentResponse.setDocument(doc);
         Mono<DocumentResponse> docRespEntity = Mono.just(documentResponse);
-        Mockito.doReturn(docRespEntity).when(documentClientCall).getDocument(docId);
+        doReturn(docRespEntity).when(documentClientCall).getDocument(docId);
     }
 
     private void mockUserConfiguration(List<String> permessi) {

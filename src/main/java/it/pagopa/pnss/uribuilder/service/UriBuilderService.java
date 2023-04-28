@@ -441,54 +441,6 @@ public class UriBuilderService extends CommonS3ObjectService {
                     } else synchronousSink.next(fileDownloadResponse);
                 })
                 .cast(FileDownloadResponse.class);
-
-
-//        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), doc.getDocumentType().getTipoDocumento()).map(fileDownloadInfo -> {
-//            FileDownloadResponse downloadResponse = new FileDownloadResponse();
-//            BigDecimal contentLength = doc.getContentLenght();
-//
-//            // NOTA: deve essere restituito lo stato logico, piuttosto che lo stato tecnico
-//            if (doc.getDocumentLogicalState() != null) {
-//                downloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
-//            } else {
-//                downloadResponse.setDocumentStatus("");
-//            }
-//
-//            downloadResponse
-//                            .checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
-//                            .contentLength(contentLength)
-//                            .contentType(doc.getContentType())
-//                            .documentType(doc.getDocumentType().getTipoDocumento())
-//                            .key(fileKey);
-//
-//
-//            if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
-//                try {
-//                    final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
-//                    downloadResponse.setRetentionUntil(new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()));
-//                } catch (Exception e) {
-//                    log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
-//                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-//                }
-//            }
-//
-//            downloadResponse.setVersionId(null);
-//
-//            if ((Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) && (doc.getDocumentState() == null || !(doc.getDocumentState()
-//                                                                                                                        .equalsIgnoreCase(
-//                                                                                                                                TECHNICAL_STATUS_AVAILABLE) ||
-//                                                                                                                     doc.getDocumentState()
-//                                                                                                                        .equalsIgnoreCase(
-//                                                                                                                                TECHNICAL_STATUS_ATTACHED) ||
-//                                                                                                                     doc.getDocumentState()
-//                                                                                                                        .equalsIgnoreCase(
-//                                                                                                                                TECHNICAL_STATUS_FREEZED)))) {
-//                throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
-//                                                   "Document : " + doc.getDocumentKey() + " not has a valid state "));
-//            }
-//
-//            return downloadResponse;
-//        });
     }
 
     private Mono<Boolean> validationFieldCreateUri() {

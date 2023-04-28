@@ -81,7 +81,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
         log.info("getDocument() : IN : documentKey {}", documentKey);
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
+//                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
                    .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class));
     }
 
@@ -101,11 +101,11 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                                                                                     .build()))
                    .handle((documentFounded, sink) -> {
                        if (documentFounded != null) {
-                           log.error("insertDocument() : document founded : {}", documentFounded);
+                           log.error("insertDocument() : document found : {}", documentFounded);
                            sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
                        }
                    })
-                   .doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
+//                   .doOnError(ItemAlreadyPresent.class, throwable -> log.error(throwable.getMessage()))
                    .switchIfEmpty(Mono.just(documentInput))
                    .flatMap(o -> docTypesService.getDocType(key))
                    .flatMap(o -> {
@@ -172,7 +172,9 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                                    log.debug("New status inserted is invalid for the documentType, DocumentLogicalState was not updated");
                                }
                            } else {
-                               throw new IllegalDocumentStateException("Cannot read statuses of Document cause statuses is null, therefore new status inserted is invalid");
+                        	   String sMsg = "Cannot read statuses of Document cause statuses is null, therefore new status inserted is invalid";
+                   			   log.error("getResponse() : error IllegalDocumentStateException {}", sMsg);
+                               throw new IllegalDocumentStateException(sMsg);
                            }
 
                            /*if (documentChanges.getDocumentState().equalsIgnoreCase("available")) {
@@ -258,30 +260,24 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                    .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
                    .onErrorResume(RuntimeException.class, throwable -> {
                        if (throwable instanceof NullPointerException) {
-                           log.error("patchDocument() : errore per valore null : messaggio = {}", throwable.getMessage(), throwable);
-                           /*TOGLIERE*/
-                           log.info("patchDocument() : errore per valore null: messaggio = {}", throwable.getMessage());
+                           log.error("patchDocument() : errore per valore null : messaggio = {}", throwable.getMessage());
                            return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
                        } else if (throwable instanceof DocumentKeyNotPresentException) {
-                           log.error("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}",
+                           log.info("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}",
                                      throwable.getMessage(),
                                      throwable);
-                           /*TOGLIERE*/
-                           log.info("patchDocument() : errore per DocumentKeyNotPresentException: messaggio = {}", throwable.getMessage());
                            return Mono.error(throwable);
                        } else if (throwable instanceof InvalidNextStatusException) {
-                           log.error("patchDocument() : invalid next status : messaggio = {}", throwable.getMessage(), throwable);
+                           log.info("patchDocument() : invalid next status : messaggio = {}", throwable.getMessage());
                            return Mono.error(throwable);
                        } else if (throwable instanceof IllegalDocumentStateException) {
-                           log.debug("Non ci sono status disponibili per il documento selezionato: {}", documentKey);
+                           log.info("Non ci sono status disponibili per il documento selezionato: {}", documentKey);
                            return Mono.error(throwable);
                        } else if (throwable instanceof RetentionException) {
                            return Mono.error(throwable);
                        }
-                           log.error("patchDocument() : errore generico : messaggio = {}", throwable.getMessage(), throwable);
-                           /*TOGLIERE*/
-                           log.info("patchDocument() : errore generico: messaggio = {}", throwable.getMessage());
-                           return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
+                       log.error("patchDocument() : errore generico : messaggio = {}", throwable.getMessage());
+                       return Mono.error(new PatchDocumentExcetpion(throwable.getMessage()));
                    })
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
     }

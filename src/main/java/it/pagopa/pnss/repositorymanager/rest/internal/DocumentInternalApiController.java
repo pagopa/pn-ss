@@ -67,34 +67,27 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 		response.getError().setDescription(throwable.getMessage());
 
 		if (throwable instanceof ItemAlreadyPresent) {
-			log.error("getResponse() : error ItemAlreadyPresent");
 			String errorMsg = documentKey == null ? "Document already present"
 					: String.format("Document with id %s already present", documentKey);
 			return buildErrorResponse(HttpStatus.CONFLICT, errorMsg);
 		} else if (throwable instanceof DocumentKeyNotPresentException) {
-			log.error("getResponse() : error DocumentKeyNotPresentException");
 			String errorMsg = documentKey == null ? "Document not found"
 					: String.format("Document with id %s not found", documentKey);
 			return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
 		} else if (throwable instanceof RepositoryManagerException) {
-			log.error("getResponse() : error RepositoryManagerException");
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		}else if (throwable instanceof IllegalDocumentStateException) {
-			log.error("getResponse() : error IllegalDocumentStateException");
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		}else if (throwable instanceof PatchDocumentExcetpion) {
-			log.error("getResponse() : error PatchDocumentExcetpion");
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else if (throwable instanceof DocumentTypeNotPresentException) {
 			String errorMsg = "Document type invalide";
 			log.error("getResponse() : error DocumentTypeNotPresentException");
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMsg);
 		} else if (throwable instanceof InvalidNextStatusException) {
-			log.error("getResponse() : error InvalidNextStatusException {}", throwable.getMessage());
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		}
 		else if (throwable instanceof RetentionException) {
-			log.error("getResponse() : error RetentionException {}", throwable.getMessage());
 			return buildErrorResponse(HttpStatus.NOT_FOUND, throwable);
 		}
 		else {

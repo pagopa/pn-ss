@@ -18,6 +18,7 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.ChecksumException;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
+import it.pagopa.pnss.common.client.exception.S3BucketException;
 import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
@@ -360,19 +361,20 @@ public class UriBuilderService extends CommonS3ObjectService {
 
                                                     return documentResponse.getDocument();
                                                 })
-                               .handle((document, sink)->
-                               {
-                                   if(document.getDocumentState().equalsIgnoreCase(DELETED))
-                                   {
-                                       sink.error(new ResponseStatusException(HttpStatus.GONE));
-                                   }
-                                   else {
-                                       sink.next(document);
-                                   }
-                               })
-                               .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
+                                                .handle((document, sink)->
+                                                {
+                                                	if(document.getDocumentState().equalsIgnoreCase(DELETED)){
+                                                		sink.error(new ResponseStatusException(HttpStatus.GONE,
+                                    		   								"Document has been deleted"));
+                                                	}
+                                                	else {
+                                                		sink.next(document);
+                                                	}
+                                                })
+                                                .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
                    })
-                   .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue,(Document) doc, metadataOnly != null && metadataOnly))
+                   .cast(Document.class)
+                   .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))
                    .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "))
                    .onErrorResume(RuntimeException.class, throwable -> {
                        log.error("createUriForDownloadFile() : erroe generico = {}", throwable.getMessage(), throwable);
@@ -387,6 +389,9 @@ public class UriBuilderService extends CommonS3ObjectService {
         // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
         // non viene creata e viene ritornato un Mono.empty()
         return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly)
+        		.onErrorResume(S3BucketException.NoSuchKeyException.class, throwable ->
+          	  		Mono.error(new ResponseStatusException(HttpStatus.GONE, "Document is missing from bucket"))
+        		)
                 .map(fileDownloadInfo -> new FileDownloadResponse().download(fileDownloadInfo))
                 .switchIfEmpty(Mono.just(new FileDownloadResponse()))
                 .map(fileDownloadResponse ->
@@ -521,8 +526,13 @@ public class UriBuilderService extends CommonS3ObjectService {
             log.info("--- RETENTION DATE " + response.getHttpExpiresDate() + " DOCUMENT " + keyName);
             log.info("Restore status: %s.\n", restoreFlag ? "in progress" : "not in progress (finished or failed)");
         } catch (AmazonServiceException ase) {
-            log.error(" Errore AMAZON AmazonServiceException", ase);
-            if (!ase.getErrorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
+        	if (ase.getErrorCode().equalsIgnoreCase("NoSuchKey")) {
+            	log.error(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
+            	throw new S3BucketException.NoSuchKeyException(keyName);
+            }
+        	
+        	if (!ase.getErrorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
+            	log.error(" Errore AMAZON AmazonServiceException", ase);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR + "- " + ase.getErrorMessage());
             }
         } catch (SdkClientException sce) {
@@ -531,7 +541,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         } catch (Exception e) {
             log.error(" Errore Generico", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico " + e.getMessage());
-
         }
 
         fdinfo.setRetryAfter(maxRestoreTimeCold);
@@ -570,6 +579,11 @@ public class UriBuilderService extends CommonS3ObjectService {
             return fdinfo;
 
         } catch (AmazonServiceException ase) {
+            if (ase.getErrorCode().equalsIgnoreCase("NoSuchKey")) {
+            	log.error(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
+            	throw new S3BucketException.NoSuchKeyException(keyName);
+            }
+            
             log.error(" Errore AMAZON AmazonServiceException", ase);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                                               "Errore AMAZON AmazonServiceException - " + ase.getMessage());

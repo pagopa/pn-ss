@@ -36,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -83,6 +84,7 @@ public class UriBuilderService extends CommonS3ObjectService {
     private final BucketName bucketName;
     private final DocTypesClientCall docTypesClientCall;
     private final DocTypesService docTypesService;
+
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
@@ -375,6 +377,8 @@ public class UriBuilderService extends CommonS3ObjectService {
                    })
                    .cast(Document.class)
                    .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))
+                   .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable ->
+                        Mono.error(new ResponseStatusException(HttpStatus.GONE, "Document is missing from bucket")))
                    .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "))
                    .onErrorResume(RuntimeException.class, throwable -> {
                        log.error("createUriForDownloadFile() : erroe generico = {}", throwable.getMessage(), throwable);
@@ -389,9 +393,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
         // non viene creata e viene ritornato un Mono.empty()
         return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly)
-        		.onErrorResume(S3BucketException.NoSuchKeyException.class, throwable ->
-          	  		Mono.error(new ResponseStatusException(HttpStatus.GONE, "Document is missing from bucket"))
-        		)
                 .map(fileDownloadInfo -> new FileDownloadResponse().download(fileDownloadInfo))
                 .switchIfEmpty(Mono.just(new FileDownloadResponse()))
                 .map(fileDownloadResponse ->
@@ -494,7 +495,7 @@ public class UriBuilderService extends CommonS3ObjectService {
         return Mono.just(true);
     }
 
-    private Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly ) {
+    public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly ) throws S3BucketException.NoSuchKeyException{
             log.info("INIZIO RECUPERO URL DOWNLOAD ");
             if (Boolean.TRUE.equals(metadataOnly))
                 return Mono.empty();
@@ -505,7 +506,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                 }
     }
 
-    private FileDownloadInfo recoverDocumentFromBucket(String bucketName, String keyName) {
+    private FileDownloadInfo recoverDocumentFromBucket(String bucketName, String keyName) throws S3BucketException.NoSuchKeyException {
         FileDownloadInfo fdinfo = new FileDownloadInfo();
         // mettere codice per far partire il recupero del file
         log.info("--- RESTORE DOCUMENT : " + keyName);
@@ -548,7 +549,7 @@ public class UriBuilderService extends CommonS3ObjectService {
     }
 
 
-    private FileDownloadInfo getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) {
+    private FileDownloadInfo getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
 
         try {
             S3Presigner presigner = getS3Presigner();
@@ -578,12 +579,11 @@ public class UriBuilderService extends CommonS3ObjectService {
             fdinfo.setUrl(theUrl);
             return fdinfo;
 
-        } catch (AmazonServiceException ase) {
-            if (ase.getErrorCode().equalsIgnoreCase("NoSuchKey")) {
+        } catch (AwsServiceException ase) {
+            if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
             	log.error(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
             	throw new S3BucketException.NoSuchKeyException(keyName);
             }
-            
             log.error(" Errore AMAZON AmazonServiceException", ase);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                                               "Errore AMAZON AmazonServiceException - " + ase.getMessage());
@@ -594,7 +594,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         } catch (Exception e) {
             log.error(" Errore Generico", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico ");
-
         }
 
     }
@@ -621,4 +620,5 @@ public class UriBuilderService extends CommonS3ObjectService {
             throw new ContentTypeNotFoundException(contentType);
         }
     }
+
 }

@@ -207,9 +207,9 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        log.info("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}",
                                 documentEntityStored);
 
-                       if ( documentChanges.getDocumentState() != null && 
-                    		   !documentChanges.getDocumentState().toUpperCase().equals(Constant.STAGED) &&
-                    		   !documentChanges.getDocumentState().toUpperCase().equals(Constant.BOOKED)) {
+                       if ( documentChanges.getDocumentState() != null && (
+                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
+                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
 	                       log.info("patchDocument() : START Tagging");
 	                       Region region = Region.of(awsConfigurationProperties.regionCode());
 	                       S3AsyncClient s3 = S3AsyncClient.builder().region(region).build();
@@ -243,9 +243,9 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                        return documentEntityStored;
                    })
                    .flatMap(documentEntityStored -> { 
-                       if ( documentChanges.getDocumentState() != null && 
-                    		   !documentChanges.getDocumentState().toUpperCase().equals(Constant.STAGED) &&
-                    		   !documentChanges.getDocumentState().toUpperCase().equals(Constant.BOOKED)) {
+                       if ( documentChanges.getDocumentState() != null && (
+                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
+                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
 		                   return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
 		                           authApiKey,
 		                           documentChanges,

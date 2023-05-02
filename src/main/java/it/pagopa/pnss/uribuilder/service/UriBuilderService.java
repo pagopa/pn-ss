@@ -142,7 +142,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                                    GenerateRandoKeyFile.getInstance()
                                                                                                        .createKeyName(documentType),
                                                                                                         fileExtension);
-                                                log.info("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
+                                                log.debug("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
                                                 return documentClientCall.postDocument(new DocumentInput().contentType(request.getContentType())
                                                                                                           .documentKey(documentKeyTmp)
                                                                                                           .documentState(
@@ -264,7 +264,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                        String documentState, String documentType, String contenType,
                                                        Map<String, String> secret, ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
 
-        log.debug("signBucket() : START : s3Presigner IN : " + "bucketName {} : keyName {} : " +
+        log.info("signBucket() : START : s3Presigner IN : " + "bucketName {} : keyName {} : " +
                   "documentState {} : documentType {} : contenType {} : " + "secret {} : checksumType{} : checksumValue {}",
                   bucketName,
                   documentKey,
@@ -331,7 +331,7 @@ public class UriBuilderService extends CommonS3ObjectService {
         }
         return Mono.fromCallable(this::validationFieldCreateUri)
                    .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
-                   .doOnSuccess(o -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
+                   .doOnSuccess(o -> log.debug("--- REST FINE  CHIAMATA USER CONFIGURATION"))
                    .flatMap(userConfigurationResponse -> {
                        List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
@@ -363,7 +363,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                 		sink.next(document);
                                                 	}
                                                 })
-                                                .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
+                                                .doOnSuccess(o -> log.debug("---  FINE  CHECK PERMESSI LETTURA"));
                    })
                    .cast(Document.class)
                    .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))
@@ -450,26 +450,26 @@ public class UriBuilderService extends CommonS3ObjectService {
     private FileDownloadInfo recoverDocumentFromBucket(String bucketName, String keyName) throws S3BucketException.NoSuchKeyException {
         FileDownloadInfo fdinfo = new FileDownloadInfo();
         // mettere codice per far partire il recupero del file
-        log.info("--- RESTORE DOCUMENT : " + keyName);
+        log.info("--- STARTING RESTORE DOCUMENT : " + keyName);
 
         try {
-            log.info("--- CREATION S3 CLIENT DOCUMENT : " + keyName);
+            log.debug("--- CREATION S3 CLIENT DOCUMENT : " + keyName);
             AmazonS3 s3Client = getAmazonS3();
 
             // Create and submit a request to restore an object from Glacier for two days.
-            log.info("--- REQUIRE RESTORE OBJECT DOCUMENT : " + keyName);
+            log.debug("--- REQUIRE RESTORE OBJECT DOCUMENT : " + keyName);
             RestoreObjectRequest requestRestore = new RestoreObjectRequest(bucketName, keyName, stayHotTime);
-            log.info("--- RESTORE OBJECT DOCUMENT : " + keyName);
+            log.debug("--- RESTORE OBJECT DOCUMENT : " + keyName);
             s3Client.restoreObjectV2(requestRestore);
 
             // Check the restoration status of the object.
             ObjectMetadata response = s3Client.getObjectMetadata(bucketName, keyName);
             Boolean restoreFlag = response.getOngoingRestore();
-            log.info("--- RETENTION DATE " + response.getHttpExpiresDate() + " DOCUMENT " + keyName);
-            log.info("Restore status: %s.\n", restoreFlag ? "in progress" : "not in progress (finished or failed)");
+            log.debug("--- RETENTION DATE " + response.getHttpExpiresDate() + " DOCUMENT " + keyName);
+            log.debug("Restore status: %s.\n", restoreFlag ? "in progress" : "not in progress (finished or failed)");
         } catch (AmazonServiceException ase) {
         	if (ase.getErrorCode().equalsIgnoreCase("NoSuchKey")) {
-            	log.error(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
+            	log.debug(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
             	throw new S3BucketException.NoSuchKeyException(keyName);
             }
         	
@@ -492,10 +492,13 @@ public class UriBuilderService extends CommonS3ObjectService {
 
     private FileDownloadInfo getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
 
+        log.info("---> STARTING GET PRESIGNED URL <--- , fileKey : {}", keyName);
+
         try {
             S3Presigner presigner = getS3Presigner();
             FileDownloadInfo fdinfo = new FileDownloadInfo();
-            log.info("INIZIO CREAZIONE OGGETTO  GetObjectRequest");
+
+            log.debug("INIZIO CREAZIONE getObjectRequest");
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                                                                 .bucket(bucketName)
                                                                 .key(keyName)
@@ -503,18 +506,19 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                         queryParamPresignedUrlTraceId,
                                                                         xTraceIdValue))
                                                                 .build();
-            log.info("FINE  CREAZIONE OGGETTO  GetObjectRequest");
-            log.info("INIZIO  CREAZIONE OGGETTO  GetObjectPresignRequest");
+            log.debug("FINE CREAZIONE getObjectPresignRequest");
+
+            log.debug("INIZIO CREAZIONE getObjectPresignRequest");
             GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
                                                                                      .signatureDuration(Duration.ofMinutes(Long.parseLong(
                                                                                              duration)))
                                                                                      .getObjectRequest(getObjectRequest)
                                                                                      .build();
-            log.info("FINE  CREAZIONE OGGETTO  GetObjectPresignRequest");
+            log.debug("FINE CREAZIONE getObjectPresignRequest");
 
-            log.info("INIZIO  RECUPERO URL ");
+            log.debug("INIZIO  RECUPERO URL ");
             PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(getObjectPresignRequest);
-            log.info("FINE   RECUPERO URL ");
+            log.debug("FINE   RECUPERO URL ");
 
             String theUrl = presignedGetObjectRequest.url().toString();
             fdinfo.setUrl(theUrl);
@@ -522,7 +526,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 
         } catch (AwsServiceException ase) {
             if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
-            	log.error(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
+            	log.debug(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
             	throw new S3BucketException.NoSuchKeyException(keyName);
             }
             log.error(" Errore AMAZON AmazonServiceException", ase);

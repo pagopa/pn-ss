@@ -67,12 +67,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 //    public Flux<DocumentType> getAllDocumentType() {
     public Mono<List<DocumentType>> getAllDocumentType() {
         log.info("getAllDocumentType() : START");
-        
-//        return Mono.from(docTypeEntityDynamoDbAsyncTable.scan())
-//                .map(Page::items)
-//                .flatMapMany(Flux::fromIterable)
-//                .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
-        
+
         return Mono.from(docTypeEntityDynamoDbAsyncTable.scan())
         		   .map(Page::items)
         		   .switchIfEmpty(Mono.empty())

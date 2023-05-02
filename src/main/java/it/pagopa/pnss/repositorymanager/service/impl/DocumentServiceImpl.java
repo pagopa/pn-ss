@@ -192,7 +192,7 @@ public class DocumentServiceImpl extends CommonS3ObjectService implements Docume
                     		   documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
                     		   documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
 
-	                       log.info("patchDocument() : START Tagging");
+	                       log.debug("patchDocument() : START Tagging");
 	                       Region region = Region.of(awsConfigurationProperties.regionCode());
 	                       S3AsyncClient s3 = S3AsyncClient.builder().region(region).build();
 	                       String storageType;

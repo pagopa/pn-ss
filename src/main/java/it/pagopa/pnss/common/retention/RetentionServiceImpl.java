@@ -136,9 +136,8 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
                 }
             }
             throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", documentKey));
-        }).onErrorResume(e -> {
+        }).doOnError(e -> {
             log.error("getDefaultRetention() : errore : {}", e.getMessage(), e);
-            throw new RetentionException(e.getMessage());
         });
 
     }

@@ -47,11 +47,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                           .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                           .retrieve()
                           .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
-                          .bodyToMono(DocumentResponse.class)
-                          .onErrorResume(RuntimeException.class, e -> {
-                              log.error("DocumentClientCallImpl.getDocument() : errore generico = {}", e.getMessage(), e);
-                              return Mono.error(e);
-                          });
+                          .bodyToMono(DocumentResponse.class);
     }
 
     @Override
@@ -62,11 +58,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                           .retrieve()
                           .onStatus(FORBIDDEN::equals,
                                     clientResponse -> Mono.error(new DocumentkeyPresentException(document.getDocumentKey())))
-                          .bodyToMono(DocumentResponse.class)
-                          .onErrorResume(RuntimeException.class, e -> {
-                              log.error("DocumentClientCallImpl.postDocument() : errore generico = {}", e.getMessage(), e);
-                              return Mono.error(e);
-                          });
+                          .bodyToMono(DocumentResponse.class);
     }
 
     @Override
@@ -83,11 +75,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                                     clientResponse -> Mono.error(new InvalidNextStatusException(document.getDocumentState(), keyFile)))
                           .onStatus(NOT_FOUND::equals,
                                     clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
-                          .bodyToMono(DocumentResponse.class)
-                          .onErrorResume(RuntimeException.class, e -> {
-                              log.error("DocumentClientCallImpl.patchDocument() : errore generico = {}", e.getMessage(), e);
-                              return Mono.error(e);
-                          });
+                          .bodyToMono(DocumentResponse.class);
     }
 
     @Override

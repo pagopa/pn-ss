@@ -101,10 +101,10 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         dtc.setStorageConfigurations(new ArrayList<>());
 
         return storageConfigurationsService.getLifecycleConfiguration().doOnNext(lifecycleRuleList -> {
-            log.info("getDocumentsConfigs() : elem lifecycleRuleList {}", lifecycleRuleList);
+            log.debug("getDocumentsConfigs() : elem lifecycleRuleList {}", lifecycleRuleList);
             dtc.setStorageConfigurations(convert(lifecycleRuleList));
         }).flatMap(lifecycleRule -> docTypesService.getAllDocumentType()).doOnNext(documentTypeList -> {
-            log.info("getDocumentsConfigs() : elem documentTypeList {}", documentTypeList);
+            log.debug("getDocumentsConfigs() : elem documentTypeList {}", documentTypeList);
             dtc.setDocumentsTypes(convertDocumentTypeConfigurationList(documentTypeList));
         }).then(Mono.just(dtc));
     }

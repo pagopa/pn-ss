@@ -247,20 +247,11 @@ public class UriBuilderService extends CommonS3ObjectService {
 //        				  secret,
 //        				  checksumType,
 //        				  checksumValue)
-                                          .onErrorResume(ChecksumException.class, throvable -> {
-                                              log.error("buildsUploadUrl() : Errore impostazione ChecksumValue = {}",
-                                                        throvable.getMessage(),
-                                                        throvable);
-                                              return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                                                            throvable.getMessage()));
-                                          }).onErrorResume(AmazonServiceException.class, throvable -> {
-                    log.error("buildsUploadUrl() : " + AMAZONERROR + "= {}", throvable.getMessage(), throvable);
-                    return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR));
-                }).onErrorResume(ResponseStatusException.class, throvable -> {
-                    log.error("buildsUploadUrl() : Errore AMAZON SdkClientException = {}", throvable.getMessage(), throvable);
-                    return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR));
-                }).onErrorResume(Exception.class, throvable -> {
-                    log.error("buildsUploadUrl() : Errore generico: {}", throvable.getMessage(), throvable);
+                .onErrorResume(ChecksumException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        throwable.getMessage())))
+                .onErrorResume(AmazonServiceException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR)))
+                .onErrorResume(throwable -> {
+                    log.error("buildsUploadUrl() : Errore generico: {}", throwable.getMessage(), throwable);
                     return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore generico"));
                 });
 
@@ -280,7 +271,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                   secret,
                   checksumType,
                   checksumValue);
-        log.info("signBucket() : sign bucket {}", duration);
+        log.debug("signBucket() : sign bucket {}", duration);
 
         if (checksumType == null || checksumValue == null || checksumValue.isBlank()) {
             return Mono.error(new ChecksumException("Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
@@ -333,7 +324,6 @@ public class UriBuilderService extends CommonS3ObjectService {
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, String xTraceIdValue, Boolean metadataOnly) {
         if (xTraceIdValue== null || StringUtils.isBlank(xTraceIdValue)) {
             String errorMsg = String.format("Header %s is missing", queryParamPresignedUrlTraceId);
-            log.error("NullPointerException: {}", errorMsg);
             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg));
         }
         return Mono.fromCallable(this::validationFieldCreateUri)
@@ -368,7 +358,6 @@ public class UriBuilderService extends CommonS3ObjectService {
                        log.error("createUriForDownloadFile() : erroe generico = {}", throwable.getMessage(), throwable);
                        return Mono.error(throwable);
                    });
-
     }
 
     @NotNull

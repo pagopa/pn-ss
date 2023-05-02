@@ -63,7 +63,7 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
         log.info("getLifecycleRuleDTO() : START");
         LifecycleRuleDTO dto = new LifecycleRuleDTO();
         rule.filter().and().tags().forEach(tag -> {
-            log.info("getLifecycleRuleDTO() : tag : value for {} : {}", tag.key(), tag.value());
+            log.debug("getLifecycleRuleDTO() : tag : value for {} : {}", tag.key(), tag.value());
             if (TAG_KEY.equals(tag.key())) {
                 dto.setName(tag.value());
             }
@@ -75,7 +75,7 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
                      rule.transitions().size());
         }
         dto.setTransitionDays(rule.hasTransitions() ? formatInYearsDays(rule.transitions().get(0).days()) : dto.getExpirationDays());
-        log.info("getLifecycleRuleDTO() : dto : {}", dto);
+        log.debug("getLifecycleRuleDTO() : dto : {}", dto);
         return dto;
     }
 
@@ -91,7 +91,7 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
 
     private GetBucketLifecycleConfigurationResponse getAsynchLifecycleConfigurationResponse() {
         try {
-            log.info("getLifecycleConfiguration() : pnSsBucketName : {}", bucketName.ssHotName());
+            log.debug("getLifecycleConfiguration() : pnSsBucketName : {}", bucketName.ssHotName());
             S3AsyncClient s3AsyncClient = getS3AsyncClient();
             GetBucketLifecycleConfigurationRequest request =
                     GetBucketLifecycleConfigurationRequest.builder().bucket(bucketName.ssHotName()).build();
@@ -112,7 +112,7 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
         }
 
         return Mono.just(filter(response.rules())).map(this::convert).onErrorResume(throwable -> {
-            log.error("getLifecycleConfiguration() : error", throwable);
+            log.debug("getLifecycleConfiguration() : error", throwable);
             return Mono.error(new BucketException(throwable.getMessage()));
         });
     }

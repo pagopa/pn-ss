@@ -78,11 +78,8 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		}else if (throwable instanceof IllegalDocumentStateException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
-		}else if (throwable instanceof PatchDocumentExcetpion) {
-			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else if (throwable instanceof DocumentTypeNotPresentException) {
-			String errorMsg = "Document type invalide";
-			log.error("getResponse() : error DocumentTypeNotPresentException");
+			String errorMsg = "Document type not present";
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMsg);
 		} else if (throwable instanceof InvalidNextStatusException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
@@ -91,8 +88,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 			return buildErrorResponse(HttpStatus.NOT_FOUND, throwable);
 		}
 		else {
-			log.info("getErrorResponse() : other");
-			log.error("errore", throwable);
+			log.error("Internal Error ---> {}", throwable.getMessage());
 			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
 		}
 	}

@@ -63,7 +63,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 		} else if (throwable instanceof RepositoryManagerException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else {
-			log.error("getErrorResponse() : other error {}", throwable);
+			log.error("getErrorResponse() : other error {}", throwable.getMessage());
 			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
 		}
 	}

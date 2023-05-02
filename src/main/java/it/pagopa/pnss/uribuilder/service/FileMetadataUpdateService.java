@@ -51,7 +51,7 @@ public class FileMetadataUpdateService {
                         String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
                                 xPagopaSafestorageCxId,
                                 tipoDocumento);
-                        log.error("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
+                        log.debug("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
                         synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, errore));
                     } else synchronousSink.next(document);
 
@@ -81,7 +81,7 @@ public class FileMetadataUpdateService {
                             isStatusPresent = documentType.getStatuses().containsKey(logicalState);
                         }
                         if (!isStatusPresent) {
-                            log.error("FileMetadataUpdateService.createUriForUploadFile() : Status '{}' not found for document" + " key {}",
+                            log.debug("FileMetadataUpdateService.createUriForUploadFile() : Status '{}' not found for document" + " key {}",
                                       request.getStatus(),
                                       fileKey);
                             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -89,7 +89,7 @@ public class FileMetadataUpdateService {
                         }
 
                         if (StringUtils.isEmpty(technicalStatus)) {
-                            log.error("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found " +
+                            log.debug("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found " +
                                       "for document key {}", fileKey);
                             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                                                           "Technical status not found for document key : " + fileKey));
@@ -113,7 +113,7 @@ public class FileMetadataUpdateService {
                 })
 
                             .onErrorResume(WebClientResponseException.class, e -> {
-                                log.error(
+                                log.debug(
                                         "FileMetadataUpdateService.createUriForUploadFile() : rilevata una WebClientResponseException : " +
 										"errore = {}",
                                         e.getMessage(),
@@ -122,7 +122,7 @@ public class FileMetadataUpdateService {
                             })
 
                             .onErrorResume(DocumentKeyNotPresentException.class, e -> {
-                                log.error(
+                                log.debug(
                                         "FileMetadataUpdateService.createUriForUploadFile() : rilevata una DocumentKeyNotPresentException" +
 										" : errore" +
                                         " = " + "{}",

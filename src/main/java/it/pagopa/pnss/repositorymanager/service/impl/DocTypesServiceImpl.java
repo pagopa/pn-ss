@@ -59,7 +59,7 @@ public class DocTypesServiceImpl implements DocTypesService {
         log.info("getDocType() : IN : typeId {}", typeId);
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
-                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error(throwable.getMessage()))
+                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
     }
 
@@ -96,7 +96,7 @@ public class DocTypesServiceImpl implements DocTypesService {
                                                                                    .partitionValue(docTypeInput.getTipoDocumento())
                                                                                    .build()))
                 .flatMap(foundedDocumentType -> Mono.error(new ItemAlreadyPresent(docTypeInput.getTipoDocumento())))
-                .doOnError(ItemAlreadyPresent.class, throwable -> log.info(throwable.getMessage()))
+                .doOnError(ItemAlreadyPresent.class, throwable -> log.debug(throwable.getMessage()))
                 .switchIfEmpty(Mono.just(docTypeInput))
                 .flatMap(unused -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
                         docTypeEntityInput))))
@@ -111,7 +111,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
-                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error(throwable.getMessage()))
+                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(unused -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.updateItem(docTypeEntityInput)))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), DocumentType.class));
     }
@@ -123,7 +123,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(typeKey))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
-                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error(throwable.getMessage()))
+                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(docTypeToDelete -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.deleteItem(typeKey)))
                    .map(objects -> objectMapper.convertValue(objects.getT1(), DocumentType.class));
     }

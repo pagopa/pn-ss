@@ -49,9 +49,6 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 	}
 
 	private Mono<ResponseEntity<UserConfigurationResponse>> getResponse(String name, Throwable throwable) {
-		UserConfigurationResponse response = new UserConfigurationResponse();
-		response.setError(new Error());
-
 		if (throwable instanceof ItemAlreadyPresent) {
 			String errorMsg = name == null ? "UserConfiguration already present"
 					: String.format("UserConfiguration with name %s already present", name);
@@ -63,8 +60,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 		} else if (throwable instanceof RepositoryManagerException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else {
-			log.info("getErrorResponse() : other");
-			log.error("errore", throwable);
+			log.error("Internal Error ---> {}", throwable.getMessage());
 			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, throwable);
 		}
 	}

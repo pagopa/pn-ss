@@ -46,7 +46,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
         log.info("getUserConfiguration() : IN : name {}", name);
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
-                   .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
+                   .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity, UserConfiguration.class));
     }
 
@@ -67,7 +67,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                                                                                              .partitionValue(userConfigurationInput.getName())
                                                                                              .build()))
                 .flatMap(foundedClientConfiguration -> Mono.error(new ItemAlreadyPresent(userConfigurationInput.getApiKey())))
-                .doOnError(ItemAlreadyPresent.class, throwable -> log.info(throwable.getMessage()))
+                .doOnError(ItemAlreadyPresent.class, throwable -> log.debug(throwable.getMessage()))
                 .switchIfEmpty(Mono.just(userConfigurationInput))
                 .flatMap(unused -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
                         userConfigurationEntity))))
@@ -80,9 +80,9 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
-                   .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
+                   .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(entityStored -> {
-                       log.info("patchUserConfiguration() : userConfigurationEntity begore patch : {}", entityStored);
+                       log.debug("patchUserConfiguration() : userConfigurationEntity begore patch : {}", entityStored);
                        if (userConfigurationChanges.getCanCreate() != null && !userConfigurationChanges.getCanCreate().isEmpty()) {
                            entityStored.setCanCreate(userConfigurationChanges.getCanCreate());
                        }
@@ -98,7 +98,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                        if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
                            entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
                        }
-                       log.info("patchUserConfiguration() : userConfigurationEntity for patch : {}", entityStored);
+                       log.debug("patchUserConfiguration() : userConfigurationEntity for patch : {}", entityStored);
                        return entityStored;
                    })
                    .zipWhen(userConfigurationUpdated -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
@@ -113,7 +113,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(userConfigurationKey))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
-                   .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
+                   .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(userConfigurationToDelete -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.deleteItem(
                            userConfigurationKey)))
                    .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity.getT1(), UserConfiguration.class));

@@ -18,6 +18,7 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.ChecksumException;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
+import it.pagopa.pnss.common.client.exception.S3BucketException;
 import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -82,6 +84,7 @@ public class UriBuilderService extends CommonS3ObjectService {
     private final BucketName bucketName;
     private final DocTypesClientCall docTypesClientCall;
     private final DocTypesService docTypesService;
+
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
@@ -189,12 +192,12 @@ public class UriBuilderService extends CommonS3ObjectService {
         return Mono.justOrEmpty(contentType).handle((s, sink) -> {
             if (contentType.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing"));
-            } else 
+            } else
             	if (documentType == null || documentType.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
             } else if (xTraceIdValue == null || xTraceIdValue.isBlank()) {
                 sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, queryParamPresignedUrlTraceId + " : Is missing"));
-            } 
+            }
             else {
                 sink.next(contentType);
             }
@@ -350,10 +353,23 @@ public class UriBuilderService extends CommonS3ObjectService {
 
                                                     return documentResponse.getDocument();
                                                 })
+                                                .handle((document, sink)->
+                                                {
+                                                	if(document.getDocumentState().equalsIgnoreCase(DELETED)){
+                                                		sink.error(new ResponseStatusException(HttpStatus.GONE,
+                                    		   								"Document has been deleted"));
+                                                	}
+                                                	else {
+                                                		sink.next(document);
+                                                	}
+                                                })
                                                 .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
                    })
-                   .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly))
-                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNE URL OK "))
+                   .cast(Document.class)
+                   .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))
+                   .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable ->
+                        Mono.error(new ResponseStatusException(HttpStatus.GONE, "Document is missing from bucket")))
+                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "))
                    .onErrorResume(RuntimeException.class, throwable -> {
                        log.error("createUriForDownloadFile() : erroe generico = {}", throwable.getMessage(), throwable);
                        return Mono.error(throwable);
@@ -363,68 +379,75 @@ public class UriBuilderService extends CommonS3ObjectService {
     @NotNull
     private Mono<FileDownloadResponse> getFileDownloadResponse(String fileKey, String xTraceIdValue, Document doc, Boolean metadataOnly) {
 
-        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), doc.getDocumentType().getTipoDocumento()).map(fileDownloadInfo -> {
-            FileDownloadResponse downloadResponse = new FileDownloadResponse();
-            BigDecimal contentLength = doc.getContentLenght();
+        // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
+        // non viene creata e viene ritornato un Mono.empty()
+        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly)
+                .map(fileDownloadInfo -> new FileDownloadResponse().download(fileDownloadInfo))
+                .switchIfEmpty(Mono.just(new FileDownloadResponse()))
+                .map(fileDownloadResponse ->
+                {
+                    BigDecimal contentLength = doc.getContentLenght();
 
-            // NOTA: deve essere restituito lo stato logico, piuttosto che lo stato tecnico
-            if (doc.getDocumentLogicalState() != null) {
-                downloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
-            } else {
-                downloadResponse.setDocumentStatus("");
-            }
+                    // NOTA: deve essere restituito lo stato logico, piuttosto che lo stato tecnico
+                    if (doc.getDocumentLogicalState() != null) {
+                        fileDownloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
+                    } else {
+                        fileDownloadResponse.setDocumentStatus("");
+                    }
 
-            downloadResponse.download(fileDownloadInfo)
+                    return fileDownloadResponse
                             .checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
                             .contentLength(contentLength)
                             .contentType(doc.getContentType())
                             .documentType(doc.getDocumentType().getTipoDocumento())
-                            .key(fileKey);
-
-
-            if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
-                try {
-                    final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
-                    downloadResponse.setRetentionUntil(new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()));
-                } catch (Exception e) {
-                    log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-                }
-            }
-
-            downloadResponse.setVersionId(null);
-
-            if ((Boolean.FALSE.equals(metadataOnly) || metadataOnly == null) && (doc.getDocumentState() == null || !(doc.getDocumentState()
-                                                                                                                        .equalsIgnoreCase(
-                                                                                                                                TECHNICAL_STATUS_AVAILABLE) ||
-                                                                                                                     doc.getDocumentState()
-                                                                                                                        .equalsIgnoreCase(
-                                                                                                                                TECHNICAL_STATUS_ATTACHED) ||
-                                                                                                                     doc.getDocumentState()
-                                                                                                                        .equalsIgnoreCase(
-                                                                                                                                TECHNICAL_STATUS_FREEZED)))) {
-                throw (new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                   "Document : " + doc.getDocumentKey() + " not has a valid state "));
-            }
-
-            return downloadResponse;
-        });
+                            .key(fileKey)
+                            .versionId(null);
+                })
+                .handle((fileDownloadResponse, synchronousSink) ->
+                {
+                    if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
+                        try {
+                            final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+                            synchronousSink.next(fileDownloadResponse.retentionUntil((new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()))));
+                        } catch (Exception e) {
+                            log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
+                            synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage()));
+                        }
+                    } else synchronousSink.next(fileDownloadResponse);
+                })
+                .cast(FileDownloadResponse.class)
+                .handle((fileDownloadResponse, synchronousSink) ->
+                {
+                    if (Boolean.FALSE.equals(metadataOnly) && (doc.getDocumentState() == null || !(doc.getDocumentState()
+                            .equalsIgnoreCase(
+                                    TECHNICAL_STATUS_AVAILABLE) || doc.getDocumentState()
+                            .equalsIgnoreCase(
+                                    TECHNICAL_STATUS_ATTACHED) || doc.getDocumentState()
+                            .equalsIgnoreCase(
+                                    TECHNICAL_STATUS_FREEZED)))) {
+                        synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "Document : " + doc.getDocumentKey() + " not has a valid state "));
+                    } else synchronousSink.next(fileDownloadResponse);
+                })
+                .cast(FileDownloadResponse.class);
     }
 
     private Mono<Boolean> validationFieldCreateUri() {
         return Mono.just(true);
     }
 
-    private Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, String documentType) {
+    public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly ) throws S3BucketException.NoSuchKeyException{
             log.info("INIZIO RECUPERO URL DOWNLOAD ");
+            if (Boolean.TRUE.equals(metadataOnly))
+                return Mono.empty();
             if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
-                return Mono.just( getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue));
-            } else {
-                return Mono.just( recoverDocumentFromBucket(bucketName.ssHotName(), fileKey) );
-            }
+                    return Mono.just( getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue));
+                } else {
+                    return Mono.just( recoverDocumentFromBucket(bucketName.ssHotName(), fileKey) );
+                }
     }
 
-    private FileDownloadInfo recoverDocumentFromBucket(String bucketName, String keyName) {
+    private FileDownloadInfo recoverDocumentFromBucket(String bucketName, String keyName) throws S3BucketException.NoSuchKeyException {
         FileDownloadInfo fdinfo = new FileDownloadInfo();
         // mettere codice per far partire il recupero del file
         log.info("--- RESTORE DOCUMENT : " + keyName);
@@ -445,8 +468,13 @@ public class UriBuilderService extends CommonS3ObjectService {
             log.info("--- RETENTION DATE " + response.getHttpExpiresDate() + " DOCUMENT " + keyName);
             log.info("Restore status: %s.\n", restoreFlag ? "in progress" : "not in progress (finished or failed)");
         } catch (AmazonServiceException ase) {
-            log.error(" Errore AMAZON AmazonServiceException", ase);
-            if (!ase.getErrorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
+        	if (ase.getErrorCode().equalsIgnoreCase("NoSuchKey")) {
+            	log.error(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
+            	throw new S3BucketException.NoSuchKeyException(keyName);
+            }
+        	
+        	if (!ase.getErrorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
+            	log.error(" Errore AMAZON AmazonServiceException", ase);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR + "- " + ase.getErrorMessage());
             }
         } catch (SdkClientException sce) {
@@ -455,7 +483,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         } catch (Exception e) {
             log.error(" Errore Generico", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico " + e.getMessage());
-
         }
 
         fdinfo.setRetryAfter(maxRestoreTimeCold);
@@ -463,7 +490,7 @@ public class UriBuilderService extends CommonS3ObjectService {
     }
 
 
-    private FileDownloadInfo getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) {
+    private FileDownloadInfo getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
 
         try {
             S3Presigner presigner = getS3Presigner();
@@ -493,7 +520,11 @@ public class UriBuilderService extends CommonS3ObjectService {
             fdinfo.setUrl(theUrl);
             return fdinfo;
 
-        } catch (AmazonServiceException ase) {
+        } catch (AwsServiceException ase) {
+            if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
+            	log.error(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
+            	throw new S3BucketException.NoSuchKeyException(keyName);
+            }
             log.error(" Errore AMAZON AmazonServiceException", ase);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                                               "Errore AMAZON AmazonServiceException - " + ase.getMessage());
@@ -504,7 +535,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         } catch (Exception e) {
             log.error(" Errore Generico", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico ");
-
         }
 
     }
@@ -524,7 +554,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         	if(mime == null) {
         		mime = "";
         	}
-        	
         	return mime;
         }
         catch(MimeTypeException exception)
@@ -532,4 +561,5 @@ public class UriBuilderService extends CommonS3ObjectService {
             throw new ContentTypeNotFoundException(contentType);
         }
     }
+
 }

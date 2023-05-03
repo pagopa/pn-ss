@@ -168,7 +168,6 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                                          }));
                                             })
                                             .flatMap(insertedDocument ->
-//                       PresignedPutObjectRequest presignedPutObjectRequest =
                                                              buildsUploadUrl(documentType,
                                                                              insertedDocument.getDocument().getDocumentState(),
                                                                              insertedDocument.getDocument().getDocumentKey(),
@@ -329,30 +328,20 @@ public class UriBuilderService extends CommonS3ObjectService {
                        return documentClientCall.getDocument(fileKey)
                                                 .onErrorResume(DocumentKeyNotPresentException.class, throwable ->
                                                     Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + fileKey)))
-                                                .map(documentResponse -> {
-                                                    if (!canRead.contains(documentResponse.getDocument()
-                                                                                          .getDocumentType()
-                                                                                          .getTipoDocumento())) {
-                                                        throw (new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                                                                           "Client : " + xPagopaSafestorageCxId +
-                                                                                           " not has privilege for read document type " +
-                                                                                           documentResponse.getDocument()
-                                                                                                           .getDocumentType()));
-                                                    }
+                               .handle((documentResponse, synchronousSink) ->
+                               {
+                                   var document = documentResponse.getDocument();
+                                   var documentType = document.getDocumentType();
 
-                                                    return documentResponse.getDocument();
-                                                })
-                                                .handle((document, sink)->
-                                                {
-                                                	if(document.getDocumentState().equalsIgnoreCase(DELETED)){
-                                                		sink.error(new ResponseStatusException(HttpStatus.GONE,
-                                    		   								"Document has been deleted"));
-                                                	}
-                                                	else {
-                                                		sink.next(document);
-                                                	}
-                                                })
-                                                .doOnSuccess(o -> log.debug("---  FINE  CHECK PERMESSI LETTURA"));
+                                   if (!canRead.contains(documentType.getTipoDocumento())) {
+                                       synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                               String.format("Client : %s not has privilege for read document type %s", xPagopaSafestorageCxId, documentType)));
+                                   } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
+                                       synchronousSink.error(new ResponseStatusException(HttpStatus.GONE,
+                                               "Document has been deleted"));
+                                   } else synchronousSink.next(document);
+                               })
+                               .doOnSuccess(o -> log.debug("---  FINE  CHECK PERMESSI LETTURA"));
                    })
                    .cast(Document.class)
                    .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))
@@ -388,6 +377,8 @@ public class UriBuilderService extends CommonS3ObjectService {
                             .key(fileKey)
                             .versionId(null);
                 })
+
+                //Check sul parsing corretto della retentionUntil
                 .handle((fileDownloadResponse, synchronousSink) ->
                 {
                     if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
@@ -401,6 +392,8 @@ public class UriBuilderService extends CommonS3ObjectService {
                     } else synchronousSink.next(fileDownloadResponse);
                 })
                 .cast(FileDownloadResponse.class)
+
+                //Check sugli stati validi.
                 .handle((fileDownloadResponse, synchronousSink) ->
                 {
                     if (Boolean.FALSE.equals(metadataOnly) && (doc.getDocumentState() == null || !(doc.getDocumentState()
@@ -441,33 +434,28 @@ public class UriBuilderService extends CommonS3ObjectService {
                 .build();
 
         return s3Service.restoreObject(keyName, bucketName, restoreRequest)
-//                .thenReturn(s3Service.getObject(keyName, bucketName).map(ResponseBytes::response))
-//                .cast(GetObjectResponse.class)
-//                .map(GetObjectResponse::storageClass)
-//                .handle((storageClass, synchronousSink) ->
-//                {
-//                    if (!storageClass.equals(StorageClass.STANDARD))
-//                        synchronousSink.error(new S3BucketException(""));
-//                    else synchronousSink.next(new FileDownloadInfo());
-//                })
-//                .cast(FileDownloadInfo.class)
-                .map(fileDownloadInfo -> new FileDownloadInfo().retryAfter(maxRestoreTimeCold))
+                //Eccezioni S3: RestoreAlreadyInProgress viene ignorata.
                 .onErrorResume(S3Exception.class, ase ->
                 {
                     if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
                         log.error(" Errore AMAZON NoSuchKey S3Exception ", ase);
                         return Mono.error(new S3BucketException.NoSuchKeyException(keyName));
-                    } else {
+                    } else if (!ase.awsErrorDetails().errorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
                         log.error(" Errore AMAZON S3Exception", ase);
                         return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));
+                    } else {
+                        log.debug(" Errore AMAZON RestoreAlreadyInProgress S3Exception", ase);
+                        return Mono.empty();
                     }
                 })
+                //Eccezioni dell'SDK.
                 .onErrorResume(SdkClientException.class, sce ->
                 {
                     log.error(" Errore AMAZON SdkClientException", sce);
                     return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                             "Errore AMAZON S3Exception - " + sce.getMessage()));
-                });
+                })
+                .thenReturn(new FileDownloadInfo().retryAfter(maxRestoreTimeCold));
     }
 
 
@@ -486,6 +474,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 
         return s3Service.presignGetObject(getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)))
                 .map(presignedRequest -> new FileDownloadInfo().url(presignedRequest.url().toString()))
+                //Eccezioni S3
                 .onErrorResume(S3Exception.class, ase ->
                 {
                     if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
@@ -496,6 +485,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                         return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));
                     }
                 })
+                //Eccezioni dell'SDK
                 .onErrorResume(SdkClientException.class, sce ->
                 {
                     log.error(" Errore AMAZON SdkClientException", sce);

@@ -24,6 +24,10 @@ Parameters:
   #   Type: String
   #   Description: 'Where to send CDC'
 
+  SafeStorageBucketName:
+    Type: String
+    Description: 'Safe Storage bucket name'
+
   PnSsGestoreBucketLambdaNameIn:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
@@ -111,7 +115,7 @@ Resources:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
     Properties:
-      BucketName: !Sub ${ProjectName}-safestorage-${AWS::Region}-${AWS::AccountId}
+      BucketName: !Ref SafeStorageBucketName
       AccessControl: 'Private'
       BucketEncryption:
         ServerSideEncryptionConfiguration:

@@ -435,17 +435,18 @@ public class UriBuilderService extends CommonS3ObjectService {
 
         return s3Service.restoreObject(keyName, bucketName, restoreRequest)
                 //Eccezioni S3: RestoreAlreadyInProgress viene ignorata.
-                .onErrorResume(S3Exception.class, ase ->
+                .onErrorResume(AwsServiceException.class, ase ->
                 {
-                    if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
-                        log.error(" Errore AMAZON NoSuchKey S3Exception ", ase);
-                        return Mono.error(new S3BucketException.NoSuchKeyException(keyName));
-                    } else if (!ase.awsErrorDetails().errorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
-                        log.error(" Errore AMAZON S3Exception", ase);
-                        return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));
-                    } else {
+                    if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
                         log.debug(" Errore AMAZON RestoreAlreadyInProgress S3Exception", ase);
                         return Mono.empty();
+                    }
+                    else if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
+                        log.error(" Errore AMAZON NoSuchKey S3Exception ", ase);
+                        return Mono.error(new S3BucketException.NoSuchKeyException(keyName));
+                    } else {
+                        log.error(" Errore AMAZON S3Exception", ase);
+                        return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));
                     }
                 })
                 //Eccezioni dell'SDK.

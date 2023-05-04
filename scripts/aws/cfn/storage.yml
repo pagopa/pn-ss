@@ -39,6 +39,10 @@ Parameters:
     Description: 'Nome del Event Bus che raccoglie gli eventi del microservizio Gestore Disponibilita'
     Default: 'Pn-Ss-Notifications-Bus'
   
+  AlarmSNSTopicName:
+    Type: String
+    Description: 'Topic alarm'
+    
 Conditions:
   # IsProdEnv: !Equals ['PROD', !Ref DeployEnv]
   IsDevEnv: !Equals [!Ref 'AWS::AccountId', '063295570123']

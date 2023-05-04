@@ -276,6 +276,10 @@ Parameters:
     Type: String
     Description: 'GestoreBucket Security Group'
 
+  AlarmSNSTopicName:
+    Type: String
+    Description: 'Topic alarm'
+
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]

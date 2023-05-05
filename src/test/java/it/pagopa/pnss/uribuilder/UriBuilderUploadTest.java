@@ -8,6 +8,8 @@ import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
@@ -18,20 +20,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static it.pagopa.pnss.common.DocTypesConstant.*;
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 
@@ -43,13 +52,13 @@ class UriBuilderUploadTest {
     @Autowired
     private WebTestClient webClient;
 
-    @MockBean
+    @SpyBean
     private DocTypesClientCall docTypesClientCall;
 
     @MockBean
     private UserConfigurationClientCall userConfigurationClientCall;
 
-    @MockBean
+    @SpyBean
     private DocTypesService docTypesService;
 
     @MockBean
@@ -76,6 +85,7 @@ class UriBuilderUploadTest {
     private static final String X_QUERY_PARAM_URL_VALUE= "queryParamPresignedUrlTraceId_value";
     private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey").documentType(new DocumentType().checksum(ChecksumEnum.MD5)));
 
+    private static DynamoDbTable<DocTypeEntity> dynamoDbTable;
     private WebTestClient.ResponseSpec fileUploadTestCall(FileCreationRequest fileCreationRequest) {
         return this.webClient.post()
                              .uri(urlPath)
@@ -205,14 +215,24 @@ class UriBuilderUploadTest {
                                                                              new DocumentType().tipoDocumento(PN_LEGAL_FACTS),
                                                                              new DocumentType().tipoDocumento(PN_EXTERNAL_LEGAL_FACTS));
 
-        @BeforeEach
-        void setUp() {
-            when(docTypesService.getAllDocumentType()).thenReturn(Mono.just(DOCUMENT_TYPE_LIST));
+        private static void insertDocTypeEntity(String tipoDocumento) {
+            log.info("execute insertDocTypeEntity()");
+            var docTypeEntity = new DocTypeEntity();
+            docTypeEntity.setTipoDocumento(tipoDocumento);
+            dynamoDbTable.putItem(builder -> builder.item(docTypeEntity));
+        }
+
+        @BeforeAll
+        public static void insertDefaultDocType(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
+                                                @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+            log.info("execute insertDefaultDocType()");
+            dynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(),
+                    TableSchema.fromBean(DocTypeEntity.class));
+            DOCUMENT_TYPE_LIST.forEach(documentType->insertDocTypeEntity(documentType.getTipoDocumento()));
         }
 
         @Test
         void testUrlGenStatusPre() {
-
             FileCreationRequest fcr = new FileCreationRequest();
             fcr.setContentType(IMAGE_TIFF_VALUE);
             fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
@@ -236,7 +256,7 @@ class UriBuilderUploadTest {
             documentTypeResponse.setDocType(documentType);
 
             Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
-            Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
+           // Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
 
             DocumentResponse docResp = new DocumentResponse();
             Document document = new Document();
@@ -305,7 +325,7 @@ class UriBuilderUploadTest {
             documentTypeResponse.setDocType(documentType);
 
             Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
-            Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
+           // Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
 
             DocumentResponse docResp = new DocumentResponse();
             Document document = new Document();
@@ -357,7 +377,7 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
+           // when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
 
             FileCreationRequest fcr = new FileCreationRequest();
 //            fcr.setContentType("VALUE_FAULT");

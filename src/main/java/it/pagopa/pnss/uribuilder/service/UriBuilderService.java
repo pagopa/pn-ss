@@ -91,17 +91,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         this.bucketName = bucketName;
         this.docTypesClientCall = docTypesClientCall;
     }
-
-//    private Mono<String> getBucketName(String docType) {
-//
-//        return docTypesClientCall.getdocTypes(docType).map(documentTypeResponse -> {
-//            var transformations = documentTypeResponse.getDocType().getTransformations();
-//            if (transformations == null || transformations.isEmpty()) {
-//                return bucketName.ssHotName();
-//            } else return bucketName.ssStageName();
-//        });
-//    }
-
     private Mono<String> getBucketName(DocumentType docType) {
         var transformations = docType.getTransformations();
         if (transformations == null || transformations.isEmpty()) {
@@ -211,40 +200,6 @@ public class UriBuilderService extends CommonS3ObjectService {
         }
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
-
-//    private Mono<PresignedPutObjectRequest> buildsUploadUrl(String documentType, String documentState, String documentKey,
-//                                                            String contentType, Map<String, String> secret, ChecksumEnum checksumType,
-//                                                            String checksumValue, String xTraceIdValue) {
-//        log.info("buildsUploadUrl() : START : " + "documentType {} : documentState {} : documentKey {} : " +
-//                 "contentType {} : secret {} : checksumType {} : checksumValue {}",
-//                 documentType,
-//                 documentState,
-//                 documentKey,
-//                 contentType,
-//                 secret,
-//                 checksumType,
-//                 checksumValue);
-//
-//        S3Presigner presigner = getS3Presigner();
-//        return getBucketName(documentType).flatMap(buckName -> signBucket(presigner,
-//                                                                          buckName,
-//                                                                          documentKey,
-//                                                                          documentState,
-//                                                                          documentType,
-//                                                                          contentType,
-//                                                                          secret,
-//                                                                          checksumType,
-//                                                                          checksumValue,
-//                                                                          xTraceIdValue))
-//                .onErrorResume(ChecksumException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-//                        throwable.getMessage())))
-//                .onErrorResume(AmazonServiceException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR)))
-//                .onErrorResume(throwable -> {
-//                    log.error("buildsUploadUrl() : Errore generico: {}", throwable.getMessage(), throwable);
-//                    return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore generico"));
-//                });
-//
-//    }
 
     private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue) {
 

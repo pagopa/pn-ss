@@ -108,6 +108,20 @@ class UriBuilderServiceDownloadTest {
                 .exchange();
     }
 
+    private WebTestClient.ResponseSpec noTraceIdFileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
+        this.webClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
+        return this.webClient.get()
+                .uri(uriBuilder -> uriBuilder.path(urlDownload).queryParam("metadataOnly", metadataOnly)
+                        //... building a URI
+                        .build(requestIdx))
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(queryParamPresignedUrlTraceId, "")
+                .header(HttpHeaders.ACCEPT, "application/json")
+                .attribute("metadataOnly", metadataOnly)
+                .exchange();
+    }
+
     @BeforeEach
     private void createUserConfiguration() {
 
@@ -131,6 +145,25 @@ class UriBuilderServiceDownloadTest {
     }
 
 
+    @Test
+    void testBlankTraceIdHeader()
+    {
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+
+        mockGetDocument(d, docId);
+
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
+        noTraceIdFileDownloadTestCall(docId, true).expectStatus().isBadRequest();
+    }
     @Test
     void testUrlGenerato() {
 

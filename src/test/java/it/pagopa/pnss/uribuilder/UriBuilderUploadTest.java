@@ -14,6 +14,7 @@ import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
 
+import org.eclipse.jetty.http.HttpHeader;
 import org.junit.jupiter.api.*;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,17 +84,37 @@ class UriBuilderUploadTest {
     private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey").documentType(new DocumentType().checksum(ChecksumEnum.MD5)));
 
     private static DynamoDbTable<DocTypeEntity> dynamoDbTable;
-    private WebTestClient.ResponseSpec fileUploadTestCall(FileCreationRequest fileCreationRequest) {
+
+    private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(FileCreationRequest fileCreationRequest)
+    {
         return this.webClient.post()
-                             .uri(urlPath)
-                             .accept(MediaType.APPLICATION_JSON)
-                             .contentType(MediaType.APPLICATION_JSON)
-                             .bodyValue(fileCreationRequest)
-                             .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
-                             .header(xApiKey, xApiKeyValue)
-                             .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
-                             .header(headerChecksumValue, xChecksumValue)
-                             .exchange();
+                .uri(urlPath)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(fileCreationRequest)
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
+                .header(xApiKey, xApiKeyValue);
+    }
+    private WebTestClient.ResponseSpec fileUploadTestCall(FileCreationRequest fileCreationRequest) {
+
+        return callRequestHeadersSpec(fileCreationRequest)
+                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                .header(headerChecksumValue, xChecksumValue)
+                .exchange();
+    }
+
+    private WebTestClient.ResponseSpec noTraceIdfileUploadTestCall(FileCreationRequest fileCreationRequest) {
+
+        return callRequestHeadersSpec(fileCreationRequest)
+                .header(headerChecksumValue, xChecksumValue)
+                .exchange();
+    }
+
+    private WebTestClient.ResponseSpec noChecksumUploadTestCall(FileCreationRequest fileCreationRequest) {
+
+        return callRequestHeadersSpec(fileCreationRequest)
+                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                .exchange();
     }
 
 //    @Test
@@ -154,6 +175,47 @@ class UriBuilderUploadTest {
 //
 //        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
 //    }
+    @Test
+    void testMissingTraceIdHeader()
+    {
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfiguration.setCanCreate(List.of(PN_AAR));
+        userConfig.setUserConfiguration(userConfiguration);
+
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
+
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType("application/pdf");
+        fcr.setDocumentType(PN_AAR);
+        fcr.setStatus(PRELOADED);
+        noTraceIdfileUploadTestCall(fcr).expectStatus().isBadRequest();
+    }
+
+    @Test
+    void testMissingChecksumHeader()
+    {
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+        userConfiguration.setApiKey(xApiKeyValue);
+        userConfiguration.setCanCreate(List.of(PN_AAR));
+        userConfig.setUserConfiguration(userConfiguration);
+
+        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
+
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType("application/pdf");
+        fcr.setDocumentType(PN_AAR);
+        fcr.setStatus(PRELOADED);
+        noChecksumUploadTestCall(fcr).expectStatus().isBadRequest();
+    }
 
     @Test
     void testContentTypeParamObbligatorio() {

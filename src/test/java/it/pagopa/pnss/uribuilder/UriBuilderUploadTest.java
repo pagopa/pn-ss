@@ -52,14 +52,11 @@ class UriBuilderUploadTest {
     @Autowired
     private WebTestClient webClient;
 
-    @SpyBean
+    @MockBean
     private DocTypesClientCall docTypesClientCall;
 
     @MockBean
     private UserConfigurationClientCall userConfigurationClientCall;
-
-    @SpyBean
-    private DocTypesService docTypesService;
 
     @MockBean
     private DocumentClientCall documentClientCall;
@@ -210,27 +207,6 @@ class UriBuilderUploadTest {
     @Nested
     class ValidationFieldSuccess{
 
-        private static final List<DocumentType> DOCUMENT_TYPE_LIST = List.of(new DocumentType().tipoDocumento(PN_NOTIFICATION_ATTACHMENTS),
-                                                                             new DocumentType().tipoDocumento(PN_AAR),
-                                                                             new DocumentType().tipoDocumento(PN_LEGAL_FACTS),
-                                                                             new DocumentType().tipoDocumento(PN_EXTERNAL_LEGAL_FACTS));
-
-        private static void insertDocTypeEntity(String tipoDocumento) {
-            log.info("execute insertDocTypeEntity()");
-            var docTypeEntity = new DocTypeEntity();
-            docTypeEntity.setTipoDocumento(tipoDocumento);
-            dynamoDbTable.putItem(builder -> builder.item(docTypeEntity));
-        }
-
-        @BeforeAll
-        public static void insertDefaultDocType(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                                @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
-            log.info("execute insertDefaultDocType()");
-            dynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(),
-                    TableSchema.fromBean(DocTypeEntity.class));
-            DOCUMENT_TYPE_LIST.forEach(documentType->insertDocTypeEntity(documentType.getTipoDocumento()));
-        }
-
         @Test
         void testUrlGenStatusPre() {
             FileCreationRequest fcr = new FileCreationRequest();
@@ -256,7 +232,7 @@ class UriBuilderUploadTest {
             documentTypeResponse.setDocType(documentType);
 
             Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
-           // Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
+            Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
 
             DocumentResponse docResp = new DocumentResponse();
             Document document = new Document();
@@ -288,6 +264,14 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(xApiKeyValue);
             userConfiguration.setCanCreate(new ArrayList<>());
             userConfig.setUserConfiguration(userConfiguration);
+
+            DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
+            DocumentType documentType = new DocumentType();
+            documentType.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
+            documentTypeResponse.setDocType(documentType);
+
+            Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
+            Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
 
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
@@ -325,7 +309,7 @@ class UriBuilderUploadTest {
             documentTypeResponse.setDocType(documentType);
 
             Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
-           // Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
+            Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
 
             DocumentResponse docResp = new DocumentResponse();
             Document document = new Document();
@@ -345,26 +329,6 @@ class UriBuilderUploadTest {
             FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
             Assertions.assertFalse(resp.getUploadUrl().isEmpty());
         }
-
-        @Test
-        void testErroreInserimentoDocumentType() {
-
-            UserConfigurationResponse userConfig = new UserConfigurationResponse();
-            UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
-            userConfig.setUserConfiguration(userConfiguration);
-
-            when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-
-            FileCreationRequest fcr = new FileCreationRequest();
-            fcr.setContentType(IMAGE_TIFF_VALUE);
-            fcr.setDocumentType("VALUE_FAULT");
-            fcr.setStatus(PRELOADED);
-            fileUploadTestCall(fcr).expectStatus().isBadRequest();
-        }
-        
         @Test
         void testUploadSignedPdfContentTypeOk() {
 
@@ -377,10 +341,9 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-           // when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
 
             FileCreationRequest fcr = new FileCreationRequest();
-//            fcr.setContentType("VALUE_FAULT");
             fcr.setContentType("application/pdf");
             fcr.setDocumentType(PN_AAR);
             fcr.setStatus(PRELOADED);

@@ -16,10 +16,7 @@ import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.exception.ChecksumException;
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
-import it.pagopa.pnss.common.client.exception.S3BucketException;
+import it.pagopa.pnss.common.client.exception.*;
 import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
@@ -40,8 +37,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.http.SdkHttpMethod;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
@@ -93,7 +89,7 @@ public class UriBuilderService extends CommonS3ObjectService {
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, DocTypesService docTypesService, S3Service s3Service, S3Presigner s3Presigner) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
@@ -102,14 +98,11 @@ public class UriBuilderService extends CommonS3ObjectService {
         this.s3Presigner = s3Presigner;
     }
 
-    private Mono<String> getBucketName(String docType) {
-
-        return docTypesClientCall.getdocTypes(docType).map(documentTypeResponse -> {
-            var transformations = documentTypeResponse.getDocType().getTransformations();
-            if (transformations == null || transformations.isEmpty()) {
-                return bucketName.ssHotName();
-            } else return bucketName.ssStageName();
-        });
+    private Mono<String> getBucketName(DocumentType docType) {
+        var transformations = docType.getTransformations();
+        if (transformations == null || transformations.isEmpty()) {
+            return Mono.just(bucketName.ssHotName());
+        } else return Mono.just(bucketName.ssStageName());
     }
 
     public Mono<FileCreationResponse> createUriForUploadFile(String xPagopaSafestorageCxId, FileCreationRequest request,
@@ -235,7 +228,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                 checksumType,
                 checksumValue);
 
-        return getBucketName(documentType).flatMap(buckName -> signBucket(s3Presigner,
+        return getBucketName(documentType).flatMap(buckName -> signBucket(
                         buckName,
                         documentKey,
                         documentState,
@@ -256,7 +249,7 @@ public class UriBuilderService extends CommonS3ObjectService {
 
     }
 
-    private Mono<PresignedPutObjectRequest> signBucket(S3Presigner s3Presigner, String bucketName, String documentKey,
+    private Mono<PresignedPutObjectRequest> signBucket(String bucketName, String documentKey,
                                                        String documentState, String documentType, String contenType,
                                                        Map<String, String> secret, ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
 

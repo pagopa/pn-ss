@@ -44,6 +44,7 @@ import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.sns.SnsAsyncClient;
@@ -204,6 +205,20 @@ public class AwsConfiguration {
     }
 
     @Bean
+    public S3Presigner s3Presigner()
+    {
+        S3Presigner.Builder builder = S3Presigner.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsS3Endpoint != null) {
+            builder.endpointOverride(URI.create(testAwsS3Endpoint));
+        }
+
+        return builder.build();
+    }
+
+    @Bean
     public SecretsManagerClient secretsManagerClient() {
         SecretsManagerClientBuilder secretsManagerClient = SecretsManagerClient.builder()
                                                                                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
@@ -273,7 +288,7 @@ public class AwsConfiguration {
                                                                              amazonDynamoDB,
                                                                              cloudWatchClient);
             if (testEventBridge == null) {
-                executor.execute(worker);
+                //executor.execute(worker);
             }
         };
     }

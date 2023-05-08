@@ -288,7 +288,7 @@ public class AwsConfiguration {
                                                                              amazonDynamoDB,
                                                                              cloudWatchClient);
             if (testEventBridge == null) {
-                //executor.execute(worker);
+                executor.execute(worker);
             }
         };
     }

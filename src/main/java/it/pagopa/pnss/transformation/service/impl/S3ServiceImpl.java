@@ -10,9 +10,12 @@ import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+
+import java.time.Duration;
 
 @Service
 @Slf4j
@@ -20,8 +23,11 @@ public class S3ServiceImpl implements S3Service {
 
     private final S3AsyncClient s3AsyncClient;
 
-    public S3ServiceImpl(S3AsyncClient s3AsyncClient) {
+    private final S3Presigner s3Presigner;
+
+    public S3ServiceImpl(S3AsyncClient s3AsyncClient, S3Presigner s3Presigner) {
         this.s3AsyncClient = s3AsyncClient;
+        this.s3Presigner = s3Presigner;
     }
 
     @Override
@@ -42,6 +48,7 @@ public class S3ServiceImpl implements S3Service {
                                                                                                              .bucket(bucketName),
                                                                                            AsyncRequestBody.fromBytes(fileBytes))))
                    .doOnNext(putObjectResponse -> log.debug("Put an object in S3 in bucket {} having key {}", bucketName, key));
+
     }
 
     @Override
@@ -49,4 +56,19 @@ public class S3ServiceImpl implements S3Service {
         return Mono.fromCompletionStage(s3AsyncClient.deleteObject(builder -> builder.key(key).bucket(bucketName)))
                    .doOnNext(putObjectResponse -> log.debug("Delete an object from S3 from bucket {} having key {}", bucketName, key));
     }
+
+    @Override
+    public Mono<RestoreObjectResponse> restoreObject(String key, String bucketName, RestoreRequest restoreRequest) {
+        return Mono.fromCompletionStage(s3AsyncClient.restoreObject(builder -> builder.key(key).bucket(bucketName).restoreRequest(restoreRequest)))
+                .doOnNext(getObjectResponseResponseBytes -> log.debug("Restored an object from S3 from bucket {} having key {}",
+                        bucketName,
+                        key));
+    }
+
+    @Override
+    public Mono<PresignedGetObjectRequest> presignGetObject(GetObjectRequest getObjectRequest, Duration duration) {
+        return Mono.just(s3Presigner.presignGetObject(builder -> builder.getObjectRequest(getObjectRequest).signatureDuration(duration)));
+    }
+
+
 }

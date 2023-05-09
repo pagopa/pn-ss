@@ -123,7 +123,7 @@ public class AwsConfiguration {
         SqsAsyncClientBuilder sqsAsyncClientBuilder = SqsAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (sqsLocalStackEndpoint != null) {
-            sqsAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(sqsLocalStackEndpoint));
+            sqsAsyncClientBuilder.endpointOverride(URI.create(sqsLocalStackEndpoint));
         }
 
         return sqsAsyncClientBuilder.build();
@@ -134,7 +134,7 @@ public class AwsConfiguration {
         DynamoDbClientBuilder dynamoDbClientBuilder = DynamoDbClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (dynamoDbLocalStackEndpoint != null) {
-            dynamoDbClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
+            dynamoDbClientBuilder.endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
         }
 
         return dynamoDbClientBuilder.build();
@@ -156,7 +156,7 @@ public class AwsConfiguration {
                 DynamoDbAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (dynamoDbLocalStackEndpoint != null) {
-            dynamoDbAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
+            dynamoDbAsyncClientBuilder.endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
         }
 
         return dynamoDbAsyncClientBuilder.build();
@@ -177,7 +177,7 @@ public class AwsConfiguration {
         SnsAsyncClientBuilder snsAsyncClientBuilder = SnsAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (snsLocalStackEndpoint != null) {
-            snsAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(snsLocalStackEndpoint));
+            snsAsyncClientBuilder.endpointOverride(URI.create(snsLocalStackEndpoint));
         }
 
         return snsAsyncClientBuilder.build();

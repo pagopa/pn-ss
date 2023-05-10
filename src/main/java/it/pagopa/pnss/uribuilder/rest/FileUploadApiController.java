@@ -54,7 +54,7 @@ public class FileUploadApiController implements FileUploadApi {
         																				xTraceIdValue);
         						  })
         						  .onErrorResume(ChecksumException.class, throwable -> {
-        							  log.error("FileUploadApiController.createFile() : errore checksum = {}", throwable.getMessage(), throwable);
+        							  log.debug("FileUploadApiController.createFile() : errore checksum = {}", throwable.getMessage(), throwable);
         							  throw new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage());
         						  })
                                   .map(ResponseEntity::ok);

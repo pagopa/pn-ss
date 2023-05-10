@@ -967,7 +967,7 @@ Resources:
                   responseBody += chunk;
                 });
                 res.on("end", () => {
-                  resolve(JSON.parse(responseBody));
+                  console.log(responseBody);
                   switch (res.statusCode) {
                     case 200:
                       resolve(JSON.parse(responseBody));

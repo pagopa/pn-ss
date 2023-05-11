@@ -196,15 +196,15 @@ Resources:
       NotificationConfiguration:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           - Event: 's3:ObjectRemoved:*'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           - Event: 's3:ObjectRestore:*'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           - Event: 's3:LifecycleExpiration:DeleteMarkerCreated'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           - Event: 's3:LifecycleTransition'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           # - Event: 's3:Replication'
             # Function: !GetAtt PnSsGestoreBucket.Arn
       ObjectLockEnabled: true
@@ -253,7 +253,7 @@ Resources:
           EventBridgeEnabled: true
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
@@ -263,88 +263,59 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
-  PnSsQueueStagingBucket:
-    Type: AWS::SQS::Queue
+  PnSsQueueStagingBucketStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 20      
-      RedrivePolicy:
-        deadLetterTargetArn : !GetAtt PnSsDLQueueStagingBucket.Arn
-        maxReceiveCount : 10
-      VisibilityTimeout: 30
-
-  PnSsDLQueueStagingBucket:
-    Type: AWS::SQS::Queue
-    Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 20
-      VisibilityTimeout: 30 
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-staging-bucket-events-queue'
+        MaxReceiveCount: 10
+        HasDLQ: True
 
 ########### GESTORE BUCKET INVOKE QUEUE ###########
 # La coda PnSsQueueGestoreBucketInvoke è il target delle S3 notifications provenienti dal bucket principale #
-# visibility timeout docs https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html#events-sqs-queueconfig 
-  PnSsQueueGestoreBucketInvoke:
-    Type: AWS::SQS::Queue
+# visibility timeout docs https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html#events-sqs-queueconfig
+  PnSsQueueGestoreBucketInvokeStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0      
-      RedrivePolicy:
-        deadLetterTargetArn : !GetAtt PnSsDLQueueGestoreBucketInvoke.Arn
-        maxReceiveCount : 10
-      VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket 
-
-  PnSsDLQueueGestoreBucketInvoke:
-    Type: AWS::SQS::Queue
-    Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0
-      VisibilityTimeout: 30
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-main-bucket-events-queue'
+        MaxReceiveCount: 10
+        HasDLQ: True
+        VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket
 
   PnSsQueuePolicyGestoreBucketInvoke:
     Type: AWS::SQS::QueuePolicy
     Properties: 
       Queues: 
-        - !Ref PnSsQueueGestoreBucketInvoke
+        - !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueURL
       PolicyDocument:
         Version: '2012-10-17'
         Statement: 
           - Action: 
             - 'SQS:*'
             Effect: "Allow"
-            Resource: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
             Principal:
               Service: 's3.amazonaws.com'
           - Action: 
             - 'SQS:*'
             Effect: "Allow"
-            Resource: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
             Principal:
               AWS: '*'
 
 ########### GESTORE BUCKET INVOKE DLQ ###########
 # La coda PnSsQueueGestoreBucketInvokeErrors è la DLQ configurata per la risorsa Gestore Bucket (Lambda) #
-  PnSsQueueGestoreBucketInvokeErrors:
-    Type: AWS::SQS::Queue
+  PnSsQueueGestoreBucketInvokeErrorsStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0      
-      RedrivePolicy:
-        deadLetterTargetArn : !GetAtt PnSsDLQueueGestoreBucketInvokeErrors.Arn
-        maxReceiveCount : 10
-      VisibilityTimeout: 30
-
-  PnSsDLQueueGestoreBucketInvokeErrors:
-    Type: AWS::SQS::Queue
-    Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0
-      VisibilityTimeout: 30
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-gestore-bucket-invocation-errors-queue'
+        MaxReceiveCount: 10
+        HasDLQ: True
 
 ########### GESTORE DISPONIBILITA' EXTERNAL NOTIFICATION ###########
   PnSsEventBusExternalNotification: 
@@ -392,14 +363,14 @@ Resources:
           StringEqualsIfExists:
             events:creatorAccount: !Sub '${AWS::AccountId}'
 
-  PnSsQueueNotificheExt1:
-    Type: AWS::SQS::Queue
+  PnSsQueueNotificheExt1Stack:
+    Type: AWS::CloudFormation::Stack
     Condition: IsDevEnv
     Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0      
-      VisibilityTimeout: 30
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-external-notification-1-queue'
+        HasDLQ: False
     
   PnSsEventRuleNotificheExt1:
     Type: AWS::Events::Rule
@@ -415,7 +386,7 @@ Resources:
           - !Sub ${AWS::Region}
       State: 'ENABLED'
       Targets:
-        - Arn: !GetAtt PnSsQueueNotificheExt1.Arn
+        - Arn: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueARN
           Id: 'PnSsExt1QueueTargetForExtNotification'
 
   # ####### DENY POLICY FROM OUTSIDE ACCOUNT ########
@@ -483,51 +454,51 @@ Outputs:
 
   PnSsQueueNameStagingBucket:
     Description: 'Nome coda per notifiche SS Staging Bucket'
-    Value: !GetAtt  PnSsQueueStagingBucket.QueueName
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueName
 
   PnSsQueueArnStagingBucket:
     Description: 'ARN coda per notifiche SS Staging Bucket'
-    Value: !GetAtt  PnSsQueueStagingBucket.Arn
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueARN
 
   PnSsQueueUrlStagingBucket:
     Description: 'URL coda per notifiche SS Staging Bucket'
-    Value: !Ref PnSsQueueStagingBucket
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueURL
 
   PnSsDLQueueNameStagingBucket:
     Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
-    Value: !GetAtt PnSsDLQueueStagingBucket.QueueName
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.DeadLetterQueueName
 
   PnSsQueueNameGestoreBucketInvokeErrors:
     Description: 'Nome coda per pubblicazione errori del Gestore Bucket'
-    Value: !GetAtt  PnSsQueueGestoreBucketInvokeErrors.QueueName
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.QueueName
 
   PnSsQueueArnGestoreBucketInvokeErrors:
     Description: 'ARN coda per pubblicazione errori del Gestore Bucket'
-    Value: !GetAtt  PnSsQueueGestoreBucketInvokeErrors.Arn
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.QueueARN
 
   PnSsQueueUrlGestoreBucketInvokeErrors:
     Description: 'URL coda per pubblicazione errori del Gestore Bucket'
-    Value: !Ref PnSsQueueGestoreBucketInvokeErrors
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.QueueURL
 
   PnSsDLQueueNameGestoreBucketInvokeErrors:
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
-    Value: !GetAtt PnSsDLQueueGestoreBucketInvokeErrors.QueueName
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.DeadLetterQueueName
 
   PnSsQueueNameGestoreBucketInvoke:
     Description: 'Nome coda per pubblicazione notifiche di eventi sul bucket SS'
-    Value: !GetAtt  PnSsQueueGestoreBucketInvoke.QueueName
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueName
 
   PnSsQueueArnGestoreBucketInvoke:
     Description: 'ARN coda per pubblicazione notifiche di eventi sul bucket SS'
-    Value: !GetAtt  PnSsQueueGestoreBucketInvoke.Arn
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
 
   PnSsQueueUrlGestoreBucketInvoke:
     Description: 'URL coda per pubblicazione notifiche di eventi sul bucket SS'
-    Value: !Ref PnSsQueueGestoreBucketInvoke
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueURL
 
   PnSsDLQueueNameGestoreBucketInvoke:
     Description: 'Nome coda DLQ per pubblicazione notifiche di eventi sul bucket SS'
-    Value: !GetAtt PnSsDLQueueGestoreBucketInvoke.QueueName
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.DeadLetterQueueName
 
   PnSsGestoreBucketLambdaName:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'

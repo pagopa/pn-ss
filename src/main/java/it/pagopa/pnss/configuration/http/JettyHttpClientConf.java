@@ -19,8 +19,6 @@ import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 @Configuration
 @Slf4j
 public class JettyHttpClientConf {
-
-    private final CharsetDecoder charsetDecoder = StandardCharsets.UTF_8.newDecoder();
     private final SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
     private static final List<String> CONTENT_TYPE_OF_RESPONSE_BODY_TO_LOG = List.of(APPLICATION_JSON_VALUE, APPLICATION_XML_VALUE);
 

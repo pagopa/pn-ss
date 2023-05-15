@@ -45,7 +45,7 @@ Parameters:
     
 Conditions:
   # IsProdEnv: !Equals ['PROD', !Ref DeployEnv]
-  IsDevEnv: !Equals [!Ref 'AWS::AccountId', '063295570123']
+  IsDevEnv: !Equals [!Ref 'AWS::AccountId', '946373734005']
 
 Resources:
 
@@ -271,6 +271,8 @@ Resources:
         QueueName: 'pn-ss-staging-bucket-events-queue'
         MaxReceiveCount: 10
         HasDLQ: True
+        QueueHasAlarm: 'true'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 ########### GESTORE BUCKET INVOKE QUEUE ###########
 # La coda PnSsQueueGestoreBucketInvoke è il target delle S3 notifications provenienti dal bucket principale #
@@ -284,6 +286,8 @@ Resources:
         MaxReceiveCount: 10
         HasDLQ: True
         VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket
+        QueueHasAlarm: 'true'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
   PnSsQueuePolicyGestoreBucketInvoke:
     Type: AWS::SQS::QueuePolicy
@@ -316,6 +320,8 @@ Resources:
         QueueName: 'pn-ss-gestore-bucket-invocation-errors-queue'
         MaxReceiveCount: 10
         HasDLQ: True
+        QueueHasAlarm: 'true'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 ########### GESTORE DISPONIBILITA' EXTERNAL NOTIFICATION ###########
   PnSsEventBusExternalNotification: 
@@ -371,6 +377,8 @@ Resources:
       Parameters:
         QueueName: 'pn-ss-external-notification-1-queue'
         HasDLQ: False
+        QueueHasAlarm: 'true'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
     
   PnSsEventRuleNotificheExt1:
     Type: AWS::Events::Rule
@@ -468,6 +476,14 @@ Outputs:
     Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
     Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.DeadLetterQueueName
 
+  PnSsAlarmArnQueueStagingBucket:
+    Description: "ARN dell'allarme messaggi vecchi nella coda notifiche SS Staging Bucket "
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.SqsAgeAlarmArn
+  
+  PnSsAlarmArnDLQueueStagingBucket:
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ notifiche SS Staging Bucket "
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.SqsDLQAlarmArn
+
   PnSsQueueNameGestoreBucketInvokeErrors:
     Description: 'Nome coda per pubblicazione errori del Gestore Bucket'
     Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.QueueName
@@ -483,6 +499,14 @@ Outputs:
   PnSsDLQueueNameGestoreBucketInvokeErrors:
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
     Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.DeadLetterQueueName
+
+  PnSsAlarmArnQueueGestoreBucketInvokeErrors:
+    Description: "ARN dell'allarme messaggi vecchi nella coda errori del Gestore Bucket"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.SqsAgeAlarmArn
+  
+  PnSsAlarmArnDLQueueGestoreBucketInvokeErrors:
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ errori del Gestore Bucket"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.SqsDLQAlarmArn
 
   PnSsQueueNameGestoreBucketInvoke:
     Description: 'Nome coda per pubblicazione notifiche di eventi sul bucket SS'
@@ -500,6 +524,14 @@ Outputs:
     Description: 'Nome coda DLQ per pubblicazione notifiche di eventi sul bucket SS'
     Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.DeadLetterQueueName
 
+  PnSsAlarmArnQueueGestoreBucketInvoke:
+    Description: "ARN dell'allarme messaggi vecchi nella coda notifiche di eventi sul bucket SS"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.SqsAgeAlarmArn
+  
+  PnSsAlarmArnDLQueueGestoreBucketInvoke:
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ notifiche di eventi sul bucket SS"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.SqsDLQAlarmArn
+    
   PnSsGestoreBucketLambdaName:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
     Value: !Ref PnSsGestoreBucketLambdaNameIn

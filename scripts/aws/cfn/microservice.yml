@@ -152,6 +152,14 @@ Parameters:
   PnSsDLQueueNameStagingBucket:
     Type: String
     Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
+  
+  PnSsAlarmArnQueueStagingBucket:
+    Type: String
+    Description: "ARN dell'allarme messaggi vecchi nella coda notifiche SS Staging Bucket "
+  
+  PnSsAlarmArnDLQueueStagingBucket:
+    Type: String
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ notifiche SS Staging Bucket "
 
   PnSsQueueNameGestoreBucketInvokeErrors:
     Type: String
@@ -168,6 +176,14 @@ Parameters:
   PnSsDLQueueNameGestoreBucketInvokeErrors:
     Type: String
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
+
+  PnSsAlarmArnQueueGestoreBucketInvokeErrors:
+    Type: String
+    Description: "ARN dell'allarme messaggi vecchi nella coda errori del Gestore Bucket"
+  
+  PnSsAlarmArnDLQueueGestoreBucketInvokeErrors:
+    Type: String
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ errori del Gestore Bucket"
   
   PnSsQueueNameGestoreBucketInvoke:
     Type: String
@@ -184,6 +200,14 @@ Parameters:
   PnSsDLQueueNameGestoreBucketInvoke:
     Type: String
     Description: 'Nome coda DLQ per pubblicazione notifiche di eventi dal bucket SS'
+
+  PnSsAlarmArnQueueGestoreBucketInvoke:
+    Type: String
+    Description: "ARN dell'allarme messaggi vecchi nella coda notifiche di eventi sul bucket SS"
+  
+  PnSsAlarmArnDLQueueGestoreBucketInvoke:
+    Type: String
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ notifiche di eventi sul bucket SS"
 
   PnSsManagedPolicyName:
     Type: String
@@ -591,6 +615,12 @@ Resources:
             - !GetAtt SafeStorageMicroservice.Outputs.FatalLogsMetricAlarmArn
             - !GetAtt PnSsDLQueueNameStagingBucketAlarm.Arn
             - !GetAtt PnSsDLQueueNameGestoreBucketInvokeErrorsAlarm.Arn
+            - !Ref PnSsAlarmArnQueueStagingBucket
+            - !Ref PnSsAlarmArnDLQueueStagingBucket
+            - !Ref PnSsAlarmArnQueueGestoreBucketInvokeErrors
+            - !Ref PnSsAlarmArnDLQueueGestoreBucketInvokeErrors
+            - !Ref PnSsAlarmArnQueueGestoreBucketInvoke
+            - !Ref PnSsAlarmArnDLQueueGestoreBucketInvoke
             # - !GetAtt SafeStorageMicroservice.Outputs.AutoScalingAlarmArn
         DynamoDBTableNames:
           !Join
@@ -604,6 +634,7 @@ Resources:
           !Join
           - ','
           - - !Ref PnSsQueueArnStagingBucket
+            - !Ref PnSsQueueArnGestoreBucketInvoke
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
         LambdaArns: !GetAtt PnSsGestoreBucket.Arn
         # KinesisDataArns:

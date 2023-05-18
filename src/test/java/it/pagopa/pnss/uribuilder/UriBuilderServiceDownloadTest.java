@@ -94,7 +94,8 @@ class UriBuilderServiceDownloadTest {
     BucketName bucketName;
     private static final String CHECKSUM = "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
 
-    private WebTestClient.ResponseSpec fileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
+    private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(String requestIdx, Boolean metadataOnly)
+    {
         this.webClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         return this.webClient.get()
                 .uri(uriBuilder -> uriBuilder.path(urlDownload).queryParam("metadataOnly", metadataOnly)
@@ -102,9 +103,18 @@ class UriBuilderServiceDownloadTest {
                         .build(requestIdx))
                 .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
-                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
                 .header(HttpHeaders.ACCEPT, "application/json")
-                .attribute("metadataOnly", metadataOnly)
+                .attribute("metadataOnly", metadataOnly);
+    }
+
+    private WebTestClient.ResponseSpec fileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
+        return callRequestHeadersSpec(requestIdx, metadataOnly)
+                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                .exchange();
+    }
+
+    private WebTestClient.ResponseSpec noTraceIdFileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
+        return callRequestHeadersSpec(requestIdx, metadataOnly)
                 .exchange();
     }
 
@@ -131,6 +141,25 @@ class UriBuilderServiceDownloadTest {
     }
 
 
+    @Test
+    void testMissingTraceIdHeader()
+    {
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+
+        mockGetDocument(d, docId);
+
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
+        noTraceIdFileDownloadTestCall(docId, true).expectStatus().isBadRequest();
+    }
     @Test
     void testUrlGenerato() {
 

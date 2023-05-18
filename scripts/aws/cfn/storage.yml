@@ -477,11 +477,11 @@ Outputs:
     Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.DeadLetterQueueName
 
   PnSsAlarmArnQueueStagingBucket:
-    Description: "ARN dell'allarme messaggi vecchi nella coda notifiche SS Staging Bucket "
+    Description: "ARN dell'allarme messaggi vecchi nella coda notifiche SS Staging Bucket"
     Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.SqsAgeAlarmArn
   
   PnSsAlarmArnDLQueueStagingBucket:
-    Description: "ARN dell'allarme per presenza di messaggi nella DLQ notifiche SS Staging Bucket "
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ notifiche SS Staging Bucket"
     Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.SqsDLQAlarmArn
 
   PnSsQueueNameGestoreBucketInvokeErrors:

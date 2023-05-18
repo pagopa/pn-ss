@@ -19,7 +19,12 @@ Parameters:
   Version:
     Type: String
     Description: 'keep track of used projects commitIds'
-  
+
+  PnCoreTargetEventBus:
+    Type: String
+    Description: 'ARN of Pn Core Event Bus where to forward external notifications'
+    Default: ''
+    
   # CdcKinesisSourceStreamArn:
   #   Type: String
   #   Description: 'Where to send CDC'

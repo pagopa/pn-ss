@@ -499,7 +499,7 @@ Resources:
             Principal:
               Service: 
                 - 'events.amazonaws.com'
-      Description: 'Role for forwarding Events to PnCoreTargetEventBus'
+      # Description: 'Role for forwarding Events to PnCoreTargetEventBus'
       Policies:
         - PolicyName: 'PutEventsInlinePolicy'
           PolicyDocument: 

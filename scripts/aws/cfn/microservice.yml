@@ -213,7 +213,11 @@ Parameters:
     Type: String
     Description: 'Nome della managed policy de lmicroservizio Safe Storage'
     Default: 'PnSsManagedPolicyName'
-
+ 
+  PnSsGestoreBucketLambdaName:
+    Type: String
+    Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
+ 
   PnSsEventBusNameExternalNotification:
     Type: String
     Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'
@@ -222,9 +226,21 @@ Parameters:
     Type: String
     Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
 
-  PnSsGestoreBucketLambdaName:
+  PnSsQueueNameEventsDLQueueExternalNotifications:
     Type: String
-    Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
+    Description: 'Nome DLQ per forward degli eventi al bus PnCoreTargetEventBus'
+
+  PnSsQueueArnEventsDLQueueExternalNotifications:
+    Type: String
+    Description: 'ARN DLQ per forward degli eventi al bus PnCoreTargetEventBus'
+
+  PnSsQueueUrlEventsDLQueueExternalNotifications:
+    Type: String
+    Description: 'URL DLQ per forward degli eventi al bus PnCoreTargetEventBus'
+
+  PnSsAlarmArnEventsDLQueueExternalNotifications:
+    Type: String
+    Description: "ARN dell'allarme messaggi vecchi nella DLQ per forward degli eventi al bus PnCoreTargetEventBus"  
 
 #### Parametri presenti nel file json di configurazione  ###
   
@@ -498,35 +514,26 @@ Resources:
                   - !Ref PnCoreTargetEventBus
       # RoleName: PnSsRole
 
-  PnSsEventsDLQueueExternalNotifications:
-    Type: AWS::SQS::Queue
-    Condition: PnCoreTargetEventBusExists
-    Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0
-      VisibilityTimeout: 30
-
   PnSsQueuePolicyExternalNotifications:
     Type: AWS::SQS::QueuePolicy
     Condition: PnCoreTargetEventBusExists
     Properties: 
       Queues: 
-        - !Ref PnSsEventsDLQueueExternalNotifications
+        - !Ref PnSsQueueUrlEventsDLQueueExternalNotifications
       PolicyDocument: 
         Statement: 
           - Sid: 'AllowAccessSameAccount'
             Action: 
               - "SQS:*"
             Effect: "Allow"
-            Resource: !GetAtt PnSsEventsDLQueueExternalNotifications.Arn
+            Resource: !Ref PnSsQueueArnEventsDLQueueExternalNotifications
             Principal: 
               AWS: !Sub ${AWS::AccountId}
           - Sid: 'AllowPutEventsFromEventRule'
             Action: 
               - "sqs:SendMessage"
             Effect: "Allow"
-            Resource: !GetAtt PnSsEventsDLQueueExternalNotifications.Arn
+            Resource: !Ref PnSsQueueArnEventsDLQueueExternalNotifications
             Principal: 
               Service:
               - 'events.amazonaws.com'
@@ -553,43 +560,7 @@ Resources:
           Id: 'PnSsExternalNotificationTarget'
           RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
           DeadLetterConfig:
-            Arn: !GetAtt PnSsEventsDLQueueExternalNotifications.Arn
-
-  #####    Metrics and Alarms  -  Queues #####
-
-  PnSsDLQueueNameStagingBucketAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      #AlarmName: !Sub "${PnSsDLQueueNameStagingBucket}Alarm"
-      AlarmDescription: !Sub 'Allarme per segnalare la presenza di messaggi nella DLQ ${PnSsDLQueueNameStagingBucket}'
-      Namespace: AWS/SQS
-      MetricName: ApproximateNumberOfMessagesVisible
-      Dimensions:
-        - Name: QueueName
-          Value: !Ref PnSsDLQueueNameStagingBucket
-      Statistic: Sum
-      Period: 60
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: missing
-
-  PnSsDLQueueNameGestoreBucketInvokeErrorsAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      #AlarmName: !Sub "${PnSsDLQueueNameGestoreBucketInvokeErrors}Alarm"
-      AlarmDescription: !Sub 'Allarme per segnalare la presenza di messaggi nella DLQ ${PnSsDLQueueNameGestoreBucketInvokeErrors}'
-      Namespace: AWS/SQS
-      MetricName: ApproximateNumberOfMessagesVisible
-      Dimensions:
-        - Name: QueueName
-          Value: !Ref PnSsDLQueueNameGestoreBucketInvokeErrors
-      Statistic: Sum
-      Period: 60
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: missing
+            Arn: !Ref PnSsQueueArnEventsDLQueueExternalNotifications
 
   #####    Metrics and Alarms  -  Microservice ##### 
   SafeStorageMicroserviceAlarm:
@@ -613,14 +584,13 @@ Resources:
           - ','
           - - !GetAtt SafeStorageMicroserviceAlarm.Outputs.MicroserviceAlarmArn
             - !GetAtt SafeStorageMicroservice.Outputs.FatalLogsMetricAlarmArn
-            - !GetAtt PnSsDLQueueNameStagingBucketAlarm.Arn
-            - !GetAtt PnSsDLQueueNameGestoreBucketInvokeErrorsAlarm.Arn
             - !Ref PnSsAlarmArnQueueStagingBucket
             - !Ref PnSsAlarmArnDLQueueStagingBucket
             - !Ref PnSsAlarmArnQueueGestoreBucketInvokeErrors
             - !Ref PnSsAlarmArnDLQueueGestoreBucketInvokeErrors
             - !Ref PnSsAlarmArnQueueGestoreBucketInvoke
             - !Ref PnSsAlarmArnDLQueueGestoreBucketInvoke
+            - !Ref PnSsAlarmArnEventsDLQueueExternalNotifications
             # - !GetAtt SafeStorageMicroservice.Outputs.AutoScalingAlarmArn
         DynamoDBTableNames:
           !Join
@@ -636,6 +606,7 @@ Resources:
           - - !Ref PnSsQueueArnStagingBucket
             - !Ref PnSsQueueArnGestoreBucketInvoke
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
+            - !Ref PnSsQueueArnEventsDLQueueExternalNotifications
         LambdaArns: !GetAtt PnSsGestoreBucket.Arn
         # KinesisDataArns:
         # KinesisFirehoseArns:

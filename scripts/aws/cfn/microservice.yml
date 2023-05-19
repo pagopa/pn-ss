@@ -500,6 +500,7 @@ Resources:
               Service: 
                 - 'events.amazonaws.com'
       # Description: 'Role for forwarding Events to PnCoreTargetEventBus'
+      Description: 'Role for forwarding Events to Pn Core EventBus'
       Policies:
         - PolicyName: 'PutEventsInlinePolicy'
           PolicyDocument: 

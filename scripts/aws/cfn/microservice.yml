@@ -226,19 +226,19 @@ Parameters:
     Type: String
     Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
 
-  PnSsQueueNameEventsDLQueueExternalNotifications:
+  PnSsQueueNameEventsDLQueuePnCoreTargetEventBus:
     Type: String
     Description: 'Nome DLQ per forward degli eventi al bus PnCoreTargetEventBus'
 
-  PnSsQueueArnEventsDLQueueExternalNotifications:
+  PnSsQueueArnEventsDLQueuePnCoreTargetEventBus:
     Type: String
     Description: 'ARN DLQ per forward degli eventi al bus PnCoreTargetEventBus'
 
-  PnSsQueueUrlEventsDLQueueExternalNotifications:
+  PnSsQueueUrlEventsDLQueuePnCoreTargetEventBus:
     Type: String
     Description: 'URL DLQ per forward degli eventi al bus PnCoreTargetEventBus'
 
-  PnSsAlarmArnEventsDLQueueExternalNotifications:
+  PnSsAlarmArnEventsDLQueuePnCoreTargetEventBus:
     Type: String
     Description: "ARN dell'allarme messaggi vecchi nella DLQ per forward degli eventi al bus PnCoreTargetEventBus"  
 
@@ -517,21 +517,21 @@ Resources:
     Type: AWS::SQS::QueuePolicy
     Properties: 
       Queues: 
-        - !Ref PnSsQueueUrlEventsDLQueueExternalNotifications
+        - !Ref PnSsQueueUrlEventsDLQueuePnCoreTargetEventBus
       PolicyDocument: 
         Statement: 
           - Sid: 'AllowAccessSameAccount'
             Action: 
               - "SQS:*"
             Effect: "Allow"
-            Resource: !Ref PnSsQueueArnEventsDLQueueExternalNotifications
+            Resource: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
             Principal: 
               AWS: !Sub ${AWS::AccountId}
           - Sid: 'AllowPutEventsFromEventRule'
             Action: 
               - "sqs:SendMessage"
             Effect: "Allow"
-            Resource: !Ref PnSsQueueArnEventsDLQueueExternalNotifications
+            Resource: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
             Principal: 
               Service:
               - 'events.amazonaws.com'
@@ -557,7 +557,7 @@ Resources:
           Id: 'PnSsExternalNotificationTarget'
           RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
           DeadLetterConfig:
-            Arn: !Ref PnSsQueueArnEventsDLQueueExternalNotifications
+            Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
 
   #####    Metrics and Alarms  -  Microservice ##### 
   SafeStorageMicroserviceAlarm:
@@ -587,7 +587,7 @@ Resources:
             - !Ref PnSsAlarmArnDLQueueGestoreBucketInvokeErrors
             - !Ref PnSsAlarmArnQueueGestoreBucketInvoke
             - !Ref PnSsAlarmArnDLQueueGestoreBucketInvoke
-            - !Ref PnSsAlarmArnEventsDLQueueExternalNotifications
+            - !Ref PnSsAlarmArnEventsDLQueuePnCoreTargetEventBus
             # - !GetAtt SafeStorageMicroservice.Outputs.AutoScalingAlarmArn
         DynamoDBTableNames:
           !Join
@@ -603,7 +603,7 @@ Resources:
           - - !Ref PnSsQueueArnStagingBucket
             - !Ref PnSsQueueArnGestoreBucketInvoke
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
-            - !Ref PnSsQueueArnEventsDLQueueExternalNotifications
+            - !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
         LambdaArns: !GetAtt PnSsGestoreBucket.Arn
         # KinesisDataArns:
         # KinesisFirehoseArns:

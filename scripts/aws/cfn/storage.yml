@@ -407,12 +407,12 @@ Resources:
         - Arn: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN
           Id: 'PnSsDEVQueueTargetForExtNotification'
 
-  PnSsEventsDLQueueExternalNotificationsStack:
+  PnSsEventsDLQueuePnCoreTargetEventBusStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
-        QueueName: 'pn-ss-events-external-notification-DLQueue'
+        QueueName: 'pn-ss-forward-events-pncoreeventbus-DLQueue'
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
@@ -564,18 +564,18 @@ Outputs:
     Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
     Value: !GetAtt  PnSsEventBusExternalNotification.Arn
 
-  PnSsQueueNameEventsDLQueueExternalNotifications:
+  PnSsQueueNameEventsDLQueuePnCoreTargetEventBus:
     Description: 'Nome DLQ per forward degli eventi al bus PnCoreTargetEventBus'
-    Value: !GetAtt PnSsEventsDLQueueExternalNotificationsStack.Outputs.QueueName
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.QueueName
 
-  PnSsQueueArnEventsDLQueueExternalNotifications:
+  PnSsQueueArnEventsDLQueuePnCoreTargetEventBus:
     Description: 'ARN DLQ per forward degli eventi al bus PnCoreTargetEventBus'
-    Value: !GetAtt PnSsEventsDLQueueExternalNotificationsStack.Outputs.QueueARN
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.QueueARN
 
-  PnSsQueueUrlEventsDLQueueExternalNotifications:
+  PnSsQueueUrlEventsDLQueuePnCoreTargetEventBus:
     Description: 'URL DLQ per forward degli eventi al bus PnCoreTargetEventBus'
-    Value: !GetAtt PnSsEventsDLQueueExternalNotificationsStack.Outputs.QueueURL
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.QueueURL
 
-  PnSsAlarmArnEventsDLQueueExternalNotifications:
+  PnSsAlarmArnEventsDLQueuePnCoreTargetEventBus:
     Description: "ARN dell'allarme messaggi vecchi nella DLQ per forward degli eventi al bus PnCoreTargetEventBus"
-    Value: !GetAtt PnSsEventsDLQueueExternalNotificationsStack.Outputs.SqsAgeAlarmArn
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.SqsAgeAlarmArn

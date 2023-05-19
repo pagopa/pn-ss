@@ -489,7 +489,6 @@ Resources:
   #####    External notifications    #####
   PnSsRoleExternalNotifications:
     Type: AWS::IAM::Role
-    Condition: PnCoreTargetEventBusExists
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -500,7 +499,7 @@ Resources:
             Principal:
               Service: 
                 - 'events.amazonaws.com'
-      Description: 'Role for forwarding Events to Pn Core EventBus'
+      Description: 'Role for forwarding Events to PnCoreTargetEventBus'
       Policies:
         - PolicyName: 'PutEventsInlinePolicy'
           PolicyDocument: 
@@ -516,7 +515,6 @@ Resources:
 
   PnSsQueuePolicyExternalNotifications:
     Type: AWS::SQS::QueuePolicy
-    Condition: PnCoreTargetEventBusExists
     Properties: 
       Queues: 
         - !Ref PnSsQueueUrlEventsDLQueueExternalNotifications
@@ -543,7 +541,6 @@ Resources:
 
   PnSsEventRuleExternalNotifications:
     Type: AWS::Events::Rule
-    Condition: PnCoreTargetEventBusExists
     Properties:
       EventBusName: !Ref PnSsEventBusNameExternalNotification
       Description: 'Rule forwarding events to Pn Core EventBus'

@@ -55,7 +55,6 @@ Parameters:
 Conditions:
   # TODO: Sistemare questo parametro una volta che si dovrà fare il rilascio in un ambiente diverso da 'dev'
   IsDevEnv:  !Equals ['dev-env-param', 'dev-env-param' ] 
-  # PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
 
 Resources:
 
@@ -385,7 +384,7 @@ Resources:
     Properties:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
-        QueueName: 'pn-ss-external-notification-1-queue'
+        QueueName: 'pn-ss-external-notification-DEV-queue'
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName

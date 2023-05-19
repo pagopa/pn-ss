@@ -213,7 +213,7 @@ Resources:
       #   Rule: 
       #     DefaultRetention: 
       #       Days: 1
-      #       Mode: !If [ IsProdEnv , 'COMPLIANCE' , 'GOVERNANCE']
+      #       Mode: 'GOVERNANCE' # non modificare quando si decommenta la sezione
       #       # Years: 
       VersioningConfiguration:
         Status: Enabled

@@ -6,7 +6,7 @@
     "PnSsGestoreRepositoryPort" : "8080",
     "PnSsGestoreRepositoryPathGetDocument" : "/safestorage/internal/v1/documents",
     "PnSsGestoreRepositoryPathPatchDocument" : "/safestorage/internal/v1/documents",
-    "PnSsTableDocumentiStreamMetadatiTable" : "PnSsTableDocumentiStreamMetadati",
+    "PnSsTableDocumentiStreamMetadatiTable" : "pn-SsDocumentiStreamMetadati",
     "PnSsArubaCertId" : "AS0",
     "PnSsArubaEnabledLog" : "false",
     "PnSsArubaSignWsdlUrl" : "https://asbr-pagopa.arubapec.it/ArubaSignService/ArubaSignService",

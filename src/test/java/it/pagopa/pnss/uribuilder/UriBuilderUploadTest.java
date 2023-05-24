@@ -342,7 +342,16 @@ class UriBuilderUploadTest {
         }
 
         @Test
-        void testUrlGenerato() {
+        void testUrlGeneratoMD5(){
+            testUrlGenerato(ChecksumEnum.MD5);
+        }
+
+        @Test
+        void testUrlGeneratoNONE(){
+            testUrlGenerato(ChecksumEnum.NONE);
+        }
+
+        void testUrlGenerato(ChecksumEnum checksumValue) {
 
             log.debug("UriBulderUploadTest.testUrlGenerato() : decommentare");
 
@@ -377,7 +386,7 @@ class UriBuilderUploadTest {
             Document document = new Document();
             document.setDocumentKey("keyFile");
             DocumentType documentTypeDoc = new DocumentType();
-            documentTypeDoc.setChecksum(DocumentType.ChecksumEnum.MD5);
+            documentTypeDoc.setChecksum((checksumValue));
             document.setDocumentType(documentTypeDoc);
             docResp.setDocument(document);
             Mono<DocumentResponse> respDoc = Mono.just(docResp);

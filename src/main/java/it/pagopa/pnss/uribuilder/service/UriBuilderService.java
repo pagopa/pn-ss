@@ -274,31 +274,27 @@ public class UriBuilderService extends CommonS3ObjectService {
 
         return Mono.just(checksumType)
                    .flatMap(checksumTypeToEvaluate -> {
+
+                       PutObjectRequest.Builder putObjectRequest = PutObjectRequest.builder()
+                               .bucket(bucketName)
+                               .key(documentKey)
+                               .contentType(contenType)
+                               .metadata(secret)
+                               .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
+                                       queryParamPresignedUrlTraceId,
+                                       xTraceIdValue));
+
                        if (ChecksumEnum.MD5.name().equals(checksumTypeToEvaluate.name())) {
-                           return Mono.just(PutObjectRequest.builder()
-                                                            .bucket(bucketName)
-                                                            .key(documentKey)
-                                                            .contentType(contenType)
-                                                            .metadata(secret)
-                                                            .contentMD5(checksumValue)
-                                                            .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
-                                                                    queryParamPresignedUrlTraceId,
-                                                                    xTraceIdValue))
+                           return Mono.just(putObjectRequest.contentMD5(checksumValue)
                                                             .build());
                        } else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank() && secret != null &&
                                   ChecksumEnum.SHA256.name().equals(checksumTypeToEvaluate.name())) {
-                           return Mono.just(PutObjectRequest.builder()
-                                                            .bucket(bucketName)
-                                                            .key(documentKey)
-                                                            .contentType(contenType)
-                                                            .metadata(secret)
-                                                            .checksumSHA256(checksumValue)
-                                                            .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
-                                                                    queryParamPresignedUrlTraceId,
-                                                                    xTraceIdValue))
+                           return Mono.just(putObjectRequest.checksumSHA256(checksumValue)
                                                             .build());
-                       } else {
-                           return Mono.error(new ChecksumException(
+                       }else if (ChecksumEnum.NONE.name().equals(checksumTypeToEvaluate.name())){
+                           return Mono.just(putObjectRequest.build());
+                       }else {
+                            return Mono.error(new ChecksumException(
                                    "Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
                        }
                    })

@@ -265,9 +265,6 @@ public class UriBuilderService extends CommonS3ObjectService {
                   checksumValue);
         log.debug("signBucket() : sign bucket {}", duration);
 
-        if (checksumType == null || checksumValue == null || checksumValue.isBlank()) {
-            return Mono.error(new ChecksumException("Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
-        }
         if (queryParamPresignedUrlTraceId == null || queryParamPresignedUrlTraceId.isBlank()) {
             return Mono.error(new QueryParamException("Property \"queryParam.presignedUrl.traceId\" non impostata"));
         }

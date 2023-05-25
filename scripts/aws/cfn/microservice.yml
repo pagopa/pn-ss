@@ -798,7 +798,7 @@ Resources:
 
       Code:
         ZipFile: |
-"use strict";
+          "use strict";
 
           const http = require(process.env.PnSsGestoreRepositoryProtocol);
           const AWS = require("aws-sdk");

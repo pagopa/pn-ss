@@ -222,13 +222,13 @@ Resources:
           # - Event: 's3:Replication'
             # Function: !GetAtt PnSsGestoreBucket.Arn
       ObjectLockEnabled: true
-      # ObjectLockConfiguration:
-      #   ObjectLockEnabled: 'Enabled'
-      #   Rule: 
-      #     DefaultRetention: 
-      #       Days: 1
-      #       Mode: 'GOVERNANCE' # non modificare quando si decommenta la sezione
-      #       # Years: 
+      ObjectLockConfiguration:
+        ObjectLockEnabled: 'Enabled'
+        Rule:
+          DefaultRetention:
+            Days: 1
+            Mode: 'GOVERNANCE' # non modificare quando si decommenta la sezione
+            # Years:
       VersioningConfiguration:
         Status: Enabled
       OwnershipControls:

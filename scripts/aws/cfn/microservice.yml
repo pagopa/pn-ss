@@ -439,7 +439,7 @@ Resources:
               - 'sqs:List*'
               - 'sqs:SendMessage'
             Resource:
-              - !Sub '${PnSsQueueArnStagingBucket}'
+              - !Ref PnSsQueueArnStagingBucket
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -644,7 +644,7 @@ Resources:
           - Action: 
               - 'SQS:SendMessage'
             Effect: "Allow"
-            Resource: !Sub ${PnSsQueueArnStagingBucket}
+            Resource: !Ref PnSsQueueArnStagingBucket
             Principal:  
               Service:
                 - 'events.amazonaws.com'
@@ -654,7 +654,7 @@ Resources:
           - Action: 
               - 'SQS:ReceiveMessage'
             Effect: "Allow"
-            Resource: !Sub ${PnSsQueueArnStagingBucket}
+            Resource: !Ref PnSsQueueArnStagingBucket
             Principal:  
               AWS: 
                 - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]] 
@@ -769,14 +769,14 @@ Resources:
     Type: AWS::SQS::QueuePolicy
     Properties: 
       Queues: 
-        - !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueURL
+        - !Ref PnSsQueueUrlGestoreBucketInvoke
       PolicyDocument:
         Version: '2012-10-17'
         Statement: 
           - Action: 
             - 'SQS:SendMessage'
             Effect: "Allow"
-            Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+            Resource: !Ref PnSsQueueArnGestoreBucketInvoke
             Principal:
               Service: 's3.amazonaws.com'
             Condition:
@@ -785,7 +785,7 @@ Resources:
           - Action: 
             - 'SQS:ReceiveMessage'
             Effect: "Allow"
-            Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+            Resource: !Ref PnSsQueueArnGestoreBucketInvoke
             Principal:
               AWS: 
                 !GetAtt PnSsGestoreBucketRole.Arn

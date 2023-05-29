@@ -522,7 +522,7 @@ Resources:
         Statement: 
           - Sid: 'AllowAccessSameAccount'
             Action: 
-              - "SQS:*"
+              - 'SQS:ReceiveMessage'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
             Principal: 
@@ -689,7 +689,7 @@ Resources:
           Version: '2012-10-17'
           Statement: 
             - Action: 
-                - 'SQS:*'
+                - 'SQS:SendMessage'
               Effect: "Allow"
               Resource: !Sub ${PnSsQueueArnGestoreBucketInvokeErrors}
               Principal:  

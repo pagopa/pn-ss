@@ -642,15 +642,22 @@ Resources:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-              - 'SQS:*'
+              - 'SQS:SendMessage'
+            Effect: "Allow"
+            Resource: !Sub ${PnSsQueueArnStagingBucket}
+            Principal:  
+              Service:
+                - 'events.amazonaws.com'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Sub '${AWS::AccountId}'
+          - Action: 
+              - 'SQS:ReceiveMessage'
             Effect: "Allow"
             Resource: !Sub ${PnSsQueueArnStagingBucket}
             Principal:  
               AWS: 
-                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
-              Service:
-                - 'events.amazonaws.com'
- 
+                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]] 
 
   #####   Cloud Trail  +  Logging   #####
   SafeStorageCloudTrail:
@@ -757,6 +764,31 @@ Resources:
         - IpProtocol: -1
           SourceSecurityGroupId: !Ref PnVPCDefaultSecurityGroup
       VpcId: !Ref VpcId
+
+  PnSsQueuePolicyGestoreBucketInvoke:
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueURL
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement: 
+          - Action: 
+            - 'SQS:SendMessage'
+            Effect: "Allow"
+            Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+            Principal:
+              Service: 's3.amazonaws.com'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Sub '${AWS::AccountId}'
+          - Action: 
+            - 'SQS:ReceiveMessage'
+            Effect: "Allow"
+            Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+            Principal:
+              AWS: 
+                !GetAtt PnSsGestoreBucketRole.Arn
 
   PnSsGestoreBucketInputQueue:
     Type: AWS::Lambda::EventSourceMapping

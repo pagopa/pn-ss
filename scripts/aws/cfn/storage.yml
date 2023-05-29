@@ -285,6 +285,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-staging-bucket-events-queue'
+        SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
         QueueHasAlarm: 'true'
@@ -301,6 +302,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-main-bucket-events-queue'
+        SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
         VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket
@@ -338,6 +340,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-gestore-bucket-invocation-errors-queue'
+        SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
         QueueHasAlarm: 'true'
@@ -398,6 +401,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-external-notification-DEV-queue'
+        SqsManagedSseEnabled: true
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
@@ -428,6 +432,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-forward-events-pncoreeventbus-DLQueue'
+        SqsManagedSseEnabled: true
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName

@@ -24,15 +24,13 @@ public class JettyHttpClientConf {
 
     @Bean
     public HttpClient getJettyHttpClient() {
-        HttpClient myHC = new HttpClient(sslContextFactory) {
+        return new HttpClient(sslContextFactory) {
             @Override
             public Request newRequest(URI uri) {
                 Request request = super.newRequest(uri);
                 return enhance(request);
             }
         };
-        myHC.setMaxConnectionsPerDestination(100);
-        return myHC;
     }
 
     private Request enhance(Request request) {

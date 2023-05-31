@@ -318,17 +318,23 @@ Resources:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-            - 'SQS:*'
+            - 'sqs:*'
             Effect: "Allow"
             Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
             Principal:
               Service: 's3.amazonaws.com'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
           - Action: 
-            - 'SQS:*'
+            - 'sqs:*'
             Effect: "Allow"
             Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
             Principal:
               AWS: '*'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
 
 ########### GESTORE BUCKET INVOKE DLQ ###########
 # La coda PnSsQueueGestoreBucketInvokeErrors è la DLQ configurata per la risorsa Gestore Bucket (Lambda) #
@@ -387,10 +393,10 @@ Resources:
         Effect: 'Allow'
         Resource: !GetAtt PnSsEventBusExternalNotification.Arn
         Principal: 
-          AWS: !Sub '${AWS::AccountId}'
+          AWS: !Ref AWS::AccountId
         Condition:
           StringEqualsIfExists:
-            events:creatorAccount: !Sub '${AWS::AccountId}'
+            events:creatorAccount: !Ref AWS::AccountId
 
   PnSsQueueNotificheDEVStack:
     Type: AWS::CloudFormation::Stack
@@ -416,9 +422,9 @@ Resources:
         source: 
           - "GESTORE DISPONIBILITA"
         account: 
-          - !Sub ${AWS::AccountId}
+          - !Ref AWS::AccountId
         region: 
-          - !Sub ${AWS::Region}
+          - !Ref AWS::Region
       State: 'ENABLED'
       Targets:
         - Arn: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN

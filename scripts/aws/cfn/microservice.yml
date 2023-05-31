@@ -397,10 +397,10 @@ Resources:
               - 'dynamodb:GetRecords'
               - 'dynamodb:GetShardIterator'
             Resource:
-              - !Sub '${PnSsTableArnAnagraficaClient}'
-              - !Sub '${PnSsTableArnTipologieDocumenti}'
-              - !Sub '${PnSsTableArnDocumenti}'
-              - !Sub '${PnSsTableDocumentiStreamArn}'
+              - !Ref PnSsTableArnAnagraficaClient
+              - !Ref PnSsTableArnTipologieDocumenti
+              - !Ref PnSsTableArnDocumenti
+              - !Ref PnSsTableDocumentiStreamArn
           - Sid: 'FullAccesStreamMetadataTable'
             Effect: Allow
             Action:
@@ -426,9 +426,9 @@ Resources:
               - 's3:PutObject*'
               - 's3:RestoreObject'
             Resource:
-              - !Sub '${PnSsBucketArn}'
+              - !Ref PnSsBucketArn
               - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
-              - !Sub '${PnSsStagingBucketArn}'
+              - !Ref PnSsStagingBucketArn
               - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
           - Effect: Allow
             Action:
@@ -459,7 +459,7 @@ Resources:
               - 'events:PutEvents'
               - 'events:DescribeEventBus'
             Resource:
-              - !Sub '${PnSsEventBusArnExternalNotification}'
+              - !Ref PnSsEventBusArnExternalNotification
 
   #####    Staging Bucket Events Rule    #####
   PnSsEventRuleStagingBucket:
@@ -470,9 +470,9 @@ Resources:
         source: 
           - 'aws.s3' 
         account: 
-          - !Sub ${AWS::AccountId}
+          - !Ref AWS::AccountId
         region:
-          - !Sub ${AWS::Region}
+          - !Ref AWS::Region
         detail-type: 
           - 'Object Created'
         detail:
@@ -522,14 +522,14 @@ Resources:
         Statement: 
           - Sid: 'AllowAccessSameAccount'
             Action: 
-              - 'SQS:ReceiveMessage'
+              - 'sqs:ReceiveMessage'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
             Principal: 
-              AWS: !Sub ${AWS::AccountId}
+              AWS: !Ref AWS::AccountId
           - Sid: 'AllowPutEventsFromEventRule'
             Action: 
-              - "sqs:SendMessage"
+              - 'sqs:SendMessage'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
             Principal: 
@@ -548,9 +548,9 @@ Resources:
         source: 
           - "GESTORE DISPONIBILITA"
         account: 
-          - !Sub ${AWS::AccountId}
+          - !Ref AWS::AccountId
         region: 
-          - !Sub ${AWS::Region}
+          - !Ref AWS::Region
       State: 'ENABLED'
       Targets:
         - Arn: !Ref PnCoreTargetEventBus
@@ -621,7 +621,7 @@ Resources:
   PnSsStagingBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Sub ${PnSsStagingBucketName}
+      Bucket: !Ref PnSsStagingBucketName
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -637,12 +637,12 @@ Resources:
     Type: AWS::SQS::QueuePolicy
     Properties: 
       Queues: 
-        - !Sub '${PnSsQueueUrlStagingBucket}'
+        - !Ref PnSsQueueUrlStagingBucket
       PolicyDocument:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-              - 'SQS:SendMessage'
+              - 'sqs:SendMessage'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnStagingBucket
             Principal:  
@@ -650,9 +650,9 @@ Resources:
                 - 'events.amazonaws.com'
             Condition:
               StringEquals:
-                AWS:SourceAccount: !Sub '${AWS::AccountId}'
+                AWS:SourceAccount: !Ref AWS::AccountId
           - Action: 
-              - 'SQS:ReceiveMessage'
+              - 'sqs:ReceiveMessage'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnStagingBucket
             Principal:  
@@ -684,14 +684,14 @@ Resources:
       Type: AWS::SQS::QueuePolicy
       Properties: 
         Queues: 
-          - !Sub '${PnSsQueueUrlGestoreBucketInvokeErrors}'
+          - !Ref PnSsQueueUrlGestoreBucketInvokeErrors
         PolicyDocument:
           Version: '2012-10-17'
           Statement: 
             - Action: 
-                - 'SQS:SendMessage'
+                - 'sqs:SendMessage'
               Effect: "Allow"
-              Resource: !Sub ${PnSsQueueArnGestoreBucketInvokeErrors}
+              Resource: !Ref PnSsQueueArnGestoreBucketInvokeErrors
               Principal:  
                 AWS: 
                   - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !Ref PnSsGestoreBucketRole]]
@@ -727,7 +727,7 @@ Resources:
                   - 's3:*MultipartUpload*'
                   - 's3:*Tag*'
                 Resource:
-                  - !Sub '${PnSsBucketArn}'
+                  - !Ref PnSsBucketArn
                   - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
               - Sid: 'QueueInvokeErrorsPolicyProducer'
                 Effect: 'Allow'
@@ -774,16 +774,16 @@ Resources:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-            - 'SQS:SendMessage'
+            - 'sqs:SendMessage'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnGestoreBucketInvoke
             Principal:
               Service: 's3.amazonaws.com'
             Condition:
               StringEquals:
-                AWS:SourceAccount: !Sub '${AWS::AccountId}'
+                AWS:SourceAccount: !Ref AWS::AccountId
           - Action: 
-            - 'SQS:ReceiveMessage'
+            - 'sqs:ReceiveMessage'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnGestoreBucketInvoke
             Principal:

@@ -146,7 +146,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 
     private Instant getRetainUntilDate(Instant dataCreazione, Integer retentionPeriod) throws RetentionException {
         try {
-            log.error("getRetainUntilDate() : START, retentionPeriod : {}", retentionPeriod);
+            log.debug("getRetainUntilDate() : START, retentionPeriod : {}", retentionPeriod);
             return dataCreazione.plus(Period.ofDays(retentionPeriod));
         } catch (Exception e) {
             log.error("getRetainUntilDate() : errore", e);

@@ -5,6 +5,7 @@ import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.StorageConfiguration;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.RetentionException;
+import it.pagopa.pnss.common.client.exception.RetentionToIgnoreException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
@@ -21,6 +22,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalField;
 import java.util.Locale;
+import java.util.Objects;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 
@@ -43,7 +45,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
      */
     @Value("${object.lock.retention.mode}")
     private String objectLockRetentionMode;
-
+    private final Integer retentionToIgnore = 1;
     private final ConfigurationApiCall configurationApiCall;
 
     private final BucketName bucketName;
@@ -170,8 +172,15 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
             authApiKey = defaultInteralApiKeyValue;
         }
 
-        return getRetentionPeriodInDays(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey).map(
-                retentionPeriodInDays -> getRetainUntilDate(dataCreazioneObjectForBucket, retentionPeriodInDays));
+        return getRetentionPeriodInDays(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
+                .handle((retentionPeriodInDays, sink) ->
+                {
+                    if (Objects.equals(retentionPeriodInDays, retentionToIgnore))
+                        sink.error(new RetentionToIgnoreException());
+                    else sink.next(retentionPeriodInDays);
+                })
+                .cast(Integer.class)
+                .map(retentionPeriodInDays -> getRetainUntilDate(dataCreazioneObjectForBucket, retentionPeriodInDays));
     }
 
     @Override
@@ -305,6 +314,11 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
                                                                                 .flatMap(putObjectRetentionRequest -> Mono.fromCompletionStage(
                                                                                         getS3AsyncClient().putObjectRetention(
                                                                                                 putObjectRetentionRequest)))
+                                                                                .onErrorResume(RetentionToIgnoreException.class, e ->
+                                                                                   {
+                                                                                       log.debug(e.getMessage());
+                                                                                       return Mono.empty();
+                                                                                   })
                                                                                 .thenReturn(documentEntity);
 
                        }

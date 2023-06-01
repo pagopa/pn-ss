@@ -20,6 +20,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRetentionRequest;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.function.Predicate;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 
@@ -167,8 +168,9 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
             authApiKey = defaultInteralApiKeyValue;
         }
 
-        return getRetentionPeriodInDays(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey).map(
-                retentionPeriodInDays -> getRetainUntilDate(dataCreazioneObjectForBucket, retentionPeriodInDays));
+        return getRetentionPeriodInDays(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
+                .filter(Predicate.isEqual(1).negate())
+                .map(retentionPeriodInDays -> getRetainUntilDate(dataCreazioneObjectForBucket, retentionPeriodInDays));
     }
 
     @Override

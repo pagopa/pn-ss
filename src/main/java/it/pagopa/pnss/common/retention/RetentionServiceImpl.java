@@ -96,8 +96,8 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
         }
     }
 
-    private Mono<Integer> getRetentionPeriodInDays(String documentKey, String documentState, String documentType,
-                                                   String authPagopaSafestorageCxId, String authApiKey)
+    public Mono<Integer> getRetentionPeriod(String documentKey, String documentState, String documentType,
+                                             String authPagopaSafestorageCxId, String authApiKey)
             throws RetentionException {
         log.info("getRetentionPeriod() : START : documentKey '{}' : documentState '{}' : documentType '{}'",
                  documentKey,
@@ -145,6 +145,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
 
     private Instant getRetainUntilDate(Instant dataCreazione, Integer retentionPeriod) throws RetentionException {
         try {
+            log.debug("getRetainUntilDate() : START - retentionPeriod : {}", retentionPeriod);
             return dataCreazione.plus(Period.ofDays(retentionPeriod));
         } catch (Exception e) {
             log.error("getRetainUntilDate() : errore", e);
@@ -168,7 +169,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
             authApiKey = defaultInteralApiKeyValue;
         }
 
-        return getRetentionPeriodInDays(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
+        return getRetentionPeriod(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
                 .filter(Predicate.isEqual(1).negate())
                 .map(retentionPeriodInDays -> getRetainUntilDate(dataCreazioneObjectForBucket, retentionPeriodInDays));
     }

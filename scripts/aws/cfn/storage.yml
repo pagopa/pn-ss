@@ -226,7 +226,7 @@ Resources:
         ObjectLockEnabled: 'Enabled'
         Rule:
           DefaultRetention:
-            Days: 1
+#            Days: 1
             Mode: 'GOVERNANCE' # non modificare quando si decommenta la sezione
             # Years:
       VersioningConfiguration:

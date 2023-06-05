@@ -802,33 +802,33 @@ Resources:
       Code:
         ZipFile: |
           "use strict";
-
+         
           const http = require(process.env.PnSsGestoreRepositoryProtocol);
           const AWS = require("aws-sdk");
           const crypto = require("crypto");
-
+         
           const HOSTNAME = process.env.PnSsHostname;
           const PORT = process.env.PnSsGestoreRepositoryPort;
           const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
           const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
           const STAGINGBUCKET = process.env.PnSsStagingBucketName;
-
+         
           exports.handler = async (event) => {
             const s3 = new AWS.S3();
-            let failedMessageIds = [];
+            const batchItemFailures =[];
             console.log(JSON.stringify(event));
-
+         
             await Promise.allSettled(
               event.Records.map(async (record) => {
                 const bodyData = JSON.parse(record.body);
-
+         
                 console.log("Processing " + record.messageId);
-
+         
                 let jsonDocument = {
                   documentKey: "",
                   documentState: "",
                 };
-
+         
                 let bucketName;
                 console.log("Buket Name: " + bodyData.Records[0].s3.bucket.name);
                 console.log("Object Key: " + bodyData.Records[0].s3.object.key);
@@ -856,11 +856,11 @@ Resources:
                           .promise();
                         console.log(Body);
                         const doc = await getDocumentFromDB(jsonDocument.documentKey);
-
+          
                         console.log(doc.document);
                         console.log(doc.document.documentType.checksum);
                         console.log(JSON.stringify(doc.document.documentType.checksum));
-
+          
                         jsonDocument.checkSum = crypto
                           .createHash(doc.document.documentType.checksum)
                           .update(Body)
@@ -897,31 +897,22 @@ Resources:
                   default:
                     return;
                 }
-                try {
-                  const res = await updateDynamo(jsonDocument);
-                  console.log(res);
-                  console.log("############## EXIT  ####################");
-                  return;
-                  //return response;
-                } catch (err) {
-                  console.log(err);
-                  const retMessgeError = "Errore nella patch su DynamoDB.";
-                  console.log(retMessgeError);
-                  failedMessageIds.push(record.messageId);
-                  return;
-                  //throw new Error(retMessgeError);
-                }
+                await updateDynamo(jsonDocument).then(
+                  function(data) {
+                    console.log("############## EXIT  ####################");
+                    return;
+                  },
+                  function(error) {
+                    const retMessgeError = "Errore nella patch su DynamoDB - " + error;
+                    console.log(retMessgeError);
+                    batchItemFailures.push({itemIdentifier: record.messageId});
+                    return;
+                  }
+                );
               })
             );
             console.log("FINE LAVORAZIONE EVENTO");
-            return {
-              batchItemFailures: failedMessageIds.map((id) => {
-                console.log("MESSAGE_ID: " + id);
-                return {
-                  itemIdentifier: id,
-                };
-              }),
-            };
+            return { batchItemFailures };
           };
           function getDocumentFromDB(docKey) {
             const options = {
@@ -936,16 +927,16 @@ Resources:
             return new Promise((resolve, reject) => {
               const req = http.request(options, (res) => {
                 let responseBody = "";
-
+          
                 res.on("data", (chunk) => {
                   responseBody += chunk;
                 });
-
+          
                 res.on("end", () => {
                   resolve(JSON.parse(responseBody));
                 });
               });
-
+          
               req.on("error", (err) => {
                 console.error(err);
                 reject(err);
@@ -970,16 +961,13 @@ Resources:
                   responseBody += chunk;
                 });
                 res.on("end", () => {
-                  console.log(responseBody);
+                  console.log(res.statusCode + " - " + responseBody);
                   switch (res.statusCode) {
                     case 200:
                       resolve(JSON.parse(responseBody));
                       break;
-                    case 500:
-                      reject;
-                      break;
                     default:
-                      reject;
+                      reject(res.statusCode + " - " + data.documentKey);
                       break;
                   }
                 });

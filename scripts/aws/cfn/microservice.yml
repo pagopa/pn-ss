@@ -320,6 +320,10 @@ Parameters:
     Type: String
     Description: 'Topic alarm'
 
+  PCKmsEncDecDynamoDataKeyARN:
+    Type: String
+    Description: 'Name of KMS Key for Dynamo encode/decode data'
+
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
@@ -413,6 +417,13 @@ Resources:
               - 'cloudwatch:PutMetricData'
             Resource:
               - '*'
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+            Resource:
+              - !Ref PCKmsEncDecDynamoDataKeyARN              
           - Effect: Allow
             Action:
               - 's3:List*'

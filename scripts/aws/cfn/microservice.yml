@@ -333,8 +333,8 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/ecs-service.yaml'
       Parameters:
         MicroServiceUniqueName: !Sub '${ProjectName}-safe-storage'
-        CpuValue: 2048
-        MemoryAmount: 6GB
+        CpuValue: 4096
+        MemoryAmount: 8GB
         AlarmSNSTopicArn: !Ref AlarmSNSTopicArn
         ContainerImageURI: !Sub '${ContainerImageUri}'
         ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'
@@ -778,6 +778,7 @@ Resources:
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
       MemorySize: 1024
+      ReservedConcurrentExecutions: 20
       Runtime: nodejs16.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240

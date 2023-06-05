@@ -43,7 +43,7 @@ public class ManageDynamoEvent {
     }
 
     public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge){
-        log.debug("DBStream: publish evento for {}", docEntity.get(DOCUMENTKEY_KEY).getS());
+        log.info("Send availability event for {}", docEntity.get(DOCUMENTKEY_KEY).getS());
         NotificationMessage message = new NotificationMessage();
 
         message.setKey(docEntity.get(DOCUMENTKEY_KEY).getS());

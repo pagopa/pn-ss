@@ -10,7 +10,7 @@ import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -45,7 +45,7 @@ class StreamsRecordProcessorTest {
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
         List<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
-        Assert.assertEquals(eventSendToBridge.size(),1);
+        Assertions.assertEquals(1, eventSendToBridge.size());
     }
 
     @Test
@@ -60,7 +60,7 @@ class StreamsRecordProcessorTest {
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
         List<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
-        Assert.assertEquals(eventSendToBridge.size(),0);
+        Assertions.assertEquals(0, eventSendToBridge.size());
     }
 
     @Test
@@ -75,7 +75,7 @@ class StreamsRecordProcessorTest {
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
         List<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
-        Assert.assertEquals(eventSendToBridge.size(),0);
+        Assertions.assertEquals(0, eventSendToBridge.size());
     }
 
     @Test
@@ -90,7 +90,7 @@ class StreamsRecordProcessorTest {
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
         List<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
-        Assert.assertEquals(eventSendToBridge.size(),0);
+        Assertions.assertEquals(0, eventSendToBridge.size());
     }
     @NotNull
     private  com.amazonaws.services.dynamodbv2.model.Record createRecorDynamo(String eventName ,String documentStateNew,  String documentStateOld) {

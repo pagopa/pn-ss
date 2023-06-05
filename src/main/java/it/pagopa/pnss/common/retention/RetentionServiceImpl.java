@@ -5,6 +5,7 @@ import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.StorageConfiguration;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.RetentionException;
+import it.pagopa.pnss.common.client.exception.RetentionToIgnoreException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
@@ -19,8 +20,10 @@ import software.amazon.awssdk.services.s3.model.PutObjectRetentionRequest;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalField;
 import java.util.Locale;
 import java.util.function.Predicate;
+import java.util.Objects;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 
@@ -43,7 +46,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
      */
     @Value("${object.lock.retention.mode}")
     private String objectLockRetentionMode;
-
+    private final Integer retentionToIgnore = 1;
     private final ConfigurationApiCall configurationApiCall;
 
     private final BucketName bucketName;
@@ -56,13 +59,13 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
     /*
      * Controlla: StorageConfigurationsImpl.formatInYearsDays()
      */
-    public Integer getRetentionPeriodInDays(String retentionPeriod) throws RetentionException {
-        log.info("getRetentionPeriodInDays() : START : retentionPeriod '{}'", retentionPeriod);
+    public Integer computeRetentionPeriodInDays(String retentionPeriod) throws RetentionException {
+        log.info("computeRetentionPeriodInDays() : START : retentionPeriod '{}'", retentionPeriod);
 
         if (retentionPeriod == null || retentionPeriod.isBlank() || retentionPeriod.length() < 2) {
             throw new RetentionException("Storage Configuration : Retention Period not found");
         }
-        log.debug("getRetentionPeriodInDays() : retentionPeriod '{}'", retentionPeriod);
+        log.debug("computeRetentionPeriodInDays() : retentionPeriod '{}'", retentionPeriod);
 
         final String dayRef = "d";
         final String yearRef = "y";
@@ -73,7 +76,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
             int yearsValue = retentionPeriodStr.contains(yearRef) ? Integer.parseInt(retentionPeriodStr.substring(0,
                     retentionPeriodStr.indexOf(yearRef))) : 0;
             int daysValue = 0;
-            log.debug("getRetentionPeriodInDays() : yearsValue {} : daysValue {}", yearsValue, daysValue);
+            log.debug("computeRetentionPeriodInDays() : yearsValue {} : daysValue {}", yearsValue, daysValue);
             if (yearsValue > 0) {
                 daysValue =
                         retentionPeriodStr.contains(dayRef) ? Integer.parseInt(retentionPeriodStr.substring(retentionPeriodStr.indexOf(yearRef) + 1,
@@ -82,16 +85,16 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
                 daysValue = retentionPeriodStr.contains(dayRef) ? Integer.parseInt(retentionPeriodStr.substring(0,
                         retentionPeriodStr.indexOf(dayRef))) : 0;
             }
-            log.debug("getRetentionPeriodInDays() : retentionPeriod '{}' : daysValue {} - before : yearsValue {} - before",
+            log.debug("computeRetentionPeriodInDays() : retentionPeriod '{}' : daysValue {} - before : yearsValue {} - before",
                     retentionPeriodStr,
                      daysValue,
                      yearsValue);
 
             Integer days = (yearsValue > 0) ? yearsValue * 365 + daysValue : daysValue;
-            log.debug("getRetentionPeriodInDays() : retentionPeriod '{}' : days {} - after", retentionPeriodStr, days);
+            log.debug("computeRetentionPeriodInDays() : retentionPeriod '{}' : days {} - after", retentionPeriodStr, days);
             return days;
         } catch (Exception e) {
-            log.error("getRetentionPeriodInDays() : errore di conversione", e);
+            log.error("computeRetentionPeriodInDays() : errore di conversione", e);
             throw new RetentionException("Can't convert retention period");
         }
     }
@@ -132,8 +135,9 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
             for (StorageConfiguration sc : response.getStorageConfigurations()) {
                 log.debug("getRetentionPeriod() : storage configuration '{}'", sc.getName());
                 if (sc.getName().equals(dtcToRefer.getStatuses().get(documentState).getStorage())) {
-                    log.debug("getRetentionPeriod() : storage configuration ToRefer '{}'", sc.getName());
-                    return getRetentionPeriodInDays(sc.getRetentionPeriod());
+                    var retentionPeriod = sc.getRetentionPeriod();
+                    log.debug("getRetentionPeriod() : storage configuration ToRefer '{}' - retentionPeriod : {}", sc.getName(), retentionPeriod);
+                    return computeRetentionPeriodInDays(retentionPeriod);
                 }
             }
             throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", documentKey));
@@ -170,7 +174,13 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
         }
 
         return getRetentionPeriod(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
-                .filter(Predicate.isEqual(1).negate())
+                .handle((retentionPeriodInDays, sink) ->
+                {
+                    if (Objects.equals(retentionPeriodInDays, retentionToIgnore))
+                        sink.error(new RetentionToIgnoreException());
+                    else sink.next(retentionPeriodInDays);
+                })
+                .cast(Integer.class)
                 .map(retentionPeriodInDays -> getRetainUntilDate(dataCreazioneObjectForBucket, retentionPeriodInDays));
     }
 
@@ -277,24 +287,21 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
                                                     documentEntity.getDocumentLogicalState(),
                                                     // stato logico
                                                     documentEntity.getDocumentType().getTipoDocumento(),
-                                                    dataCreazioneObjectInBucket).flatMap(istantRetentionUntil -> {
-                                                                                    log.debug("setRetentionPeriodInBucketObjectMetadata() "
-                                                                                             + ": START formatting retentionUntil");
-                                                                                    final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm" +
-                                                                                                                  ":ssXXX";
+                                                    dataCreazioneObjectInBucket).flatMap(instantRetentionUntil -> {
+                                                                                    log.debug("setRetentionPeriodInBucketObjectMetadata() : START formatting retentionUntil - instantRetentionUntil : {}", instantRetentionUntil);
+                                                                                    final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
                                                                                     DateTimeFormatter formatter =
                                                                                             DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.systemDefault());
                                                                                     // aggiorno la retentionUntilDate nella entity
-                                                                                    documentEntity.setRetentionUntil(formatter.format(istantRetentionUntil));
-                                                                                    log.debug("setRetentionPeriodInBucketObjectMetadata() "
-                                                                                             + ": END formatting retentionUntil");
+                                                                                    documentEntity.setRetentionUntil(formatter.format(instantRetentionUntil));
+                                                                                    log.debug("setRetentionPeriodInBucketObjectMetadata() : END formatting retentionUntil");
                                                                                     // restituisco l'objectLockRetention per il
                                                                                     // successivo
                                                                                     // aggiornamento
                                                                                     // del metadato per
                                                                                     // l'object nel bucket
                                                                                     return Mono.just(ObjectLockRetention.builder()
-                                                                                                                        .retainUntilDate(istantRetentionUntil)
+                                                                                                                        .retainUntilDate(instantRetentionUntil)
                                                                                                                         .mode(objectLockRetentionMode)
                                                                                                                         .build());
                                                                                 })
@@ -308,6 +315,11 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
                                                                                 .flatMap(putObjectRetentionRequest -> Mono.fromCompletionStage(
                                                                                         getS3AsyncClient().putObjectRetention(
                                                                                                 putObjectRetentionRequest)))
+                                                                                .onErrorResume(RetentionToIgnoreException.class, e ->
+                                                                                   {
+                                                                                       log.debug(e.getMessage());
+                                                                                       return Mono.empty();
+                                                                                   })
                                                                                 .thenReturn(documentEntity);
 
                        }

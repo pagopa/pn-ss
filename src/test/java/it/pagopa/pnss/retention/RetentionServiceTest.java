@@ -27,14 +27,14 @@ public class RetentionServiceTest {
     @ParameterizedTest
     @ValueSource(strings = {"10y", "5Y", "10d", "5D", "1Y 1d", "10y 5d", "1y 10D", "10Y 10D"})
     void getRetentionPeriodInDaysOk(String retentionPeriod) {
-        Assertions.assertNotNull(retentionService.getRetentionPeriodInDays(retentionPeriod));
+        Assertions.assertNotNull(retentionService.computeRetentionPeriodInDays(retentionPeriod));
     }
 
     @ParameterizedTest
     @EmptySource
     @ValueSource(strings = {" ", "d"})
     void getRetentionPeriodInDaysKo(String retentionPeriod) {
-        Assertions.assertThrows(RetentionException.class, () -> retentionService.getRetentionPeriodInDays(retentionPeriod));
+        Assertions.assertThrows(RetentionException.class, () -> retentionService.computeRetentionPeriodInDays(retentionPeriod));
     }
 
 }

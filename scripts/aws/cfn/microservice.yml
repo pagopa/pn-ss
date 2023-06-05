@@ -778,6 +778,7 @@ Resources:
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
       MemorySize: 1024
+      ReservedConcurrentExecutions: 20
       Runtime: nodejs16.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240

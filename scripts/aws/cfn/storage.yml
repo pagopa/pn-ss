@@ -125,6 +125,26 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
+  PnSsKmsBucket:
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: "Symmetric Encryption KMS for Safe Storage's Buckets"
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Enable Permissions on all user and roles
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
+  
   PnSsBucket:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
@@ -136,7 +156,7 @@ Resources:
           - BucketKeyEnabled: true
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
-              #  KMSMasterKeyID: KMS-KEY-AR
+              KMSMasterKeyID: !GetAtt PnSsKmsBucket.Arn
       CorsConfiguration:  
         CorsRules:
           - AllowedHeaders:
@@ -255,7 +275,7 @@ Resources:
           - BucketKeyEnabled: true
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
-              #  KMSMasterKeyID: KMS-KEY-AR
+              KMSMasterKeyID: !GetAtt PnSsKmsBucket.Arn
       LifecycleConfiguration:
         Rules:
           - Id: 'PnSsStagingAbortIncompleteMultipartUpload'
@@ -594,3 +614,7 @@ Outputs:
   PnSsAlarmArnEventsDLQueuePnCoreTargetEventBus:
     Description: "ARN dell'allarme messaggi vecchi nella DLQ per forward degli eventi al bus PnCoreTargetEventBus"
     Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.SqsAgeAlarmArn
+
+  PnSsKmsArnBucket:
+    Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
+    Value: !GetAtt PnSsKmsBucket.Arn

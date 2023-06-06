@@ -365,6 +365,7 @@ Resources:
         ContainerEnvEntry20: !Sub 'pst=${PresignedUrlMinutesLifespan}'
         ContainerEnvEntry21: !Sub 'stayHotTime=${PnSsUriBuilderstayHotTime}'
         ContainerEnvEntry22: !Sub 'PnSsBucketLockRetentionMode=GOVERNANCE'
+        ContainerEnvEntry23: 'PnSsMinRetentionDays=1'
         ContainerEnvEntry30: !Sub 'PnSsArubaCertId=${PnSsArubaCertId}'
         ContainerEnvEntry31: !Sub 'PnSsArubaEnabledLog=${PnSsArubaEnabledLog}'
         ContainerEnvEntry32: !Sub 'PnSsArubaSignWsdlUrl=${PnSsArubaSignWsdlUrl}'

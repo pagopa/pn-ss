@@ -287,7 +287,7 @@ Resources:
         QueueName: 'pn-ss-staging-bucket-events-queue'
         MaxReceiveCount: 10
         HasDLQ: True
-        QueueHasAlarm: 'true'
+        QueueHasAlarm: 'false'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 ########### GESTORE BUCKET INVOKE QUEUE ###########
@@ -304,7 +304,7 @@ Resources:
         MaxReceiveCount: 10
         HasDLQ: True
         VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket
-        QueueHasAlarm: 'true'
+        QueueHasAlarm: 'false'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
   PnSsQueuePolicyGestoreBucketInvoke:

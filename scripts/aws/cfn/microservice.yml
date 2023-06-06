@@ -324,6 +324,18 @@ Parameters:
     Type: String
     Description: 'Name of KMS Key for Dynamo encode/decode data'
 
+#### Parametri esterni indipendenti ###
+
+  PnSsGestoreBucketReservedConcurrentExecutions:
+    Type: Number
+    Description: 'Maximum number of concurrent executions for Lambda Gestore Bucket'
+    Default: 40
+
+  PnSsMinTasksInstancesNumber:
+    Type: Number
+    Description: 'Minimum number of running instances for the microservice'
+    Default: 2
+
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
@@ -337,8 +349,8 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/ecs-service.yaml'
       Parameters:
         MicroServiceUniqueName: !Sub '${ProjectName}-safe-storage'
-        CpuValue: 2048
-        MemoryAmount: 6GB
+        CpuValue: 4096
+        MemoryAmount: 8GB
         AlarmSNSTopicArn: !Ref AlarmSNSTopicArn
         ContainerImageURI: !Sub '${ContainerImageUri}'
         ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'
@@ -374,6 +386,7 @@ Resources:
         EcsDefaultSecurityGroup: !Ref EcsDefaultSecurityGroup
         LoadBalancerListenerArn: !Ref ApplicationLoadBalancerListenerArn
         LoadbalancerRulePriority: !Ref MicroserviceNumber
+        MinTasksNumber: !Ref PnSsMinTasksInstancesNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         # HealthCheckPath: 
@@ -780,7 +793,7 @@ Resources:
         - ReportBatchItemFailures
       MaximumBatchingWindowInSeconds: 0 #default value
       ScalingConfig: 
-        MaximumConcurrency: 100
+        MaximumConcurrency: !Ref PnSsGestoreBucketReservedConcurrentExecutions
 
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function
@@ -789,6 +802,7 @@ Resources:
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
       MemorySize: 1024
+      ReservedConcurrentExecutions: !Ref PnSsGestoreBucketReservedConcurrentExecutions
       Runtime: nodejs16.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240

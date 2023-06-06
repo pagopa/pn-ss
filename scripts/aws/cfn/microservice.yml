@@ -242,6 +242,10 @@ Parameters:
     Type: String
     Description: "ARN dell'allarme messaggi vecchi nella DLQ per forward degli eventi al bus PnCoreTargetEventBus"  
 
+  PnSsKmsArnBucket:
+    Type: String
+    Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
+
 #### Parametri presenti nel file json di configurazione  ###
   
   PnSsUriBuilderstayHotTime:
@@ -450,9 +454,11 @@ Resources:
               - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentitySignature , '*']]
           - Effect: Allow
             Action:
-              - 'kms:*'
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+              - 'kms:ReEncrypt*'
             Resource:
-              - '*'
+              - !Ref PnSsKmsArnBucket
           - Sid: 'AllowPutEventsDisponibilita'
             Effect: Allow
             Action:

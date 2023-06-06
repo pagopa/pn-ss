@@ -5,21 +5,21 @@ import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
 import it.pagopa.pn.template.rest.v1.dto.StorageConfiguration;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.RetentionException;
+import it.pagopa.pnss.common.client.exception.RetentionToIgnoreException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
-import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
+import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
-import software.amazon.awssdk.services.s3.model.PutObjectRetentionRequest;
-
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.Objects;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 
@@ -267,7 +267,7 @@ public class RetentionServiceImpl implements RetentionService {
                                     "NON specificata da applicazione chiamante E " + " vecchio stato document = {}" +
                                     " nuovo stato document = {}", oldState, documentChanges.getDocumentState());
 
-                           Instant dataCreazioneObjectInBucket = headOjectResponse.lastModified();
+                           Instant dataCreazioneObjectInBucket = headObjectResponse.lastModified();
                            log.debug("setRetentionPeriodInBucketObjectMetadata() : dataCreazioneObjectInBucket = {}",
                                     dataCreazioneObjectInBucket);
                            return getRetentionUntil(authPagopaSafestorageCxId,

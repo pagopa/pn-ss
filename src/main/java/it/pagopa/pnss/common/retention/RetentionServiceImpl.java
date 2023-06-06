@@ -20,7 +20,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectRetentionRequest;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalField;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -45,7 +44,8 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
      */
     @Value("${object.lock.retention.mode}")
     private String objectLockRetentionMode;
-    private final Integer retentionToIgnore = 1;
+    @Value("${min.retention.days}")
+    private Integer minDaysRetention;
     private final ConfigurationApiCall configurationApiCall;
 
     private final BucketName bucketName;
@@ -175,7 +175,7 @@ public class RetentionServiceImpl extends CommonS3ObjectService implements Reten
         return getRetentionPeriodInDays(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
                 .handle((retentionPeriodInDays, sink) ->
                 {
-                    if (Objects.equals(retentionPeriodInDays, retentionToIgnore))
+                    if (Objects.equals(retentionPeriodInDays, minDaysRetention))
                         sink.error(new RetentionToIgnoreException());
                     else sink.next(retentionPeriodInDays);
                 })

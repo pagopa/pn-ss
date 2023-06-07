@@ -420,7 +420,7 @@ Resources:
             Action:
               - 'dynamodb:*'
             Resource:
-              - !Join [ '', [ !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/' , '*', !Ref PnSsTableDocumentiStreamMetadatiTable , '*']]
+              - !Join [ '', [ !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/' , !Ref PnSsTableDocumentiStreamMetadatiTable]]
           - Sid: 'CloudWatchPutMetricData'
             Effect: Allow
             Action:

@@ -242,6 +242,10 @@ Parameters:
     Type: String
     Description: "ARN dell'allarme messaggi vecchi nella DLQ per forward degli eventi al bus PnCoreTargetEventBus"  
 
+  PnSsKmsArnBucket:
+    Type: String
+    Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
+
 #### Parametri presenti nel file json di configurazione  ###
   
   PnSsUriBuilderstayHotTime:
@@ -462,6 +466,14 @@ Resources:
             Resource:
               - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentityTimemark , '*']]
               - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentitySignature , '*']]
+          - Effect: Allow
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+              - 'kms:ReEncrypt*'
+              - 'kms:GenerateDataKey'
+            Resource:
+              - !Ref PnSsKmsArnBucket
           - Sid: 'AllowPutEventsDisponibilita'
             Effect: Allow
             Action:
@@ -651,7 +663,7 @@ Resources:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-              - 'sqs:SendMessage'
+            - 'sqs:SendMessage'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnStagingBucket
             Principal:  
@@ -719,7 +731,7 @@ Resources:
           Principal:
             Service: lambda.amazonaws.com
           Action:
-          - 'sts:AssumeRole'
+            - 'sts:AssumeRole'
       Policies:
         - PolicyName: 'PnSsGestoreBucketInlinePolicy'
           PolicyDocument: 
@@ -763,6 +775,13 @@ Resources:
                 Condition:
                   StringLike:
                     kms:RequestAlias: 'alias/aws/sqs'
+              - Effect: Allow
+                Action:
+                  - 'kms:Encrypt'
+                  - 'kms:Decrypt'
+                  - 'kms:GenerateDataKey'
+                Resource:
+                  - !Ref PnSsKmsArnBucket
 
   PnSsSecurityGroupSafeStorage:
     Type: AWS::EC2::SecurityGroup

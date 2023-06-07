@@ -324,6 +324,19 @@ Parameters:
     Type: String
     Description: 'Topic alarm'
 
+#### Parametri esterni indipendenti ###
+
+  PnSsGestoreBucketReservedConcurrentExecutions:
+    Type: Number
+    Description: 'Maximum number of concurrent executions for Lambda Gestore Bucket'
+    Default: 40
+
+  PnSsMinTasksInstancesNumber:
+    Type: Number
+    Description: 'Minimum number of running instances for the microservice'
+    Default: 2
+
+
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
@@ -337,8 +350,8 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/ecs-service.yaml'
       Parameters:
         MicroServiceUniqueName: !Sub '${ProjectName}-safe-storage'
-        CpuValue: 2048
-        MemoryAmount: 6GB
+        CpuValue: 4096
+        MemoryAmount: 8GB
         AlarmSNSTopicArn: !Ref AlarmSNSTopicArn
         ContainerImageURI: !Sub '${ContainerImageUri}'
         ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'
@@ -374,6 +387,7 @@ Resources:
         EcsDefaultSecurityGroup: !Ref EcsDefaultSecurityGroup
         LoadBalancerListenerArn: !Ref ApplicationLoadBalancerListenerArn
         LoadbalancerRulePriority: !Ref MicroserviceNumber
+        MinTasksNumber: !Ref PnSsMinTasksInstancesNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         # HealthCheckPath: 
@@ -401,16 +415,16 @@ Resources:
               - 'dynamodb:GetRecords'
               - 'dynamodb:GetShardIterator'
             Resource:
-              - !Sub '${PnSsTableArnAnagraficaClient}'
-              - !Sub '${PnSsTableArnTipologieDocumenti}'
-              - !Sub '${PnSsTableArnDocumenti}'
-              - !Sub '${PnSsTableDocumentiStreamArn}'
+              - !Ref PnSsTableArnAnagraficaClient
+              - !Ref PnSsTableArnTipologieDocumenti
+              - !Ref PnSsTableArnDocumenti
+              - !Ref PnSsTableDocumentiStreamArn
           - Sid: 'FullAccesStreamMetadataTable'
             Effect: Allow
             Action:
               - 'dynamodb:*'
             Resource:
-              - !Join [ '', [ !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/' , '*', !Ref PnSsTableDocumentiStreamMetadatiTable , '*']]
+              - !Join [ '', [ !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/' , !Ref PnSsTableDocumentiStreamMetadatiTable]]
           - Sid: 'CloudWatchPutMetricData'
             Effect: Allow
             Action:
@@ -430,9 +444,9 @@ Resources:
               - 's3:PutObject*'
               - 's3:RestoreObject'
             Resource:
-              - !Sub '${PnSsBucketArn}'
+              - !Ref PnSsBucketArn
               - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
-              - !Sub '${PnSsStagingBucketArn}'
+              - !Ref PnSsStagingBucketArn
               - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
           - Effect: Allow
             Action:
@@ -443,7 +457,7 @@ Resources:
               - 'sqs:List*'
               - 'sqs:SendMessage'
             Resource:
-              - !Sub '${PnSsQueueArnStagingBucket}'
+              - !Ref PnSsQueueArnStagingBucket
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -465,7 +479,7 @@ Resources:
               - 'events:PutEvents'
               - 'events:DescribeEventBus'
             Resource:
-              - !Sub '${PnSsEventBusArnExternalNotification}'
+              - !Ref PnSsEventBusArnExternalNotification
 
   #####    Staging Bucket Events Rule    #####
   PnSsEventRuleStagingBucket:
@@ -476,9 +490,9 @@ Resources:
         source: 
           - 'aws.s3' 
         account: 
-          - !Sub ${AWS::AccountId}
+          - !Ref AWS::AccountId
         region:
-          - !Sub ${AWS::Region}
+          - !Ref AWS::Region
         detail-type: 
           - 'Object Created'
         detail:
@@ -528,14 +542,14 @@ Resources:
         Statement: 
           - Sid: 'AllowAccessSameAccount'
             Action: 
-              - "SQS:*"
+              - 'sqs:ReceiveMessage'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
             Principal: 
-              AWS: !Sub ${AWS::AccountId}
+              AWS: !Ref AWS::AccountId
           - Sid: 'AllowPutEventsFromEventRule'
             Action: 
-              - "sqs:SendMessage"
+              - 'sqs:SendMessage'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
             Principal: 
@@ -554,9 +568,9 @@ Resources:
         source: 
           - "GESTORE DISPONIBILITA"
         account: 
-          - !Sub ${AWS::AccountId}
+          - !Ref AWS::AccountId
         region: 
-          - !Sub ${AWS::Region}
+          - !Ref AWS::Region
       State: 'ENABLED'
       Targets:
         - Arn: !Ref PnCoreTargetEventBus
@@ -627,7 +641,7 @@ Resources:
   PnSsStagingBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Sub ${PnSsStagingBucketName}
+      Bucket: !Ref PnSsStagingBucketName
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -643,20 +657,27 @@ Resources:
     Type: AWS::SQS::QueuePolicy
     Properties: 
       Queues: 
-        - !Sub '${PnSsQueueUrlStagingBucket}'
+        - !Ref PnSsQueueUrlStagingBucket
       PolicyDocument:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-              - 'sqs:*'
+            - 'sqs:SendMessage'
             Effect: "Allow"
-            Resource: !Sub ${PnSsQueueArnStagingBucket}
+            Resource: !Ref PnSsQueueArnStagingBucket
             Principal:  
-              AWS: 
-                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
               Service:
                 - 'events.amazonaws.com'
- 
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+          - Action: 
+              - 'sqs:ReceiveMessage'
+            Effect: "Allow"
+            Resource: !Ref PnSsQueueArnStagingBucket
+            Principal:  
+              AWS: 
+                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]] 
 
   #####   Cloud Trail  +  Logging   #####
   SafeStorageCloudTrail:
@@ -683,14 +704,14 @@ Resources:
       Type: AWS::SQS::QueuePolicy
       Properties: 
         Queues: 
-          - !Sub '${PnSsQueueUrlGestoreBucketInvokeErrors}'
+          - !Ref PnSsQueueUrlGestoreBucketInvokeErrors
         PolicyDocument:
           Version: '2012-10-17'
           Statement: 
             - Action: 
-                - 'sqs:*'
+                - 'sqs:SendMessage'
               Effect: "Allow"
-              Resource: !Sub ${PnSsQueueArnGestoreBucketInvokeErrors}
+              Resource: !Ref PnSsQueueArnGestoreBucketInvokeErrors
               Principal:  
                 AWS: 
                   - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !Ref PnSsGestoreBucketRole]]
@@ -709,7 +730,7 @@ Resources:
           Principal:
             Service: lambda.amazonaws.com
           Action:
-          - 'sts:AssumeRole'
+            - 'sts:AssumeRole'
       Policies:
         - PolicyName: 'PnSsGestoreBucketInlinePolicy'
           PolicyDocument: 
@@ -726,7 +747,7 @@ Resources:
                   - 's3:*MultipartUpload*'
                   - 's3:*Tag*'
                 Resource:
-                  - !Sub '${PnSsBucketArn}'
+                  - !Ref PnSsBucketArn
                   - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
               - Sid: 'QueueInvokeErrorsPolicyProducer'
                 Effect: 'Allow'
@@ -770,6 +791,31 @@ Resources:
           SourceSecurityGroupId: !Ref PnVPCDefaultSecurityGroup
       VpcId: !Ref VpcId
 
+  PnSsQueuePolicyGestoreBucketInvoke:
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !Ref PnSsQueueUrlGestoreBucketInvoke
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement: 
+          - Action: 
+            - 'sqs:SendMessage'
+            Effect: "Allow"
+            Resource: !Ref PnSsQueueArnGestoreBucketInvoke
+            Principal:
+              Service: 's3.amazonaws.com'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+          - Action: 
+            - 'sqs:ReceiveMessage'
+            Effect: "Allow"
+            Resource: !Ref PnSsQueueArnGestoreBucketInvoke
+            Principal:
+              AWS: 
+                !GetAtt PnSsGestoreBucketRole.Arn
+
   PnSsGestoreBucketInputQueue:
     Type: AWS::Lambda::EventSourceMapping
     Properties: 
@@ -781,7 +827,7 @@ Resources:
         - ReportBatchItemFailures
       MaximumBatchingWindowInSeconds: 0 #default value
       ScalingConfig: 
-        MaximumConcurrency: 100
+        MaximumConcurrency: !Ref PnSsGestoreBucketReservedConcurrentExecutions
 
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function
@@ -790,6 +836,7 @@ Resources:
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
       MemorySize: 1024
+      ReservedConcurrentExecutions: !Ref PnSsGestoreBucketReservedConcurrentExecutions
       Runtime: nodejs16.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240

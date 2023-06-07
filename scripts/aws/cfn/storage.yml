@@ -305,6 +305,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-staging-bucket-events-queue'
+        SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
         QueueHasAlarm: 'true'
@@ -321,6 +322,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-main-bucket-events-queue'
+        SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
         VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket
@@ -336,17 +338,23 @@ Resources:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-            - 'SQS:*'
+            - 'sqs:*'
             Effect: "Allow"
             Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
             Principal:
               Service: 's3.amazonaws.com'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
           - Action: 
-            - 'SQS:*'
+            - 'sqs:*'
             Effect: "Allow"
             Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
             Principal:
               AWS: '*'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
 
 ########### GESTORE BUCKET INVOKE DLQ ###########
 # La coda PnSsQueueGestoreBucketInvokeErrors è la DLQ configurata per la risorsa Gestore Bucket (Lambda) #
@@ -358,6 +366,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-gestore-bucket-invocation-errors-queue'
+        SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
         QueueHasAlarm: 'true'
@@ -404,10 +413,10 @@ Resources:
         Effect: 'Allow'
         Resource: !GetAtt PnSsEventBusExternalNotification.Arn
         Principal: 
-          AWS: !Sub '${AWS::AccountId}'
+          AWS: !Ref AWS::AccountId
         Condition:
           StringEqualsIfExists:
-            events:creatorAccount: !Sub '${AWS::AccountId}'
+            events:creatorAccount: !Ref AWS::AccountId
 
   PnSsQueueNotificheDEVStack:
     Type: AWS::CloudFormation::Stack
@@ -418,6 +427,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-external-notification-DEV-queue'
+        SqsManagedSseEnabled: true
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
@@ -432,9 +442,9 @@ Resources:
         source: 
           - "GESTORE DISPONIBILITA"
         account: 
-          - !Sub ${AWS::AccountId}
+          - !Ref AWS::AccountId
         region: 
-          - !Sub ${AWS::Region}
+          - !Ref AWS::Region
       State: 'ENABLED'
       Targets:
         - Arn: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN
@@ -448,6 +458,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-forward-events-pncoreeventbus-DLQueue'
+        SqsManagedSseEnabled: true
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName

@@ -7,6 +7,7 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.time.Duration;
+import java.util.Map;
 
 public interface S3Service {
 
@@ -17,4 +18,10 @@ public interface S3Service {
     Mono<RestoreObjectResponse> restoreObject(String key, String bucketName, RestoreRequest restoreRequest);
 
     Mono<PresignedGetObjectRequest> presignGetObject(GetObjectRequest getObjectRequest, Duration duration);
+
+    Mono<GetBucketLifecycleConfigurationResponse> getBucketLifecycleConfiguration(String bucket);
+
+    Mono<HeadObjectResponse> headObject(String key, String bucket);
+
+    Mono<PutObjectRetentionResponse> putObjectRetention(String key, String bucket, ObjectLockRetention objectLockRetention);
 }

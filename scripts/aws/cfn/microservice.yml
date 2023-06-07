@@ -333,6 +333,11 @@ Parameters:
     Default: 2
 
 
+  # Log group parameters
+  EcsLogGroup:
+    Type: String
+    Description: 'Ecs log group name'
+
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
@@ -364,7 +369,7 @@ Resources:
         ContainerEnvEntry12: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
         ContainerEnvEntry20: !Sub 'pst=${PresignedUrlMinutesLifespan}'
         ContainerEnvEntry21: !Sub 'stayHotTime=${PnSsUriBuilderstayHotTime}'
-        ContainerEnvEntry22: !Sub 'PnSsBucketLockRetentionMode=GOVERNANCE'
+        ContainerEnvEntry22: 'PnSsBucketLockRetentionMode=GOVERNANCE'
         ContainerEnvEntry30: !Sub 'PnSsArubaCertId=${PnSsArubaCertId}'
         ContainerEnvEntry31: !Sub 'PnSsArubaEnabledLog=${PnSsArubaEnabledLog}'
         ContainerEnvEntry32: !Sub 'PnSsArubaSignWsdlUrl=${PnSsArubaSignWsdlUrl}'
@@ -386,6 +391,7 @@ Resources:
         MinTasksNumber: !Ref PnSsMinTasksInstancesNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
+        EcsLogGroup: !Ref EcsLogGroup
         # HealthCheckPath: 
   
   PnSsManagedPolicy:

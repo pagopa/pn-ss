@@ -648,7 +648,7 @@ Resources:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-              - 'SQS:*'
+              - 'sqs:*'
             Effect: "Allow"
             Resource: !Sub ${PnSsQueueArnStagingBucket}
             Principal:  
@@ -688,7 +688,7 @@ Resources:
           Version: '2012-10-17'
           Statement: 
             - Action: 
-                - 'SQS:*'
+                - 'sqs:*'
               Effect: "Allow"
               Resource: !Sub ${PnSsQueueArnGestoreBucketInvokeErrors}
               Principal:  
@@ -753,6 +753,12 @@ Resources:
                 Condition:
                   StringLike:
                     kms:RequestAlias: 'alias/aws/sqs'
+              - Effect: Allow
+                Action:
+                  - 'kms:Encrypt'
+                  - 'kms:Decrypt'
+                Resource:
+                  - !Ref PnSsKmsArnBucket
 
   PnSsSecurityGroupSafeStorage:
     Type: AWS::EC2::SecurityGroup

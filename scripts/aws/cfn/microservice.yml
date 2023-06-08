@@ -242,6 +242,10 @@ Parameters:
     Type: String
     Description: "ARN dell'allarme messaggi vecchi nella DLQ per forward degli eventi al bus PnCoreTargetEventBus"  
 
+  PnSsKmsArnBucket:
+    Type: String
+    Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
+
 #### Parametri presenti nel file json di configurazione  ###
   
   PnSsUriBuilderstayHotTime:
@@ -448,7 +452,6 @@ Resources:
             Action:
               - 'sqs:ReceiveMessage'
               - 'sqs:DeleteMessage'
-              - 'sqs:PurgeQueue'
               - 'sqs:Get*'
               - 'sqs:List*'
               - 'sqs:SendMessage'
@@ -462,6 +465,14 @@ Resources:
             Resource:
               - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentityTimemark , '*']]
               - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentitySignature , '*']]
+          - Effect: Allow
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+              - 'kms:ReEncrypt*'
+              - 'kms:GenerateDataKey'
+            Resource:
+              - !Ref PnSsKmsArnBucket
           - Sid: 'AllowPutEventsDisponibilita'
             Effect: Allow
             Action:
@@ -532,6 +543,8 @@ Resources:
           - Sid: 'AllowAccessSameAccount'
             Action: 
               - 'sqs:ReceiveMessage'
+              - 'sqs:GetQueueAttributes'
+              - 'sqs:GetQueueUrl'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
             Principal: 
@@ -539,6 +552,8 @@ Resources:
           - Sid: 'AllowPutEventsFromEventRule'
             Action: 
               - 'sqs:SendMessage'
+              - 'sqs:GetQueueAttributes'
+              - 'sqs:GetQueueUrl'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
             Principal: 
@@ -651,7 +666,10 @@ Resources:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-              - 'sqs:SendMessage'
+            - 'sqs:SendMessage'
+            - 'sqs:GetQueueAttributes'
+            - 'sqs:GetQueueUrl'
+            
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnStagingBucket
             Principal:  
@@ -661,7 +679,9 @@ Resources:
               StringEquals:
                 AWS:SourceAccount: !Ref AWS::AccountId
           - Action: 
-              - 'sqs:ReceiveMessage'
+            - 'sqs:ReceiveMessage'
+            - 'sqs:GetQueueAttributes'
+            - 'sqs:GetQueueUrl'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnStagingBucket
             Principal:  
@@ -698,7 +718,9 @@ Resources:
           Version: '2012-10-17'
           Statement: 
             - Action: 
-                - 'sqs:SendMessage'
+              - 'sqs:SendMessage'
+              - 'sqs:GetQueueAttributes'
+              - 'sqs:GetQueueUrl'
               Effect: "Allow"
               Resource: !Ref PnSsQueueArnGestoreBucketInvokeErrors
               Principal:  
@@ -719,7 +741,7 @@ Resources:
           Principal:
             Service: lambda.amazonaws.com
           Action:
-          - 'sts:AssumeRole'
+            - 'sts:AssumeRole'
       Policies:
         - PolicyName: 'PnSsGestoreBucketInlinePolicy'
           PolicyDocument: 
@@ -742,6 +764,7 @@ Resources:
                 Effect: 'Allow'
                 Action: 
                   - 'sqs:SendMessage'
+                  - 'sqs:Get*'
                 Resource:
                   - !Ref PnSsQueueArnGestoreBucketInvokeErrors
               - Sid: 'GetInvokeSQS'
@@ -763,6 +786,13 @@ Resources:
                 Condition:
                   StringLike:
                     kms:RequestAlias: 'alias/aws/sqs'
+              - Effect: Allow
+                Action:
+                  - 'kms:Encrypt'
+                  - 'kms:Decrypt'
+                  - 'kms:GenerateDataKey'
+                Resource:
+                  - !Ref PnSsKmsArnBucket
 
   PnSsSecurityGroupSafeStorage:
     Type: AWS::EC2::SecurityGroup
@@ -784,6 +814,9 @@ Resources:
         Statement: 
           - Action: 
             - 'sqs:SendMessage'
+            - 'sqs:GetQueueAttributes'
+            - 'sqs:GetQueueUrl'
+            
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnGestoreBucketInvoke
             Principal:
@@ -793,6 +826,8 @@ Resources:
                 AWS:SourceAccount: !Ref AWS::AccountId
           - Action: 
             - 'sqs:ReceiveMessage'
+            - 'sqs:GetQueueAttributes'
+            - 'sqs:GetQueueUrl'
             Effect: "Allow"
             Resource: !Ref PnSsQueueArnGestoreBucketInvoke
             Principal:

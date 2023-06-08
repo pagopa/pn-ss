@@ -44,9 +44,6 @@ public class FileUploadApiController implements FileUploadApi {
 											if (exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
 												checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
 											}
-											if (checksumValue == null || checksumValue.isBlank()) {
-												return Mono.error(new ChecksumException("Checksum value (header or in request) not present"));
-											}
 										}
         								return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
         																				request,

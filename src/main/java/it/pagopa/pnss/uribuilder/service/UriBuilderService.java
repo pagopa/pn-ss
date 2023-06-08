@@ -1,10 +1,6 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.RestoreObjectRequest;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
@@ -20,8 +16,6 @@ import it.pagopa.pnss.common.client.exception.*;
 import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
-import it.pagopa.pnss.repositorymanager.service.DocTypesService;
-import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,8 +33,6 @@ import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -54,7 +46,7 @@ import static it.pagopa.pnss.common.constant.Constant.*;
 
 @Service
 @Slf4j
-public class UriBuilderService extends CommonS3ObjectService {
+public class UriBuilderService {
 
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;

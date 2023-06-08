@@ -4,13 +4,11 @@ import it.pagopa.pnss.common.client.dto.LifecycleRuleDTO;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
-import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
+import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationResponse;
 import software.amazon.awssdk.services.s3.model.LifecycleRule;
 
@@ -19,8 +17,10 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class StorageConfigurationsImpl extends CommonS3ObjectService implements StorageConfigurationsService {
+public class StorageConfigurationsServiceImpl implements StorageConfigurationsService {
 
+    @Autowired
+    private S3Service s3Service;
     private static final String TAG_KEY = "storageType";
 
     @Autowired
@@ -89,31 +89,22 @@ public class StorageConfigurationsImpl extends CommonS3ObjectService implements 
         return listOut;
     }
 
-    private GetBucketLifecycleConfigurationResponse getAsynchLifecycleConfigurationResponse() {
-        try {
-            log.debug("getLifecycleConfiguration() : pnSsBucketName : {}", bucketName.ssHotName());
-            S3AsyncClient s3AsyncClient = getS3AsyncClient();
-            GetBucketLifecycleConfigurationRequest request =
-                    GetBucketLifecycleConfigurationRequest.builder().bucket(bucketName.ssHotName()).build();
-            return s3AsyncClient.getBucketLifecycleConfiguration(request).get();
-        } catch (Exception e) {
-            log.error("getAsynchLifecycleConfigurationResponse() : no response", e);
-            Thread.currentThread().interrupt();
-            return null;
-        }
-    }
-
+    @Override
     public Mono<List<LifecycleRuleDTO>> getLifecycleConfiguration() {
+
         log.info("getLifecycleConfiguration() : START");
-
-        GetBucketLifecycleConfigurationResponse response = getAsynchLifecycleConfigurationResponse();
-        if (response == null || response.rules() == null) {
-            throw new BucketException("No Rules founded");
-        }
-
-        return Mono.just(filter(response.rules())).map(this::convert).onErrorResume(throwable -> {
-            log.debug("getLifecycleConfiguration() : error", throwable);
-            return Mono.error(new BucketException(throwable.getMessage()));
-        });
+        return s3Service.getBucketLifecycleConfiguration(bucketName.ssHotName())
+                .handle((response, sink) -> {
+                    if (response == null || response.rules() == null) {
+                        sink.error(new BucketException("No Rules founded"));
+                    } else sink.next(response);
+                })
+                .cast(GetBucketLifecycleConfigurationResponse.class)
+                .map(response -> filter(response.rules()))
+                .map(this::convert)
+                .onErrorResume(throwable -> {
+                    log.debug("getLifecycleConfiguration() : error", throwable);
+                    return Mono.error(new BucketException(throwable.getMessage()));
+                });
     }
 }

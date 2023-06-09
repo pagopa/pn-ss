@@ -57,6 +57,13 @@ Parameters:
     Description: 'Deploy environment type'
     Default: 'dev'
     
+  LogsKinesisSourceStreamArn:
+    Type: String
+    Description: 'Where to send Logs'
+
+  LogRetention:
+    Type: Number
+    Default: 14
 Conditions:
   IsDevEnv: !Equals [ !Ref EnvType, 'dev'] 
 
@@ -137,6 +144,26 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
+  PnSsKmsBucket:
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: "Symmetric Encryption KMS for Safe Storage's Buckets"
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Enable Permissions on all user and roles
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
+  
   PnSsBucket:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
@@ -148,7 +175,7 @@ Resources:
           - BucketKeyEnabled: true
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
-              #  KMSMasterKeyID: KMS-KEY-AR
+              KMSMasterKeyID: !GetAtt PnSsKmsBucket.Arn
       CorsConfiguration:  
         CorsRules:
           - AllowedHeaders:
@@ -267,7 +294,7 @@ Resources:
           - BucketKeyEnabled: true
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
-              #  KMSMasterKeyID: KMS-KEY-AR
+              KMSMasterKeyID: !GetAtt PnSsKmsBucket.Arn
       LifecycleConfiguration:
         Rules:
           - Id: 'PnSsStagingAbortIncompleteMultipartUpload'
@@ -297,9 +324,10 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-staging-bucket-events-queue'
+        SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
-        QueueHasAlarm: 'true'
+        QueueHasAlarm: 'false'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 ########### GESTORE BUCKET INVOKE QUEUE ###########
@@ -313,10 +341,11 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-main-bucket-events-queue'
+        SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
         VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket
-        QueueHasAlarm: 'true'
+        QueueHasAlarm: 'false'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
   PnSsQueuePolicyGestoreBucketInvoke:
@@ -328,17 +357,23 @@ Resources:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-            - 'SQS:*'
+            - 'sqs:*'
             Effect: "Allow"
             Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
             Principal:
               Service: 's3.amazonaws.com'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
           - Action: 
-            - 'SQS:*'
+            - 'sqs:*'
             Effect: "Allow"
             Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
             Principal:
               AWS: '*'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
 
 ########### GESTORE BUCKET INVOKE DLQ ###########
 # La coda PnSsQueueGestoreBucketInvokeErrors è la DLQ configurata per la risorsa Gestore Bucket (Lambda) #
@@ -350,6 +385,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-gestore-bucket-invocation-errors-queue'
+        SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
         QueueHasAlarm: 'true'
@@ -396,10 +432,10 @@ Resources:
         Effect: 'Allow'
         Resource: !GetAtt PnSsEventBusExternalNotification.Arn
         Principal: 
-          AWS: !Sub '${AWS::AccountId}'
+          AWS: !Ref AWS::AccountId
         Condition:
           StringEqualsIfExists:
-            events:creatorAccount: !Sub '${AWS::AccountId}'
+            events:creatorAccount: !Ref AWS::AccountId
 
   PnSsQueueNotificheDEVStack:
     Type: AWS::CloudFormation::Stack
@@ -410,6 +446,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-external-notification-DEV-queue'
+        SqsManagedSseEnabled: true
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
@@ -424,9 +461,9 @@ Resources:
         source: 
           - "GESTORE DISPONIBILITA"
         account: 
-          - !Sub ${AWS::AccountId}
+          - !Ref AWS::AccountId
         region: 
-          - !Sub ${AWS::Region}
+          - !Ref AWS::Region
       State: 'ENABLED'
       Targets:
         - Arn: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN
@@ -440,6 +477,7 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-forward-events-pncoreeventbus-DLQueue'
+        SqsManagedSseEnabled: true
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
@@ -461,6 +499,29 @@ Resources:
   #       Condition:
   #         StringNotEquals:
   #           aws:SourceAccount: !Sub '${AWS::AccountId}'
+
+  ### LOG GROUP RESOURCES ###
+  EcsLogGroup:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain    
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
+      Parameters:
+        LogGroupName: !Sub '${ProjectName}-safe-storage'
+        LogsKinesisSourceStreamArn: !Ref LogsKinesisSourceStreamArn
+        LogGroupRetention: !Ref LogRetention
+
+  # GestoreBucketLambdaLogGroup:
+  #   Type: AWS::CloudFormation::Stack
+  #   UpdateReplacePolicy: Retain
+  #   DeletionPolicy: Retain    
+  #   Properties:
+  #     TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
+  #     Parameters:
+  #       LogGroupName: !Ref PnSsGestoreBucketLambdaNameIn
+  #       LogGroupPrefix: '/aws/lambda'
+  #       LogGroupRetention: !Ref LogRetention
 
 Outputs:
   PnSsTableNameAnagraficaClient:
@@ -610,3 +671,11 @@ Outputs:
   PCKmsEncDecDynamoDataKeyARN:
     Description: Name of KMS Key for Dynamo encode/decode data
     Value: !Sub '${PCKmsEncDecDynamoDataKey.Arn}'
+
+  # Log group exports
+  EcsLogGroup:
+    Value: !GetAtt EcsLogGroup.Outputs.LogGroupName
+    
+  PnSsKmsArnBucket:
+    Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
+    Value: !GetAtt PnSsKmsBucket.Arn

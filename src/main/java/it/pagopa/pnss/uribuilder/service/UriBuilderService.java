@@ -1,10 +1,6 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.RestoreObjectRequest;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
@@ -20,8 +16,6 @@ import it.pagopa.pnss.common.client.exception.*;
 import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
-import it.pagopa.pnss.repositorymanager.service.DocTypesService;
-import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,8 +33,6 @@ import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -54,7 +46,7 @@ import static it.pagopa.pnss.common.constant.Constant.*;
 
 @Service
 @Slf4j
-public class UriBuilderService extends CommonS3ObjectService {
+public class UriBuilderService {
 
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
@@ -265,40 +257,33 @@ public class UriBuilderService extends CommonS3ObjectService {
                   checksumValue);
         log.debug("signBucket() : sign bucket {}", duration);
 
-        if (checksumType == null || checksumValue == null || checksumValue.isBlank()) {
-            return Mono.error(new ChecksumException("Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
-        }
         if (queryParamPresignedUrlTraceId == null || queryParamPresignedUrlTraceId.isBlank()) {
             return Mono.error(new QueryParamException("Property \"queryParam.presignedUrl.traceId\" non impostata"));
         }
 
         return Mono.just(checksumType)
                    .flatMap(checksumTypeToEvaluate -> {
+
+                       PutObjectRequest.Builder putObjectRequest = PutObjectRequest.builder()
+                               .bucket(bucketName)
+                               .key(documentKey)
+                               .contentType(contenType)
+                               .metadata(secret)
+                               .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
+                                       queryParamPresignedUrlTraceId,
+                                       xTraceIdValue));
+
                        if (ChecksumEnum.MD5.name().equals(checksumTypeToEvaluate.name())) {
-                           return Mono.just(PutObjectRequest.builder()
-                                                            .bucket(bucketName)
-                                                            .key(documentKey)
-                                                            .contentType(contenType)
-                                                            .metadata(secret)
-                                                            .contentMD5(checksumValue)
-                                                            .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
-                                                                    queryParamPresignedUrlTraceId,
-                                                                    xTraceIdValue))
+                           return Mono.just(putObjectRequest.contentMD5(checksumValue)
                                                             .build());
                        } else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank() && secret != null &&
                                   ChecksumEnum.SHA256.name().equals(checksumTypeToEvaluate.name())) {
-                           return Mono.just(PutObjectRequest.builder()
-                                                            .bucket(bucketName)
-                                                            .key(documentKey)
-                                                            .contentType(contenType)
-                                                            .metadata(secret)
-                                                            .checksumSHA256(checksumValue)
-                                                            .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
-                                                                    queryParamPresignedUrlTraceId,
-                                                                    xTraceIdValue))
+                           return Mono.just(putObjectRequest.checksumSHA256(checksumValue)
                                                             .build());
-                       } else {
-                           return Mono.error(new ChecksumException(
+                       }else if (ChecksumEnum.NONE.name().equals(checksumTypeToEvaluate.name())){
+                           return Mono.just(putObjectRequest.build());
+                       }else {
+                            return Mono.error(new ChecksumException(
                                    "Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
                        }
                    })

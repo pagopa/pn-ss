@@ -57,6 +57,13 @@ Parameters:
     Description: 'Deploy environment type'
     Default: 'dev'
     
+  LogsKinesisSourceStreamArn:
+    Type: String
+    Description: 'Where to send Logs'
+
+  LogRetention:
+    Type: Number
+    Default: 14
 Conditions:
   IsDevEnv: !Equals [ !Ref EnvType, 'dev'] 
 
@@ -308,7 +315,7 @@ Resources:
         SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
-        QueueHasAlarm: 'true'
+        QueueHasAlarm: 'false'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 ########### GESTORE BUCKET INVOKE QUEUE ###########
@@ -326,7 +333,7 @@ Resources:
         MaxReceiveCount: 10
         HasDLQ: True
         VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket
-        QueueHasAlarm: 'true'
+        QueueHasAlarm: 'false'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
   PnSsQueuePolicyGestoreBucketInvoke:
@@ -481,6 +488,29 @@ Resources:
   #         StringNotEquals:
   #           aws:SourceAccount: !Sub '${AWS::AccountId}'
 
+  ### LOG GROUP RESOURCES ###
+  EcsLogGroup:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain    
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
+      Parameters:
+        LogGroupName: !Sub '${ProjectName}-safe-storage'
+        LogsKinesisSourceStreamArn: !Ref LogsKinesisSourceStreamArn
+        LogGroupRetention: !Ref LogRetention
+
+  # GestoreBucketLambdaLogGroup:
+  #   Type: AWS::CloudFormation::Stack
+  #   UpdateReplacePolicy: Retain
+  #   DeletionPolicy: Retain    
+  #   Properties:
+  #     TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
+  #     Parameters:
+  #       LogGroupName: !Ref PnSsGestoreBucketLambdaNameIn
+  #       LogGroupPrefix: '/aws/lambda'
+  #       LogGroupRetention: !Ref LogRetention
+
 Outputs:
   PnSsTableNameAnagraficaClient:
     Description: 'Nome della tabella SS Anagrafica Client'
@@ -626,6 +656,9 @@ Outputs:
     Description: "ARN dell'allarme messaggi vecchi nella DLQ per forward degli eventi al bus PnCoreTargetEventBus"
     Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.SqsAgeAlarmArn
 
+  # Log group exports
+  EcsLogGroup:
+    Value: !GetAtt EcsLogGroup.Outputs.LogGroupName
   PnSsKmsArnBucket:
     Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
     Value: !GetAtt PnSsKmsBucket.Arn

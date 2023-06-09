@@ -324,6 +324,10 @@ Parameters:
     Type: String
     Description: 'Topic alarm'
 
+  PCKmsEncDecDynamoDataKeyARN:
+    Type: String
+    Description: 'Name of KMS Key for Dynamo encode/decode data'
+
 #### Parametri esterni indipendenti ###
 
   PnSsGestoreBucketReservedConcurrentExecutions:
@@ -335,7 +339,6 @@ Parameters:
     Type: Number
     Description: 'Minimum number of running instances for the microservice'
     Default: 2
-
 
   # Log group parameters
   EcsLogGroup:
@@ -437,6 +440,13 @@ Resources:
               - 'cloudwatch:PutMetricData'
             Resource:
               - '*'
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+            Resource:
+              - !Ref PCKmsEncDecDynamoDataKeyARN              
           - Effect: Allow
             Action:
               - 's3:List*'

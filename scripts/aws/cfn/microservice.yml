@@ -895,33 +895,33 @@ Resources:
       Code:
         ZipFile: |
           "use strict";
-         
+
           const http = require(process.env.PnSsGestoreRepositoryProtocol);
           const AWS = require("aws-sdk");
           const crypto = require("crypto");
-         
+
           const HOSTNAME = process.env.PnSsHostname;
           const PORT = process.env.PnSsGestoreRepositoryPort;
           const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
           const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
           const STAGINGBUCKET = process.env.PnSsStagingBucketName;
-         
+
           exports.handler = async (event) => {
             const s3 = new AWS.S3();
             const batchItemFailures =[];
             console.log(JSON.stringify(event));
-         
+
             await Promise.allSettled(
               event.Records.map(async (record) => {
                 const bodyData = JSON.parse(record.body);
-         
+
                 console.log("Processing " + record.messageId);
-         
+
                 let jsonDocument = {
                   documentKey: "",
                   documentState: "",
                 };
-         
+
                 let bucketName;
                 console.log("Buket Name: " + bodyData.Records[0].s3.bucket.name);
                 console.log("Object Key: " + bodyData.Records[0].s3.object.key);
@@ -941,30 +941,27 @@ Resources:
                     } else {
                       jsonDocument.contentLenght = bodyData.Records[0].s3.object.size;
                       jsonDocument.documentState = "available";
-                      jsonDocument.checkSum = "";
                       params.Bucket = bucketName;
                       params.Key = jsonDocument.documentKey;
                       try {
                         const { Body } = await s3
                           .getObject(params)
                           .promise();
-                        console.log(Body);
                         const doc = await getDocumentFromDB(jsonDocument.documentKey);
-          
+
                         console.log(doc.document);
                         console.log(doc.document.documentType.checksum);
                         console.log(JSON.stringify(doc.document.documentType.checksum));
-                        if( doc.document.documentType.checksum != "NONE" ) {
-                          jsonDocument.checkSum = crypto
-                            .createHash(doc.document.documentType.checksum)
-                            .update(Body)
-                            .digest("base64");
-                        }
+
+                        jsonDocument.checkSum = crypto
+                          .createHash(doc.document.documentType.checksum)
+                          .update(Body)
+                          .digest("base64");
                       } catch (error) {
                         console.log(error);
-                        const messageError = `Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}. Verificare che l'oggetto esiste nel bucket o sul database Dynamo.`;
+                        const messageError = `* FATAL * Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}. Verificare che l'oggetto esiste nel bucket o sul database Dynamo.`;
                         console.log(messageError);
-                        failedMessageIds.push(record.messageId);
+                        batchItemFailures.push({itemIdentifier: record.messageId});
                         return;
                         //throw new Error(messageError);
                       }
@@ -998,7 +995,7 @@ Resources:
                     return;
                   },
                   function(error) {
-                    const retMessgeError = "Errore nella patch su DynamoDB - " + error;
+                    const retMessgeError = "* FATAL * Errore nella patch su DynamoDB - " + error;
                     console.log(retMessgeError);
                     batchItemFailures.push({itemIdentifier: record.messageId});
                     return;
@@ -1022,16 +1019,16 @@ Resources:
             return new Promise((resolve, reject) => {
               const req = http.request(options, (res) => {
                 let responseBody = "";
-          
+
                 res.on("data", (chunk) => {
                   responseBody += chunk;
                 });
-          
+
                 res.on("end", () => {
                   resolve(JSON.parse(responseBody));
                 });
               });
-          
+
               req.on("error", (err) => {
                 console.error(err);
                 reject(err);
@@ -1075,3 +1072,4 @@ Resources:
               req.end();
             });
           }
+        

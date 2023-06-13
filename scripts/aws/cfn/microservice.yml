@@ -941,6 +941,7 @@ Resources:
                     } else {
                       jsonDocument.contentLenght = bodyData.Records[0].s3.object.size;
                       jsonDocument.documentState = "available";
+                      jsonDocument.checkSum = "";
                       params.Bucket = bucketName;
                       params.Key = jsonDocument.documentKey;
                       try {
@@ -953,10 +954,12 @@ Resources:
                         console.log(doc.document.documentType.checksum);
                         console.log(JSON.stringify(doc.document.documentType.checksum));
 
-                        jsonDocument.checkSum = crypto
-                          .createHash(doc.document.documentType.checksum)
-                          .update(Body)
-                          .digest("base64");
+                        if( doc.document.documentType.checksum != "NONE" ) {
+                           jsonDocument.checkSum = crypto
+                             .createHash(doc.document.documentType.checksum)
+                             .update(Body)
+                             .digest("base64");
+                        }
                       } catch (error) {
                         console.log(error);
                         const messageError = `* FATAL * Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}. Verificare che l'oggetto esiste nel bucket o sul database Dynamo.`;

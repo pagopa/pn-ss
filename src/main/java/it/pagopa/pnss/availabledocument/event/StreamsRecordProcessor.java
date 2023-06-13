@@ -44,7 +44,6 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     @Override
     public void processRecords(ProcessRecordsInput processRecordsInput) {
 
-        try {
             List<PutEventsRequestEntry> requestEntries = findEventSendToBridge(processRecordsInput);
             if (!requestEntries.isEmpty()) {
                 EventBridgeClient eventBridgeClient =
@@ -59,12 +58,12 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 PutEventsRequest eventsRequest = PutEventsRequest.builder()
                         .entries(requestEntries)
                         .build();
-                eventBridgeClient.putEvents(eventsRequest);
-
+                try {
+                    eventBridgeClient.putEvents(eventsRequest);
+                }catch (Exception e ){
+                    log.error("* FATAL * DBStream: Errore generico ",e);
+                }
             }
-        }catch (Exception e ){
-            log.error("DBStream: Errore generico ",e);
-        }
 
     }
 
@@ -97,7 +96,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     log.debug("DBStream Ok: {}", recordEvent.getPartitionKey());
 
                 }catch (Exception ex){
-                    log.error("DBStream: Errore generico nella gestione dell'evento su {} - {}",recordEvent.getPartitionKey(), ex );
+                    log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento su {} - {}",recordEvent.getPartitionKey(), ex );
                 }
             }
 
@@ -108,7 +107,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
             }
         }
         catch (Exception e) {
-            log.error("DBStream: Errore nel settaggio del checkpoint",e );
+            log.error("* FATAL * DBStream: Errore nel settaggio del checkpoint",e );
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
         return requestEntries;
@@ -121,7 +120,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 shutdownInput.getCheckpointer().checkpoint();
             }
             catch (Exception e) {
-                log.error("DBStream: Errore durante il processo di shutDown", e);
+                log.error("* FATAL * DBStream: Errore durante il processo di shutDown", e);
             }
         }
 

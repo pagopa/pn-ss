@@ -717,7 +717,7 @@ Resources:
         - DataResources:
             - Type: AWS::S3::Object
               Values:
-                - !Sub "arn:${AWS::Partition}:s3:::${PnSsBucketName}/"  
+                - !Sub "arn:aws:s3:::${PnSsBucketName}/"  
           IncludeManagementEvents: false
           ReadWriteType: All
       S3BucketName: !Ref SafeStorageFileAccessLogsBucketName
@@ -749,7 +749,7 @@ Resources:
       RoleName: !Join [ '', [!Sub '${PnSsGestoreBucketLambdaName}', '-role-name']]
       Description: 'Ruolo della Lambda che implementa la funzionalità del Gestore Bucket'
       ManagedPolicyArns:
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -1075,4 +1075,105 @@ Resources:
               req.end();
             });
           }
-        
+
+##### Gestore Bucket Concurrency Handler  #####
+
+  PnSsGestoreBucketConcurrencyHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ 'PnSsGestoreBucketConcurrencyHandler', '-role-name']]
+      Description: 'Ruolo della Lambda che scala il numero di istanze concorrenti della Lambda Gestore Bucket'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action:
+            - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'PnSsGestoreBucketConcurrencyHandlerInlinePolicy'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              - Sid: 'UpdateGestoreBucketConcurrency'
+                Effect: 'Allow'
+                Action: 
+                  - 'lambda:Get*'
+                  - 'lambda:List*'
+                  - 'lambda:PutFunctionConcurrency'
+                Resource:
+                  - !GetAtt PnSsGestoreBucket.Arn
+              - Sid: 'UpdateGestoreBucketTrigger'
+                Effect: 'Allow'
+                Action: 
+                  - 'lambda:Get*'
+                  - 'lambda:List*'
+                  - 'lambda:UpdateEventSourceMapping'
+                Resource:
+                  - !GetAtt PnSsGestoreBucket.Arn
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:event-source-mapping:${PnSsGestoreBucketInputQueue}'
+
+  PnSsGestoreBucketConcurrencyHandler:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: 'Pn-ss-gestore-bucket-concurrency-handler-lambda' #!Ref PnSsGestoreBucketLambdaName
+      Description: 'Pn SafeStorage Gestore Bucket Concurrency Handler'
+      Handler: index.handler
+      MemorySize: 256
+      Runtime: nodejs16.x
+      Role: !GetAtt PnSsGestoreBucketConcurrencyHandlerRole.Arn
+      Timeout: 240
+      VpcConfig:
+        SubnetIds:
+          - !Select [ 0, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
+        SecurityGroupIds:
+          - !GetAtt PnSsSecurityGroupSafeStorage.GroupId
+      Environment:
+        Variables:
+          PnSsGestoreBucketTriggerId: !Ref PnSsGestoreBucketInputQueue
+          PnSsGestoreBucketLambdaArn: !GetAtt PnSsGestoreBucket.Arn
+
+      Code:
+        ZipFile: |
+          "use strict";
+          const AWS = require('aws-sdk');
+          const uuid = process.env.PnSsGestoreBucketTriggerId;
+          const lambdaArn = process.env.PnSsGestoreBucketLambdaArn;
+          const lambda = new AWS.Lambda();
+
+          exports.handler = async (event) => {  
+            console.log(JSON.stringify(event));
+          };
+
+  PnSsEventRuleGestoreBucketConcurrencyHandler:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: 'pn-ss-event-rule-gestore-bucket-concurrency'
+      Description: 'Rule catching scaling events of the Safe Storage ECS cluster'
+      EventPattern:   
+        source: 
+          - 'aws.application-autoscaling' 
+        account: 
+          - !Ref AWS::AccountId
+        region:
+          - !Ref AWS::Region
+        detail-type: 
+          - 'Application Auto Scaling Scaling Activity State Change'
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt PnSsGestoreBucketConcurrencyHandler.Arn
+          Id: "GestoreBucketConcurrencyHandler"
+
+  PnSsGestoreBucketConcurrencyHandlerPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt PnSsGestoreBucketConcurrencyHandler.Arn
+      Principal: 'events.amazonaws.com'
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn

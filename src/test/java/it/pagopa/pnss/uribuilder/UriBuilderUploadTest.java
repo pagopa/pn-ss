@@ -103,6 +103,13 @@ class UriBuilderUploadTest {
                 .exchange();
     }
 
+    private WebTestClient.ResponseSpec fileUploadTestCallNoHeader(FileCreationRequest fileCreationRequest) {
+
+        return callRequestHeadersSpec(fileCreationRequest)
+                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                .exchange();
+    }
+
     private WebTestClient.ResponseSpec noTraceIdfileUploadTestCall(FileCreationRequest fileCreationRequest) {
 
         return callRequestHeadersSpec(fileCreationRequest)
@@ -194,27 +201,6 @@ class UriBuilderUploadTest {
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus(PRELOADED);
         noTraceIdfileUploadTestCall(fcr).expectStatus().isBadRequest();
-    }
-
-    @Test
-    void testMissingChecksumHeader()
-    {
-        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-        UserConfiguration userConfiguration = new UserConfiguration();
-        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-        userConfiguration.setApiKey(xApiKeyValue);
-        userConfiguration.setCanCreate(List.of(PN_AAR));
-        userConfig.setUserConfiguration(userConfiguration);
-
-        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
-
-        FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setContentType("application/pdf");
-        fcr.setDocumentType(PN_AAR);
-        fcr.setStatus(PRELOADED);
-        noChecksumUploadTestCall(fcr).expectStatus().isBadRequest();
     }
 
     @Test
@@ -342,7 +328,16 @@ class UriBuilderUploadTest {
         }
 
         @Test
-        void testUrlGenerato() {
+        void testUrlGeneratoMD5(){
+            testUrlGenerato(ChecksumEnum.MD5);
+        }
+
+        @Test
+        void testUrlGeneratoNONE(){
+            testUrlGenerato(ChecksumEnum.NONE);
+        }
+
+        void testUrlGenerato(ChecksumEnum checksumValue) {
 
             log.debug("UriBulderUploadTest.testUrlGenerato() : decommentare");
 
@@ -377,17 +372,22 @@ class UriBuilderUploadTest {
             Document document = new Document();
             document.setDocumentKey("keyFile");
             DocumentType documentTypeDoc = new DocumentType();
-            documentTypeDoc.setChecksum(DocumentType.ChecksumEnum.MD5);
+            documentTypeDoc.setChecksum((checksumValue));
             document.setDocumentType(documentTypeDoc);
             docResp.setDocument(document);
             Mono<DocumentResponse> respDoc = Mono.just(docResp);
             Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
 
-            WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(fcr);
+            WebTestClient.ResponseSpec responseSpec;
+
+            if(checksumValue.equals(ChecksumEnum.MD5)){
+                responseSpec = fileUploadTestCall(fcr);
+            }else{
+                responseSpec = fileUploadTestCallNoHeader(fcr);
+            }
+
             FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
                     responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
-
-
             FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
             Assertions.assertFalse(resp.getUploadUrl().isEmpty());
         }

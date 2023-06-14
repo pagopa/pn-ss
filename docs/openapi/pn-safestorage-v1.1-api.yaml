@@ -765,7 +765,7 @@ components:
             codice di verifica del corretto caricamento del file
             https://aws.amazon.com/it/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/
           type: string
-          enum: [ 'MD5', 'SHA256']
+          enum: [ 'MD5', 'SHA256', 'NONE']
         statuses:
           description: >- 
             Elenco degli stati che un documento può assumere. Usato solo per gli allegati 

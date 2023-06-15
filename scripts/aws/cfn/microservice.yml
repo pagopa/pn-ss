@@ -404,6 +404,7 @@ Resources:
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         LogAlarmStrategyV1: !Ref LogAlarmStrategy
         EcsLogGroup: !Ref EcsLogGroup
+        LoadBalancingAlgorithm: round_robin
         # HealthCheckPath: 
   
   PnSsManagedPolicy:

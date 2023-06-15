@@ -214,10 +214,6 @@ Parameters:
     Description: 'Nome della managed policy de lmicroservizio Safe Storage'
     Default: 'PnSsManagedPolicyName'
  
-  PnSsGestoreBucketLambdaName:
-    Type: String
-    Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
- 
   PnSsEventBusNameExternalNotification:
     Type: String
     Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'
@@ -320,6 +316,18 @@ Parameters:
     Type: String
     Description: 'GestoreBucket Security Group'
 
+  PnSsGestoreBucketLambdaName:
+    Type: String
+    Description: 'Name of Lambda function implementing functionality of Gestore Bucket'
+  
+  PnSsGestoreBucketConcurrencyHandlerLambdaName:
+    Type: String
+    Description: "Name of Lambda function which updates Gestore Bucket's concurrency"
+
+  PnSsEventRuleNameGestoreBucketConcurrencyHandler:
+    Type: String
+    Description: "Event Bridge Rule to trigger the update of Gestore Bucket's concurrrent instances"
+
   PnSsGestoreBucketInstancesPerTaskInstance:
     Type: String
     Description: 'Concurrent instances of Gestore Bucket for each instance of SS microservice task'  
@@ -343,7 +351,7 @@ Parameters:
   PCKmsEncDecDynamoDataKeyARN:
     Type: String
     Description: 'Name of KMS Key for Dynamo encode/decode data'
-    
+
   # Log group parameters
   EcsLogGroup:
     Type: String
@@ -750,7 +758,7 @@ Resources:
   PnSsGestoreBucketRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Join [ '', [!Sub '${PnSsGestoreBucketLambdaName}', '-role-name']]
+      RoleName: !Join [ '', [!Sub '${PnSsGestoreBucketLambdaName}', '-role']]
       Description: 'Ruolo della Lambda che implementa la funzionalità del Gestore Bucket'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
@@ -1085,8 +1093,8 @@ Resources:
   PnSsGestoreBucketConcurrencyHandlerRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Join [ '', [ 'PnSsGestoreBucketConcurrencyHandler', '-role-name']]
-      Description: 'Ruolo della Lambda che scala il numero di istanze concorrenti della Lambda Gestore Bucket'
+      RoleName: !Join [ '', [ 'PnSsGestoreBucketConcurrencyHandler', '-role']]
+      Description: 'Lambda Role to scale the number of concurrent instances of Lambda Gestore Bucket'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
       AssumeRolePolicyDocument:
@@ -1123,8 +1131,8 @@ Resources:
   PnSsGestoreBucketConcurrencyHandler:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: 'Pn-ss-gestore-bucket-concurrency-handler-lambda' #!Ref PnSsGestoreBucketLambdaName
-      Description: 'Pn SafeStorage Gestore Bucket Concurrency Handler'
+      FunctionName: !Ref PnSsGestoreBucketConcurrencyHandlerLambdaName
+      Description: 'SafeStorage Concurrency Handler for Gestore Bucket'
       Handler: index.handler
       MemorySize: 256
       Runtime: nodejs16.x
@@ -1141,6 +1149,7 @@ Resources:
         Variables:
           PnSsGestoreBucketTriggerId: !Ref PnSsGestoreBucketInputQueue
           PnSsGestoreBucketLambdaArn: !GetAtt PnSsGestoreBucket.Arn
+          PnSsGestoreBucketInstancesPerTaskInstance: !Ref PnSsGestoreBucketInstancesPerTaskInstance
 
       Code:
         ZipFile: |
@@ -1148,16 +1157,66 @@ Resources:
           const AWS = require('aws-sdk');
           const uuid = process.env.PnSsGestoreBucketTriggerId;
           const lambdaArn = process.env.PnSsGestoreBucketLambdaArn;
+          const lambdaName = lambdaArn.split('function/')
+          console.log('Lambda function named "', lambdaName[1], '" with arn "', lambdaArn ,'" and triggerID = "', uuid, '" will be updated')
           const lambda = new AWS.Lambda();
 
-          exports.handler = async (event) => {  
+          exports.handler = async function (event) {
             console.log(JSON.stringify(event));
-          };
+            
+            const newCapacity = event.detail.newDesiredCapacity;
+            const oldCapacity = event.detail.oldDesiredCapacity;
+            console.log("Safe Storage ECS Task capacity changed from ", oldCapacity, " to ", newCapacity);
+            
+            const instancesNumberPerTask = process.env.PnSsGestoreBucketInstancesPerTaskInstance;
+            const concurrency = newCapacity * instancesNumberPerTask;
+            console.log("New concurrency: ", concurrency);
+            
+            // Setting lambda concurrency params
+            const lambda_params = {
+                FunctionName: lambdaArn,
+                ReservedConcurrentExecutions: concurrency
+              };
+            
+            // Setting lambda params
+            const event_source_mapping_params = {
+              FunctionName: lambdaArn,
+              UUID: uuid,
+              ScalingConfig: {
+                  MaximumConcurrency: concurrency
+              }
+            };
+
+            // Modifica la concurrency della funzione Lambda
+            await new Promise(function (resolve, reject){
+              lambda.putFunctionConcurrency(lambda_params, (res) => {
+                console.log("Changed lambda concurrency to ", concurrency);
+              }).on("error", (e) => {
+                console.log("* FATAL * An error occurred while calling putFunctionConcurrency of function ", lambdaName[1]);
+                reject(Error(e));
+              });
+            });
+
+            // Modifica l'EventSourceMapping della funzione Lambda
+            await new Promise(function (resolve, reject){
+              lambda.lambda.updateEventSourceMapping(event_source_mapping_params, (res) => {
+                console.log("Updated Lambda Event Source Mapping with the following params: ", JSON.stringify(event_source_mapping_params));
+              }).on("error", (e) => {
+                console.log("* FATAL * An error occurred while calling updateEventSourceMapping for trigger ", uuid);
+                reject(Error(e));
+              });
+            });
+
+            return {
+              statusCode: 200,
+              body: 'Concurrency and EventSourceMapping successfully modified! '
+            };
+          }
 
   PnSsEventRuleGestoreBucketConcurrencyHandler:
     Type: AWS::Events::Rule
     Properties:
-      Name: 'pn-ss-event-rule-gestore-bucket-concurrency'
+      Name: !Ref PnSsEventRuleNameGestoreBucketConcurrencyHandler
       Description: 'Rule catching scaling events of the Safe Storage ECS cluster'
       EventPattern:   
         source: 

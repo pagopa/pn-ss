@@ -353,11 +353,6 @@ Parameters:
     Default: 70
     Type: String
 
-  MinTasksNumber:
-    Default: 1
-    Type: Number
-    Description: minimum autoscaling number of tasks
-
   MaxTasksNumber:
     Default: 6
     Type: Number

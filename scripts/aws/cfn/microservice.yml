@@ -1225,7 +1225,8 @@ Resources:
       Name: !Ref PnSsEventRuleNameGestoreBucketConcurrencyHandler
       Description: 'Rule catching scaling events of the Safe Storage ECS cluster'
       EventPattern:   
-        detail-type: 'AWS API Call via CloudTrail'
+        detail-type: 
+          - 'AWS API Call via CloudTrail'
         source: 
           - 'aws.ecs' 
         detail:
@@ -1234,7 +1235,8 @@ Resources:
           eventName:
             - 'UpdateService'
           requestParameters:
-            service: !GetAtt SafeStorageMicroservice.Outputs.ServiceName
+            service: 
+              - !GetAtt SafeStorageMicroservice.Outputs.ServiceName
           responseElements:
             service:
               - serviceArn:!GetAtt SafeStorageMicroservice.Outputs.ServiceARN 

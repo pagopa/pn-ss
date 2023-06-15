@@ -408,12 +408,12 @@ Resources:
         LoadBalancerListenerArn: !Ref ApplicationLoadBalancerListenerArn
         LoadbalancerRulePriority: !Ref MicroserviceNumber
         MinTasksNumber: !Ref PnSsMinTasksInstancesNumber
-        MaxTasksNumber: 3
+        MaxTasksNumber: 2
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         EcsLogGroup: !Ref EcsLogGroup
         AutoscalingStrategy: 'REST-API'
-        AutoscalingThreshold: '100'
+        AutoscalingThreshold: '20000'
   
   PnSsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -1189,6 +1189,16 @@ Resources:
               }
             };
 
+            // Modifica l'EventSourceMapping della funzione Lambda
+            await new Promise(function (resolve, reject){
+              lambda.updateEventSourceMapping(event_source_mapping_params, (res) => {
+                console.log("Updated Lambda Event Source Mapping with the following params: ", JSON.stringify(event_source_mapping_params));
+              }).on("error", (e) => {
+                console.log("* FATAL * An error occurred while calling updateEventSourceMapping for trigger ", uuid);
+                reject(Error(e));
+              });
+            });
+
             // Modifica la concurrency della funzione Lambda
             await new Promise(function (resolve, reject){
               lambda.putFunctionConcurrency(lambda_params, (res) => {
@@ -1199,15 +1209,6 @@ Resources:
               });
             });
 
-            // Modifica l'EventSourceMapping della funzione Lambda
-            await new Promise(function (resolve, reject){
-              lambda.lambda.updateEventSourceMapping(event_source_mapping_params, (res) => {
-                console.log("Updated Lambda Event Source Mapping with the following params: ", JSON.stringify(event_source_mapping_params));
-              }).on("error", (e) => {
-                console.log("* FATAL * An error occurred while calling updateEventSourceMapping for trigger ", uuid);
-                reject(Error(e));
-              });
-            });
 
             return {
               statusCode: 200,
@@ -1223,12 +1224,11 @@ Resources:
       EventPattern:   
         source: 
           - 'aws.application-autoscaling' 
+          - 'ecs.amazonaws.com'
         account: 
           - !Ref AWS::AccountId
         region:
           - !Ref AWS::Region
-        detail-type: 
-          - 'Application Auto Scaling Scaling Activity State Change'
       State: 'ENABLED'
       Targets:
         - Arn: !GetAtt PnSsGestoreBucketConcurrencyHandler.Arn

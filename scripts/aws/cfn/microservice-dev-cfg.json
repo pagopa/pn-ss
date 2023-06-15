@@ -18,6 +18,8 @@
     "PnSsTimemarkUrl": "https://servizi.arubapec.it/tsa/ngrequest.php",
     "PnSsSecurityGroupNameSafeStorage" : "pn-ss-gestore-bucket-sec-group",
     "MaxTasksNumber": "13",
+    "PnSsMinTasksInstancesNumber": "2",
+    "PnSsGestoreBucketReservedConcurrentExecutions": "60",
     "AutoscalingThreshold": "14371"
   }
 }

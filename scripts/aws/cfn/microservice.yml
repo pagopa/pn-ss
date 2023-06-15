@@ -349,6 +349,15 @@ Parameters:
     Type: String
     Description: 'Ecs log group name'
 
+  AutoscalingThreshold:
+    Default: 70
+    Type: String
+
+  MaxTasksNumber:
+    Default: 6
+    Type: Number
+    Description: maximum autoscaling number of tasks
+
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
@@ -404,6 +413,9 @@ Resources:
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         LogAlarmStrategyV1: !Ref LogAlarmStrategy
         EcsLogGroup: !Ref EcsLogGroup
+        LoadBalancingAlgorithm: round_robin
+        AutoscalingThreshold: !Ref AutoscalingThreshold
+        MaxTasksNumber: !Ref MaxTasksNumber
         # HealthCheckPath: 
   
   PnSsManagedPolicy:

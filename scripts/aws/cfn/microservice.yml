@@ -320,6 +320,22 @@ Parameters:
     Type: String
     Description: 'GestoreBucket Security Group'
 
+  PnSsGestoreBucketInstancesPerTaskInstance:
+    Type: String
+    Description: 'Concurrent instances of Gestore Bucket for each instance of SS microservice task'  
+    Default: 20
+
+  PnSsMinTasksInstancesNumber:
+    Type: Number
+    Description: 'Minimum number of running instances for the microservice'
+    Default: 2
+
+  PnSsGestoreBucketMinReservedConcurrentExecutions:
+    Type: Number
+    Description: 'Maximum number of concurrent executions for Lambda Gestore Bucket'
+    Default: 40
+
+### Altri parametri
   AlarmSNSTopicName:
     Type: String
     Description: 'Topic alarm'
@@ -327,19 +343,7 @@ Parameters:
   PCKmsEncDecDynamoDataKeyARN:
     Type: String
     Description: 'Name of KMS Key for Dynamo encode/decode data'
-
-#### Parametri esterni indipendenti ###
-
-  PnSsGestoreBucketReservedConcurrentExecutions:
-    Type: Number
-    Description: 'Maximum number of concurrent executions for Lambda Gestore Bucket'
-    Default: 40
-
-  PnSsMinTasksInstancesNumber:
-    Type: Number
-    Description: 'Minimum number of running instances for the microservice'
-    Default: 2
-
+    
   # Log group parameters
   EcsLogGroup:
     Type: String
@@ -861,7 +865,7 @@ Resources:
         - ReportBatchItemFailures
       MaximumBatchingWindowInSeconds: 0 #default value
       ScalingConfig: 
-        MaximumConcurrency: !Ref PnSsGestoreBucketReservedConcurrentExecutions
+        MaximumConcurrency: !Ref PnSsGestoreBucketMinReservedConcurrentExecutions
 
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function
@@ -870,7 +874,7 @@ Resources:
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
       MemorySize: 1024
-      ReservedConcurrentExecutions: !Ref PnSsGestoreBucketReservedConcurrentExecutions
+      ReservedConcurrentExecutions: !Ref PnSsGestoreBucketMinReservedConcurrentExecutions
       Runtime: nodejs16.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240

@@ -1193,6 +1193,7 @@ Resources:
             await new Promise(function (resolve, reject){
               lambda.updateEventSourceMapping(event_source_mapping_params, (res) => {
                 console.log("Updated Lambda Event Source Mapping with the following params: ", JSON.stringify(event_source_mapping_params));
+                resolve();
               }).on("error", (e) => {
                 console.log("* FATAL * An error occurred while calling updateEventSourceMapping for trigger ", uuid);
                 reject(Error(e));
@@ -1203,6 +1204,7 @@ Resources:
             await new Promise(function (resolve, reject){
               lambda.putFunctionConcurrency(lambda_params, (res) => {
                 console.log("Changed lambda concurrency to ", concurrency);
+                resolve();
               }).on("error", (e) => {
                 console.log("* FATAL * An error occurred while calling putFunctionConcurrency of function ", lambdaName[1]);
                 reject(Error(e));

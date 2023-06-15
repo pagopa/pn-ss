@@ -324,11 +324,15 @@ Parameters:
     Type: String
     Description: 'Topic alarm'
 
+  LogAlarmStrategy:
+    Type: String
+    Default: 'FATAL'
+    
   PCKmsEncDecDynamoDataKeyARN:
     Type: String
     Description: 'Name of KMS Key for Dynamo encode/decode data'
 
-#### Parametri esterni indipendenti ###
+  #### Parametri esterni indipendenti ###
 
   PnSsGestoreBucketReservedConcurrentExecutions:
     Type: Number
@@ -398,6 +402,7 @@ Resources:
         MinTasksNumber: !Ref PnSsMinTasksInstancesNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
+        LogAlarmStrategyV1: !Ref LogAlarmStrategy
         EcsLogGroup: !Ref EcsLogGroup
         # HealthCheckPath: 
   

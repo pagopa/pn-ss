@@ -1159,15 +1159,16 @@ Resources:
           const AWS = require('aws-sdk');
           const uuid = process.env.PnSsGestoreBucketTriggerId;
           const lambdaArn = process.env.PnSsGestoreBucketLambdaArn;
-          const lambdaName = lambdaArn.split('function/')
-          console.log('Lambda function named "', lambdaName[1], '" with arn "', lambdaArn ,'" and triggerID = "', uuid, '" will be updated')
+          const lambdaArr = lambdaArn.split('function/')
+          var lambdaName = lambdaArr[1]
+          console.log('Lambda function named "', lambdaName, '" with arn "', lambdaArn ,'" and triggerID = "', uuid, '" will be updated')
           const lambda = new AWS.Lambda();
 
           exports.handler = async function (event) {
             console.log(JSON.stringify(event));
             
-            const newCapacity = event.detail.newDesiredCapacity;
-            const oldCapacity = event.detail.oldDesiredCapacity;
+            const newCapacity = event.detail.responseElements.service.desiredCount;
+            const oldCapacity = event.detail.responseElements.service.runningCount;
             console.log("Safe Storage ECS Task capacity changed from ", oldCapacity, " to ", newCapacity);
             
             const instancesNumberPerTask = process.env.PnSsGestoreBucketInstancesPerTaskInstance;
@@ -1206,7 +1207,7 @@ Resources:
                 console.log("Changed lambda concurrency to ", concurrency);
                 resolve();
               }).on("error", (e) => {
-                console.log("* FATAL * An error occurred while calling putFunctionConcurrency of function ", lambdaName[1]);
+                console.log("* FATAL * An error occurred while calling putFunctionConcurrency of function ", lambdaName);
                 reject(Error(e));
               });
             });
@@ -1224,9 +1225,19 @@ Resources:
       Name: !Ref PnSsEventRuleNameGestoreBucketConcurrencyHandler
       Description: 'Rule catching scaling events of the Safe Storage ECS cluster'
       EventPattern:   
+        detail-type: 'AWS API Call via CloudTrail'
         source: 
-          - 'aws.application-autoscaling' 
-          - 'ecs.amazonaws.com'
+          - 'aws.ecs' 
+        detail:
+          eventSource:
+            - 'ecs.amazonaws.com'
+          eventName:
+            - 'UpdateService'
+          requestParameters:
+            service: !GetAtt SafeStorageMicroservice.Outputs.ServiceName
+          responseElements:
+            service:
+              - serviceArn:!GetAtt SafeStorageMicroservice.Outputs.ServiceARN 
         account: 
           - !Ref AWS::AccountId
         region:

@@ -408,10 +408,12 @@ Resources:
         LoadBalancerListenerArn: !Ref ApplicationLoadBalancerListenerArn
         LoadbalancerRulePriority: !Ref MicroserviceNumber
         MinTasksNumber: !Ref PnSsMinTasksInstancesNumber
+        MaxTasksNumber: 3
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         EcsLogGroup: !Ref EcsLogGroup
-        # HealthCheckPath: 
+        AutoscalingStrategy: 'REST-API'
+        AutoscalingThreshold: '100'
   
   PnSsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy

@@ -21,7 +21,7 @@
     "PnSsSecurityGroupNameSafeStorage" : "pn-ss-gestore-bucket-sec-group",
     "PnSsEventRuleNameGestoreBucketConcurrencyHandler" : "pn-ss-gestore-bucket-concurrency-rule",
     "PnSsGestoreBucketInstancesPerTaskInstance" : "20",
-    "PnSsMinTasksInstancesNumber" : "2",
-    "PnSsGestoreBucketMinReservedConcurrentExecutions": "40"
+    "PnSsMinTasksInstancesNumber" : "1",
+    "PnSsGestoreBucketMinReservedConcurrentExecutions": "20"
   }
 }

@@ -2,6 +2,7 @@ package it.pagopa.pnss.uribuilder.service;
 
 import com.amazonaws.SdkClientException;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
@@ -39,7 +40,8 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
@@ -69,16 +71,22 @@ public class UriBuilderService {
     @Value("${max.restore.time.cold}")
     BigDecimal maxRestoreTimeCold;
 
+    @Value("${default.internal.x-api-key.value:#{null}}")
+    private String defaultInternalApiKeyValue;
+
+    @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
+    private String defaultInternalClientIdValue;
+
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
     private final DocTypesClientCall docTypesClientCall;
-
     private final S3Service s3Service;
-
     private final S3Presigner s3Presigner;
-
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
+
+    private final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+    private final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
                              BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner) {
@@ -359,20 +367,26 @@ public class UriBuilderService {
                 })
 
                 //Check sul parsing corretto della retentionUntil
-                .handle((fileDownloadResponse, synchronousSink) ->
+                .flatMap(fileDownloadResponse ->
                 {
-                    if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
-                        try {
-                            final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
-                            synchronousSink.next(fileDownloadResponse.retentionUntil((new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()))));
-                        } catch (Exception e) {
-                            log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
-                            synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage()));
-                        }
-                    } else synchronousSink.next(fileDownloadResponse);
+                    if (!StringUtils.isBlank(doc.getRetentionUntil())) {
+                        var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
+                        return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
+                    } else {
+                        return s3Service.headObject(fileKey, bucketName.ssHotName())
+                                .map(HeadObjectResponse::objectLockRetainUntilDate)
+                                .flatMap(retentionInstant ->
+                                        documentClientCall
+                                                .patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, fileKey, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(retentionInstant)))
+                                                .thenReturn(retentionInstant))
+                                .map(retentionInstant -> fileDownloadResponse.retentionUntil(Date.from(retentionInstant)));
+                    }
                 })
-                .cast(FileDownloadResponse.class)
-
+                .onErrorResume(DateTimeException.class, throwable ->
+                {
+                    log.error("getFileDownloadResponse() : errore nel parsing o nella formattazione della data = {}", throwable.getMessage(), throwable);
+                    return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, throwable.getMessage()));
+                })
                 //Check sugli stati validi.
                 .handle((fileDownloadResponse, synchronousSink) ->
                 {

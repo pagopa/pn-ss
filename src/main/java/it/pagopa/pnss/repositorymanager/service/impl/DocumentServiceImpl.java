@@ -21,6 +21,7 @@ import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tika.utils.StringUtils;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
@@ -133,7 +134,7 @@ public class DocumentServiceImpl implements DocumentService {
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(documentEntity -> {
 
-                       if(!documentChanges.getDocumentState().isBlank()) {
+                       if(!StringUtils.isBlank(documentChanges.getDocumentState())) {
                            var documentStatusChange = new DocumentStatusChange();
                            documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
                            documentStatusChange.setProcessId("SS");
@@ -147,7 +148,7 @@ public class DocumentServiceImpl implements DocumentService {
                    .map(tuple -> {
                        DocumentEntity documentEntityStored = tuple.getT1();
                        log.debug("patchDocument() : (recupero documentEntity dal DB) documentEntityStored = {}", documentEntityStored);
-                       if (documentChanges.getDocumentState() != null && !documentChanges.getDocumentState().isBlank()) {
+                       if (!StringUtils.isBlank(documentChanges.getDocumentState())) {
                            // il vecchio stato viene considerato nella gestione della retentionUntil
                            oldState.set(documentEntityStored.getDocumentState());
                            boolean statusFound= false;

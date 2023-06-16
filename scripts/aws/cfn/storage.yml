@@ -246,6 +246,15 @@ Resources:
             Transitions: 
               - StorageClass: 'GLACIER'
                 TransitionInDays: 1
+          - Id: 'PnSsInvoicingActivityReport'
+            ExpirationInDays: 366
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storageType'
+                Value: 'PN_INVOICING_ACTIVITY_REPORT'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 70
       NotificationConfiguration:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'

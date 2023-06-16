@@ -362,6 +362,10 @@ Parameters:
     Type: String
     Description: 'Name of KMS Key for Dynamo encode/decode data'
 
+  LogAlarmStrategy:
+    Type: String
+    Default: 'FATAL'
+
   # Log group parameters
   EcsLogGroup:
     Type: String
@@ -421,6 +425,7 @@ Resources:
         MaxTasksNumber: !Ref MaxTasksNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
+        LogAlarmStrategyV1: !Ref LogAlarmStrategy
         EcsLogGroup: !Ref EcsLogGroup
         AutoscalingStrategy: 'REST-API'
         AutoscalingThreshold: !Ref AutoscalingThreshold

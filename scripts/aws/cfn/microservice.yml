@@ -333,15 +333,25 @@ Parameters:
     Description: 'Concurrent instances of Gestore Bucket for each instance of SS microservice task'  
     Default: 20
 
-  PnSsMinTasksInstancesNumber:
-    Type: Number
-    Description: 'Minimum number of running instances for the microservice'
-    Default: 2
-
   PnSsGestoreBucketMinReservedConcurrentExecutions:
     Type: Number
     Description: 'Maximum number of concurrent executions for Lambda Gestore Bucket'
     Default: 40
+
+  MinTasksNumber:
+    Type: Number
+    Description: 'Minimum number of running instances for the microservice'
+    Default: 2
+
+  MaxTasksNumber:
+    Type: Number
+    Description: 'Maximum number of running instances for the microservice'
+    Default: 2
+
+  AutoscalingThreshold:
+    Type: Number
+    Description: 'Alarm threshold to trigger autoscaling of the microservice'
+    Default: 2
 
 ### Altri parametri
   AlarmSNSTopicName:
@@ -407,13 +417,13 @@ Resources:
         EcsDefaultSecurityGroup: !Ref EcsDefaultSecurityGroup
         LoadBalancerListenerArn: !Ref ApplicationLoadBalancerListenerArn
         LoadbalancerRulePriority: !Ref MicroserviceNumber
-        MinTasksNumber: !Ref PnSsMinTasksInstancesNumber
-        MaxTasksNumber: 2
+        MinTasksNumber: !Ref MinTasksNumber
+        MaxTasksNumber: !Ref MaxTasksNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         EcsLogGroup: !Ref EcsLogGroup
         AutoscalingStrategy: 'REST-API'
-        AutoscalingThreshold: '20000'
+        AutoscalingThreshold: !Ref AutoscalingThreshold
   
   PnSsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -1190,17 +1200,6 @@ Resources:
               }
             };
 
-            // Modifica l'EventSourceMapping della funzione Lambda
-            await new Promise(function (resolve, reject){
-              lambda.updateEventSourceMapping(event_source_mapping_params, (res) => {
-                console.log("Updated Lambda Event Source Mapping with the following params: ", JSON.stringify(event_source_mapping_params));
-                resolve();
-              }).on("error", (e) => {
-                console.log("* FATAL * An error occurred while calling updateEventSourceMapping for trigger ", uuid);
-                reject(Error(e));
-              });
-            });
-
             // Modifica la concurrency della funzione Lambda
             await new Promise(function (resolve, reject){
               lambda.putFunctionConcurrency(lambda_params, (res) => {
@@ -1212,6 +1211,16 @@ Resources:
               });
             });
 
+            // Modifica l'EventSourceMapping della funzione Lambda
+            await new Promise(function (resolve, reject){
+              lambda.updateEventSourceMapping(event_source_mapping_params, (res) => {
+                console.log("Updated Lambda Event Source Mapping with the following params: ", JSON.stringify(event_source_mapping_params));
+                resolve();
+              }).on("error", (e) => {
+                console.log("* FATAL * An error occurred while calling updateEventSourceMapping for trigger ", uuid);
+                reject(Error(e));
+              });
+            });
 
             return {
               statusCode: 200,
@@ -1239,11 +1248,8 @@ Resources:
               - !GetAtt SafeStorageMicroservice.Outputs.ServiceName
           responseElements:
             service:
-              - serviceArn:!GetAtt SafeStorageMicroservice.Outputs.ServiceARN 
-        account: 
-          - !Ref AWS::AccountId
-        region:
-          - !Ref AWS::Region
+              serviceArn: 
+                - !GetAtt SafeStorageMicroservice.Outputs.ServiceARN 
       State: 'ENABLED'
       Targets:
         - Arn: !GetAtt PnSsGestoreBucketConcurrencyHandler.Arn

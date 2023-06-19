@@ -351,7 +351,7 @@ Parameters:
   AutoscalingThreshold:
     Type: Number
     Description: 'Alarm threshold to trigger autoscaling of the microservice'
-    Default: 2
+    Default: 20000
 
 ### Altri parametri
   AlarmSNSTopicName:
@@ -370,6 +370,11 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
+    
+  MaxTasksNumber:
+    Default: 6
+    Type: Number
+    Description: maximum autoscaling number of tasks
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
@@ -421,14 +426,16 @@ Resources:
         EcsDefaultSecurityGroup: !Ref EcsDefaultSecurityGroup
         LoadBalancerListenerArn: !Ref ApplicationLoadBalancerListenerArn
         LoadbalancerRulePriority: !Ref MicroserviceNumber
-        MinTasksNumber: !Ref MinTasksNumber
-        MaxTasksNumber: !Ref MaxTasksNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         LogAlarmStrategyV1: !Ref LogAlarmStrategy
         EcsLogGroup: !Ref EcsLogGroup
-        AutoscalingStrategy: 'REST-API'
+        LoadBalancingAlgorithm: round_robin
         AutoscalingThreshold: !Ref AutoscalingThreshold
+        AutoscalingStrategy: REST-API
+        MinTasksNumber: !Ref MinTasksNumber
+        MaxTasksNumber: !Ref MaxTasksNumber
+        # HealthCheckPath: 
   
   PnSsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy

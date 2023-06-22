@@ -327,6 +327,9 @@ public class UriBuilderService {
                                    } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
                                        synchronousSink.error(new ResponseStatusException(HttpStatus.GONE,
                                                "Document has been deleted"));
+                                   } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) || document.getDocumentState().equalsIgnoreCase(STAGED)) {
+                                       synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                               "Document not found"));
                                    } else synchronousSink.next(document);
                                })
                                .doOnSuccess(o -> log.debug("---  FINE  CHECK PERMESSI LETTURA"));
@@ -386,20 +389,6 @@ public class UriBuilderService {
                 {
                     log.error("getFileDownloadResponse() : errore nel parsing o nella formattazione della data = {}", throwable.getMessage(), throwable);
                     return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, throwable.getMessage()));
-                })
-                //Check sugli stati validi.
-                .handle((fileDownloadResponse, synchronousSink) ->
-                {
-                    if (Boolean.FALSE.equals(metadataOnly) && (doc.getDocumentState() == null || !(doc.getDocumentState()
-                            .equalsIgnoreCase(
-                                    TECHNICAL_STATUS_AVAILABLE) || doc.getDocumentState()
-                            .equalsIgnoreCase(
-                                    TECHNICAL_STATUS_ATTACHED) || doc.getDocumentState()
-                            .equalsIgnoreCase(
-                                    TECHNICAL_STATUS_FREEZED)))) {
-                        synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                "Document : " + doc.getDocumentKey() + " not has a valid state "));
-                    } else synchronousSink.next(fileDownloadResponse);
                 })
                 .cast(FileDownloadResponse.class);
     }

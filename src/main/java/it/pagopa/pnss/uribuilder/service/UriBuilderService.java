@@ -137,10 +137,7 @@ public class UriBuilderService {
                                             .map(unused-> getFileExtension(contentType))
                                             .onErrorResume(ContentTypeNotFoundException.class, e-> Mono.just(""))
                                             .flatMap(fileExtension -> {
-                                                var documentKeyTmp = String.format("%s%s",
-                                                                                   GenerateRandoKeyFile.getInstance()
-                                                                                                       .createKeyName(documentType),
-                                                                                                        fileExtension);
+                                                var documentKeyTmp = GenerateRandoKeyFile.getInstance().createKeyName(documentType, fileExtension);
                                                 log.debug("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
                                                 return documentClientCall.postDocument(new DocumentInput().contentType(request.getContentType())
                                                                                                           .documentKey(documentKeyTmp)

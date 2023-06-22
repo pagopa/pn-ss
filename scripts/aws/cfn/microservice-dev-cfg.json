@@ -16,10 +16,14 @@
     "PnSsIdentityTimemark": "pn/identity/timemark",
     "PnSsIdentitySignature": "pn/identity/signature",
     "PnSsTimemarkUrl": "https://servizi.arubapec.it/tsa/ngrequest.php",
+    "PnSsGestoreBucketLambdaName" : "pn-safe-storage-gestore-bucket-lambda",
+    "PnSsGestoreBucketConcurrencyHandlerLambdaName" : "pn-ss-gestore-bucket-concurrency-handler-lambda",
     "PnSsSecurityGroupNameSafeStorage" : "pn-ss-gestore-bucket-sec-group",
+    "PnSsEventRuleNameGestoreBucketConcurrencyHandler" : "pn-ss-gestore-bucket-concurrency-rule",
+    "PnSsGestoreBucketInstancesPerTaskInstance" : "20",
+    "PnSsGestoreBucketMinReservedConcurrentExecutions": "40",
+    "MinTasksNumber": "2",
     "MaxTasksNumber": "13",
-    "PnSsMinTasksInstancesNumber": "2",
-    "PnSsGestoreBucketReservedConcurrentExecutions": "60",
-    "AutoscalingThreshold": "14371"
+    "AutoscalingThreshold": "20000"
   }
 }

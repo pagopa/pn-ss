@@ -214,10 +214,6 @@ Parameters:
     Description: 'Nome della managed policy de lmicroservizio Safe Storage'
     Default: 'PnSsManagedPolicyName'
  
-  PnSsGestoreBucketLambdaName:
-    Type: String
-    Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
- 
   PnSsEventBusNameExternalNotification:
     Type: String
     Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'
@@ -320,39 +316,61 @@ Parameters:
     Type: String
     Description: 'GestoreBucket Security Group'
 
-  AlarmSNSTopicName:
+  PnSsGestoreBucketLambdaName:
     Type: String
-    Description: 'Topic alarm'
-
-  LogAlarmStrategy:
+    Description: 'Name of Lambda function implementing functionality of Gestore Bucket'
+  
+  PnSsGestoreBucketConcurrencyHandlerLambdaName:
     Type: String
-    Default: 'FATAL'
-    
-  PCKmsEncDecDynamoDataKeyARN:
+    Description: "Name of Lambda function which updates Gestore Bucket's concurrency"
+
+  PnSsEventRuleNameGestoreBucketConcurrencyHandler:
     Type: String
-    Description: 'Name of KMS Key for Dynamo encode/decode data'
+    Description: "Event Bridge Rule to trigger the update of Gestore Bucket's concurrrent instances"
 
-  #### Parametri esterni indipendenti ###
+  PnSsGestoreBucketInstancesPerTaskInstance:
+    Type: String
+    Description: 'Concurrent instances of Gestore Bucket for each instance of SS microservice task'  
+    Default: 20
 
-  PnSsGestoreBucketReservedConcurrentExecutions:
+  PnSsGestoreBucketMinReservedConcurrentExecutions:
     Type: Number
     Description: 'Maximum number of concurrent executions for Lambda Gestore Bucket'
     Default: 40
 
-  PnSsMinTasksInstancesNumber:
+  MinTasksNumber:
     Type: Number
     Description: 'Minimum number of running instances for the microservice'
     Default: 2
+
+  MaxTasksNumber:
+    Type: Number
+    Description: 'Maximum number of running instances for the microservice'
+    Default: 2
+
+  AutoscalingThreshold:
+    Type: Number
+    Description: 'Alarm threshold to trigger autoscaling of the microservice'
+    Default: 20000
+
+### Altri parametri
+  AlarmSNSTopicName:
+    Type: String
+    Description: 'Topic alarm'
+
+  PCKmsEncDecDynamoDataKeyARN:
+    Type: String
+    Description: 'Name of KMS Key for Dynamo encode/decode data'
+
+  LogAlarmStrategy:
+    Type: String
+    Default: 'FATAL'
 
   # Log group parameters
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
-
-  AutoscalingThreshold:
-    Default: 70
-    Type: String
-
+    
   MaxTasksNumber:
     Default: 6
     Type: Number
@@ -408,15 +426,15 @@ Resources:
         EcsDefaultSecurityGroup: !Ref EcsDefaultSecurityGroup
         LoadBalancerListenerArn: !Ref ApplicationLoadBalancerListenerArn
         LoadbalancerRulePriority: !Ref MicroserviceNumber
-        MinTasksNumber: !Ref PnSsMinTasksInstancesNumber
         # CloudwatchLogKinesisStreamArn: !Ref LogsKinesisSourceStreamArn
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         LogAlarmStrategyV1: !Ref LogAlarmStrategy
         EcsLogGroup: !Ref EcsLogGroup
         LoadBalancingAlgorithm: round_robin
         AutoscalingThreshold: !Ref AutoscalingThreshold
-        MaxTasksNumber: !Ref MaxTasksNumber
         AutoscalingStrategy: REST-API
+        MinTasksNumber: !Ref MinTasksNumber
+        MaxTasksNumber: !Ref MaxTasksNumber
         # HealthCheckPath: 
   
   PnSsManagedPolicy:
@@ -735,7 +753,7 @@ Resources:
         - DataResources:
             - Type: AWS::S3::Object
               Values:
-                - !Sub "arn:${AWS::Partition}:s3:::${PnSsBucketName}/"  
+                - !Sub "arn:aws:s3:::${PnSsBucketName}/"  
           IncludeManagementEvents: false
           ReadWriteType: All
       S3BucketName: !Ref SafeStorageFileAccessLogsBucketName
@@ -764,10 +782,10 @@ Resources:
   PnSsGestoreBucketRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Join [ '', [!Sub '${PnSsGestoreBucketLambdaName}', '-role-name']]
+      RoleName: !Join [ '', [!Sub '${PnSsGestoreBucketLambdaName}', '-role']]
       Description: 'Ruolo della Lambda che implementa la funzionalità del Gestore Bucket'
       ManagedPolicyArns:
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -879,7 +897,7 @@ Resources:
         - ReportBatchItemFailures
       MaximumBatchingWindowInSeconds: 0 #default value
       ScalingConfig: 
-        MaximumConcurrency: !Ref PnSsGestoreBucketReservedConcurrentExecutions
+        MaximumConcurrency: !Ref PnSsGestoreBucketMinReservedConcurrentExecutions
 
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function
@@ -888,7 +906,7 @@ Resources:
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
       MemorySize: 1024
-      ReservedConcurrentExecutions: !Ref PnSsGestoreBucketReservedConcurrentExecutions
+      ReservedConcurrentExecutions: !Ref PnSsGestoreBucketMinReservedConcurrentExecutions
       Runtime: nodejs16.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240
@@ -1093,4 +1111,167 @@ Resources:
               req.end();
             });
           }
-        
+
+##### Gestore Bucket Concurrency Handler  #####
+
+  PnSsGestoreBucketConcurrencyHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ 'PnSsGestoreBucketConcurrencyHandler', '-role']]
+      Description: 'Lambda Role to scale the number of concurrent instances of Lambda Gestore Bucket'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action:
+            - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'PnSsGestoreBucketConcurrencyHandlerInlinePolicy'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              - Sid: 'UpdateGestoreBucketConcurrency'
+                Effect: 'Allow'
+                Action: 
+                  - 'lambda:Get*'
+                  - 'lambda:List*'
+                  - 'lambda:PutFunctionConcurrency'
+                Resource:
+                  - !GetAtt PnSsGestoreBucket.Arn
+              - Sid: 'UpdateGestoreBucketTrigger'
+                Effect: 'Allow'
+                Action: 
+                  - 'lambda:Get*'
+                  - 'lambda:List*'
+                  - 'lambda:UpdateEventSourceMapping'
+                Resource:
+                  - !GetAtt PnSsGestoreBucket.Arn
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:event-source-mapping:${PnSsGestoreBucketInputQueue}'
+
+  PnSsGestoreBucketConcurrencyHandler:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref PnSsGestoreBucketConcurrencyHandlerLambdaName
+      Description: 'SafeStorage Concurrency Handler for Gestore Bucket'
+      Handler: index.handler
+      MemorySize: 256
+      Runtime: nodejs16.x
+      Role: !GetAtt PnSsGestoreBucketConcurrencyHandlerRole.Arn
+      Timeout: 240
+      VpcConfig:
+        SubnetIds:
+          - !Select [ 0, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
+        SecurityGroupIds:
+          - !GetAtt PnSsSecurityGroupSafeStorage.GroupId
+      Environment:
+        Variables:
+          PnSsGestoreBucketTriggerId: !Ref PnSsGestoreBucketInputQueue
+          PnSsGestoreBucketLambdaArn: !GetAtt PnSsGestoreBucket.Arn
+          PnSsGestoreBucketInstancesPerTaskInstance: !Ref PnSsGestoreBucketInstancesPerTaskInstance
+
+      Code:
+        ZipFile: |
+          "use strict";
+          const AWS = require('aws-sdk');
+          const uuid = process.env.PnSsGestoreBucketTriggerId;
+          const lambdaArn = process.env.PnSsGestoreBucketLambdaArn;
+          const lambdaArr = lambdaArn.split('function/')
+          var lambdaName = lambdaArr[1]
+          console.log('Lambda function named "', lambdaName, '" with arn "', lambdaArn ,'" and triggerID = "', uuid, '" will be updated')
+          const lambda = new AWS.Lambda();
+
+          exports.handler = async function (event) {
+            console.log(JSON.stringify(event));
+            
+            const newCapacity = event.detail.responseElements.service.desiredCount;
+            const oldCapacity = event.detail.responseElements.service.runningCount;
+            console.log("Safe Storage ECS Task capacity changed from ", oldCapacity, " to ", newCapacity);
+            
+            const instancesNumberPerTask = process.env.PnSsGestoreBucketInstancesPerTaskInstance;
+            const concurrency = newCapacity * instancesNumberPerTask;
+            console.log("New concurrency: ", concurrency);
+            
+            // Setting lambda concurrency params
+            const lambda_params = {
+                FunctionName: lambdaArn,
+                ReservedConcurrentExecutions: concurrency
+              };
+            
+            // Setting lambda params
+            const event_source_mapping_params = {
+              FunctionName: lambdaArn,
+              UUID: uuid,
+              ScalingConfig: {
+                  MaximumConcurrency: concurrency
+              }
+            };
+
+            // Modifica la concurrency della funzione Lambda
+            await new Promise(function (resolve, reject){
+              lambda.putFunctionConcurrency(lambda_params, (res) => {
+                console.log("Changed lambda concurrency to ", concurrency);
+                resolve();
+              }).on("error", (e) => {
+                console.log("* FATAL * An error occurred while calling putFunctionConcurrency of function ", lambdaName);
+                reject(Error(e));
+              });
+            });
+
+            // Modifica l'EventSourceMapping della funzione Lambda
+            await new Promise(function (resolve, reject){
+              lambda.updateEventSourceMapping(event_source_mapping_params, (res) => {
+                console.log("Updated Lambda Event Source Mapping with the following params: ", JSON.stringify(event_source_mapping_params));
+                resolve();
+              }).on("error", (e) => {
+                console.log("* FATAL * An error occurred while calling updateEventSourceMapping for trigger ", uuid);
+                reject(Error(e));
+              });
+            });
+
+            return {
+              statusCode: 200,
+              body: 'Concurrency and EventSourceMapping successfully modified! '
+            };
+          }
+
+  PnSsEventRuleGestoreBucketConcurrencyHandler:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Ref PnSsEventRuleNameGestoreBucketConcurrencyHandler
+      Description: 'Rule catching scaling events of the Safe Storage ECS cluster'
+      EventPattern:   
+        detail-type: 
+          - 'AWS API Call via CloudTrail'
+        source: 
+          - 'aws.ecs' 
+        detail:
+          eventSource:
+            - 'ecs.amazonaws.com'
+          eventName:
+            - 'UpdateService'
+          requestParameters:
+            service: 
+              - !GetAtt SafeStorageMicroservice.Outputs.ServiceName
+          responseElements:
+            service:
+              serviceArn: 
+                - !GetAtt SafeStorageMicroservice.Outputs.ServiceARN 
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt PnSsGestoreBucketConcurrencyHandler.Arn
+          Id: "GestoreBucketConcurrencyHandler"
+
+  PnSsGestoreBucketConcurrencyHandlerPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt PnSsGestoreBucketConcurrencyHandler.Arn
+      Principal: 'events.amazonaws.com'
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn

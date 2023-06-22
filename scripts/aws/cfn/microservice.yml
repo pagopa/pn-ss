@@ -68,6 +68,10 @@ Parameters:
   #   Type: String
   #   Description: 'Kinesis stream that receive logs'
   
+  ConfinfoEventBusArn:
+    Type: String
+    Description: Confinfo event bus ARN
+
   Version:
     Type: String
     Description: 'keep track of used projects commitIds'
@@ -565,6 +569,7 @@ Resources:
                   - 'events:PutEvents'
                 Resource:
                   - !Ref PnCoreTargetEventBus
+                  - !Ref ConfinfoEventBusArn
       # RoleName: PnSsRole
 
   PnSsQueuePolicyExternalNotifications:
@@ -613,6 +618,11 @@ Resources:
       Targets:
         - Arn: !Ref PnCoreTargetEventBus
           Id: 'PnSsExternalNotificationTarget'
+          RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
+          DeadLetterConfig:
+            Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
+        - Arn: !Ref ConfinfoEventBusArn
+          Id: 'PnConfinfoEventBusTarget'
           RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
           DeadLetterConfig:
             Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus

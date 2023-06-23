@@ -332,6 +332,7 @@ public class UriBuilderService {
                                                "Document not found"));
                                    } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) ) {
                                 	   try {
+                                		   log.debug("before check presence in createUriForDownloadFile");
                                 		   s3Service.headObject(fileKey, bucketName.ssHotName());
                                 	   } catch (NoSuchKeyException e) {
                                            synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -384,6 +385,7 @@ public class UriBuilderService {
                         var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
                         return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
                     } else {
+             		    log.debug("before check presence in getFileDownloadResponse");
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
                                 .map(HeadObjectResponse::objectLockRetainUntilDate)
                                 .flatMap(retentionInstant ->
@@ -406,9 +408,9 @@ public class UriBuilderService {
     }
 
     public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly ) throws S3BucketException.NoSuchKeyException{
-            log.info("INIZIO RECUPERO URL DOWNLOAD ");
-            if (Boolean.TRUE.equals(metadataOnly))
-                return Mono.empty();
+        log.info("INIZIO RECUPERO URL DOWNLOAD - metadata {}", metadataOnly);
+        if (Boolean.TRUE.equals(metadataOnly))
+            return Mono.empty();
         if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
             return getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue);
         } else {

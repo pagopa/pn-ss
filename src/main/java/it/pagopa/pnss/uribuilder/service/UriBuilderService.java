@@ -334,7 +334,7 @@ public class UriBuilderService {
                                 	   try {
                                 		   log.debug("before check presence in createUriForDownloadFile");
                                 		   s3Service.headObject(fileKey, bucketName.ssHotName());
-                                	   } catch (NoSuchKeyException e) {
+                                	   } catch (software.amazon.awssdk.services.s3.model.NoSuchKeyException e) {
                                            synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                    "Document not found"));
                             		   }

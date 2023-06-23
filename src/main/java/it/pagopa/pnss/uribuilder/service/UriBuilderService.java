@@ -381,19 +381,24 @@ public class UriBuilderService {
                 //Check sul parsing corretto della retentionUntil
                 .flatMap(fileDownloadResponse ->
                 {
-                    if (!StringUtils.isBlank(doc.getRetentionUntil())) {
-                        var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
-                        return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
-                    } else {
-             		    log.debug("before check presence in getFileDownloadResponse");
-                        return s3Service.headObject(fileKey, bucketName.ssHotName())
-                                .map(HeadObjectResponse::objectLockRetainUntilDate)
-                                .flatMap(retentionInstant ->
-                                        documentClientCall
-                                                .patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, fileKey, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(retentionInstant)))
-                                                .thenReturn(retentionInstant))
-                                .map(retentionInstant -> fileDownloadResponse.retentionUntil(Date.from(retentionInstant)));
-                    }
+                	if( !doc.getDocumentState().equalsIgnoreCase(BOOKED)) {
+	                    if (!StringUtils.isBlank(doc.getRetentionUntil())) {
+	                        var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
+	                        return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
+	                    } else {
+	             		    log.debug("before check presence in getFileDownloadResponse");
+	                        return s3Service.headObject(fileKey, bucketName.ssHotName())
+	                                .map(HeadObjectResponse::objectLockRetainUntilDate)
+	                                .flatMap(retentionInstant ->
+	                                        documentClientCall
+	                                                .patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, fileKey, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(retentionInstant)))
+	                                                .thenReturn(retentionInstant))
+	                                .map(retentionInstant -> fileDownloadResponse.retentionUntil(Date.from(retentionInstant)));
+	                    }
+                	}
+                	else {
+                		return Mono.just(fileDownloadResponse);
+                	}
                 })
                 .onErrorResume(DateTimeException.class, throwable ->
                 {

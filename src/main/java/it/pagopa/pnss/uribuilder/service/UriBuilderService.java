@@ -345,7 +345,7 @@ public class UriBuilderService {
                    .cast(Document.class)
                    .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))
                    .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable ->
-                        Mono.error(new ResponseStatusException(HttpStatus.GONE, "Document is missing from bucket")))
+                        Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
                    .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "));
     }
 

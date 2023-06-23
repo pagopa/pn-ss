@@ -327,9 +327,17 @@ public class UriBuilderService {
                                    } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
                                        synchronousSink.error(new ResponseStatusException(HttpStatus.GONE,
                                                "Document has been deleted"));
-                                   } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) || document.getDocumentState().equalsIgnoreCase(STAGED)) {
+                                   } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
                                        synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                "Document not found"));
+                                   } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) ) {
+                                	   try {
+                                		   s3Service.headObject(fileKey, bucketName.ssHotName());
+                                	   } catch (NoSuchKeyException e) {
+                                           synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                                   "Document not found"));
+                            		   }
+                                	   synchronousSink.next(document);
                                    } else synchronousSink.next(document);
                                })
                                .doOnSuccess(o -> log.debug("---  FINE  CHECK PERMESSI LETTURA"));

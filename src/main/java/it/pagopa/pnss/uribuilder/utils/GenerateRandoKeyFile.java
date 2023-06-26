@@ -1,9 +1,10 @@
-package it.pagopa.pnss.uribuilder.service;
+package it.pagopa.pnss.uribuilder.utils;
 
 import com.amazonaws.util.StringUtils;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.UUID;
 
 public  class GenerateRandoKeyFile {
@@ -17,7 +18,7 @@ public  class GenerateRandoKeyFile {
         return generateRandoKeyFile;
     }
 
-    public synchronized String createKeyName(String documentType, String extension) {
+    public synchronized String createEncodedKeyName(String documentType, String extension) {
         OffsetDateTime todayDate = OffsetDateTime.now();
 
         var year = String.valueOf(todayDate.getYear());
@@ -33,7 +34,7 @@ public  class GenerateRandoKeyFile {
                 + Long.toHexString(temp.getLeastSignificantBits());
         var documentName = documentType + "-" + uuidString + extension;
 
-        return StringUtils.join("/", year, month, day, hour, documentName);
+        return URLEncoder.encode(StringUtils.join("/", year, month, day, hour, documentName), StandardCharsets.UTF_8);
     }
 
     private String twoDigitFormat(String value)

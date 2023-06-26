@@ -18,6 +18,7 @@ import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.S3Service;
+import it.pagopa.pnss.uribuilder.utils.GenerateRandoKeyFile;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.lang3.StringUtils;
@@ -39,7 +40,6 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
-import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -137,7 +137,7 @@ public class UriBuilderService {
                                             .map(unused-> getFileExtension(contentType))
                                             .onErrorResume(ContentTypeNotFoundException.class, e-> Mono.just(""))
                                             .flatMap(fileExtension -> {
-                                                var documentKeyTmp = GenerateRandoKeyFile.getInstance().createKeyName(documentType, fileExtension);
+                                                var documentKeyTmp = GenerateRandoKeyFile.getInstance().createEncodedKeyName(documentType, fileExtension);
                                                 log.debug("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
                                                 return documentClientCall.postDocument(new DocumentInput().contentType(request.getContentType())
                                                                                                           .documentKey(documentKeyTmp)

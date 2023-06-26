@@ -195,7 +195,7 @@ Resources:
                 DaysAfterInitiation: 1
             Status: 'Enabled'
           - Id: 'PnSsNotificationAttachmentTemporary'
-            ExpirationInDays: 1
+            ExpirationInDays: 7
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'

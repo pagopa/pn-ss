@@ -327,6 +327,18 @@ public class UriBuilderService {
                                    } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
                                        synchronousSink.error(new ResponseStatusException(HttpStatus.GONE,
                                                "Document has been deleted"));
+                                   } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
+                                       synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                               "Document not found"));
+                                   } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) ) {
+                                	   try {
+                                		   log.debug("before check presence in createUriForDownloadFile");
+                                		   s3Service.headObject(fileKey, bucketName.ssHotName());
+                                    	   synchronousSink.next(document);
+                                	   } catch (software.amazon.awssdk.services.s3.model.NoSuchKeyException e) {
+                                           synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                                   "Document not found"));
+                            		   }
                                    } else synchronousSink.next(document);
                                })
                                .doOnSuccess(o -> log.debug("---  FINE  CHECK PERMESSI LETTURA"));
@@ -334,7 +346,7 @@ public class UriBuilderService {
                    .cast(Document.class)
                    .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))
                    .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable ->
-                        Mono.error(new ResponseStatusException(HttpStatus.GONE, "Document is missing from bucket")))
+                        Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
                    .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "));
     }
 
@@ -369,37 +381,29 @@ public class UriBuilderService {
                 //Check sul parsing corretto della retentionUntil
                 .flatMap(fileDownloadResponse ->
                 {
-                    if (!StringUtils.isBlank(doc.getRetentionUntil())) {
-                        var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
-                        return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
-                    } else {
-                        return s3Service.headObject(fileKey, bucketName.ssHotName())
-                                .map(HeadObjectResponse::objectLockRetainUntilDate)
-                                .flatMap(retentionInstant ->
-                                        documentClientCall
-                                                .patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, fileKey, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(retentionInstant)))
-                                                .thenReturn(retentionInstant))
-                                .map(retentionInstant -> fileDownloadResponse.retentionUntil(Date.from(retentionInstant)));
-                    }
+                	if( !doc.getDocumentState().equalsIgnoreCase(BOOKED)) {
+	                    if (!StringUtils.isBlank(doc.getRetentionUntil())) {
+	                        var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
+	                        return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
+	                    } else {
+	             		    log.debug("before check presence in getFileDownloadResponse");
+	                        return s3Service.headObject(fileKey, bucketName.ssHotName())
+	                                .map(HeadObjectResponse::objectLockRetainUntilDate)
+	                                .flatMap(retentionInstant ->
+	                                        documentClientCall
+	                                                .patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, fileKey, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(retentionInstant)))
+	                                                .thenReturn(retentionInstant))
+	                                .map(retentionInstant -> fileDownloadResponse.retentionUntil(Date.from(retentionInstant)));
+	                    }
+                	}
+                	else {
+                		return Mono.just(fileDownloadResponse);
+                	}
                 })
                 .onErrorResume(DateTimeException.class, throwable ->
                 {
                     log.error("getFileDownloadResponse() : errore nel parsing o nella formattazione della data = {}", throwable.getMessage(), throwable);
                     return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, throwable.getMessage()));
-                })
-                //Check sugli stati validi.
-                .handle((fileDownloadResponse, synchronousSink) ->
-                {
-                    if (Boolean.FALSE.equals(metadataOnly) && (doc.getDocumentState() == null || !(doc.getDocumentState()
-                            .equalsIgnoreCase(
-                                    TECHNICAL_STATUS_AVAILABLE) || doc.getDocumentState()
-                            .equalsIgnoreCase(
-                                    TECHNICAL_STATUS_ATTACHED) || doc.getDocumentState()
-                            .equalsIgnoreCase(
-                                    TECHNICAL_STATUS_FREEZED)))) {
-                        synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                "Document : " + doc.getDocumentKey() + " not has a valid state "));
-                    } else synchronousSink.next(fileDownloadResponse);
                 })
                 .cast(FileDownloadResponse.class);
     }
@@ -409,9 +413,9 @@ public class UriBuilderService {
     }
 
     public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly ) throws S3BucketException.NoSuchKeyException{
-            log.info("INIZIO RECUPERO URL DOWNLOAD ");
-            if (Boolean.TRUE.equals(metadataOnly))
-                return Mono.empty();
+        log.info("INIZIO RECUPERO URL DOWNLOAD - metadata {}", metadataOnly);
+        if (Boolean.TRUE.equals(metadataOnly))
+            return Mono.empty();
         if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
             return getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue);
         } else {

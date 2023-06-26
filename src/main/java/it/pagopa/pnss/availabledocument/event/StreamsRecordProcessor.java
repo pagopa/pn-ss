@@ -1,6 +1,7 @@
 package it.pagopa.pnss.availabledocument.event;
 
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
+import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
@@ -103,11 +104,16 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         }
         try {
             if (!test){
-                processRecordsInput.getCheckpointer().checkpoint();
+            	try {
+            		processRecordsInput.getCheckpointer().checkpoint();
+            	}
+            	catch (ShutdownException e) {
+					log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
+				}
             }
         }
         catch (Exception e) {
-            log.error("* FATAL * DBStream: Errore nel settaggio del checkpoint",e );
+            log.error("* FATAL * processRecords: {} {}",e, e.getMessage() );
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
         return requestEntries;

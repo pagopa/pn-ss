@@ -33,15 +33,10 @@ Parameters:
     Type: String
     Description: 'Safe Storage bucket name'
 
-  PnSsGestoreBucketLambdaNameIn:
+  PnSsGestoreBucketLambdaName:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
     Default: 'pn-safe-storage-gestore-bucket-lambda'
-
-  DeployEnv:
-    Type: String
-    Description: Nome dell'ambiente destinazione
-    Default: DEV
   
   PnSsEventBusExternalNotificationName:
     Type: String 
@@ -64,6 +59,7 @@ Parameters:
   LogRetention:
     Type: Number
     Default: 14
+
 Conditions:
   IsDevEnv: !Equals [ !Ref EnvType, 'dev'] 
 
@@ -450,7 +446,7 @@ Resources:
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
-
+  
   PnSsEventRuleNotificheDEV:
     Type: AWS::Events::Rule
     Condition: IsDevEnv
@@ -513,16 +509,6 @@ Resources:
         LogsKinesisSourceStreamArn: !Ref LogsKinesisSourceStreamArn
         LogGroupRetention: !Ref LogRetention
 
-  # GestoreBucketLambdaLogGroup:
-  #   Type: AWS::CloudFormation::Stack
-  #   UpdateReplacePolicy: Retain
-  #   DeletionPolicy: Retain    
-  #   Properties:
-  #     TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
-  #     Parameters:
-  #       LogGroupName: !Ref PnSsGestoreBucketLambdaNameIn
-  #       LogGroupPrefix: '/aws/lambda'
-  #       LogGroupRetention: !Ref LogRetention
 
 Outputs:
   PnSsTableNameAnagraficaClient:
@@ -643,7 +629,7 @@ Outputs:
     
   PnSsGestoreBucketLambdaName:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
-    Value: !Ref PnSsGestoreBucketLambdaNameIn
+    Value: !Ref PnSsGestoreBucketLambdaName
 
   PnSsEventBusNameExternalNotification:
     Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'

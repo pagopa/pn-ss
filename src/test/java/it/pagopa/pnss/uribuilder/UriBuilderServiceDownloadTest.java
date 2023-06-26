@@ -324,7 +324,7 @@ class UriBuilderServiceDownloadTest {
         when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 
         mockGetDocument(d, docId);
-        fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.GONE);
+        fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
     }
 
    /* @Test

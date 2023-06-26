@@ -22,8 +22,8 @@
     "PnSsEventRuleNameGestoreBucketConcurrencyHandler" : "pn-ss-gestore-bucket-concurrency-rule",
     "PnSsGestoreBucketInstancesPerTaskInstance" : "20",
     "PnSsGestoreBucketMinReservedConcurrentExecutions": "40",
-    "MinTasksNumber": "2",
+    "MinTasksNumber": "3",
     "MaxTasksNumber": "13",
-    "AutoscalingThreshold": "20000"
+    "AutoscalingThreshold": "15000"
   }
 }

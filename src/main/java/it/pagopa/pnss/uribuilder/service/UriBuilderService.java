@@ -449,27 +449,28 @@ public class UriBuilderService {
     }
 
 
-    private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
+    private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String key, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
 
-        log.info("---> STARTING GET PRESIGNED URL <--- , fileKey : {}", keyName);
+        log.info("---> STARTING GET PRESIGNED URL <--- , fileKey : {}", key);
 
         log.debug("INIZIO CREAZIONE getObjectRequest");
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
-                .key(keyName)
+                .key(key)
                 .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
                         queryParamPresignedUrlTraceId,
                         xTraceIdValue))
                 .build();
 
-        return s3Service.presignGetObject(getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)))
+        return s3Service.headObject(key, bucketName)
+                .then(s3Service.presignGetObject(getObjectRequest, Duration.ofMinutes(Long.parseLong(duration))))
                 .map(presignedRequest -> new FileDownloadInfo().url(presignedRequest.url().toString()))
                 //Eccezioni S3
                 .onErrorResume(S3Exception.class, ase ->
                 {
                     if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
                         log.error(" Errore AMAZON NoSuchKey S3Exception ", ase);
-                        return Mono.error(new S3BucketException.NoSuchKeyException(keyName));
+                        return Mono.error(new S3BucketException.NoSuchKeyException(key));
                     } else {
                         log.error(" Errore AMAZON S3Exception", ase);
                         return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));

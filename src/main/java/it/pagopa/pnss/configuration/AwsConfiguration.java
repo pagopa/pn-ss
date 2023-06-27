@@ -267,7 +267,7 @@ public class AwsConfiguration {
 //                   10 elementi, il numero
 //                   di eventi Kinesis è
 //                   impostato anch'esso a 10                                                                                             
-            		.withMaxRecords(10)
+            		.withMaxRecords(1000)
             		.withIdleTimeBetweenReadsInMillis(5)
             		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
 

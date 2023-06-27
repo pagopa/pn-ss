@@ -45,7 +45,6 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     public void processRecords(ProcessRecordsInput processRecordsInput) {
         log.debug("DBStream - processRecords: ritardo {} - record letti {}", processRecordsInput.getMillisBehindLatest(), processRecordsInput.getRecords().size());
         findEventSendToBridge(processRecordsInput)
-                .buffer(10)
                 .map(putEventsRequestEntries -> {
 
                     PutEventsRequest eventsRequest = PutEventsRequest.builder()
@@ -68,6 +67,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     return recordEvent;
                 })
                 .filter(RecordAdapter.class::isInstance)
+                .buffer(10)
                 .map(recordEvent -> ((RecordAdapter) recordEvent).getInternalObject())
                 .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))
                 .flatMap(streamRecord -> {

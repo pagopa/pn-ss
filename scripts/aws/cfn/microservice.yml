@@ -584,7 +584,7 @@ Resources:
                   - 'events:PutEvents'
                 Resource:
                   - !Ref PnCoreTargetEventBus
-                  - !If [ ConfInfoEventBusExist , !Ref ConfinfoEventBusArn, '']
+                  # - !If [ ConfInfoEventBusExist , !Ref ConfinfoEventBusArn, '' ]
       # RoleName: PnSsRole
 
   PnSsQueuePolicyExternalNotifications:

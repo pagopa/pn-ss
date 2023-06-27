@@ -330,15 +330,6 @@ public class UriBuilderService {
                                    } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
                                        synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                "Document not found"));
-                                   } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) ) {
-                                	   try {
-                                		   log.debug("before check presence in createUriForDownloadFile");
-                                		   s3Service.headObject(fileKey, bucketName.ssHotName());
-                                    	   synchronousSink.next(document);
-                                	   } catch (software.amazon.awssdk.services.s3.model.NoSuchKeyException e) {
-                                           synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                                   "Document not found"));
-                            		   }
                                    } else synchronousSink.next(document);
                                })
                                .doOnSuccess(o -> log.debug("---  FINE  CHECK PERMESSI LETTURA"));

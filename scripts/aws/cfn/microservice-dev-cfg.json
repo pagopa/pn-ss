@@ -24,6 +24,7 @@
     "PnSsGestoreBucketMinReservedConcurrentExecutions": "40",
     "MinTasksNumber": "3",
     "MaxTasksNumber": "13",
-    "AutoscalingThreshold": "15000"
+    "AutoscalingThreshold": "15000",
+    "PnSsRetentionDaysToIgnore": "1"
   }
 }

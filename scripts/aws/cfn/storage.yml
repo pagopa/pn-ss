@@ -43,6 +43,11 @@ Parameters:
     Description: 'Nome del Event Bus che raccoglie gli eventi del microservizio Gestore Disponibilita'
     Default: 'Pn-Ss-Notifications-Bus'
   
+  PnSsPreloadedDocsRetentionDays:
+    Type: Number 
+    Description: 'Numero di giorni di retention per i file di tipo PRELOADED'
+    Default: 7
+
   AlarmSNSTopicName:
     Type: String
     Description: 'Topic alarm'
@@ -195,7 +200,7 @@ Resources:
                 DaysAfterInitiation: 1
             Status: 'Enabled'
           - Id: 'PnSsNotificationAttachmentTemporary'
-            ExpirationInDays: 7
+            ExpirationInDays: !Ref PnSsPreloadedDocsRetentionDays
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
@@ -666,3 +671,7 @@ Outputs:
   PnSsKmsArnBucket:
     Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
     Value: !GetAtt PnSsKmsBucket.Arn
+
+  PnSsPreloadedDocsRetentionDays: 
+    Description: 'Numero di giorni di retention per i file di tipo PRELOADED'
+    Value: !Ref PnSsPreloadedDocsRetentionDays

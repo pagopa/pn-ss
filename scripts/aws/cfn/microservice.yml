@@ -350,7 +350,7 @@ Parameters:
   MaxTasksNumber:
     Type: Number
     Description: 'Maximum number of running instances for the microservice'
-    Default: 2
+    Default: 6
 
   AutoscalingThreshold:
     Type: Number
@@ -368,17 +368,18 @@ Parameters:
 
   LogAlarmStrategy:
     Type: String
-    Default: 'FATAL'
+    Default: 'FATAL'  
+    
+  PnSsPreloadedDocsRetentionDays:
+    Type: Number 
+    Description: 'Numero di giorni di retention per i file di tipo PRELOADED'
+
 
   # Log group parameters
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
-    
-  MaxTasksNumber:
-    Default: 6
-    Type: Number
-    Description: maximum autoscaling number of tasks
+
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
@@ -412,6 +413,7 @@ Resources:
         ContainerEnvEntry20: !Sub 'pst=${PresignedUrlMinutesLifespan}'
         ContainerEnvEntry21: !Sub 'stayHotTime=${PnSsUriBuilderstayHotTime}'
         ContainerEnvEntry22: 'PnSsBucketLockRetentionMode=GOVERNANCE'
+        ContainerEnvEntry23: !Sub 'PnSsPreloadedDocsRetentionDays=${PnSsPreloadedDocsRetentionDays}'
         ContainerEnvEntry30: !Sub 'PnSsArubaCertId=${PnSsArubaCertId}'
         ContainerEnvEntry31: !Sub 'PnSsArubaEnabledLog=${PnSsArubaEnabledLog}'
         ContainerEnvEntry32: !Sub 'PnSsArubaSignWsdlUrl=${PnSsArubaSignWsdlUrl}'

@@ -71,7 +71,6 @@ Parameters:
   ConfinfoEventBusArn:
     Type: String
     Description: Confinfo event bus ARN
-    Default: ''
 
   Version:
     Type: String
@@ -376,10 +375,14 @@ Parameters:
     Type: String
     Description: 'Ecs log group name'
 
+  MaxTasksNumber:
+    Default: 6
+    Type: Number
+    Description: maximum autoscaling number of tasks
+    
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
-  ConfInfoEventBusExist: !Not [ !Equals [ !Ref ConfinfoEventBusArn, '']]
 
 Resources:
 
@@ -584,7 +587,7 @@ Resources:
                   - 'events:PutEvents'
                 Resource:
                   - !Ref PnCoreTargetEventBus
-                  # - !If [ ConfInfoEventBusExist , !Ref ConfinfoEventBusArn, '' ]
+                  - !Ref ConfinfoEventBusArn
       # RoleName: PnSsRole
 
   PnSsQueuePolicyExternalNotifications:
@@ -636,11 +639,11 @@ Resources:
           RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
           DeadLetterConfig:
             Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
-        # - Arn: !Ref ConfinfoEventBusArn
-        #   Id: 'PnConfinfoEventBusTarget'
-        #   RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
-        #   DeadLetterConfig:
-        #     Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
+        - Arn: !Ref ConfinfoEventBusArn
+          Id: 'PnConfinfoEventBusTarget'
+          RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
+          DeadLetterConfig:
+            Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
 
   #####    Metrics and Alarms  -  Microservice #####
   SafeStorageMicroserviceAlarm:

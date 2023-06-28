@@ -249,8 +249,8 @@ public class AwsConfiguration {
                                                                                            dynamoEventStreamName.documentName(),
                                                                                            awsCredentialsProvider,
                                                                                            "streams-demo-worker")
-            		.withMaxLeaseRenewalThreads(5000)
-            		.withMaxLeasesForWorker(5000)
+//            		.withMaxLeaseRenewalThreads(20)
+//            		.withMaxLeasesForWorker(5000)
 
 //                   Fix temporanea per non
 //                   fare andare in errore
@@ -267,8 +267,8 @@ public class AwsConfiguration {
 //                   10 elementi, il numero
 //                   di eventi Kinesis è
 //                   impostato anch'esso a 10                                                                                             
-            		.withMaxRecords(10)
-            		.withIdleTimeBetweenReadsInMillis(5)
+            		.withMaxRecords(1000)
+            		.withIdleTimeBetweenReadsInMillis(1000)
             		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
 
             IRecordProcessorFactory recordProcessorFactory =

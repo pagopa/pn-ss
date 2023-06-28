@@ -55,7 +55,8 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     return eventBridgeClient.putEvents(eventsRequest);
                 })
                 .then()
-                .doOnError(e -> log.error("* FATAL * DBStream: Errore generico ", e));
+                .doOnError(e -> log.error("* FATAL * DBStream: Errore generico ", e))
+                .subscribe();
     }
 
     @NotNull

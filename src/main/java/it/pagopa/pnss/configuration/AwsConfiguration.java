@@ -15,6 +15,8 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionIn
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
+
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
 import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessorFactory;
@@ -44,6 +46,7 @@ import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.sns.SnsAsyncClient;
@@ -53,6 +56,7 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 
 @Configuration
 public class AwsConfiguration {
@@ -119,12 +123,10 @@ public class AwsConfiguration {
 
     @Bean
     public SqsAsyncClient sqsAsyncClient() {
-        SqsAsyncClientBuilder sqsAsyncClientBuilder = SqsAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+        SqsAsyncClientBuilder sqsAsyncClientBuilder = SqsAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (sqsLocalStackEndpoint != null) {
-            sqsAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(sqsLocalStackEndpoint));
-        } else {
-            sqsAsyncClientBuilder.region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion());
+            sqsAsyncClientBuilder.endpointOverride(URI.create(sqsLocalStackEndpoint));
         }
 
         return sqsAsyncClientBuilder.build();
@@ -132,12 +134,10 @@ public class AwsConfiguration {
 
     @Bean
     public DynamoDbClient dynamoDbClient() {
-        DynamoDbClientBuilder dynamoDbClientBuilder = DynamoDbClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+        DynamoDbClientBuilder dynamoDbClientBuilder = DynamoDbClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (dynamoDbLocalStackEndpoint != null) {
-            dynamoDbClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
-        } else {
-            dynamoDbClientBuilder.region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion());
+            dynamoDbClientBuilder.endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
         }
 
         return dynamoDbClientBuilder.build();
@@ -156,12 +156,10 @@ public class AwsConfiguration {
     @Bean
     public DynamoDbAsyncClient dynamoDbAsyncClient() {
         DynamoDbAsyncClientBuilder dynamoDbAsyncClientBuilder =
-                DynamoDbAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+                DynamoDbAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (dynamoDbLocalStackEndpoint != null) {
-            dynamoDbAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
-        } else {
-            dynamoDbAsyncClientBuilder.region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion());
+            dynamoDbAsyncClientBuilder.endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
         }
 
         return dynamoDbAsyncClientBuilder.build();
@@ -179,12 +177,10 @@ public class AwsConfiguration {
 
     @Bean
     public SnsAsyncClient snsClient() {
-        SnsAsyncClientBuilder snsAsyncClientBuilder = SnsAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+        SnsAsyncClientBuilder snsAsyncClientBuilder = SnsAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
 
         if (snsLocalStackEndpoint != null) {
-            snsAsyncClientBuilder.region(Region.of(localStackRegion)).endpointOverride(URI.create(snsLocalStackEndpoint));
-        } else {
-            snsAsyncClientBuilder.region(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion());
+            snsAsyncClientBuilder.endpointOverride(URI.create(snsLocalStackEndpoint));
         }
 
         return snsAsyncClientBuilder.build();
@@ -201,6 +197,20 @@ public class AwsConfiguration {
         }
 
         return s3Client.build();
+    }
+
+    @Bean
+    public S3Presigner s3Presigner()
+    {
+        S3Presigner.Builder builder = S3Presigner.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsS3Endpoint != null) {
+            builder.endpointOverride(URI.create(testAwsS3Endpoint));
+        }
+
+        return builder.build();
     }
 
     @Bean
@@ -234,36 +244,32 @@ public class AwsConfiguration {
             AmazonDynamoDBStreams dynamoDBStreamsClient =
                     AmazonDynamoDBStreamsClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
             AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
+
             KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(dynamoEventStreamName.tableMetadata(),
                                                                                            dynamoEventStreamName.documentName(),
                                                                                            awsCredentialsProvider,
-                                                                                           "streams-demo-worker").withMaxLeaseRenewalThreads(
-                                                                                                                         5000)
+                                                                                           "streams-demo-worker")
+//            		.withMaxLeaseRenewalThreads(20)
+//            		.withMaxLeasesForWorker(5000)
 
-                                                                                                                 .withMaxLeasesForWorker(
-                                                                                                                         5000)
-
-//                                                                                                               Fix temporanea per non
-//                                                                                                               fare andare in errore
-//                                                                                                               EventBridge.
-//                                                                                                               Questo stream Kinesis,
-//                                                                                                               agganciato a
-//                                                                                                               DynamoDbStreams,
-//                                                                                                               notifica a EventBridge
-//                                                                                                               determinati eventi
-//                                                                                                               provenienti dalla
-//                                                                                                               tabella documenti. Dato
-//                                                                                                               che la pubblicazione su
-//                                                                                                               EventBridge accetta massimo
-//                                                                                                               10 elementi, il numero
-//                                                                                                               di eventi Kinesis è
-//                                                                                                               impostato anch'esso a 10
-                                                                                                                 .withMaxRecords(10)
-
-                                                                                                                 .withIdleTimeBetweenReadsInMillis(
-                                                                                                                         50)
-                                                                                                                 .withInitialPositionInStream(
-                                                                                                                         InitialPositionInStream.TRIM_HORIZON);
+//                   Fix temporanea per non
+//                   fare andare in errore
+//                   EventBridge.
+//                   Questo stream Kinesis,
+//                   agganciato a
+//                   DynamoDbStreams,
+//                   notifica a EventBridge
+//                   determinati eventi
+//                   provenienti dalla
+//                   tabella documenti. Dato
+//                   che la pubblicazione su
+//                   EventBridge accetta massimo
+//                   10 elementi, il numero
+//                   di eventi Kinesis è
+//                   impostato anch'esso a 10                                                                                             
+            		.withMaxRecords(1000)
+            		.withIdleTimeBetweenReadsInMillis(1000)
+            		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
 
             IRecordProcessorFactory recordProcessorFactory =
                     new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());

@@ -52,7 +52,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 @AutoConfigureWebTestClient
 @Slf4j
 public class DocumentInternalApiControllerTest {
-	
+
     @Value("${test.aws.s3.endpoint:#{null}}")
     String testAwsS3Endpoint;
 
@@ -60,7 +60,7 @@ public class DocumentInternalApiControllerTest {
     private WebTestClient webTestClient;
     @Autowired
     private BucketName bucketName;
-    
+
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
 
@@ -231,7 +231,7 @@ public class DocumentInternalApiControllerTest {
 	@Test
 	// codice test: DCSS.102.1
 	void patchItem() {
-		
+
 		log.warn("DocumentInternalApiControllerTest.patchItem() : decommentare");
 
 //		EntityExchangeResult<DocumentResponse> documentInDb = webTestClient.get()
@@ -317,7 +317,7 @@ public class DocumentInternalApiControllerTest {
 		log.info("\n Test 10 (deleteItemIncorrectParameter) passed \n");
 
     }
-    
+
     private void addFileToBucket(String fileName) {
         S3ClientBuilder s3ClientBuilder = S3Client.builder();
         s3ClientBuilder.endpointOverride(URI.create(testAwsS3Endpoint));
@@ -327,7 +327,7 @@ public class DocumentInternalApiControllerTest {
 
         s3Client.putObject(request, RequestBody.fromBytes(readPdfDocoument()));
     }
-    
+
     private byte[] readPdfDocoument() {
         byte[] byteArray=null;
         try {
@@ -344,9 +344,9 @@ public class DocumentInternalApiControllerTest {
             byteArray = buffer.toByteArray();
 
         } catch (FileNotFoundException e) {
-        	log.error("File Not found",e);
+        	log.debug("File Not found",e);
         } catch (IOException e) {
-            log.error("IO Ex", e);
+            log.debug("IO Ex", e);
         }
         return byteArray;
 

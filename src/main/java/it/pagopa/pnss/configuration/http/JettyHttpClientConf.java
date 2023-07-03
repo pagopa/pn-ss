@@ -5,15 +5,14 @@ import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import java.net.URI;
-import java.nio.charset.CharacterCodingException;
+import java.nio.ByteBuffer;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
@@ -22,19 +21,23 @@ import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 @Slf4j
 public class JettyHttpClientConf {
 
-    private final CharsetDecoder charsetDecoder = StandardCharsets.UTF_8.newDecoder();
+    @Value("${jetty.maxConnectionsPerDestination}")
+    private int maxConnections;
     private final SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
     private static final List<String> CONTENT_TYPE_OF_RESPONSE_BODY_TO_LOG = List.of(APPLICATION_JSON_VALUE, APPLICATION_XML_VALUE);
 
     @Bean
     public HttpClient getJettyHttpClient() {
-        return new HttpClient(sslContextFactory) {
+        HttpClient myHC = new HttpClient(sslContextFactory) {
             @Override
             public Request newRequest(URI uri) {
                 Request request = super.newRequest(uri);
                 return enhance(request);
             }
         };
+        myHC.setMaxConnectionsPerDestination(maxConnections);
+//        myHC.setMaxRequestsQueuedPerDestination(2048);
+        return myHC;
     }
 
     private Request enhance(Request request) {
@@ -49,8 +52,8 @@ public class JettyHttpClientConf {
 
         request.onRequestContent((theRequest, content) -> {
             try {
-                log.info("Request body --> {}", charsetDecoder.decode(content));
-            } catch (CharacterCodingException e) {
+                log.debug("Request body --> {}", decodeContent(content));
+            } catch (Exception e) {
                 log.error(e.getMessage(), e);
             }
         });
@@ -58,8 +61,8 @@ public class JettyHttpClientConf {
         request.onResponseContent((theResponse, content) -> {
             if (CONTENT_TYPE_OF_RESPONSE_BODY_TO_LOG.contains(theResponse.getHeaders().get(CONTENT_TYPE))) {
                 try {
-                    log.info("Response body --> {}", charsetDecoder.decode(content));
-                } catch (CharacterCodingException e) {
+                    log.debug("Response body --> {}", decodeContent(content));
+                } catch (Exception e) {
                     log.error(e.getMessage(), e);
                 }
             }
@@ -67,4 +70,11 @@ public class JettyHttpClientConf {
 
         return request;
     }
+
+    private String decodeContent(ByteBuffer content) {
+        byte[] bytes = new byte[content.remaining()];
+        content.get(bytes);
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
 }

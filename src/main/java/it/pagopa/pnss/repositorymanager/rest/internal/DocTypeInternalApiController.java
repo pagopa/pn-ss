@@ -50,7 +50,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 	}
 
 	private Mono<ResponseEntity<DocumentTypeResponse>> getErrorResponse(String typeId, Throwable throwable) {
-		log.info("getErrorResponse() : IN : typeId {} : throwable {}", typeId, throwable);
+		log.debug("getErrorResponse() : IN : typeId {} : throwable {}", typeId, throwable);
 
 		if (throwable instanceof ItemAlreadyPresent) {
 			String errorMsg = typeId == null ? "DocType already present"

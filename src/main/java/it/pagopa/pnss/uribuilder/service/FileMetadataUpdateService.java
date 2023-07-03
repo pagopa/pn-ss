@@ -132,7 +132,7 @@ public class FileMetadataUpdateService {
                             })
 
                             .onErrorResume(InvalidNextStatusException.class, e -> {
-                                log.error(
+                                log.debug(
                                         "FileMetadataUpdateService.createUriForUploadFile() : rilevata una InvalidNextStatusException : " +
 										"errore" +
                                         " = " + "{}",
@@ -153,7 +153,7 @@ public class FileMetadataUpdateService {
                                  .onErrorResume(NullPointerException.class, e -> {
                                      String errorMsg =
                                              String.format("Status %s is not valid for DocumentType %s", logicalState, documentType);
-                                     log.error("NullPointerException: {}", errorMsg);
+                                     log.debug("NullPointerException: {}", errorMsg);
                                      return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg));
                                  });
     }

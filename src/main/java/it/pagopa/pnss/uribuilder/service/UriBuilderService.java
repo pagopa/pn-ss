@@ -1,12 +1,10 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.RestoreObjectRequest;
 import it.pagopa.pn.template.internal.rest.v1.dto.Document;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
@@ -15,15 +13,11 @@ import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.common.client.exception.ChecksumException;
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
-import it.pagopa.pnss.common.client.exception.S3BucketException;
+import it.pagopa.pnss.common.client.exception.*;
 import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
-import it.pagopa.pnss.repositorymanager.service.DocTypesService;
-import it.pagopa.pnss.transformation.service.CommonS3ObjectService;
+import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.lang3.StringUtils;
@@ -38,25 +32,23 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.http.SdkHttpMethod;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 
 @Service
 @Slf4j
-public class UriBuilderService extends CommonS3ObjectService {
+public class UriBuilderService {
 
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
@@ -79,31 +71,38 @@ public class UriBuilderService extends CommonS3ObjectService {
     @Value("${max.restore.time.cold}")
     BigDecimal maxRestoreTimeCold;
 
+    @Value("${default.internal.x-api-key.value:#{null}}")
+    private String defaultInternalApiKeyValue;
+
+    @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
+    private String defaultInternalClientIdValue;
+
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
     private final DocTypesClientCall docTypesClientCall;
-    private final DocTypesService docTypesService;
-
+    private final S3Service s3Service;
+    private final S3Presigner s3Presigner;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
 
+    private final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+    private final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
+
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, DocTypesService docTypesService) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.docTypesClientCall = docTypesClientCall;
-        this.docTypesService = docTypesService;
+        this.s3Service = s3Service;
+        this.s3Presigner = s3Presigner;
     }
 
-    private Mono<String> getBucketName(String docType) {
-
-        return docTypesClientCall.getdocTypes(docType).map(documentTypeResponse -> {
-            var transformations = documentTypeResponse.getDocType().getTransformations();
-            if (transformations == null || transformations.isEmpty()) {
-                return bucketName.ssHotName();
-            } else return bucketName.ssStageName();
-        });
+    private Mono<String> getBucketName(DocumentType docType) {
+        var transformations = docType.getTransformations();
+        if (transformations == null || transformations.isEmpty()) {
+            return Mono.just(bucketName.ssHotName());
+        } else return Mono.just(bucketName.ssStageName());
     }
 
     public Mono<FileCreationResponse> createUriForUploadFile(String xPagopaSafestorageCxId, FileCreationRequest request,
@@ -142,7 +141,7 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                                    GenerateRandoKeyFile.getInstance()
                                                                                                        .createKeyName(documentType),
                                                                                                         fileExtension);
-                                                log.info("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
+                                                log.debug("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
                                                 return documentClientCall.postDocument(new DocumentInput().contentType(request.getContentType())
                                                                                                           .documentKey(documentKeyTmp)
                                                                                                           .documentState(
@@ -167,14 +166,11 @@ public class UriBuilderService extends CommonS3ObjectService {
                                                                                          }));
                                             })
                                             .flatMap(insertedDocument ->
-//                       PresignedPutObjectRequest presignedPutObjectRequest =
-                                                             buildsUploadUrl(documentType,
-                                                                             insertedDocument.getDocument().getDocumentState(),
-                                                                             insertedDocument.getDocument().getDocumentKey(),
-                                                                             contentType,
+
+                                                             buildsUploadUrl(insertedDocument.getDocument(),
+                                                                             checksumValue,
                                                                              metadata,
-                                                                             insertedDocument.getDocument().getDocumentType().getChecksum(),
-                                                                             checksumValue, xTraceIdValue).map(presignedPutObjectRequest -> {
+                                                                             xTraceIdValue).map(presignedPutObjectRequest -> {
                                                                  FileCreationResponse response = new FileCreationResponse();
                                                                  response.setKey(insertedDocument.getDocument().getDocumentKey());
                                                                  response.setSecret(secret.toString());
@@ -189,25 +185,22 @@ public class UriBuilderService extends CommonS3ObjectService {
     }
 
     private Mono<Boolean> validationField(String contentType, String documentType, String xTraceIdValue) {
-        return Mono.justOrEmpty(contentType).handle((s, sink) -> {
-            if (contentType.isBlank()) {
-                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing"));
-            } else
-            	if (documentType == null || documentType.isBlank()) {
-                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
-            } else if (xTraceIdValue == null || xTraceIdValue.isBlank()) {
-                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, queryParamPresignedUrlTraceId + " : Is missing"));
-            }
-            else {
-                sink.next(contentType);
-            }
-        }).flatMap(mono -> docTypesService.getAllDocumentType()).handle((documentTypes, sink) -> {
-            if (documentTypes.stream().noneMatch(item -> item.getTipoDocumento().equals(documentType))) {
-                sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid"));
-            } else {
-                sink.next(documentTypes);
-            }
-        }).map(o -> true).switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing")));
+        return Mono.justOrEmpty(contentType)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing")))
+                .handle((s, sink) -> {
+                    if (contentType.isBlank()) {
+                        sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing"));
+                    } else if (documentType == null || documentType.isBlank()) {
+                        sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
+                    } else if (xTraceIdValue == null || xTraceIdValue.isBlank()) {
+                        sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, queryParamPresignedUrlTraceId + " : Is missing"));
+                    } else {
+                        sink.next(contentType);
+                    }
+                })
+                .flatMap(mono -> docTypesClientCall.getdocTypes(documentType))
+                .onErrorResume(DocumentTypeNotPresentException.class, e -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid")))
+                .map(o -> true);
     }
 
     private FileCreationResponse.UploadMethodEnum extractUploadMethod(SdkHttpMethod method) {
@@ -217,42 +210,38 @@ public class UriBuilderService extends CommonS3ObjectService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private Mono<PresignedPutObjectRequest> buildsUploadUrl(String documentType, String documentState, String documentKey,
-                                                            String contentType, Map<String, String> secret, ChecksumEnum checksumType,
-                                                            String checksumValue, String xTraceIdValue) {
-        log.info("buildsUploadUrl() : START : " + "documentType {} : documentState {} : documentKey {} : " +
-                 "contentType {} : secret {} : checksumType {} : checksumValue {}",
-                 documentType,
-                 documentState,
-                 documentKey,
-                 contentType,
-                 secret,
-                 checksumType,
-                 checksumValue);
+    private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue) {
 
-        S3Presigner presigner = getS3Presigner();
-        return getBucketName(documentType).flatMap(buckName -> signBucket(presigner,
-                                                                          buckName,
-                                                                          documentKey,
-                                                                          documentState,
-                                                                          documentType,
-                                                                          contentType,
-                                                                          secret,
-                                                                          checksumType,
-                                                                          checksumValue,
-                                                                          xTraceIdValue))
-//        return signBucket(presigner,
-//        				  getBucketName(documentType),
-//        				  documentKey,
-//        				  documentState,
-//        				  documentType,
-//        				  contentType,
-//        				  secret,
-//        				  checksumType,
-//        				  checksumValue)
+        var documentType = document.getDocumentType();
+        var documentState = document.getDocumentState();
+        var documentKey = document.getDocumentKey();
+        var contentType = document.getContentType();
+        var checksumType = documentType.getChecksum();
+
+        log.info("buildsUploadUrl() : START : " + "documentType {} : documentState {} : documentKey {} : " +
+                        "contentType {} : secret {} : checksumType {} : checksumValue {}",
+                documentType,
+                documentState,
+                documentKey,
+                contentType,
+                secret,
+                checksumType,
+                checksumValue);
+
+        return getBucketName(documentType).flatMap(buckName -> signBucket(
+                        buckName,
+                        documentKey,
+                        documentState,
+                        documentType.getTipoDocumento(),
+                        contentType,
+                        secret,
+                        checksumType,
+                        checksumValue,
+                        xTraceIdValue))
+
                 .onErrorResume(ChecksumException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         throwable.getMessage())))
-                .onErrorResume(AmazonServiceException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR)))
+                .onErrorResume(AwsServiceException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR)))
                 .onErrorResume(throwable -> {
                     log.error("buildsUploadUrl() : Errore generico: {}", throwable.getMessage(), throwable);
                     return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore generico"));
@@ -260,11 +249,11 @@ public class UriBuilderService extends CommonS3ObjectService {
 
     }
 
-    private Mono<PresignedPutObjectRequest> signBucket(S3Presigner s3Presigner, String bucketName, String documentKey,
+    private Mono<PresignedPutObjectRequest> signBucket(String bucketName, String documentKey,
                                                        String documentState, String documentType, String contenType,
                                                        Map<String, String> secret, ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
 
-        log.debug("signBucket() : START : s3Presigner IN : " + "bucketName {} : keyName {} : " +
+        log.info("signBucket() : START : s3Presigner IN : " + "bucketName {} : keyName {} : " +
                   "documentState {} : documentType {} : contenType {} : " + "secret {} : checksumType{} : checksumValue {}",
                   bucketName,
                   documentKey,
@@ -276,44 +265,33 @@ public class UriBuilderService extends CommonS3ObjectService {
                   checksumValue);
         log.debug("signBucket() : sign bucket {}", duration);
 
-        if (checksumType == null || checksumValue == null || checksumValue.isBlank()) {
-            return Mono.error(new ChecksumException("Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
-        }
         if (queryParamPresignedUrlTraceId == null || queryParamPresignedUrlTraceId.isBlank()) {
             return Mono.error(new QueryParamException("Property \"queryParam.presignedUrl.traceId\" non impostata"));
         }
 
         return Mono.just(checksumType)
                    .flatMap(checksumTypeToEvaluate -> {
+
+                       PutObjectRequest.Builder putObjectRequest = PutObjectRequest.builder()
+                               .bucket(bucketName)
+                               .key(documentKey)
+                               .contentType(contenType)
+                               .metadata(secret)
+                               .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
+                                       queryParamPresignedUrlTraceId,
+                                       xTraceIdValue));
+
                        if (ChecksumEnum.MD5.name().equals(checksumTypeToEvaluate.name())) {
-                           return Mono.just(PutObjectRequest.builder()
-                                                            .bucket(bucketName)
-                                                            .key(documentKey)
-                                                            .contentType(contenType)
-                                                            .metadata(secret)
-                                                            .contentMD5(checksumValue)
-                                                            //.tagging(storageType)
-                                                            // Aggiungere queryParam custom alle presigned URL di upload e download
-                                                            .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
-                                                                    queryParamPresignedUrlTraceId,
-                                                                    xTraceIdValue))
+                           return Mono.just(putObjectRequest.contentMD5(checksumValue)
                                                             .build());
                        } else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank() && secret != null &&
                                   ChecksumEnum.SHA256.name().equals(checksumTypeToEvaluate.name())) {
-                           return Mono.just(PutObjectRequest.builder()
-                                                            .bucket(bucketName)
-                                                            .key(documentKey)
-                                                            .contentType(contenType)
-                                                            .metadata(secret)
-                                                            .checksumSHA256(checksumValue)
-                                                            //.tagging(storageType)
-                                                            // Aggiungere queryParam custom alle presigned URL di upload e download
-                                                            .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
-                                                                    queryParamPresignedUrlTraceId,
-                                                                    xTraceIdValue))
+                           return Mono.just(putObjectRequest.checksumSHA256(checksumValue)
                                                             .build());
-                       } else {
-                           return Mono.error(new ChecksumException(
+                       }else if (ChecksumEnum.NONE.name().equals(checksumTypeToEvaluate.name())){
+                           return Mono.just(putObjectRequest.build());
+                       }else {
+                            return Mono.error(new ChecksumException(
                                    "Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
                        }
                    })
@@ -331,49 +309,45 @@ public class UriBuilderService extends CommonS3ObjectService {
         }
         return Mono.fromCallable(this::validationFieldCreateUri)
                    .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
-                   .doOnSuccess(o -> log.info("--- REST FINE  CHIAMATA USER CONFIGURATION"))
+                   .doOnSuccess(o -> log.debug("--- REST FINE  CHIAMATA USER CONFIGURATION"))
                    .flatMap(userConfigurationResponse -> {
                        List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
                        return documentClientCall.getDocument(fileKey)
-                                                .onErrorResume(DocumentKeyNotPresentException.class,
-                                                               throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                                                                                                   "Document key Not " +
-                                                                                                                   "Found : " + fileKey)))
-                                                .map(documentResponse -> {
-                                                    if (!canRead.contains(documentResponse.getDocument()
-                                                                                          .getDocumentType()
-                                                                                          .getTipoDocumento())) {
-                                                        throw (new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                                                                           "Client : " + xPagopaSafestorageCxId +
-                                                                                           " not has privilege for read document type " +
-                                                                                           documentResponse.getDocument()
-                                                                                                           .getDocumentType()));
-                                                    }
+                                                .onErrorResume(DocumentKeyNotPresentException.class, throwable ->
+                                                    Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + fileKey)))
+                               .handle((documentResponse, synchronousSink) ->
+                               {
+                                   var document = documentResponse.getDocument();
+                                   var documentType = document.getDocumentType();
 
-                                                    return documentResponse.getDocument();
-                                                })
-                                                .handle((document, sink)->
-                                                {
-                                                	if(document.getDocumentState().equalsIgnoreCase(DELETED)){
-                                                		sink.error(new ResponseStatusException(HttpStatus.GONE,
-                                    		   								"Document has been deleted"));
-                                                	}
-                                                	else {
-                                                		sink.next(document);
-                                                	}
-                                                })
-                                                .doOnSuccess(o -> log.info("---  FINE  CHECK PERMESSI LETTURA"));
+                                   if (!canRead.contains(documentType.getTipoDocumento())) {
+                                       synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                               String.format("Client : %s not has privilege for read document type %s", xPagopaSafestorageCxId, documentType)));
+                                   } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
+                                       synchronousSink.error(new ResponseStatusException(HttpStatus.GONE,
+                                               "Document has been deleted"));
+                                   } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
+                                       synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                               "Document not found"));
+                                   } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) ) {
+                                	   try {
+                                		   log.debug("before check presence in createUriForDownloadFile");
+                                		   s3Service.headObject(fileKey, bucketName.ssHotName());
+                                    	   synchronousSink.next(document);
+                                	   } catch (software.amazon.awssdk.services.s3.model.NoSuchKeyException e) {
+                                           synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                                   "Document not found"));
+                            		   }
+                                   } else synchronousSink.next(document);
+                               })
+                               .doOnSuccess(o -> log.debug("---  FINE  CHECK PERMESSI LETTURA"));
                    })
                    .cast(Document.class)
                    .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))
                    .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable ->
-                        Mono.error(new ResponseStatusException(HttpStatus.GONE, "Document is missing from bucket")))
-                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "))
-                   .onErrorResume(RuntimeException.class, throwable -> {
-                       log.error("createUriForDownloadFile() : erroe generico = {}", throwable.getMessage(), throwable);
-                       return Mono.error(throwable);
-                   });
+                        Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
+                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "));
     }
 
     @NotNull
@@ -403,31 +377,33 @@ public class UriBuilderService extends CommonS3ObjectService {
                             .key(fileKey)
                             .versionId(null);
                 })
-                .handle((fileDownloadResponse, synchronousSink) ->
+
+                //Check sul parsing corretto della retentionUntil
+                .flatMap(fileDownloadResponse ->
                 {
-                    if (doc.getRetentionUntil() != null && !doc.getRetentionUntil().isBlank()) {
-                        try {
-                            final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
-                            synchronousSink.next(fileDownloadResponse.retentionUntil((new SimpleDateFormat(PATTERN_FORMAT).parse(doc.getRetentionUntil()))));
-                        } catch (Exception e) {
-                            log.error("getFileDownloadResponse() : errore = {}", e.getMessage(), e);
-                            synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage()));
-                        }
-                    } else synchronousSink.next(fileDownloadResponse);
+                	if( !doc.getDocumentState().equalsIgnoreCase(BOOKED)) {
+	                    if (!StringUtils.isBlank(doc.getRetentionUntil())) {
+	                        var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
+	                        return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
+	                    } else {
+	             		    log.debug("before check presence in getFileDownloadResponse");
+	                        return s3Service.headObject(fileKey, bucketName.ssHotName())
+	                                .map(HeadObjectResponse::objectLockRetainUntilDate)
+	                                .flatMap(retentionInstant ->
+	                                        documentClientCall
+	                                                .patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, fileKey, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(retentionInstant)))
+	                                                .thenReturn(retentionInstant))
+	                                .map(retentionInstant -> fileDownloadResponse.retentionUntil(Date.from(retentionInstant)));
+	                    }
+                	}
+                	else {
+                		return Mono.just(fileDownloadResponse);
+                	}
                 })
-                .cast(FileDownloadResponse.class)
-                .handle((fileDownloadResponse, synchronousSink) ->
+                .onErrorResume(DateTimeException.class, throwable ->
                 {
-                    if (Boolean.FALSE.equals(metadataOnly) && (doc.getDocumentState() == null || !(doc.getDocumentState()
-                            .equalsIgnoreCase(
-                                    TECHNICAL_STATUS_AVAILABLE) || doc.getDocumentState()
-                            .equalsIgnoreCase(
-                                    TECHNICAL_STATUS_ATTACHED) || doc.getDocumentState()
-                            .equalsIgnoreCase(
-                                    TECHNICAL_STATUS_FREEZED)))) {
-                        synchronousSink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                "Document : " + doc.getDocumentKey() + " not has a valid state "));
-                    } else synchronousSink.next(fileDownloadResponse);
+                    log.error("getFileDownloadResponse() : errore nel parsing o nella formattazione della data = {}", throwable.getMessage(), throwable);
+                    return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, throwable.getMessage()));
                 })
                 .cast(FileDownloadResponse.class);
     }
@@ -437,106 +413,84 @@ public class UriBuilderService extends CommonS3ObjectService {
     }
 
     public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly ) throws S3BucketException.NoSuchKeyException{
-            log.info("INIZIO RECUPERO URL DOWNLOAD ");
-            if (Boolean.TRUE.equals(metadataOnly))
-                return Mono.empty();
-            if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
-                    return Mono.just( getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue));
-                } else {
-                    return Mono.just( recoverDocumentFromBucket(bucketName.ssHotName(), fileKey) );
-                }
-    }
-
-    private FileDownloadInfo recoverDocumentFromBucket(String bucketName, String keyName) throws S3BucketException.NoSuchKeyException {
-        FileDownloadInfo fdinfo = new FileDownloadInfo();
-        // mettere codice per far partire il recupero del file
-        log.info("--- RESTORE DOCUMENT : " + keyName);
-
-        try {
-            log.info("--- CREATION S3 CLIENT DOCUMENT : " + keyName);
-            AmazonS3 s3Client = getAmazonS3();
-
-            // Create and submit a request to restore an object from Glacier for two days.
-            log.info("--- REQUIRE RESTORE OBJECT DOCUMENT : " + keyName);
-            RestoreObjectRequest requestRestore = new RestoreObjectRequest(bucketName, keyName, stayHotTime);
-            log.info("--- RESTORE OBJECT DOCUMENT : " + keyName);
-            s3Client.restoreObjectV2(requestRestore);
-
-            // Check the restoration status of the object.
-            ObjectMetadata response = s3Client.getObjectMetadata(bucketName, keyName);
-            Boolean restoreFlag = response.getOngoingRestore();
-            log.info("--- RETENTION DATE " + response.getHttpExpiresDate() + " DOCUMENT " + keyName);
-            log.info("Restore status: %s.\n", restoreFlag ? "in progress" : "not in progress (finished or failed)");
-        } catch (AmazonServiceException ase) {
-        	if (ase.getErrorCode().equalsIgnoreCase("NoSuchKey")) {
-            	log.error(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
-            	throw new S3BucketException.NoSuchKeyException(keyName);
-            }
-        	
-        	if (!ase.getErrorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
-            	log.error(" Errore AMAZON AmazonServiceException", ase);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, AMAZONERROR + "- " + ase.getErrorMessage());
-            }
-        } catch (SdkClientException sce) {
-            log.error(" Errore AMAZON SdkClientException", sce);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore AMAZON SdkClientException - " + sce.getMessage());
-        } catch (Exception e) {
-            log.error(" Errore Generico", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico " + e.getMessage());
+        log.info("INIZIO RECUPERO URL DOWNLOAD - metadata {}", metadataOnly);
+        if (Boolean.TRUE.equals(metadataOnly))
+            return Mono.empty();
+        if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
+            return getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue);
+        } else {
+            return recoverDocumentFromBucket(bucketName.ssHotName(), fileKey);
         }
+    }
+    private Mono<FileDownloadInfo> recoverDocumentFromBucket(String bucketName, String keyName) throws S3BucketException.NoSuchKeyException {
 
-        fdinfo.setRetryAfter(maxRestoreTimeCold);
-        return fdinfo;
+        log.info("--- STARTING RESTORE DOCUMENT : " + keyName);
+
+        RestoreRequest restoreRequest = RestoreRequest.builder()
+                .days(stayHotTime)
+                .glacierJobParameters(GlacierJobParameters.builder().tier(Tier.STANDARD).build())
+                .build();
+
+        return s3Service.restoreObject(keyName, bucketName, restoreRequest)
+                //Eccezioni S3: RestoreAlreadyInProgress viene ignorata.
+                .onErrorResume(AwsServiceException.class, ase ->
+                {
+                    if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
+                        log.debug(" Errore AMAZON RestoreAlreadyInProgress S3Exception", ase);
+                        return Mono.empty();
+                    }
+                    else if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
+                        log.error(" Errore AMAZON NoSuchKey S3Exception ", ase);
+                        return Mono.error(new S3BucketException.NoSuchKeyException(keyName));
+                    } else {
+                        log.error(" Errore AMAZON S3Exception", ase);
+                        return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));
+                    }
+                })
+                //Eccezioni dell'SDK.
+                .onErrorResume(SdkClientException.class, sce ->
+                {
+                    log.error(" Errore AMAZON SdkClientException", sce);
+                    return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "Errore AMAZON S3Exception - " + sce.getMessage()));
+                })
+                .thenReturn(new FileDownloadInfo().retryAfter(maxRestoreTimeCold));
     }
 
 
-    private FileDownloadInfo getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
+    private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
 
-        try {
-            S3Presigner presigner = getS3Presigner();
-            FileDownloadInfo fdinfo = new FileDownloadInfo();
-            log.info("INIZIO CREAZIONE OGGETTO  GetObjectRequest");
-            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                                                                .bucket(bucketName)
-                                                                .key(keyName)
-                                                                .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
-                                                                        queryParamPresignedUrlTraceId,
-                                                                        xTraceIdValue))
-                                                                .build();
-            log.info("FINE  CREAZIONE OGGETTO  GetObjectRequest");
-            log.info("INIZIO  CREAZIONE OGGETTO  GetObjectPresignRequest");
-            GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
-                                                                                     .signatureDuration(Duration.ofMinutes(Long.parseLong(
-                                                                                             duration)))
-                                                                                     .getObjectRequest(getObjectRequest)
-                                                                                     .build();
-            log.info("FINE  CREAZIONE OGGETTO  GetObjectPresignRequest");
+        log.info("---> STARTING GET PRESIGNED URL <--- , fileKey : {}", keyName);
 
-            log.info("INIZIO  RECUPERO URL ");
-            PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(getObjectPresignRequest);
-            log.info("FINE   RECUPERO URL ");
+        log.debug("INIZIO CREAZIONE getObjectRequest");
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(keyName)
+                .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
+                        queryParamPresignedUrlTraceId,
+                        xTraceIdValue))
+                .build();
 
-            String theUrl = presignedGetObjectRequest.url().toString();
-            fdinfo.setUrl(theUrl);
-            return fdinfo;
-
-        } catch (AwsServiceException ase) {
-            if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
-            	log.error(" Errore AMAZON NoSuchKey AmazonServiceException ", ase);
-            	throw new S3BucketException.NoSuchKeyException(keyName);
-            }
-            log.error(" Errore AMAZON AmazonServiceException", ase);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                                              "Errore AMAZON AmazonServiceException - " + ase.getMessage());
-        } catch (SdkClientException sce) {
-            log.error(" Errore AMAZON SdkClientException", sce);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                                              "Errore AMAZON AmazonServiceException - " + sce.getMessage());
-        } catch (Exception e) {
-            log.error(" Errore Generico", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Errore Generico ");
-        }
-
+        return s3Service.presignGetObject(getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)))
+                .map(presignedRequest -> new FileDownloadInfo().url(presignedRequest.url().toString()))
+                //Eccezioni S3
+                .onErrorResume(S3Exception.class, ase ->
+                {
+                    if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
+                        log.error(" Errore AMAZON NoSuchKey S3Exception ", ase);
+                        return Mono.error(new S3BucketException.NoSuchKeyException(keyName));
+                    } else {
+                        log.error(" Errore AMAZON S3Exception", ase);
+                        return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));
+                    }
+                })
+                //Eccezioni dell'SDK
+                .onErrorResume(SdkClientException.class, sce ->
+                {
+                    log.error(" Errore AMAZON SdkClientException", sce);
+                    return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "Errore AMAZON SdkClientException - " + sce.getMessage()));
+                });
     }
 
     private String generateSecret() {

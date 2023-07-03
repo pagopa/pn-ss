@@ -3,8 +3,7 @@ package it.pagopa.pnss.common.constant;
 import java.util.List;
 import java.util.Map;
 import static java.util.Map.entry;
-import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
-import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
+import static org.springframework.http.MediaType.*;
 
 public final class Constant {
 
@@ -14,10 +13,13 @@ public final class Constant {
 
     public static final String APPLICATION_ZIP_VALUE = "application/zip";
     public static final String IMAGE_TIFF_VALUE = "image/tiff";
+    public static final String APPLICATION_PKCS7_MIME = "application/pkcs7-mime";
     public static final Map<String, String> MEDIA_TYPE_WITH_EXTENSION_MAP = Map.ofEntries(entry(APPLICATION_PDF_VALUE, ".pdf"),
                                                                                           entry(APPLICATION_ZIP_VALUE, ".zip"),
+                                                                                          entry(APPLICATION_OCTET_STREAM_VALUE, ".bin"),
                                                                                           entry(APPLICATION_XML_VALUE, ".xml"),
-                                                                                          entry(IMAGE_TIFF_VALUE, ".tiff"));
+                                                                                          entry(IMAGE_TIFF_VALUE, ".tiff"),
+                                                                                          entry(APPLICATION_PKCS7_MIME, ".p7m"));
     public static final String PRELOADED = "PRELOADED";
     public static final String ATTACHED = "ATTACHED";
     public static final String SAVED = "SAVED";
@@ -29,7 +31,7 @@ public final class Constant {
 
     public static final String STORAGE_TYPE = "storageType";
     public static final List<String> LISTA_TIPO_DOCUMENTI =
-            List.of(APPLICATION_PDF_VALUE, APPLICATION_ZIP_VALUE, APPLICATION_XML_VALUE, IMAGE_TIFF_VALUE);
+            List.of(APPLICATION_PDF_VALUE, APPLICATION_ZIP_VALUE, APPLICATION_OCTET_STREAM_VALUE, APPLICATION_XML_VALUE, IMAGE_TIFF_VALUE, APPLICATION_PKCS7_MIME);
     public static final String TECHNICAL_STATUS_BOOKED = "BOOKED";
     public static final String TECHNICAL_STATUS_ATTACHED = "ATTACHED";
     public static final String TECHNICAL_STATUS_AVAILABLE = "AVAILABLE";

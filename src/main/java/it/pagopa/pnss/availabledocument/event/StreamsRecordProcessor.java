@@ -1,6 +1,7 @@
 package it.pagopa.pnss.availabledocument.event;
 
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
+import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
@@ -10,13 +11,12 @@ import com.amazonaws.services.kinesis.model.Record;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
-
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 public class StreamsRecordProcessor implements IRecordProcessor {
@@ -24,7 +24,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     public static final String MODIFY_EVENT = "MODIFY";
     public static final String REMOVE_EVENT = "REMOVE";
     private Integer checkpointCounter;
-
+    private final EventBridgeClient eventBridgeClient = EventBridgeClient.create();
     private boolean test = false;
     private final String disponibilitaDocumentiEventBridge;
 
@@ -43,75 +43,56 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     @Override
     public void processRecords(ProcessRecordsInput processRecordsInput) {
+        log.debug("DBStream - processRecords: ritardo {}", processRecordsInput.getMillisBehindLatest());
+        findEventSendToBridge(processRecordsInput)
+                .buffer(10)
+                .map(putEventsRequestEntries -> {
 
-        try {
-            List<PutEventsRequestEntry> requestEntries = findEventSendToBridge(processRecordsInput);
-            if (!requestEntries.isEmpty()) {
-                EventBridgeClient eventBridgeClient =
-                        EventBridgeClient.builder()
-                                //.credentialsProvider()
-                                //.defaultsMode()
-                                //.dualstackEnabled()
-                                //.endpointOverride()
-                                //.httpClient()
-                                //.httpClientBuilder()
-                                .build();
-                PutEventsRequest eventsRequest = PutEventsRequest.builder()
-                        .entries(requestEntries)
-                        .build();
-                eventBridgeClient.putEvents(eventsRequest);
+                    PutEventsRequest eventsRequest = PutEventsRequest.builder()
+                            .entries(putEventsRequestEntries)
+                            .build();
 
-            }
-        }catch (Exception e ){
-            log.error("DBStream: Errore generico ",e);
-        }
-
+                    return eventBridgeClient.putEvents(eventsRequest);
+                })
+                .then()
+                .doOnError(e -> log.error("* FATAL * DBStream: Errore generico ", e))
+                .subscribe();
     }
 
     @NotNull
-    public List<PutEventsRequestEntry> findEventSendToBridge (ProcessRecordsInput processRecordsInput) {
-        List<PutEventsRequestEntry> requestEntries = new ArrayList<>();
-        for (Record recordEvent : processRecordsInput.getRecords()) {
-            String data = new String(recordEvent.getData().array(), Charset.forName("UTF-8"));
-            log.debug("DBStream: {}", data);
-            if (recordEvent instanceof RecordAdapter) {
-                com.amazonaws.services.dynamodbv2.model.Record streamRecord = ((RecordAdapter) recordEvent)
-                        .getInternalObject();
-                PutEventsRequestEntry putEventsRequestEntry = null;
-                try{
-                    switch (streamRecord.getEventName()) {
-                        case INSERT_EVENT:
-                            break;
-                        case MODIFY_EVENT:
-                            ManageDynamoEvent mde = new ManageDynamoEvent();
-                            putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
-                                    streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage());
-                            if (putEventsRequestEntry!=null ){
-                                requestEntries.add(putEventsRequestEntry);
-                            }
-                            break;
-                        case REMOVE_EVENT:
-                            break;
-                    }
+    public Flux<PutEventsRequestEntry> findEventSendToBridge(ProcessRecordsInput processRecordsInput) {
+        log.debug("DBStream - findEventSendToBridge: record letti {}", processRecordsInput.getRecords().size());
+        return Flux.fromIterable(processRecordsInput.getRecords())
+                .map(recordEvent -> {
+                    String data = new String(recordEvent.getData().array(), StandardCharsets.UTF_8);
+                    log.debug("DBStream: {}", data);
+                    return recordEvent;
+                })
+                .filter(RecordAdapter.class::isInstance)
+                .map(recordEvent -> ((RecordAdapter) recordEvent).getInternalObject())
+                .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))
+                .flatMap(streamRecord -> {
+                    ManageDynamoEvent mde = new ManageDynamoEvent();
+                    return Mono.justOrEmpty(mde.manageItem(disponibilitaDocumentiEventBridge,
+                            streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage()));
+                })
+                .doOnError(e -> log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
+                .doOnComplete(() -> setCheckpoint(processRecordsInput));
+    }
 
-                    log.debug("DBStream Ok: {}", recordEvent.getPartitionKey());
-
-                }catch (Exception ex){
-                    log.error("DBStream: Errore generico nella gestione dell'evento su {} - {}",recordEvent.getPartitionKey(), ex );
+    private void setCheckpoint(ProcessRecordsInput processRecordsInput) {
+        try {
+            if (!test) {
+                try {
+                    processRecordsInput.getCheckpointer().checkpoint();
+                } catch (ShutdownException e) {
+                    log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
                 }
             }
-
-        }
-        try {
-            if (!test){
-                processRecordsInput.getCheckpointer().checkpoint();
-            }
-        }
-        catch (Exception e) {
-            log.error("DBStream: Errore nel settaggio del checkpoint",e );
+        } catch (Exception e) {
+            log.error("* FATAL * processRecords: {} {}", e, e.getMessage());
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
-        return requestEntries;
     }
 
     @Override
@@ -121,7 +102,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 shutdownInput.getCheckpointer().checkpoint();
             }
             catch (Exception e) {
-                log.error("DBStream: Errore durante il processo di shutDown", e);
+                log.error("* FATAL * DBStream: Errore durante il processo di shutDown", e);
             }
         }
 

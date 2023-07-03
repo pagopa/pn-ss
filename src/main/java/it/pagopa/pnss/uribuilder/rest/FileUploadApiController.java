@@ -40,27 +40,9 @@ public class FileUploadApiController implements FileUploadApi {
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
         return fileCreationRequest.flatMap(request -> {
         								String checksumValue = null;
-
-//										old version
-//										if (request != null && request.getChecksumValue() != null && !request.getChecksumValue().isBlank()) {
-//											checksumValue = request.getChecksumValue();
-//										}
-//										else if (exchange != null && exchange.getRequest() != null
-//												&& headerXChecksumValue != null && !headerXChecksumValue.isBlank()
-//												&& exchange.getRequest().getHeaders() !=null
-//												&& exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
-//											checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
-//										}
-//										if (checksumValue == null || checksumValue.isBlank()) {
-//											return Mono.error(new ChecksumException("Checksum value (header or in request) not present"));
-//										}
-
 										if (headerXChecksumValue != null && !headerXChecksumValue.isBlank()) {
 											if (exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
 												checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
-											}
-											if (checksumValue == null || checksumValue.isBlank()) {
-												return Mono.error(new ChecksumException("Checksum value (header or in request) not present"));
 											}
 										}
         								return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
@@ -69,7 +51,7 @@ public class FileUploadApiController implements FileUploadApi {
         																				xTraceIdValue);
         						  })
         						  .onErrorResume(ChecksumException.class, throwable -> {
-        							  log.error("FileUploadApiController.createFile() : errore checksum = {}", throwable.getMessage(), throwable);
+        							  log.debug("FileUploadApiController.createFile() : errore checksum = {}", throwable.getMessage(), throwable);
         							  throw new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage());
         						  })
                                   .map(ResponseEntity::ok);

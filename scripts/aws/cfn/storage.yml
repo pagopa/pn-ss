@@ -19,31 +19,69 @@ Parameters:
   Version:
     Type: String
     Description: 'keep track of used projects commitIds'
-  
+
+  PnCoreTargetEventBus:
+    Type: String
+    Description: 'ARN of Pn Core Event Bus where to forward external notifications'
+    Default: ''
+    
   # CdcKinesisSourceStreamArn:
   #   Type: String
   #   Description: 'Where to send CDC'
 
-  PnSsGestoreBucketLambdaNameIn:
+  SafeStorageBucketName:
+    Type: String
+    Description: 'Safe Storage bucket name'
+
+  PnSsGestoreBucketLambdaName:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
     Default: 'pn-safe-storage-gestore-bucket-lambda'
-
-  DeployEnv:
-    Type: String
-    Description: Nome dell'ambiente destinazione
-    Default: DEV
   
   PnSsEventBusExternalNotificationName:
     Type: String 
     Description: 'Nome del Event Bus che raccoglie gli eventi del microservizio Gestore Disponibilita'
     Default: 'Pn-Ss-Notifications-Bus'
   
+  AlarmSNSTopicName:
+    Type: String
+    Description: 'Topic alarm'
+  
+  EnvType:
+    Type: String
+    Description: 'Deploy environment type'
+    Default: 'dev'
+    
+  LogsKinesisSourceStreamArn:
+    Type: String
+    Description: 'Where to send Logs'
+
+  LogRetention:
+    Type: Number
+    Default: 14
+
 Conditions:
-  # IsProdEnv: !Equals ['PROD', !Ref DeployEnv]
-  IsDevEnv: !Equals [!Ref 'AWS::AccountId', '063295570123']
+  IsDevEnv: !Equals [ !Ref EnvType, 'dev'] 
+
 
 Resources:
+  PCKmsEncDecDynamoDataKey:
+    Type: 'AWS::KMS::Key'
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: A symmetric encryption KMS key AES-256-GCM
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
 
   PnSsTableAnagraficaClient:
     Type: AWS::DynamoDB::Table
@@ -59,6 +97,7 @@ Resources:
       SSESpecification:
         SSEEnabled: true
         SSEType: 'KMS'
+        KMSMasterKeyId: !Ref PCKmsEncDecDynamoDataKey
       TableClass: 'STANDARD'
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
@@ -76,9 +115,6 @@ Resources:
         - AttributeName: 'tipoDocumento'
           KeyType: 'HASH'
       BillingMode: 'PAY_PER_REQUEST'
-      SSESpecification:
-        SSEEnabled: true
-        SSEType: 'KMS'
       TableClass: 'STANDARD'
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
@@ -98,27 +134,44 @@ Resources:
       StreamSpecification:
           StreamViewType: 'NEW_AND_OLD_IMAGES'
       BillingMode: 'PAY_PER_REQUEST'
-      SSESpecification:
-        SSEEnabled: true
-        SSEType: 'KMS'
       TableClass: 'STANDARD'
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
+  PnSsKmsBucket:
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: "Symmetric Encryption KMS for Safe Storage's Buckets"
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Enable Permissions on all user and roles
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
+  
   PnSsBucket:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
     Properties:
-      BucketName: !Sub ${ProjectName}-safestorage-${AWS::Region}-${AWS::AccountId}
+      BucketName: !Ref SafeStorageBucketName
       AccessControl: 'Private'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - BucketKeyEnabled: true
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
-              #  KMSMasterKeyID: KMS-KEY-AR
+              KMSMasterKeyID: !GetAtt PnSsKmsBucket.Arn
       CorsConfiguration:  
         CorsRules:
           - AllowedHeaders:
@@ -142,7 +195,7 @@ Resources:
                 DaysAfterInitiation: 1
             Status: 'Enabled'
           - Id: 'PnSsNotificationAttachmentTemporary'
-            ExpirationInDays: 1
+            ExpirationInDays: 7
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
@@ -192,25 +245,25 @@ Resources:
       NotificationConfiguration:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           - Event: 's3:ObjectRemoved:*'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           - Event: 's3:ObjectRestore:*'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           - Event: 's3:LifecycleExpiration:DeleteMarkerCreated'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           - Event: 's3:LifecycleTransition'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           # - Event: 's3:Replication'
             # Function: !GetAtt PnSsGestoreBucket.Arn
       ObjectLockEnabled: true
-      # ObjectLockConfiguration:
-      #   ObjectLockEnabled: 'Enabled'
-      #   Rule: 
-      #     DefaultRetention: 
-      #       Days: 1
-      #       Mode: !If [ IsProdEnv , 'COMPLIANCE' , 'GOVERNANCE']
-      #       # Years: 
+      ObjectLockConfiguration:
+        ObjectLockEnabled: 'Enabled'
+        Rule:
+          DefaultRetention:
+            Days: 1
+            Mode: 'GOVERNANCE' # non modificare quando si decommenta la sezione
+            # Years:
       VersioningConfiguration:
         Status: Enabled
       OwnershipControls:
@@ -237,7 +290,7 @@ Resources:
           - BucketKeyEnabled: true
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
-              #  KMSMasterKeyID: KMS-KEY-AR
+              KMSMasterKeyID: !GetAtt PnSsKmsBucket.Arn
       LifecycleConfiguration:
         Rules:
           - Id: 'PnSsStagingAbortIncompleteMultipartUpload'
@@ -249,7 +302,7 @@ Resources:
           EventBridgeEnabled: true
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
@@ -259,88 +312,80 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
-  PnSsQueueStagingBucket:
-    Type: AWS::SQS::Queue
+  PnSsQueueStagingBucketStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
     Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 20      
-      RedrivePolicy:
-        deadLetterTargetArn : !GetAtt PnSsDLQueueStagingBucket.Arn
-        maxReceiveCount : 10
-      VisibilityTimeout: 30
-
-  PnSsDLQueueStagingBucket:
-    Type: AWS::SQS::Queue
-    Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 20
-      VisibilityTimeout: 30 
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-staging-bucket-events-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        QueueHasAlarm: 'false'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 ########### GESTORE BUCKET INVOKE QUEUE ###########
 # La coda PnSsQueueGestoreBucketInvoke è il target delle S3 notifications provenienti dal bucket principale #
-# visibility timeout docs https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html#events-sqs-queueconfig 
-  PnSsQueueGestoreBucketInvoke:
-    Type: AWS::SQS::Queue
+# visibility timeout docs https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html#events-sqs-queueconfig
+  PnSsQueueGestoreBucketInvokeStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
     Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0      
-      RedrivePolicy:
-        deadLetterTargetArn : !GetAtt PnSsDLQueueGestoreBucketInvoke.Arn
-        maxReceiveCount : 10
-      VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket 
-
-  PnSsDLQueueGestoreBucketInvoke:
-    Type: AWS::SQS::Queue
-    Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0
-      VisibilityTimeout: 30
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-main-bucket-events-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket
+        QueueHasAlarm: 'false'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
   PnSsQueuePolicyGestoreBucketInvoke:
     Type: AWS::SQS::QueuePolicy
     Properties: 
       Queues: 
-        - !Ref PnSsQueueGestoreBucketInvoke
+        - !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueURL
       PolicyDocument:
         Version: '2012-10-17'
         Statement: 
           - Action: 
-            - 'SQS:*'
+            - 'sqs:*'
             Effect: "Allow"
-            Resource: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
             Principal:
               Service: 's3.amazonaws.com'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
           - Action: 
-            - 'SQS:*'
+            - 'sqs:*'
             Effect: "Allow"
-            Resource: !GetAtt PnSsQueueGestoreBucketInvoke.Arn
+            Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
             Principal:
               AWS: '*'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
 
 ########### GESTORE BUCKET INVOKE DLQ ###########
 # La coda PnSsQueueGestoreBucketInvokeErrors è la DLQ configurata per la risorsa Gestore Bucket (Lambda) #
-  PnSsQueueGestoreBucketInvokeErrors:
-    Type: AWS::SQS::Queue
+  PnSsQueueGestoreBucketInvokeErrorsStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
     Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0      
-      RedrivePolicy:
-        deadLetterTargetArn : !GetAtt PnSsDLQueueGestoreBucketInvokeErrors.Arn
-        maxReceiveCount : 10
-      VisibilityTimeout: 30
-
-  PnSsDLQueueGestoreBucketInvokeErrors:
-    Type: AWS::SQS::Queue
-    Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0
-      VisibilityTimeout: 30
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-gestore-bucket-invocation-errors-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        QueueHasAlarm: 'true'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 ########### GESTORE DISPONIBILITA' EXTERNAL NOTIFICATION ###########
   PnSsEventBusExternalNotification: 
@@ -383,37 +428,57 @@ Resources:
         Effect: 'Allow'
         Resource: !GetAtt PnSsEventBusExternalNotification.Arn
         Principal: 
-          AWS: !Sub '${AWS::AccountId}'
+          AWS: !Ref AWS::AccountId
         Condition:
           StringEqualsIfExists:
-            events:creatorAccount: !Sub '${AWS::AccountId}'
+            events:creatorAccount: !Ref AWS::AccountId
 
-  PnSsQueueNotificheExt1:
-    Type: AWS::SQS::Queue
+  PnSsQueueNotificheDEVStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
     Condition: IsDevEnv
     Properties:
-      SqsManagedSseEnabled: True
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 0      
-      VisibilityTimeout: 30
-    
-  PnSsEventRuleNotificheExt1:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-external-notification-DEV-queue'
+        SqsManagedSseEnabled: true
+        HasDLQ: False
+        QueueHasAlarm: 'true'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+  
+  PnSsEventRuleNotificheDEV:
     Type: AWS::Events::Rule
     Condition: IsDevEnv
     Properties:
+      Description: 'This Event rule is used to forward event on a dummy queue instead of PnCoreTargetEventBus'
       EventBusName: !Ref PnSsEventBusExternalNotification
       EventPattern:
         source: 
           - "GESTORE DISPONIBILITA"
         account: 
-          - !Sub ${AWS::AccountId}
+          - !Ref AWS::AccountId
         region: 
-          - !Sub ${AWS::Region}
+          - !Ref AWS::Region
       State: 'ENABLED'
       Targets:
-        - Arn: !GetAtt PnSsQueueNotificheExt1.Arn
-          Id: 'PnSsExt1QueueTargetForExtNotification'
+        - Arn: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN
+          Id: 'PnSsDEVQueueTargetForExtNotification'
 
+  PnSsEventsDLQueuePnCoreTargetEventBusStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-forward-events-pncoreeventbus-DLQueue'
+        SqsManagedSseEnabled: true
+        HasDLQ: False
+        QueueHasAlarm: 'true'
+        OncallDLQLimit: '1'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+    
   # ####### DENY POLICY FROM OUTSIDE ACCOUNT ########
   # PnSsEventBusPolicyDenyExternalNotification:
   #   Type: AWS::Events::EventBusPolicy
@@ -431,6 +496,19 @@ Resources:
   #       Condition:
   #         StringNotEquals:
   #           aws:SourceAccount: !Sub '${AWS::AccountId}'
+
+  ### LOG GROUP RESOURCES ###
+  EcsLogGroup:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain    
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
+      Parameters:
+        LogGroupName: !Sub '${ProjectName}-safe-storage'
+        LogsKinesisSourceStreamArn: !Ref LogsKinesisSourceStreamArn
+        LogGroupRetention: !Ref LogRetention
+
 
 Outputs:
   PnSsTableNameAnagraficaClient:
@@ -479,55 +557,79 @@ Outputs:
 
   PnSsQueueNameStagingBucket:
     Description: 'Nome coda per notifiche SS Staging Bucket'
-    Value: !GetAtt  PnSsQueueStagingBucket.QueueName
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueName
 
   PnSsQueueArnStagingBucket:
     Description: 'ARN coda per notifiche SS Staging Bucket'
-    Value: !GetAtt  PnSsQueueStagingBucket.Arn
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueARN
 
   PnSsQueueUrlStagingBucket:
     Description: 'URL coda per notifiche SS Staging Bucket'
-    Value: !Ref PnSsQueueStagingBucket
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueURL
 
   PnSsDLQueueNameStagingBucket:
     Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
-    Value: !GetAtt PnSsDLQueueStagingBucket.QueueName
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.DeadLetterQueueName
+
+  PnSsAlarmArnQueueStagingBucket:
+    Description: "ARN dell'allarme messaggi vecchi nella coda notifiche SS Staging Bucket"
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.SqsAgeAlarmArn
+  
+  PnSsAlarmArnDLQueueStagingBucket:
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ notifiche SS Staging Bucket"
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.SqsDLQAlarmArn
 
   PnSsQueueNameGestoreBucketInvokeErrors:
     Description: 'Nome coda per pubblicazione errori del Gestore Bucket'
-    Value: !GetAtt  PnSsQueueGestoreBucketInvokeErrors.QueueName
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.QueueName
 
   PnSsQueueArnGestoreBucketInvokeErrors:
     Description: 'ARN coda per pubblicazione errori del Gestore Bucket'
-    Value: !GetAtt  PnSsQueueGestoreBucketInvokeErrors.Arn
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.QueueARN
 
   PnSsQueueUrlGestoreBucketInvokeErrors:
     Description: 'URL coda per pubblicazione errori del Gestore Bucket'
-    Value: !Ref PnSsQueueGestoreBucketInvokeErrors
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.QueueURL
 
   PnSsDLQueueNameGestoreBucketInvokeErrors:
     Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
-    Value: !GetAtt PnSsDLQueueGestoreBucketInvokeErrors.QueueName
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.DeadLetterQueueName
+
+  PnSsAlarmArnQueueGestoreBucketInvokeErrors:
+    Description: "ARN dell'allarme messaggi vecchi nella coda errori del Gestore Bucket"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.SqsAgeAlarmArn
+  
+  PnSsAlarmArnDLQueueGestoreBucketInvokeErrors:
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ errori del Gestore Bucket"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.SqsDLQAlarmArn
 
   PnSsQueueNameGestoreBucketInvoke:
     Description: 'Nome coda per pubblicazione notifiche di eventi sul bucket SS'
-    Value: !GetAtt  PnSsQueueGestoreBucketInvoke.QueueName
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueName
 
   PnSsQueueArnGestoreBucketInvoke:
     Description: 'ARN coda per pubblicazione notifiche di eventi sul bucket SS'
-    Value: !GetAtt  PnSsQueueGestoreBucketInvoke.Arn
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
 
   PnSsQueueUrlGestoreBucketInvoke:
     Description: 'URL coda per pubblicazione notifiche di eventi sul bucket SS'
-    Value: !Ref PnSsQueueGestoreBucketInvoke
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueURL
 
   PnSsDLQueueNameGestoreBucketInvoke:
     Description: 'Nome coda DLQ per pubblicazione notifiche di eventi sul bucket SS'
-    Value: !GetAtt PnSsDLQueueGestoreBucketInvoke.QueueName
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.DeadLetterQueueName
 
+  PnSsAlarmArnQueueGestoreBucketInvoke:
+    Description: "ARN dell'allarme messaggi vecchi nella coda notifiche di eventi sul bucket SS"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.SqsAgeAlarmArn
+  
+  PnSsAlarmArnDLQueueGestoreBucketInvoke:
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ notifiche di eventi sul bucket SS"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.SqsDLQAlarmArn
+    
   PnSsGestoreBucketLambdaName:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
-    Value: !Ref PnSsGestoreBucketLambdaNameIn
+    Value: !Ref PnSsGestoreBucketLambdaName
 
   PnSsEventBusNameExternalNotification:
     Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'
@@ -536,3 +638,31 @@ Outputs:
   PnSsEventBusArnExternalNotification:
     Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
     Value: !GetAtt  PnSsEventBusExternalNotification.Arn
+
+  PnSsQueueNameEventsDLQueuePnCoreTargetEventBus:
+    Description: 'Nome DLQ per forward degli eventi al bus PnCoreTargetEventBus'
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.QueueName
+
+  PnSsQueueArnEventsDLQueuePnCoreTargetEventBus:
+    Description: 'ARN DLQ per forward degli eventi al bus PnCoreTargetEventBus'
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.QueueARN
+
+  PnSsQueueUrlEventsDLQueuePnCoreTargetEventBus:
+    Description: 'URL DLQ per forward degli eventi al bus PnCoreTargetEventBus'
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.QueueURL
+
+  PnSsAlarmArnEventsDLQueuePnCoreTargetEventBus:
+    Description: "ARN dell'allarme messaggi vecchi nella DLQ per forward degli eventi al bus PnCoreTargetEventBus"
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.SqsAgeAlarmArn
+
+  PCKmsEncDecDynamoDataKeyARN:
+    Description: Name of KMS Key for Dynamo encode/decode data
+    Value: !Sub '${PCKmsEncDecDynamoDataKey.Arn}'
+
+  # Log group exports
+  EcsLogGroup:
+    Value: !GetAtt EcsLogGroup.Outputs.LogGroupName
+    
+  PnSsKmsArnBucket:
+    Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
+    Value: !GetAtt PnSsKmsBucket.Arn

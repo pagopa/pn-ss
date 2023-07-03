@@ -10,11 +10,13 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.S3BucketException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +33,7 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 
@@ -41,6 +44,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
@@ -83,6 +87,9 @@ class UriBuilderServiceDownloadTest {
 
     @MockBean
     DocTypesClientCall docTypesClientCall;
+
+    @SpyBean
+    S3Service s3Service;
     
     @SpyBean
     UriBuilderService uriBuilderService;
@@ -94,7 +101,8 @@ class UriBuilderServiceDownloadTest {
     BucketName bucketName;
     private static final String CHECKSUM = "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
 
-    private WebTestClient.ResponseSpec fileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
+    private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(String requestIdx, Boolean metadataOnly)
+    {
         this.webClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         return this.webClient.get()
                 .uri(uriBuilder -> uriBuilder.path(urlDownload).queryParam("metadataOnly", metadataOnly)
@@ -102,9 +110,18 @@ class UriBuilderServiceDownloadTest {
                         .build(requestIdx))
                 .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
-                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
                 .header(HttpHeaders.ACCEPT, "application/json")
-                .attribute("metadataOnly", metadataOnly)
+                .attribute("metadataOnly", metadataOnly);
+    }
+
+    private WebTestClient.ResponseSpec fileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
+        return callRequestHeadersSpec(requestIdx, metadataOnly)
+                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                .exchange();
+    }
+
+    private WebTestClient.ResponseSpec noTraceIdFileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
+        return callRequestHeadersSpec(requestIdx, metadataOnly)
                 .exchange();
     }
 
@@ -132,6 +149,25 @@ class UriBuilderServiceDownloadTest {
 
 
     @Test
+    void testMissingTraceIdHeader()
+    {
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+
+        mockGetDocument(d, docId);
+
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
+        noTraceIdFileDownloadTestCall(docId, true).expectStatus().isBadRequest();
+    }
+    @Test
     void testUrlGenerato() {
 
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
@@ -147,6 +183,8 @@ class UriBuilderServiceDownloadTest {
         mockGetDocument(d, docId);
 
         when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).build()));
+        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class))).thenReturn(Mono.just(new DocumentResponse()));
 
         fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
@@ -166,6 +204,9 @@ class UriBuilderServiceDownloadTest {
         mockGetDocument(d, docId);
 
         when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).build()));
+        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class))).thenReturn(Mono.just(new DocumentResponse()));
+
 
         fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
@@ -186,6 +227,9 @@ class UriBuilderServiceDownloadTest {
         mockGetDocument(d, docId);
 
         when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).build()));
+        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class))).thenReturn(Mono.just(new DocumentResponse()));
+
 
         fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
@@ -203,7 +247,8 @@ class UriBuilderServiceDownloadTest {
         mockGetDocument(d, docId);
         //Mockito.doReturn(fdr).when(service).createUriForDownloadFile(Mockito.any(), Mockito.any());
         when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
-
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).build()));
+        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class))).thenReturn(Mono.just(new DocumentResponse()));
 
         fileDownloadTestCall( docId,false).expectStatus()
                 .isOk().expectBody(FileDownloadResponse.class).value(response ->{
@@ -246,7 +291,24 @@ class UriBuilderServiceDownloadTest {
     	when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
     	
     	mockGetDocument(d, docId);
-    	fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.GONE);
+    	fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void testDocumentMissingFromBucketStaged() {
+
+        doThrow(new S3BucketException.NoSuchKeyException("")).when(uriBuilderService).createFileDownloadInfo(any(), any(), any(), anyBoolean());
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
+        String docId = "1111-aaaa"; mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+        DocumentInput d = new DocumentInput(); d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(STAGED);
+
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
+        mockGetDocument(d, docId);
+        fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test void testDocumentMissingFromBucketFreezed() {
@@ -262,7 +324,7 @@ class UriBuilderServiceDownloadTest {
         when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 
         mockGetDocument(d, docId);
-        fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.GONE);
+        fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
     }
 
    /* @Test
@@ -329,24 +391,6 @@ class UriBuilderServiceDownloadTest {
 
         mockGetDocument(d, docId);
         fileDownloadTestCall(docId, false).expectStatus().isForbidden();
-    }
-
-    @Test
-    void testDocumentNotInStatusAvailable() {
-        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
-
-        String docId = "1111-aaaa";
-
-        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
-
-        DocumentInput d = new DocumentInput();
-        d.setDocumentType(DocTypesConstant.PN_AAR);
-        d.setDocumentState(TECHNICAL_STATUS_BOOKED);
-
-        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
-
-        mockGetDocument(d, docId);
-        fileDownloadTestCall(docId, false).expectStatus().isBadRequest();
     }
 
     private void mockGetDocument(DocumentInput d, String docId) {

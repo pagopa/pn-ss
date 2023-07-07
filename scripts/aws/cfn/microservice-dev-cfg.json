@@ -24,6 +24,7 @@
     "PnSsGestoreBucketMinReservedConcurrentExecutions": "40",
     "MinTasksNumber": "3",
     "MaxTasksNumber": "13",
-    "AutoscalingThreshold": "15000"
+    "AutoscalingThreshold": "15000",
+    "ConfinfoEventBusArn": "arn:aws:events:eu-south-1:946373734005:event-bus/PnEc-dummy-event-bus"
   }
 }

@@ -590,10 +590,7 @@ Resources:
                   - 'events:PutEvents'
                 Resource:
                   - !Ref PnCoreTargetEventBus
-                  - !If:
-                    - ConfInfoEventBusArnExists
-                    - !Ref ConfinfoEventBusArn
-                    - !Ref "AWS::NoValue"
+                  - !Ref ConfinfoEventBusArn
       # RoleName: PnSsRole
 
   PnSsQueuePolicyExternalNotifications:
@@ -645,14 +642,11 @@ Resources:
           RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
           DeadLetterConfig:
             Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
-        # - !If :
-        #   - ConfInfoEventBusArnExists
-        #   - Arn: !Ref ConfinfoEventBusArn
-        #     Id: 'PnConfinfoEventBusTarget'
-        #     RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
-        #     DeadLetterConfig:
-        #       Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
-        #   - !Ref "AWS::NoValue"
+        - Arn: !Ref ConfinfoEventBusArn
+          Id: 'PnConfinfoEventBusTarget'
+          RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
+          DeadLetterConfig:
+            Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
 
   #####    Metrics and Alarms  -  Microservice #####
   SafeStorageMicroserviceAlarm:

@@ -384,6 +384,7 @@ Parameters:
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
+  ConfInfoEventBusArnExists: !Not [ !Equals [!Ref ConfinfoEventBusArn, '' ] ]
 
 Resources:
 
@@ -589,7 +590,10 @@ Resources:
                   - 'events:PutEvents'
                 Resource:
                   - !Ref PnCoreTargetEventBus
-                  - !Ref ConfinfoEventBusArn
+                  - !If:
+                    - ConfInfoEventBusArnExists
+                    - !Ref ConfinfoEventBusArn
+                    - !Ref "AWS::NoValue"
       # RoleName: PnSsRole
 
   PnSsQueuePolicyExternalNotifications:
@@ -641,11 +645,14 @@ Resources:
           RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
           DeadLetterConfig:
             Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
-        - Arn: !Ref ConfinfoEventBusArn
-          Id: 'PnConfinfoEventBusTarget'
-          RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
-          DeadLetterConfig:
-            Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
+        - !If :
+          - ConfInfoEventBusArnExists
+          - Arn: !Ref ConfinfoEventBusArn
+            Id: 'PnConfinfoEventBusTarget'
+            RoleArn: !GetAtt PnSsRoleExternalNotifications.Arn
+            DeadLetterConfig:
+              Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
+          - !Ref "AWS::NoValue"
 
   #####    Metrics and Alarms  -  Microservice #####
   SafeStorageMicroserviceAlarm:

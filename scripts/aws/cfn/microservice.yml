@@ -384,7 +384,6 @@ Parameters:
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
-  ConfInfoEventBusArnExists: !Not [ !Equals [!Ref ConfinfoEventBusArn, '' ] ]
 
 Resources:
 

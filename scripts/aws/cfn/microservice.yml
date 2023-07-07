@@ -71,6 +71,7 @@ Parameters:
   ConfinfoEventBusArn:
     Type: String
     Description: Confinfo event bus ARN
+    Default: ''
 
   Version:
     Type: String

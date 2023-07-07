@@ -275,7 +275,7 @@ Resources:
         ObjectLockEnabled: 'Enabled'
         Rule:
           DefaultRetention:
-            Days: 1
+            Days: !Ref PnSsPreloadedDocsRetentionDays
             Mode: 'GOVERNANCE' # non modificare quando si decommenta la sezione
             # Years:
       VersioningConfiguration:

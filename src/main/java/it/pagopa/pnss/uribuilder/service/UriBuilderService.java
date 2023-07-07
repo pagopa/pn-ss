@@ -316,31 +316,28 @@ public class UriBuilderService {
                        return documentClientCall.getDocument(fileKey)
                                                 .onErrorResume(DocumentKeyNotPresentException.class, throwable ->
                                                     Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + fileKey)))
-                               .handle((documentResponse, synchronousSink) ->
+                               .flatMap(documentResponse ->
                                {
                                    var document = documentResponse.getDocument();
                                    var documentType = document.getDocumentType();
 
                                    if (!canRead.contains(documentType.getTipoDocumento())) {
-                                       synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                       return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
                                                String.format("Client : %s not has privilege for read document type %s", xPagopaSafestorageCxId, documentType)));
                                    } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
-                                       synchronousSink.error(new ResponseStatusException(HttpStatus.GONE,
+                                       return Mono.error(new ResponseStatusException(HttpStatus.GONE,
                                                "Document has been deleted"));
                                    } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
-                                       synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                       return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                "Document not found"));
                                    } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) ) {
-                                	   try {
-                                		   log.debug("before check presence in createUriForDownloadFile");
-                                		   s3Service.headObject(fileKey, bucketName.ssHotName());
-                                    	   synchronousSink.next(document);
-                                	   } catch (software.amazon.awssdk.services.s3.model.NoSuchKeyException e) {
-                                           synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                                   "Document not found"));
-                            		   }
-                                   } else synchronousSink.next(document);
+                                       log.debug("before check presence in createUriForDownloadFile");
+                                       return s3Service.headObject(fileKey, bucketName.ssHotName()).thenReturn(document);
+                                   } else return Mono.just(document);
+                                   
                                })
+                               .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class, throwable ->
+                                   Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found")))                               
                                .doOnSuccess(o -> log.debug("---  FINE  CHECK PERMESSI LETTURA"));
                    })
                    .cast(Document.class)

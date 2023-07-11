@@ -362,17 +362,25 @@ public class UriBuilderService {
 
     private void fixBookedDocument(Document document, HeadObjectResponse hor) {
         if (document.getCheckSum() == null) {
-            if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {
+        	log.debug("fixBookedDocument() on {} - checksum null", document.getDocumentKey());
+        	if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {
+            	log.debug("fixBookedDocument() on {} - checksum MD5", document.getDocumentKey());
                 document.setCheckSum(hor.sseCustomerKeyMD5());
             } else if (ChecksumEnum.SHA256.equals(document.getDocumentType().getChecksum())) {
+            	log.debug("fixBookedDocument() on {} - checksum SHA256", document.getDocumentKey());
                 document.setCheckSum(hor.checksumSHA256());
             }
+        	log.debug("fixBookedDocument() on {} - new checksum {}", document.getDocumentKey(), document.getCheckSum());
         }
         if (document.getContentLenght() == null && hor.contentLength() != null) {
+        	log.debug("fixBookedDocument() on {} - contentLength null", document.getDocumentKey());
             document.setContentLenght(new BigDecimal(hor.contentLength()));
+        	log.debug("fixBookedDocument() on {} - new contentLength {}", document.getDocumentKey(), document.getContentLenght());
         }
         if (document.getRetentionUntil() == null && hor.objectLockRetainUntilDate() != null) {
+        	log.debug("fixBookedDocument() on {} - retentionUntil null", document.getDocumentKey());
             document.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
+        	log.debug("fixBookedDocument() on {} - retentionUntil {}", document.getDocumentKey(), document.getRetentionUntil());
         }
     }
 

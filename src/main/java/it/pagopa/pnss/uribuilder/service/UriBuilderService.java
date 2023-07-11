@@ -361,6 +361,7 @@ public class UriBuilderService {
     }
 
     private void fixBookedDocument(Document document, HeadObjectResponse hor) {
+        
         if (document.getCheckSum() == null) {
         	log.debug("fixBookedDocument() on {} - checksum null", document.getDocumentKey());
         	if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {

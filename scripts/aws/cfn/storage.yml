@@ -67,6 +67,7 @@ Parameters:
 
 Conditions:
   IsDevEnv: !Equals [ !Ref EnvType, 'dev'] 
+  IsProdEnv: !Equals [ !Ref EnvType, 'prod'] 
 
 
 Resources:
@@ -276,7 +277,7 @@ Resources:
         Rule:
           DefaultRetention:
             Days: !Ref PnSsPreloadedDocsRetentionDays
-            Mode: 'GOVERNANCE' # non modificare quando si decommenta la sezione
+            Mode: !If [ IsProdEnv, 'COMPLIANCE', 'GOVERNANCE' ]
             # Years:
       VersioningConfiguration:
         Status: Enabled

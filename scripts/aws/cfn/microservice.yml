@@ -380,9 +380,15 @@ Parameters:
     Type: String
     Description: 'Ecs log group name'
 
+  EnvType:
+    Type: String
+    Description: 'Deploy environment type'
+    Default: 'dev'
+
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
+  IsProdEnv: !Equals [ !Ref EnvType, 'prod'] 
 
 Resources:
 
@@ -411,7 +417,7 @@ Resources:
         ContainerEnvEntry12: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
         ContainerEnvEntry20: !Sub 'pst=${PresignedUrlMinutesLifespan}'
         ContainerEnvEntry21: !Sub 'stayHotTime=${PnSsUriBuilderstayHotTime}'
-        ContainerEnvEntry22: 'PnSsBucketLockRetentionMode=GOVERNANCE'
+        ContainerEnvEntry22: !If [IsProdEnv, 'PnSsBucketLockRetentionMode=COMPLIANCE', 'PnSsBucketLockRetentionMode=GOVERNANCE']
         ContainerEnvEntry23: !Sub 'PnSsPreloadedDocsRetentionDays=${PnSsPreloadedDocsRetentionDays}'
         ContainerEnvEntry30: !Sub 'PnSsArubaCertId=${PnSsArubaCertId}'
         ContainerEnvEntry31: !Sub 'PnSsArubaEnabledLog=${PnSsArubaEnabledLog}'

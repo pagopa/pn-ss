@@ -1,5 +1,6 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
+import it.pagopa.pnss.common.constant.Constant;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -70,40 +71,83 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 
 	@Override
 	public Mono<ResponseEntity<DocumentTypeResponse>> getDocType(String typeId, final ServerWebExchange exchange) {
+		final String GET_DOC_TYPE = "getDocType";
 
-		return docTypesService.getDocType(typeId).map(docType -> ResponseEntity.ok(getResponse(docType)))
-				.onErrorResume(throwable -> getErrorResponse(typeId, throwable));
+		log.info(Constant.STARTING_PROCESS_ON, GET_DOC_TYPE, typeId);
+
+		log.debug(Constant.INVOKED_METHOD, GET_DOC_TYPE, typeId);
+		return docTypesService.getDocType(typeId).map(docType -> {
+					log.info(Constant.ENDING_PROCESS_ON, GET_DOC_TYPE, typeId);
+					return ResponseEntity.ok(getResponse(docType));
+				})
+				.onErrorResume(throwable -> {
+					log.info(Constant.ENDING_PROCESS_WITH_ERROR, GET_DOC_TYPE, throwable, throwable.getMessage());
+					return getErrorResponse(typeId, throwable);
+				});
 	}
 
 	@Override
 	public Mono<ResponseEntity<DocumentTypeResponse>> insertDocType(Mono<DocumentType> documentType,
 			final ServerWebExchange exchange) {
+		final String INSERT_DOC_TYPE = "insertDocType";
 
-		log.info("insertDocType() : IN");
-
-		return documentType.flatMap(docTypesService::insertDocType)
-				.map(docType -> ResponseEntity.ok(getResponse(docType)))
-				.onErrorResume(throwable -> getErrorResponse(null, throwable));
+		return documentType.doOnNext(docType ->{
+				log.info(Constant.STARTING_PROCESS_ON, INSERT_DOC_TYPE, docType == null ? null : docType.getTipoDocumento());
+				})
+				.flatMap(docType -> {
+					log.debug(Constant.INVOKED_METHOD, INSERT_DOC_TYPE, docType);
+					return docTypesService.insertDocType(docType);
+				})
+				.map(docType -> {
+					log.info(Constant.ENDING_PROCESS_ON, INSERT_DOC_TYPE, docType.getTipoDocumento());
+					return ResponseEntity.ok(getResponse(docType));
+				})
+				.onErrorResume(throwable -> {
+					log.info(Constant.ENDING_PROCESS_WITH_ERROR, INSERT_DOC_TYPE, throwable, throwable.getMessage());
+					return getErrorResponse(null, throwable);
+				});
 
 	}
 
 	@Override
 	public Mono<ResponseEntity<DocumentTypeResponse>> updateDocType(String typeId, Mono<DocumentType> documentType,
 			final ServerWebExchange exchange) {
+		final String UPDATE_DOC_TYPE = "updateDocType";
 
-		return documentType.flatMap(request -> docTypesService.updateDocType(typeId, request))
-				.map(docType -> ResponseEntity.ok(getResponse(docType)))
-				.onErrorResume(throwable -> getErrorResponse(typeId, throwable));
+		log.info(Constant.STARTING_PROCESS_ON, UPDATE_DOC_TYPE, typeId);
+
+		return documentType.flatMap(request -> {
+					log.debug(Constant.INVOKED_METHOD + " - {}", UPDATE_DOC_TYPE, typeId, request);
+					return docTypesService.updateDocType(typeId, request);
+				})
+				.map(docType -> {
+					log.info(Constant.ENDING_PROCESS_ON, UPDATE_DOC_TYPE, docType);
+					return ResponseEntity.ok(getResponse(docType));
+				})
+				.onErrorResume(throwable -> {
+					log.info(Constant.ENDING_PROCESS_WITH_ERROR, UPDATE_DOC_TYPE, throwable, throwable.getMessage());
+					return getErrorResponse(typeId, throwable);
+				});
 
 	}
 
 	@Override
 	public Mono<ResponseEntity<Void>> deleteDocType(String typeId, final ServerWebExchange exchange) {
+		final String DELETE_DOC_TYPE = "deleteDocType";
 
-		return docTypesService.deleteDocType(typeId).map(docType -> ResponseEntity.noContent().<Void>build())
+		log.info(Constant.STARTING_PROCESS_ON, DELETE_DOC_TYPE, typeId);
+
+		log.debug(Constant.INVOKED_METHOD, DELETE_DOC_TYPE, typeId);
+		return docTypesService.deleteDocType(typeId).map(docType -> {
+					log.info(Constant.ENDING_PROCESS_ON, DELETE_DOC_TYPE, docType);
+			return ResponseEntity.noContent().<Void>build();
+			})
 				.onErrorResume(DocumentTypeNotPresentException.class,
-						throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-								throwable.getMessage(), throwable.getCause())));
+						throwable -> {
+							log.info(Constant.ENDING_PROCESS_WITH_ERROR, DELETE_DOC_TYPE, throwable, throwable.getMessage());
+						return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+									throwable.getMessage(), throwable.getCause()));
+						});
 
 	}
 }

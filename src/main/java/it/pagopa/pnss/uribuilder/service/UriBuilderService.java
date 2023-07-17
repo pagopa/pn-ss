@@ -14,6 +14,7 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.*;
+import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
@@ -142,13 +143,15 @@ public class UriBuilderService {
                                                                                                        .createKeyName(documentType),
                                                                                                         fileExtension);
                                                 log.debug("createUriForUploadFile(): documentKeyTmp = {} : ", documentKeyTmp);
-                                                return documentClientCall.postDocument(new DocumentInput().contentType(request.getContentType())
-                                                                                                          .documentKey(documentKeyTmp)
-                                                                                                          .documentState(
-                                                                                                                  initialNewDocumentState)
-                                                                                                          .clientShortCode(
-                                                                                                                  xPagopaSafestorageCxId)
-                                                                                                          .documentType(request.getDocumentType()))
+                                                DocumentInput documentInput = new DocumentInput().contentType(request.getContentType())
+                                                        .documentKey(documentKeyTmp)
+                                                        .documentState(
+                                                                initialNewDocumentState)
+                                                        .clientShortCode(
+                                                                xPagopaSafestorageCxId)
+                                                        .documentType(request.getDocumentType());
+                                                log.debug(INSERTING_DATA_IN_DYNAMODB_TABLE, documentInput, "Document");
+                                                return documentClientCall.postDocument(documentInput)
                                                                          .retryWhen(Retry.max(10)
                                                                                          .filter(DocumentkeyPresentException.class::isInstance)
                                                                                          .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
@@ -171,6 +174,7 @@ public class UriBuilderService {
                                                                              checksumValue,
                                                                              metadata,
                                                                              xTraceIdValue).map(presignedPutObjectRequest -> {
+                                                                 log.info("Inserted data in DynamoDB table {}", "Documents");
                                                                  FileCreationResponse response = new FileCreationResponse();
                                                                  response.setKey(insertedDocument.getDocument().getDocumentKey());
                                                                  response.setSecret(secret.toString());
@@ -188,13 +192,22 @@ public class UriBuilderService {
         return Mono.justOrEmpty(contentType)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing")))
                 .handle((s, sink) -> {
+                    final String VALIDATION_FIELD = "contentType, documentType, xTraceIdValue in UriBuilderService validationField()";
+
+                    log.info(Constant.CHECKING_VALIDATION_PROCESS, VALIDATION_FIELD);
+
+                    log.info("Checking {}", VALIDATION_FIELD);
                     if (contentType.isBlank()) {
+                        log.warn(Constant.VALIDATION_PROCESS_FAILED, VALIDATION_FIELD, "ContentType : Is missing");
                         sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "ContentType : Is missing"));
                     } else if (documentType == null || documentType.isBlank()) {
+                        log.warn(Constant.VALIDATION_PROCESS_FAILED, VALIDATION_FIELD, "DocumentType : Is missing");
                         sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
                     } else if (xTraceIdValue == null || xTraceIdValue.isBlank()) {
+                        log.warn(Constant.VALIDATION_PROCESS_FAILED, VALIDATION_FIELD, queryParamPresignedUrlTraceId + " : Is missing");
                         sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, queryParamPresignedUrlTraceId + " : Is missing"));
                     } else {
+                        log.info(Constant.VALIDATION_PROCESS_PASSED, VALIDATION_FIELD);
                         sink.next(contentType);
                     }
                 })
@@ -303,11 +316,15 @@ public class UriBuilderService {
     }
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, String xTraceIdValue, Boolean metadataOnly) {
+        final String XTRACEIDVALUE = "xTraceIdValue in UriBuilderService createUriForDownloadFile()";
 
+        log.info(Constant.CHECKING_VALIDATION_PROCESS, XTRACEIDVALUE);
         if (xTraceIdValue == null || StringUtils.isBlank(xTraceIdValue)) {
             String errorMsg = String.format("Header %s is missing", queryParamPresignedUrlTraceId);
+            log.warn(Constant.VALIDATION_PROCESS_FAILED, XTRACEIDVALUE, "Header %s is missing");
             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg));
         }
+        log.info(Constant.VALIDATION_PROCESS_PASSED, XTRACEIDVALUE);
 
         return Mono.fromCallable(this::validationFieldCreateUri)//
                 .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))//

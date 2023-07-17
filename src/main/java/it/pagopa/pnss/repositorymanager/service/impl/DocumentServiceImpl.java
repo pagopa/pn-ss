@@ -52,6 +52,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final AwsConfigurationProperties awsConfigurationProperties;
     private final BucketName bucketName;
     private final CallMacchinaStati callMacchinaStati;
+    private final String TABLE_NAME = "DocumentEntity";
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
@@ -83,13 +84,20 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public Mono<Document> insertDocument(DocumentInput documentInput) {
         log.info("insertDocument() : IN : documentInput : {}", documentInput);
+        final String DOCUMENT_INPUT = "documentInput in DocumentServiceImpl insertDocument()";
+
+        log.info(Constant.CHECKING_VALIDATION_PROCESS, DOCUMENT_INPUT);
         Document resp = new Document();
         if (documentInput == null) {
+            log.warn(Constant.VALIDATION_PROCESS_FAILED, DOCUMENT_INPUT, "Document is null");
             throw new RepositoryManagerException("Document is null");
         }
         if (documentInput.getDocumentKey() == null || documentInput.getDocumentKey().isBlank()) {
+            log.warn(Constant.VALIDATION_PROCESS_FAILED, DOCUMENT_INPUT, "Document Key is null");
             throw new RepositoryManagerException("Document Key is null");
         }
+        log.info(Constant.VALIDATION_PROCESS_PASSED, DOCUMENT_INPUT);
+
         String key = documentInput.getDocumentType();
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
                                                                                     .partitionValue(documentInput.getDocumentKey())
@@ -113,8 +121,12 @@ public class DocumentServiceImpl implements DocumentService {
                        resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
                        resp.setClientShortCode(documentInput.getClientShortCode());
                        DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
+                       log.debug(Constant.INSERTING_DATA_IN_DYNAMODB_TABLE, documentEntityInput, TABLE_NAME);
                        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(documentEntityInput)));
                    })
+                    .doOnSuccess(unused -> {
+                        log.info(Constant.INSERTED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                    })
                    .thenReturn(resp);
     }
 
@@ -133,13 +145,17 @@ public class DocumentServiceImpl implements DocumentService {
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(documentEntity -> {
+                       final String DOCUMENT_STATE = "documentState in DocumentServiceImpl patchDocument()";
 
+                       log.info(Constant.CHECKING_VALIDATION_PROCESS, DOCUMENT_STATE);
                        if(!StringUtils.isBlank(documentChanges.getDocumentState())) {
                            var documentStatusChange = new DocumentStatusChange();
                            documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
                            documentStatusChange.setProcessId("SS");
                            documentStatusChange.setCurrentStatus(documentEntity.getDocumentState().toLowerCase());
                            documentStatusChange.setNextStatus(documentChanges.getDocumentState().toLowerCase());
+                           log.info(Constant.VALIDATION_PROCESS_PASSED, DOCUMENT_STATE);
+                           log.info("Invoking external service pn-statemachinemanager statusValidation. Waiting Sync response.");
                            return callMacchinaStati.statusValidation(documentStatusChange);
                        } else {
                            return Mono.just(new MacchinaStatiValidateStatoResponseDto());
@@ -235,7 +251,12 @@ public class DocumentServiceImpl implements DocumentService {
                     	   return Mono.just(documentEntityStored);
                        }
                    })
-                   .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
+                   .zipWhen(documentUpdated -> {
+                       log.debug(Constant.PATCHING_DATA_IN_DYNAMODB_TABLE, documentUpdated, TABLE_NAME);
+                       CompletableFuture<DocumentEntity> document = documentEntityDynamoDbAsyncTable.updateItem(documentUpdated);
+                       log.info(Constant.PATCHED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                       return Mono.fromCompletionStage(document);
+                   })
                    .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
     }
@@ -247,8 +268,14 @@ public class DocumentServiceImpl implements DocumentService {
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(typeKey))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
-                   .zipWhen(documentToDelete -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
+                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error("Error in DocumentServiceImpl deleteDocument(): DocumentKeyNotPresentException - {}", throwable.getMessage()))
+                   .zipWhen(documentToDelete -> {
+                       log.debug(Constant.DELETING_DATA_IN_DYNAMODB_TABLE, typeKey, TABLE_NAME);
+                       return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey));
+                   })
+                   .doOnSuccess(unused ->{
+                       log.info(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                   })
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
     }
 

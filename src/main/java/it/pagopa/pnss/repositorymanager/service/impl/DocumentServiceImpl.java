@@ -52,7 +52,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final AwsConfigurationProperties awsConfigurationProperties;
     private final BucketName bucketName;
     private final CallMacchinaStati callMacchinaStati;
-    private final static String TABLE_NAME = "DocumentEntity";
+    private static final String TABLE_NAME = "DocumentEntity";
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,

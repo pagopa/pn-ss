@@ -99,7 +99,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 		final String GET_DOCUMENT = "getDocument";
 
 		log.info(Constant.STARTING_PROCESS_ON, GET_DOCUMENT, documentKey);
-		log.debug(Constant.INVOKED_METHOD, GET_DOCUMENT, documentKey);
+		log.debug(Constant.INVOKING_METHOD, GET_DOCUMENT, documentKey);
 		return documentService.getDocument(documentKey)
 				.map(documentOutput -> {
 					log.info(Constant.ENDING_PROCESS_ON, GET_DOCUMENT, documentKey);
@@ -117,11 +117,9 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 			final ServerWebExchange exchange) {
 		final String INSERT_DOCUMENT = "insertDocument";
 
-		return document.doOnNext(doc ->{
-					log.info(Constant.STARTING_PROCESS_ON, INSERT_DOCUMENT, doc == null ? null : doc.getDocumentKey());
-				})
+		return document.doOnNext(doc ->log.info(Constant.STARTING_PROCESS_ON, INSERT_DOCUMENT, doc == null ? null : doc.getDocumentKey()))
 				.flatMap(documentInput ->{
-					log.debug(Constant.INVOKED_METHOD, INSERT_DOCUMENT, documentInput);
+					log.debug(Constant.INVOKING_METHOD, INSERT_DOCUMENT, documentInput);
 					return documentService.insertDocument(documentInput);
 				})
 				.map(documentOutput -> {
@@ -146,7 +144,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
     	String xApiKeyValue = exchange.getRequest().getHeaders().getFirst(xApiKey);
 
         return documentChanges.flatMap(request -> {
-					log.debug(Constant.INVOKED_METHOD + " - {} - {} - {}", PATCH_DOCUMENT, documentKey, request, xPagopaSafestorageCxIdValue, xApiKeyValue);
+					log.debug(Constant.INVOKING_METHOD + " - '{}' - '{}' - '{}'", PATCH_DOCUMENT, documentKey, request, xPagopaSafestorageCxIdValue, xApiKeyValue);
 				return documentService.patchDocument(documentKey,
 							request,
 							xPagopaSafestorageCxIdValue,
@@ -169,7 +167,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 
 		log.info(Constant.STARTING_PROCESS_ON, DELETE_DOCUMENT, documentKey);
 
-		log.debug(Constant.INVOKED_METHOD, DELETE_DOCUMENT, documentKey);
+		log.debug(Constant.INVOKING_METHOD, DELETE_DOCUMENT, documentKey);
 		return documentService.deleteDocument(documentKey).map(docType -> {
 					log.info(Constant.ENDING_PROCESS_ON, DELETE_DOCUMENT, docType);
 			return ResponseEntity.noContent().<Void>build();

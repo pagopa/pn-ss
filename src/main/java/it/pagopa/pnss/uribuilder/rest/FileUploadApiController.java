@@ -49,7 +49,7 @@ public class FileUploadApiController implements FileUploadApi {
 												checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
 											}
 										}
-										log.debug(Constant.INVOKED_METHOD + " - {} - {} - {}", "createUriForUploadFile", xPagopaSafestorageCxId, request, checksumValue, xTraceIdValue);
+										log.debug(Constant.INVOKING_METHOD + " - '{}' - '{}' - '{}'", "createUriForUploadFile", xPagopaSafestorageCxId, request, checksumValue, xTraceIdValue);
 										return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
         																				request,
         																				checksumValue,

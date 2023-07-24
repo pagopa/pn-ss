@@ -51,7 +51,6 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 	}
 
 	private Mono<ResponseEntity<DocumentTypeResponse>> getErrorResponse(String typeId, Throwable throwable) {
-		log.debug("getErrorResponse() : IN : typeId {} : throwable {}", typeId, throwable);
 
 		if (throwable instanceof ItemAlreadyPresent) {
 			String errorMsg = typeId == null ? "DocType already present"
@@ -75,7 +74,6 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 
 		log.info(Constant.STARTING_PROCESS_ON, GET_DOC_TYPE, typeId);
 
-		log.debug(Constant.INVOKED_METHOD, GET_DOC_TYPE, typeId);
 		return docTypesService.getDocType(typeId).map(docType -> {
 					log.info(Constant.ENDING_PROCESS_ON, GET_DOC_TYPE, typeId);
 					return ResponseEntity.ok(getResponse(docType));
@@ -95,7 +93,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 				log.info(Constant.STARTING_PROCESS_ON, INSERT_DOC_TYPE, docType == null ? null : docType.getTipoDocumento());
 				})
 				.flatMap(docType -> {
-					log.debug(Constant.INVOKED_METHOD, INSERT_DOC_TYPE, docType);
+					log.debug(Constant.INVOKING_METHOD, INSERT_DOC_TYPE, docType);
 					return docTypesService.insertDocType(docType);
 				})
 				.map(docType -> {
@@ -117,7 +115,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 		log.info(Constant.STARTING_PROCESS_ON, UPDATE_DOC_TYPE, typeId);
 
 		return documentType.flatMap(request -> {
-					log.debug(Constant.INVOKED_METHOD + " - {}", UPDATE_DOC_TYPE, typeId, request);
+					log.debug(Constant.INVOKING_METHOD + " - '{}'", UPDATE_DOC_TYPE, typeId, request);
 					return docTypesService.updateDocType(typeId, request);
 				})
 				.map(docType -> {
@@ -137,7 +135,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 
 		log.info(Constant.STARTING_PROCESS_ON, DELETE_DOC_TYPE, typeId);
 
-		log.debug(Constant.INVOKED_METHOD, DELETE_DOC_TYPE, typeId);
+		log.debug(Constant.INVOKING_METHOD, DELETE_DOC_TYPE, typeId);
 		return docTypesService.deleteDocType(typeId).map(docType -> {
 					log.info(Constant.ENDING_PROCESS_ON, DELETE_DOC_TYPE, docType);
 			return ResponseEntity.noContent().<Void>build();

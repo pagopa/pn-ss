@@ -73,7 +73,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 
 		log.info(Constant.STARTING_PROCESS_ON, GET_USER_CONFIGURATION, name);
 
-		log.debug(Constant.INVOKED_METHOD, GET_USER_CONFIGURATION, name);
+		log.debug(Constant.INVOKING_METHOD, GET_USER_CONFIGURATION, name);
 		return userConfigurationService.getUserConfiguration(name)
 				.map(userConfiguration -> {
 					log.info(Constant.ENDING_PROCESS_ON, GET_USER_CONFIGURATION, name);
@@ -96,7 +96,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 				log.info(Constant.STARTING_PROCESS_ON, INSERT_USER_CONFIGURATION, userConfig == null ? null : userConfig.getName());
 				})
 				.flatMap(request -> {
-				log.debug("Invoked insertUserConfiguration with args: {}", request);
+				log.debug(Constant.INVOKING_METHOD, INSERT_USER_CONFIGURATION, request);
 				return userConfigurationService.insertUserConfiguration(request);
 				})
 				.map(userConfigurationOutput -> {
@@ -119,7 +119,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 					log.info(Constant.STARTING_PROCESS_ON, PATCH_USER_CONFIGURATION, userConfig == null ? null : userConfig.getApiKey());
 				})
 				.flatMap(request -> {
-					log.debug("Invoked patchUserConfiguration with args: {} - {}", name, request);
+					log.debug(Constant.INVOKING_METHOD + " - '{}'", PATCH_USER_CONFIGURATION, name, request);
 					return userConfigurationService.patchUserConfiguration(name, request);
 				})
 				.map(userConfigurationOutput -> {
@@ -138,7 +138,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 
 		log.info(Constant.STARTING_PROCESS_ON, DELETE_USER_CONFIGURATION, name);
 
-		log.debug(Constant.INVOKED_METHOD, DELETE_USER_CONFIGURATION, name);
+		log.debug(Constant.INVOKING_METHOD, DELETE_USER_CONFIGURATION, name);
 		return userConfigurationService.deleteUserConfiguration(name)
 				.map(docType -> {
 					log.info(Constant.ENDING_PROCESS_ON, DELETE_USER_CONFIGURATION, name);

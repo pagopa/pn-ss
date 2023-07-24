@@ -15,6 +15,8 @@ import software.amazon.awssdk.services.s3.model.LifecycleRule;
 import java.util.ArrayList;
 import java.util.List;
 
+import static it.pagopa.pnss.common.constant.Constant.CLIENT_METHOD_INVOCATION;
+
 @Service
 @Slf4j
 public class StorageConfigurationsServiceImpl implements StorageConfigurationsService {
@@ -60,10 +62,8 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
     }
 
     private LifecycleRuleDTO getLifecycleRuleDTO(LifecycleRule rule) {
-        log.info("getLifecycleRuleDTO() : START");
         LifecycleRuleDTO dto = new LifecycleRuleDTO();
         rule.filter().and().tags().forEach(tag -> {
-            log.debug("getLifecycleRuleDTO() : tag : value for {} : {}", tag.key(), tag.value());
             if (TAG_KEY.equals(tag.key())) {
                 dto.setName(tag.value());
             }
@@ -75,12 +75,10 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
                      rule.transitions().size());
         }
         dto.setTransitionDays(rule.hasTransitions() ? formatInYearsDays(rule.transitions().get(0).days()) : dto.getExpirationDays());
-        log.debug("getLifecycleRuleDTO() : dto : {}", dto);
         return dto;
     }
 
     private List<LifecycleRuleDTO> convert(List<LifecycleRule> listIn) {
-        log.info("convert() : START");
         List<LifecycleRuleDTO> listOut = new ArrayList<>();
         if (listIn == null || listIn.isEmpty()) {
             return listOut;
@@ -92,7 +90,7 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
     @Override
     public Mono<List<LifecycleRuleDTO>> getLifecycleConfiguration() {
 
-        log.info("getLifecycleConfiguration() : START");
+        log.info(CLIENT_METHOD_INVOCATION, "s3Service.getBucketLifecycleConfiguration()", bucketName.ssHotName());
         return s3Service.getBucketLifecycleConfiguration(bucketName.ssHotName())
                 .handle((response, sink) -> {
                     if (response == null || response.rules() == null) {

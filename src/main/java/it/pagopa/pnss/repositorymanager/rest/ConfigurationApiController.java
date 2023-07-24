@@ -64,7 +64,7 @@ public class ConfigurationApiController implements CfgApi {
 
         log.info(Constant.STARTING_PROCESS, GET_DOCUMENTS_CONFIGS);
 
-        log.debug(Constant.INVOKED_METHOD, GET_DOCUMENTS_CONFIGS, "");
+        log.debug(Constant.INVOKING_METHOD, GET_DOCUMENTS_CONFIGS, "");
         return documentsConfigsService.getDocumentsConfigs()
                                       .map(documentTypesConfigurations -> {
                                           log.info(Constant.ENDING_PROCESS, GET_DOCUMENTS_CONFIGS);
@@ -94,7 +94,7 @@ public class ConfigurationApiController implements CfgApi {
 
         log.info(Constant.STARTING_PROCESS_ON, GET_CURRENT_CLIENT_CONFIGS, clientId);
 
-        log.debug(Constant.INVOKED_METHOD, GET_CURRENT_CLIENT_CONFIGS, clientId);
+        log.debug(Constant.INVOKING_METHOD, GET_CURRENT_CLIENT_CONFIGS, clientId);
         return userConfigurationService.getUserConfiguration(clientId)
                                        .map(userConfigurationInternal -> {
                                            log.info(Constant.ENDING_PROCESS_ON, GET_CURRENT_CLIENT_CONFIGS, clientId);

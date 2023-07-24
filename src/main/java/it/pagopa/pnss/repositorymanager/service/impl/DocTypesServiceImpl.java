@@ -58,22 +58,26 @@ public class DocTypesServiceImpl implements DocTypesService {
 
     @Override
     public Mono<DocumentType> getDocType(String typeId) {
-        log.info("getDocType() : IN : typeId {}", typeId);
+        final String GET_DOC_TYPE = "DocTypesServiceImpl.getDocType()";
+        log.debug(Constant.INVOKING_METHOD, GET_DOC_TYPE, typeId);
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
-                   .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class));
+                   .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class))
+                   .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, typeId, GET_DOC_TYPE, documentType));
     }
 
     @Override
 //    public Flux<DocumentType> getAllDocumentType() {
     public Mono<List<DocumentType>> getAllDocumentType() {
-        log.info("getAllDocumentType() : START");
+        final String GET_ALL_DOCUMENT_TYPE = "DocTypesServiceImpl.getAllDocumentType()";
+        log.debug(Constant.INVOKING_METHOD, GET_ALL_DOCUMENT_TYPE, "");
 
         return Mono.from(docTypeEntityDynamoDbAsyncTable.scan())
         		   .map(Page::items)
         		   .switchIfEmpty(Mono.empty())
-        		   .map(this::convert);
+        		   .map(this::convert)
+                   .doOnSuccess(documentTypes -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, "", GET_ALL_DOCUMENT_TYPE, documentTypes));
     }
 
     @Override
@@ -97,7 +101,7 @@ public class DocTypesServiceImpl implements DocTypesService {
                                                                                    .partitionValue(docTypeInput.getTipoDocumento())
                                                                                    .build()))
                 .flatMap(foundedDocumentType -> Mono.error(new ItemAlreadyPresent(docTypeInput.getTipoDocumento())))
-                .doOnError(ItemAlreadyPresent.class, throwable -> log.error("Error in DocTypesServiceImpl insertDocType(): ItemAlreadyPresent - {}", throwable.getMessage()))
+                .doOnError(ItemAlreadyPresent.class, throwable -> log.error("Error in DocTypesServiceImpl.insertDocType(): ItemAlreadyPresent - '{}'", throwable.getMessage()))
                 .switchIfEmpty(Mono.just(docTypeInput))
                 .flatMap(unused -> {
                     log.debug(Constant.INSERTING_DATA_IN_DYNAMODB_TABLE, docTypeEntityInput, TABLE_NAME);
@@ -106,6 +110,7 @@ public class DocTypesServiceImpl implements DocTypesService {
                 })
                 .doOnSuccess(unused -> {
                     log.info(Constant.INSERTED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                    log.info(Constant.SUCCESSFUL_OPERATION_LABEL, docTypeInput.getTipoDocumento(), "DocTypesServiceImpl.insertDocType()", docTypeInput);
                 })
                 .thenReturn(docTypeInput);
     }
@@ -117,7 +122,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
-                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error("Error in DocTypesServiceImpl updateDocType(): DocumentTypeNotPresentException - {}", throwable.getMessage()))
+                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error("Error in DocTypesServiceImpl.updateDocType(): DocumentTypeNotPresentException - '{}'", throwable.getMessage()))
                    .zipWhen(unused -> {
                        log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, docTypeEntityInput, TABLE_NAME);
                        return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.updateItem(docTypeEntityInput));
@@ -125,17 +130,17 @@ public class DocTypesServiceImpl implements DocTypesService {
                    .doOnSuccess(unused -> {
                        log.info(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
                    })
-                   .map(objects -> objectMapper.convertValue(objects.getT2(), DocumentType.class));
+                   .map(objects -> objectMapper.convertValue(objects.getT2(), DocumentType.class))
+                   .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, typeId, "DocTypesServiceImpl.updateDocType()", documentType));
     }
 
     @Override
     public Mono<DocumentType> deleteDocType(String typeId) {
-        log.info("deleteDocType() : IN : typeId : {}", typeId);
         Key typeKey = Key.builder().partitionValue(typeId).build();
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(typeKey))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
-                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error("Error in DocTypesServiceImpl deleteDocType(): DocumentTypeNotPresentException - {}", throwable.getMessage()))
+                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error("Error in DocTypesServiceImpl.deleteDocType(): DocumentTypeNotPresentException - '{}'", throwable.getMessage()))
                    .zipWhen(docTypeToDelete -> {
                        log.debug(Constant.DELETING_DATA_IN_DYNAMODB_TABLE, typeId, TABLE_NAME);
                        return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.deleteItem(typeKey));
@@ -143,6 +148,7 @@ public class DocTypesServiceImpl implements DocTypesService {
                    .doOnSuccess(unused ->{
                        log.info(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
                    })
-                   .map(objects -> objectMapper.convertValue(objects.getT1(), DocumentType.class));
+                   .map(objects -> objectMapper.convertValue(objects.getT1(), DocumentType.class))
+                   .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, typeId, "DocTypesServiceImpl.deleteDocType()", documentType));
     }
 }

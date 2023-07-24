@@ -30,7 +30,7 @@ public class FileDownloadApiController implements FileDownloadApi {
         log.info(Constant.STARTING_PROCESS_ON, GET_FILE, fileKey);
 
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
-        log.debug(Constant.INVOKED_METHOD + " - {} - {} - {}", "createUriForDownloadFile", fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly);
+        log.debug(Constant.INVOKING_METHOD + " - '{}' - '{}' - '{}'", "createUriForDownloadFile", fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly);
         Mono<ResponseEntity<FileDownloadResponse>> fileDownloadResponseMono = uriBuilderService.createUriForDownloadFile(fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly).map(ResponseEntity::ok);
         log.info(Constant.ENDING_PROCESS, GET_FILE);
         return fileDownloadResponseMono;

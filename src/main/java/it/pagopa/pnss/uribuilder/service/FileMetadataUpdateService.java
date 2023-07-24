@@ -107,10 +107,10 @@ public class FileMetadataUpdateService {
                         documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
                     }
 
-                    log.debug(Constant.PATCHING_DATA_IN_DYNAMODB_TABLE, documentChanges, "Document");
+                    log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentChanges, "Document");
                     return docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                                         .flatMap(documentResponsePatch -> {
-                                            log.debug(Constant.PATCHED_DATA_IN_DYNAMODB_TABLE, "Document");
+                                            log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, "Document");
                                             OperationResultCodeResponse resp = new OperationResultCodeResponse();
                                             resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
                                             resp.setResultDescription(ResultCodeWithDescription.OK.getDescription());
@@ -151,7 +151,8 @@ public class FileMetadataUpdateService {
                             .onErrorResume(e -> {
                                 log.error("FileMetadataUpdateService.createUriForUploadFile() : errore generico = {}", e.getMessage(), e);
                                 return Mono.error(e);
-                            });
+                            })
+                            .doOnSuccess(operationResultCodeResponse -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, fileKey, "FileMetadataUpdateService.updateMetadata()", operationResultCodeResponse));
     }
 
     private Mono<String> checkLookUp(String documentType, String logicalState) {

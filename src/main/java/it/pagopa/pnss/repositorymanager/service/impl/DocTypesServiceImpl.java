@@ -32,7 +32,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 
     private final DynamoDbAsyncTable<DocTypeEntity> docTypeEntityDynamoDbAsyncTable;
 
-    private final String TABLE_NAME = "DocTypeEntity";
+    private final static String TABLE_NAME = "DocTypeEntity";
 
     public DocTypesServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
@@ -127,9 +127,7 @@ public class DocTypesServiceImpl implements DocTypesService {
                        log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, docTypeEntityInput, TABLE_NAME);
                        return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.updateItem(docTypeEntityInput));
                    })
-                   .doOnSuccess(unused -> {
-                       log.info(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
-                   })
+                   .doOnSuccess(unused -> log.info(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), DocumentType.class))
                    .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, typeId, "DocTypesServiceImpl.updateDocType()", documentType));
     }
@@ -145,9 +143,7 @@ public class DocTypesServiceImpl implements DocTypesService {
                        log.debug(Constant.DELETING_DATA_IN_DYNAMODB_TABLE, typeId, TABLE_NAME);
                        return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.deleteItem(typeKey));
                    })
-                   .doOnSuccess(unused ->{
-                       log.info(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
-                   })
+                   .doOnSuccess(unused -> log.info(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME))
                    .map(objects -> objectMapper.convertValue(objects.getT1(), DocumentType.class))
                    .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, typeId, "DocTypesServiceImpl.deleteDocType()", documentType));
     }

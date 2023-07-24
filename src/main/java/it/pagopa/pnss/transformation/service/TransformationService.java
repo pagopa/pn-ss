@@ -71,8 +71,8 @@ public class TransformationService {
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
         final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
 
-        log.debug(Constant.INVOKING_METHOD + " - '{}' - '{}'", OBJECT_TRANSFORMATION, key, stagingBucketName, marcatura);
-        log.info(Constant.CLIENT_METHOD_INVOCATION + " - '{}'", "s3Service.getObject()", key, stagingBucketName);
+        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG, OBJECT_TRANSFORMATION, key, stagingBucketName, marcatura);
+        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.getObject()", key, stagingBucketName);
         return Mono.zipDelayError(documentClientCall.getDocument(key), s3Service.getObject(key, stagingBucketName))
                    .filter(objects -> {
                        var document = objects.getT1().getDocument();
@@ -104,10 +104,10 @@ public class TransformationService {
     }
 
     private Mono<Void> changeFromStagingBucketToHotBucket(String key, byte[] objectBytes, String stagingBucketName) {
-        log.info(Constant.CLIENT_METHOD_INVOCATION + " - '{}' - '{}'", "s3Service.putObject()", key, objectBytes, bucketName.ssHotName());
+        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG + Constant.ARG, "s3Service.putObject()", key, objectBytes, bucketName.ssHotName());
         return s3Service.putObject(key, objectBytes, bucketName.ssHotName())
                         .flatMap(putObjectResponse -> {
-                            log.info(Constant.CLIENT_METHOD_INVOCATION + " - '{}'", "s3Service.deleteObject()", key, stagingBucketName);
+                            log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.deleteObject()", key, stagingBucketName);
                             return s3Service.deleteObject(key, stagingBucketName);
                         })
                         .then();

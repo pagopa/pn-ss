@@ -144,7 +144,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
     	String xApiKeyValue = exchange.getRequest().getHeaders().getFirst(xApiKey);
 
         return documentChanges.flatMap(request -> {
-					log.debug(Constant.INVOKING_METHOD + " - '{}' - '{}' - '{}'", PATCH_DOCUMENT, documentKey, request, xPagopaSafestorageCxIdValue, xApiKeyValue);
+					log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG, PATCH_DOCUMENT, documentKey, request, xPagopaSafestorageCxIdValue, xApiKeyValue);
 				return documentService.patchDocument(documentKey,
 							request,
 							xPagopaSafestorageCxIdValue,

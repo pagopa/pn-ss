@@ -52,7 +52,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final AwsConfigurationProperties awsConfigurationProperties;
     private final BucketName bucketName;
     private final CallMacchinaStati callMacchinaStati;
-    private final String TABLE_NAME = "DocumentEntity";
+    private final static String TABLE_NAME = "DocumentEntity";
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
@@ -270,9 +270,7 @@ public class DocumentServiceImpl implements DocumentService {
                        log.debug(Constant.DELETING_DATA_IN_DYNAMODB_TABLE, typeKey, TABLE_NAME);
                        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey));
                    })
-                   .doOnSuccess(unused ->{
-                       log.info(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
-                   })
+                   .doOnSuccess(unused -> log.info(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
                    .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, "DocumentServiceImpl.deleteDocument()", documentType));
     }

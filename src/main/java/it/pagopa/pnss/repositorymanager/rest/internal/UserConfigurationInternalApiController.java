@@ -92,9 +92,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 		final String INSERT_USER_CONFIGURATION = "insertUserConfiguration";
 
 
-		return userConfiguration.doOnNext(userConfig ->{
-				log.info(Constant.STARTING_PROCESS_ON, INSERT_USER_CONFIGURATION, userConfig == null ? null : userConfig.getName());
-				})
+		return userConfiguration.doOnNext(userConfig -> log.info(Constant.STARTING_PROCESS_ON, INSERT_USER_CONFIGURATION, userConfig == null ? null : userConfig.getName()))
 				.flatMap(request -> {
 				log.debug(Constant.INVOKING_METHOD, INSERT_USER_CONFIGURATION, request);
 				return userConfigurationService.insertUserConfiguration(request);
@@ -115,11 +113,9 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 			Mono<UserConfigurationChanges> userConfigurationChanges, final ServerWebExchange exchange) {
 		final String PATCH_USER_CONFIGURATION = "patchUserConfiguration";
 
-		return userConfigurationChanges.doOnNext(userConfig ->{
-					log.info(Constant.STARTING_PROCESS_ON, PATCH_USER_CONFIGURATION, userConfig == null ? null : userConfig.getApiKey());
-				})
+		return userConfigurationChanges.doOnNext(userConfig -> log.info(Constant.STARTING_PROCESS_ON, PATCH_USER_CONFIGURATION, userConfig == null ? null : userConfig.getApiKey()))
 				.flatMap(request -> {
-					log.debug(Constant.INVOKING_METHOD + " - '{}'", PATCH_USER_CONFIGURATION, name, request);
+					log.debug(Constant.INVOKING_METHOD + Constant.ARG, PATCH_USER_CONFIGURATION, name, request);
 					return userConfigurationService.patchUserConfiguration(name, request);
 				})
 				.map(userConfigurationOutput -> {

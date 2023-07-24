@@ -40,7 +40,7 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
         String apiKeyValue = exchange.getRequest().getHeaders().getFirst(apiKey);
 
         Mono<ResponseEntity<OperationResultCodeResponse>> updateFileMetadataRequestMono = updateFileMetadataRequest.flatMap(request -> {
-            log.debug(Constant.INVOKING_METHOD + " - '{}' - '{}' - '{}' - '{}'", "updateMetadata", fileKey, xPagopaSafestorageCxId, request, pagopaSafestorageCxIdValue, apiKeyValue);
+            log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG, "updateMetadata", fileKey, xPagopaSafestorageCxId, request, pagopaSafestorageCxIdValue, apiKeyValue);
             return fileMetadataUpdateService.updateMetadata(fileKey,
                     xPagopaSafestorageCxId,
                     request,

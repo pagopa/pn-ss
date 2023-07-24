@@ -89,9 +89,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 			final ServerWebExchange exchange) {
 		final String INSERT_DOC_TYPE = "insertDocType";
 
-		return documentType.doOnNext(docType ->{
-				log.info(Constant.STARTING_PROCESS_ON, INSERT_DOC_TYPE, docType == null ? null : docType.getTipoDocumento());
-				})
+		return documentType.doOnNext(docType -> log.info(Constant.STARTING_PROCESS_ON, INSERT_DOC_TYPE, docType == null ? null : docType.getTipoDocumento()))
 				.flatMap(docType -> {
 					log.debug(Constant.INVOKING_METHOD, INSERT_DOC_TYPE, docType);
 					return docTypesService.insertDocType(docType);
@@ -115,7 +113,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 		log.info(Constant.STARTING_PROCESS_ON, UPDATE_DOC_TYPE, typeId);
 
 		return documentType.flatMap(request -> {
-					log.debug(Constant.INVOKING_METHOD + " - '{}'", UPDATE_DOC_TYPE, typeId, request);
+					log.debug(Constant.INVOKING_METHOD + Constant.ARG, UPDATE_DOC_TYPE, typeId, request);
 					return docTypesService.updateDocType(typeId, request);
 				})
 				.map(docType -> {

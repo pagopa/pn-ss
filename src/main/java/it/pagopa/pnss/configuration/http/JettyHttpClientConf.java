@@ -50,9 +50,7 @@ public class JettyHttpClientConf {
             }
         });
 
-        request.onRequestContent((theRequest, content) -> {
-            log.debug("Request body --> {}", decodeContent(content));
-        });
+        request.onRequestContent((theRequest, content) -> log.debug("Request body --> {}", decodeContent(content)));
 
         request.onResponseContent((theResponse, content) -> {
             if (CONTENT_TYPE_OF_RESPONSE_BODY_TO_LOG.contains(theResponse.getHeaders().get(CONTENT_TYPE))) {

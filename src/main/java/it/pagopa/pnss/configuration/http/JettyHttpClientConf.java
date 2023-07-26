@@ -44,12 +44,6 @@ public class JettyHttpClientConf {
 
         request.onRequestBegin(theRequest -> log.debug("Start {} request to {}", theRequest.getMethod(), theRequest.getURI()));
 
-        request.onRequestHeaders(theRequest -> {
-            for (HttpField header : theRequest.getHeaders()) {
-                log.debug("Header {} --> {}", header.getName(), header.getValue());
-            }
-        });
-
         request.onRequestContent((theRequest, content) -> log.debug("Request body --> {}", decodeContent(content)));
 
         request.onResponseContent((theResponse, content) -> {

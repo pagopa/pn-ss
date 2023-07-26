@@ -55,13 +55,11 @@ public class ArubaCredentialConf {
                 user != null) {
                 ArubaSecretValue arubaSecretValue =
                         new ArubaSecretValue(delegatedDomain, delegatedUser, delegatedPassword, otpPwd, typeOtpAuth, user);
-                log.info("Secret locale reperito ---> " + arubaSecretValue);
                 return arubaSecretValue;
             } else {
                 String secretStringJson =
                         secretsManagerClient.getSecretValue(builder -> builder.secretId("pn/identity/signature")).secretString();
                 ArubaSecretValue arubaSecretValue = objectMapper.readValue(secretStringJson, ArubaSecretValue.class);
-                log.info("Secret reperito ---> " + arubaSecretValue.toString());
                 return arubaSecretValue;
             }
         } catch (JsonProcessingException e) {
@@ -75,13 +73,11 @@ public class ArubaCredentialConf {
         try {
             if (userTimeMark != null && passwordTimeMark != null) {
                 IdentitySecretTimeMark identitySecretTimemark = new IdentitySecretTimeMark(userTimeMark, passwordTimeMark);
-                log.info("Secret locale reperito ---> " + identitySecretTimemark);
                 return identitySecretTimemark;
             } else {
                 String secretStringJson =
                         secretsManagerClient.getSecretValue(builder -> builder.secretId("pn/identity/timemark")).secretString();
                 IdentitySecretTimeMark identitySecretTimemark = objectMapper.readValue(secretStringJson, IdentitySecretTimeMark.class);
-                log.info("Secret reperito ---> " + identitySecretTimemark.toString());
                 return identitySecretTimemark;
             }
         } catch (JsonProcessingException e) {

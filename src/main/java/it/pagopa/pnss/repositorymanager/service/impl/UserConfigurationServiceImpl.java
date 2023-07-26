@@ -29,7 +29,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
     private final ObjectMapper objectMapper;
 
     private final DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationEntityDynamoDbAsyncTable;
-    private static final String TABLE_NAME = "UserConfigurationEntity";
+    private static final String TABLE_NAME = "PnSsTableAnagraficaClient";
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                         RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {

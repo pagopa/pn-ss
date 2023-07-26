@@ -34,7 +34,7 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
             , final ServerWebExchange exchange) {
         final String UPDATE_FILE_METADATA = "updateFileMetadata";
 
-        log.info(Constant.STARTING_PROCESS_ON, UPDATE_FILE_METADATA, fileKey);
+        log.info(Constant.STARTING_PROCESS_ON + Constant.ARG, UPDATE_FILE_METADATA, fileKey, xPagopaSafestorageCxId);
 
         String pagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(pagopaSafestorageCxId);
         String apiKeyValue = exchange.getRequest().getHeaders().getFirst(apiKey);

@@ -27,7 +27,7 @@ public class FileDownloadApiController implements FileDownloadApi {
                                                               final ServerWebExchange exchange) {
         final String GET_FILE = "getFile";
 
-        log.info(Constant.STARTING_PROCESS_ON, GET_FILE, fileKey);
+        log.info(Constant.STARTING_PROCESS_ON + Constant.ARG, GET_FILE, fileKey, xPagopaSafestorageCxId);
 
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
         log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG, "createUriForDownloadFile", fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly);

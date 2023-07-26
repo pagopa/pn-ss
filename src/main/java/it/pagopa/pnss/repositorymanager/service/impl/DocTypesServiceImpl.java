@@ -32,7 +32,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 
     private final DynamoDbAsyncTable<DocTypeEntity> docTypeEntityDynamoDbAsyncTable;
 
-    private static final String TABLE_NAME = "DocTypeEntity";
+    private static final String TABLE_NAME = "PnSsTableTipologieDocumenti";
 
     public DocTypesServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {

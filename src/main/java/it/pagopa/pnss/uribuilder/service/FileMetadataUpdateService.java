@@ -29,6 +29,7 @@ public class FileMetadataUpdateService {
     private final UserConfigurationClientCall userConfigClientCall;
     private final DocumentClientCall docClientCall;
     private final DocTypesClientCall docTypesClientCall;
+    private final String TABLE_NAME = "PnSsTableDocumenti";
 
     public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall) {
         this.userConfigClientCall = userConfigurationClientCall;
@@ -107,10 +108,10 @@ public class FileMetadataUpdateService {
                         documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
                     }
 
-                    log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentChanges, "Document");
+                    log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentChanges, TABLE_NAME);
                     return docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                                         .flatMap(documentResponsePatch -> {
-                                            log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, "Document");
+                                            log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
                                             OperationResultCodeResponse resp = new OperationResultCodeResponse();
                                             resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
                                             resp.setResultDescription(ResultCodeWithDescription.OK.getDescription());

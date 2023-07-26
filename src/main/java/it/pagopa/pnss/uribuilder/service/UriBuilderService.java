@@ -89,6 +89,8 @@ public class UriBuilderService {
     private final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
 
+    private final String TABLE_NAME = "PnSsTableDocumenti";
+
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
                              BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner) {
         this.userConfigurationClientCall = userConfigurationClientCall;
@@ -173,7 +175,7 @@ public class UriBuilderService {
                                                                              checksumValue,
                                                                              metadata,
                                                                              xTraceIdValue).map(presignedPutObjectRequest -> {
-                                                                 log.info(INSERTED_DATA_IN_DYNAMODB_TABLE, "Document");
+                                                                 log.info(INSERTED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
                                                                  FileCreationResponse response = new FileCreationResponse();
                                                                  response.setKey(insertedDocument.getDocument().getDocumentKey());
                                                                  response.setSecret(secret.toString());
@@ -198,7 +200,6 @@ public class UriBuilderService {
 
                     log.info(Constant.CHECKING_VALIDATION_PROCESS, VALIDATION_FIELD);
 
-                    log.info("Checking {}", VALIDATION_FIELD);
                     if (contentType.isBlank()) {
                         log.warn(Constant.VALIDATION_PROCESS_FAILED, VALIDATION_FIELD, MISSING_CONTENT_TYPE);
                         sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, MISSING_CONTENT_TYPE));
@@ -348,43 +349,29 @@ public class UriBuilderService {
 
                             })//
                             .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class//
-                                    , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found")))
-                            .doOnSuccess(o -> 
-                                log.debug("---  FINE  CHECK PERMESSI LETTURA {}", o)//Document
-                                );
+                                    , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found")));
                 })//
                 .cast(Document.class)//
                 .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))//
                 .onErrorResume(S3BucketException.NoSuchKeyException.class//
                         , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
-                .doOnNext(o -> 
-                    log.info("--- RECUPERO PRESIGNED URL OK {}", o)//FileDownloadResponse
-                    )
                 .doOnSuccess(fileDownloadResponse -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, fileKey, "UriBuilderService.createUriForDownloadFile()", fileDownloadResponse));
     }
 
     private void fixBookedDocument(Document document, HeadObjectResponse hor) {
         
         if (document.getCheckSum() == null) {
-        	log.debug("fixBookedDocument() on {} - checksum null", document.getDocumentKey());
         	if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {
-            	log.debug("fixBookedDocument() on {} - checksum MD5", document.getDocumentKey());
                 document.setCheckSum(hor.sseCustomerKeyMD5());
             } else if (ChecksumEnum.SHA256.equals(document.getDocumentType().getChecksum())) {
-            	log.debug("fixBookedDocument() on {} - checksum SHA256", document.getDocumentKey());
                 document.setCheckSum(hor.checksumSHA256());
             }
-        	log.debug("fixBookedDocument() on {} - new checksum {}", document.getDocumentKey(), document.getCheckSum());
         }
         if (document.getContentLenght() == null && hor.contentLength() != null) {
-        	log.debug("fixBookedDocument() on {} - contentLength null", document.getDocumentKey());
             document.setContentLenght(new BigDecimal(hor.contentLength()));
-        	log.debug("fixBookedDocument() on {} - new contentLength {}", document.getDocumentKey(), document.getContentLenght());
         }
         if (document.getRetentionUntil() == null && hor.objectLockRetainUntilDate() != null) {
-        	log.debug("fixBookedDocument() on {} - retentionUntil null", document.getDocumentKey());
             document.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
-        	log.debug("fixBookedDocument() on {} - retentionUntil {}", document.getDocumentKey(), document.getRetentionUntil());
         }
     }
 

@@ -53,14 +53,11 @@ public class ArubaCredentialConf {
         try {
             if (delegatedDomain != null && delegatedPassword != null && delegatedUser != null && otpPwd != null && typeOtpAuth != null &&
                 user != null) {
-                ArubaSecretValue arubaSecretValue =
-                        new ArubaSecretValue(delegatedDomain, delegatedUser, delegatedPassword, otpPwd, typeOtpAuth, user);
-                return arubaSecretValue;
+                return new ArubaSecretValue(delegatedDomain, delegatedUser, delegatedPassword, otpPwd, typeOtpAuth, user);
             } else {
                 String secretStringJson =
                         secretsManagerClient.getSecretValue(builder -> builder.secretId("pn/identity/signature")).secretString();
-                ArubaSecretValue arubaSecretValue = objectMapper.readValue(secretStringJson, ArubaSecretValue.class);
-                return arubaSecretValue;
+                return objectMapper.readValue(secretStringJson, ArubaSecretValue.class);
             }
         } catch (JsonProcessingException e) {
             throw new JsonSecretFindingException(ArubaSecretValue.class);
@@ -72,13 +69,11 @@ public class ArubaCredentialConf {
 
         try {
             if (userTimeMark != null && passwordTimeMark != null) {
-                IdentitySecretTimeMark identitySecretTimemark = new IdentitySecretTimeMark(userTimeMark, passwordTimeMark);
-                return identitySecretTimemark;
+                return new IdentitySecretTimeMark(userTimeMark, passwordTimeMark);
             } else {
                 String secretStringJson =
                         secretsManagerClient.getSecretValue(builder -> builder.secretId("pn/identity/timemark")).secretString();
-                IdentitySecretTimeMark identitySecretTimemark = objectMapper.readValue(secretStringJson, IdentitySecretTimeMark.class);
-                return identitySecretTimemark;
+                return objectMapper.readValue(secretStringJson, IdentitySecretTimeMark.class);
             }
         } catch (JsonProcessingException e) {
             throw new JsonSecretFindingException(IdentitySecretTimeMark.class);

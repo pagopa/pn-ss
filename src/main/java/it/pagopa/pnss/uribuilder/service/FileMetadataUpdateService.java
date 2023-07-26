@@ -29,7 +29,7 @@ public class FileMetadataUpdateService {
     private final UserConfigurationClientCall userConfigClientCall;
     private final DocumentClientCall docClientCall;
     private final DocTypesClientCall docTypesClientCall;
-    private final String TABLE_NAME = "PnSsTableDocumenti";
+    private static final String TABLE_NAME = "PnSsTableDocumenti";
 
     public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall) {
         this.userConfigClientCall = userConfigurationClientCall;

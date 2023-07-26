@@ -70,10 +70,6 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         final String FIND_EVENT_SEND_TO_BRIDGE = "findEventSendToBridge";
         log.debug(Constant.INVOKING_METHOD + Constant.ARG, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput, processRecordsInput.getRecords().size());
         return Flux.fromIterable(processRecordsInput.getRecords())
-                .map(recordEvent -> {
-                    String data = new String(recordEvent.getData().array(), StandardCharsets.UTF_8);
-                    return recordEvent;
-                })
                 .filter(RecordAdapter.class::isInstance)
                 .map(recordEvent -> ((RecordAdapter) recordEvent).getInternalObject())
                 .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))

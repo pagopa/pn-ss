@@ -17,6 +17,7 @@
         <url>${git.url}</url>
         <tag>HEAD</tag>
     </scm>
+    
     <properties>
         <logbackjackson.version>0.1.5</logbackjackson.version>
         <sonar.coverage.exclusions>
@@ -25,7 +26,7 @@
     </properties>
 
     <dependencies>
-
+			
         <dependency>
             <groupId>it.pagopa.pn</groupId>
             <artifactId>pn-commons</artifactId>

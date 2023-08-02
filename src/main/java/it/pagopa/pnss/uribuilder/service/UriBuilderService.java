@@ -21,6 +21,7 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
 import org.jetbrains.annotations.NotNull;
@@ -135,7 +136,6 @@ public class UriBuilderService {
                                                 }
                                             })
                                             .map(unused-> getFileExtension(contentType))
-                                            .onErrorResume(ContentTypeNotFoundException.class, e-> Mono.just(""))
                                             .flatMap(fileExtension -> {
                                                 var documentKeyTmp = String.format("%s%s",
                                                                                    GenerateRandoKeyFile.getInstance()
@@ -544,18 +544,14 @@ public class UriBuilderService {
         return encoder.encodeToString(bytes);
     }
 
-    private String getFileExtension(String contentType)
-    {
+    private String getFileExtension(String contentType) {
         try {
-        	String mime = MimeTypes.getDefaultMimeTypes().getRegisteredMimeType(contentType).getExtension();
-        	if(mime == null) {
-        		mime = "";
-        	}
-        	return mime;
-        }
-        catch(MimeTypeException exception)
-        {
-            throw new ContentTypeNotFoundException(contentType);
+            MimeType mimeType = MimeTypes.getDefaultMimeTypes().getRegisteredMimeType(contentType);
+            if (mimeType == null)
+                return "";
+            return mimeType.getExtension();
+        } catch (MimeTypeException exception) {
+            return "";
         }
     }
 

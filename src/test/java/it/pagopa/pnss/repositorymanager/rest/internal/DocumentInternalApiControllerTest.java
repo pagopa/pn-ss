@@ -86,6 +86,8 @@ public class DocumentInternalApiControllerTest {
 		var documentEntity = new DocumentEntity();
 		documentEntity.setDocumentKey(documentKey);
 		documentEntity.setDocumentType(docTypeEntity);
+		documentEntity.setDocumentState(AVAILABLE);
+		documentEntity.setContentLenght(new BigDecimal(50));
 		dynamoDbTable.putItem(builder -> builder.item(documentEntity));
 	}
 
@@ -258,6 +260,20 @@ public class DocumentInternalApiControllerTest {
 //		Assertions.assertEquals(documentChanges.getContentLenght(),
 //				documentUpdated.getResponseBody().getDocument().getContentLenght());
 
+		log.info("\n Test 6 (patchItem) passed \n");
+	}
+
+	@Test
+		// codice test: DCSS.102.1
+	void patchItemIdempotenceOk() {
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(AVAILABLE);
+		docChanges.setContentLenght(new BigDecimal(50));
+
+		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
+				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON).body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isEqualTo(HttpStatus.OK);
 		log.info("\n Test 6 (patchItem) passed \n");
 	}
 

@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 import static it.pagopa.pnss.common.constant.Constant.STORAGE_TYPE;
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
@@ -133,16 +134,15 @@ public class DocumentServiceImpl implements DocumentService {
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                 .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                 .flatMap(documentEntity ->
-                        {
-                            if (Objects.equals(documentChanges.getDocumentState(), documentEntity.getDocumentState()) &&
-                                    Objects.equals(documentChanges.getRetentionUntil(), documentEntity.getRetentionUntil()) &&
-                                    Objects.equals(documentChanges.getContentLenght(), documentEntity.getContentLenght())
-                                    && Objects.equals(documentChanges.getCheckSum(), documentEntity.getCheckSum()))
-                                return Mono.just(objectMapper.convertValue(documentEntity, Document.class));
-                            else
-                                return applyPatch(documentEntity, documentKey, documentChanges, authPagopaSafestorageCxId, authApiKey, oldState);
-                        }
-                );
+                {
+                    if (hasBeenPatched(documentEntity, documentChanges)) {
+                        log.debug("Same changes have been already applied to document '{}'", documentKey);
+                        return Mono.just(objectMapper.convertValue(documentEntity, Document.class));
+                    } else {
+                        log.debug("Applying patch to document '{}'", documentKey);
+                        return applyPatch(documentEntity, documentKey, documentChanges, authPagopaSafestorageCxId, authApiKey, oldState);
+                    }
+                });
     }
 
     private Mono<Document> applyPatch(DocumentEntity docEntity, String documentKey, DocumentChanges documentChanges, String authPagopaSafestorageCxId,
@@ -270,6 +270,23 @@ public class DocumentServiceImpl implements DocumentService {
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(documentToDelete -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
+    }
+
+    private boolean hasBeenPatched(DocumentEntity documentEntity, DocumentChanges documentChanges) {
+        boolean hasBeenPatched = true;
+        if (!Objects.isNull(documentChanges.getDocumentState())) {
+            hasBeenPatched = Objects.equals(documentChanges.getDocumentState(), documentEntity.getDocumentState());
+        }
+        if (!Objects.isNull(documentChanges.getRetentionUntil())) {
+            hasBeenPatched = Objects.equals(documentChanges.getRetentionUntil(), documentEntity.getRetentionUntil());
+        }
+        if (!Objects.isNull(documentChanges.getContentLenght())) {
+            hasBeenPatched = Objects.equals(documentChanges.getContentLenght(), documentEntity.getContentLenght());
+        }
+        if (!Objects.isNull(documentChanges.getCheckSum())) {
+            hasBeenPatched = Objects.equals(documentChanges.getCheckSum(), documentEntity.getCheckSum());
+        }
+        return hasBeenPatched;
     }
 
 }

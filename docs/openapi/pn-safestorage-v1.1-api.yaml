@@ -71,6 +71,10 @@ tags:
     description: Lettura file 
   - name: fileMetadataUpdate
     description: Aggiornamento metadati file 
+  - name: additionalFileMetadataUpdate
+    description: Aggiornamento metadati addizionali file 
+  - name: additionalFileMetadataGet
+    description: Recupero metadati addizionali file 
 paths:
   /status:
     get:
@@ -473,8 +477,56 @@ paths:
             - il parametro clientId è diverso dal client autenticato; <br/>
             - se il file identificato da fileKey non è ancora stato salvato; <br/>
             
-      
-
+  ### WORK ITEM
+  '/safe-storage/v1/files/{fileKey}/metadata':
+    parameters:
+      - $ref: '#/components/parameters/fileKey'
+      - $ref: '#/components/parameters/clientIdHeader'
+    post:
+      operationId: updateAdditionalFileMetadata
+      tags:
+        - additionalFileMetadataUpdate
+      summary: Modifica i metadati addizionali di un file.
+      description: >-
+        __Il contenuto del file è immodificabile__. <br/>
+        La struttura metadata è una lista di oggetti con i campi metadataKey, metadataOperation e metadataValue (se metadataOperation è SET).<br/>
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAdditionalFileMetadataRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/UpdateAdditionalFileMetadataResponse'
+        '404':
+          description: >-
+            Non trovato. Restituito se: <br/>
+            - il parametro clientId è diverso dal client autenticato; <br/>
+            - se il file identificato da fileKey non è ancora stato salvato; <br/>
+    get:
+      operationId: getAdditionalFileMetadata
+      tags:
+        - additionalFileMetadataGet
+      summary: Restitiusce i metadati aggiuntivi di un documento
+      description: >-
+        Restitiusce un array di oggetti con gli attributi metadataKey e metadataValue
+        <br/>
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/GetAdditionalFileMetadataResponse'
+        '404':
+          description: >-
+            Non trovato. Restituito se: <br/>
+            - il parametro clientId è diverso dal client autenticato; <br/>
+            - se il file identificato da fileKey non è ancora stato salvato; <br/>
 components:
   parameters:
     clientIdPath: 
@@ -654,12 +706,59 @@ components:
           description: >- 
             data e ora fino a cui il documento sarà garantito all'interno di _SafeStorage_. <br/>
             Può essere ritardata nel tempo, mai anticipata. Formattata con timezone secondo l'rfc 3339
-            
-    
+
     UpdateFileMetadataResponse:
       $ref: '#/components/schemas/OperationResultCodeResponse'
 
+    UpdateAdditionalFileMetadataRequest:
+      type: object 
+      required:
+        - metadata
+      properties:
+        metadata:
+          type: array
+          items: 
+            $ref: '#/components/schemas/AdditionalMetadataUpdateElement'
+    
+    AdditionalMetadataUpdateElement:
+      type: object 
+      required:
+        - metadataKey
+        - metadataOperation
+      properties:  
+        metadataKey:
+          type: string
+          description: La chiave del metadato
+          example: CONSERVATION_STATUS
+        metadataValue:
+          type: string
+          description: Il valore del metadato
+          example: OK   
+        metadataOperation:
+          type: string
+          description: L'operazione, SET o DELETE
+          example: SET
 
+    UpdateAdditionalFileMetadataResponse:
+      $ref: '#/components/schemas/OperationResultCodeResponse'
+
+
+    GetAdditionalFileMetadataResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/AdditionalMetadataElement'
+              
+    AdditionalMetadataElement:
+      type: object 
+      properties:  
+        metadataKey:
+          type: string
+          description: La chiave del metadato
+          example: CONSERVATION_STATUS
+        metadataValue:
+          type: string
+          description: Il valore del metadato
+          example: OK   
 
     UserConfiguration:
       type: object

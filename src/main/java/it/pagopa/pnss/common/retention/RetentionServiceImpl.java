@@ -140,9 +140,7 @@ public class RetentionServiceImpl implements RetentionService {
                 }
             }
             throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", documentKey));
-        }).doOnError(e -> {
-            log.error("getDefaultRetention() : errore : {}", e.getMessage(), e);
-        });
+        }).doOnError(e -> log.error("getDefaultRetention() : errore : {}", e.getMessage(), e));
 
     }
 

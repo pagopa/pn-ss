@@ -85,8 +85,8 @@ public class UriBuilderService {
     private final S3Presigner s3Presigner;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
 
-    private final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
-    private final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
+    private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
                              BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner) {
@@ -397,7 +397,6 @@ public class UriBuilderService {
                 {
                     var checksum = doc.getCheckSum() != null ? doc.getCheckSum() : null;
                     var contentLength = doc.getContentLenght();
-                    //var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
 
                     // NOTA: deve essere restituito lo stato logico, piuttosto che lo stato tecnico
                     if (doc.getDocumentLogicalState() != null) {
@@ -471,7 +470,7 @@ public class UriBuilderService {
 
         RestoreRequest restoreRequest = RestoreRequest.builder()
                 .days(stayHotTime)
-                .glacierJobParameters(GlacierJobParameters.builder().tier(Tier.STANDARD).build())
+                .glacierJobParameters(builder -> builder.tier(Tier.STANDARD))
                 .build();
 
         return s3Service.restoreObject(keyName, bucketName, restoreRequest)

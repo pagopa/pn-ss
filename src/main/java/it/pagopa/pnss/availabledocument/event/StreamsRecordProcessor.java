@@ -83,12 +83,10 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     private void setCheckpoint(ProcessRecordsInput processRecordsInput) {
         try {
             if (!test) {
-                try {
                     processRecordsInput.getCheckpointer().checkpoint();
-                } catch (ShutdownException e) {
-                    log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
-                }
             }
+        } catch (ShutdownException e) {
+            log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
         } catch (Exception e) {
             log.error("* FATAL * processRecords: {} {}", e, e.getMessage());
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);

@@ -1,9 +1,7 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static org.mockito.Mockito.mock;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static reactor.core.publisher.Mono.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
@@ -15,7 +13,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
@@ -26,7 +23,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -43,7 +39,6 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
-import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
@@ -55,12 +50,9 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
@@ -82,9 +74,7 @@ public class DocumentInternalApiControllerTest {
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
-
 	private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_NOTIFICATION_ATTACHMENTS";
-
 	private static final String PARTITION_ID_ENTITY = "documentKeyEnt";
 	private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
 	private static final String PARTITION_ID_NO_EXISTENT = "documentKey_bad";
@@ -92,7 +82,6 @@ public class DocumentInternalApiControllerTest {
 
 	private static DocumentInput documentInput;
 	private static DocumentChanges documentChanges;
-
 	private static DynamoDbTable<DocumentEntity> dynamoDbTable;
 
 	@MockBean
@@ -107,7 +96,7 @@ public class DocumentInternalApiControllerTest {
 		allowedStatusTransitions1.add("AVAILABLE");
 
 		CurrentStatusEntity currentStatus1 = new CurrentStatusEntity();
-		currentStatus1.setStorage("PN_NOTIFICATION_ATTACHMENTS");
+		currentStatus1.setStorage(DOCTYPE_ID_LEGAL_FACTS);
 		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
 		currentStatus1.setTechnicalState("SAVED");
 
@@ -115,7 +104,7 @@ public class DocumentInternalApiControllerTest {
 		statuses1.put("SAVED", currentStatus1);
 
 		DocTypeEntity docTypeEntity = new DocTypeEntity();
-		docTypeEntity.setTipoDocumento(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS);
+		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
 		docTypeEntity.setStatuses(statuses1);
 		log.info("execute insertDocumentEntity() : docTypeEntity : {}", docTypeEntity);
 
@@ -145,14 +134,14 @@ public class DocumentInternalApiControllerTest {
 		allowedStatusTransitions1.add("AVAILABLE");
 
 		CurrentStatus currentStatus1 = new CurrentStatus();
-		currentStatus1.setStorage("PN_NOTIFICATION_ATTACHMENTS");
+		currentStatus1.setStorage(DOCTYPE_ID_LEGAL_FACTS);
 		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
 
 		Map<String, CurrentStatus> statuses1 = new HashMap<>();
 		statuses1.put("PRELOADED", currentStatus1);
 
 		DocumentType docTypes = new DocumentType();
-		docTypes.setTipoDocumento(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS);
+		docTypes.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
 		docTypes.setChecksum(DocumentType.ChecksumEnum.SHA256);
 		docTypes.setInitialStatus("SAVED");
 		docTypes.setStatuses(statuses1);
@@ -167,7 +156,7 @@ public class DocumentInternalApiControllerTest {
 		documentInput.setRetentionUntil("2032-04-12T12:32:04.000Z");
 		documentInput.setCheckSum(CHECKSUM);
 		documentInput.setContentType("xxxxx");
-		documentInput.setDocumentType("PN_NOTIFICATION_ATTACHMENTS");
+		documentInput.setDocumentType(DOCTYPE_ID_LEGAL_FACTS);
 		documentInput.setContentLenght(new BigDecimal(100));
 		log.info("execute createDocument() : documentInput : {}", documentInput);
 

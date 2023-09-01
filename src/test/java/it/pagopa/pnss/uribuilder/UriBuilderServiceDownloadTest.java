@@ -190,8 +190,52 @@ class UriBuilderServiceDownloadTest {
     }
 
     @Test
+    void testUrlGeneratoFileKeyPrefixed() {
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
+        String docId = "2023/09/01/11/1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+
+        mockGetDocument(d, docId);
+
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).build()));
+        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class))).thenReturn(Mono.just(new DocumentResponse()));
+
+        fileDownloadTestCall(docId, true).expectStatus().isOk();
+    }
+
+    @Test
     void testUrlGeneratoConMetaDataTrue() {
         String docId = "1111-aaaa";
+
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+
+        mockGetDocument(d, docId);
+
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).build()));
+        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class))).thenReturn(Mono.just(new DocumentResponse()));
+
+
+        fileDownloadTestCall(docId, true).expectStatus().isOk();
+    }
+
+    @Test
+    void testUrlGeneratoConMetaDataTrueFileKeyPrefixed() {
+        String docId = "2023/09/01/11/1111-aaaa";
 
         mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
 

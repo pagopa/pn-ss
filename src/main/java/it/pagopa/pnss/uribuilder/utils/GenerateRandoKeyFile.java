@@ -34,7 +34,7 @@ public  class GenerateRandoKeyFile {
                 + Long.toHexString(temp.getLeastSignificantBits());
         var documentName = documentType + "-" + uuidString + extension;
 
-        return URLEncoder.encode(StringUtils.join("/", year, month, day, hour, documentName), StandardCharsets.UTF_8);
+        return StringUtils.join("/", year, month, day, hour, documentName);
     }
 
     private String twoDigitFormat(String value)

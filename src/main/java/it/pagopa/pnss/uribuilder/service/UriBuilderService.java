@@ -39,6 +39,8 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -169,7 +171,7 @@ public class UriBuilderService {
                                                                              metadata,
                                                                              xTraceIdValue).map(presignedPutObjectRequest -> {
                                                                  FileCreationResponse response = new FileCreationResponse();
-                                                                 response.setKey(insertedDocument.getDocument().getDocumentKey());
+                                                                 response.setKey(URLEncoder.encode(insertedDocument.getDocument().getDocumentKey(), StandardCharsets.UTF_8));
                                                                  response.setSecret(secret.toString());
                                                                  response.setUploadUrl(presignedPutObjectRequest.url().toString());
                                                                  response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest()

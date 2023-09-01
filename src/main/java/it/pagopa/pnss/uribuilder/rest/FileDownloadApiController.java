@@ -25,6 +25,6 @@ public class FileDownloadApiController implements FileDownloadApi {
     public Mono<ResponseEntity<FileDownloadResponse>> getFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly,
                                                               final ServerWebExchange exchange) {
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
-        return uriBuilderService.createUriForDownloadFile(URLDecoder.decode(fileKey, StandardCharsets.UTF_8), xPagopaSafestorageCxId, xTraceIdValue, metadataOnly).map(ResponseEntity::ok);
+        return uriBuilderService.createUriForDownloadFile(fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly).map(ResponseEntity::ok);
     }
 }

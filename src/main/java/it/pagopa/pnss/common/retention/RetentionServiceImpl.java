@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
+
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -205,8 +208,8 @@ public class RetentionServiceImpl implements RetentionService {
             }
         }
         log.debug("setRetentionPeriodInBucketObjectMetadata() : INPUT : retentionUntil = {} : ", msg);
-
-                  return s3Service.headObject(documentEntity.getDocumentKey(), bucketName.ssHotName())
+        String documentKey = URLDecoder.decode(documentEntity.getDocumentKey(), StandardCharsets.UTF_8);
+                  return s3Service.headObject(documentKey, bucketName.ssHotName())
                    .flatMap(headObjectResponse -> {
                        log.debug("setRetentionPeriodInBucketObjectMetadata() : " + "headOjectResponse.lastModified() = {} :" +
                                 "headOjectResponse.objectLockRetainUntilDate() = {} :" + "objectLockRetentionMode = {} ",
@@ -245,7 +248,7 @@ public class RetentionServiceImpl implements RetentionService {
                                                                               .mode(objectLockRetentionMode)
                                                                               .build());
                                       })
-                                     .flatMap(objectLockRetention -> s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention))
+                                     .flatMap(objectLockRetention -> s3Service.putObjectRetention(documentKey, bucketName.ssHotName(), objectLockRetention))
                                      .thenReturn(documentEntity);
                        } else if (
                            // 1. l'oggetto nel bucket non ha una retaintUntilDate impostata
@@ -272,7 +275,7 @@ public class RetentionServiceImpl implements RetentionService {
                                     dataCreazioneObjectInBucket);
                            return getRetentionUntil(authPagopaSafestorageCxId,
                                                     authApiKey,
-                                                    documentEntity.getDocumentKey(),
+                                                    documentKey,
                                                     // si assume che la postDocument abbia gia' effettuato la traduzione dello stato logico
                                                     // e l'impostazione dello stesso stato nella entity
                                                     documentEntity.getDocumentLogicalState(),
@@ -296,7 +299,7 @@ public class RetentionServiceImpl implements RetentionService {
                                                                                                                         .mode(objectLockRetentionMode)
                                                                                                                         .build());
                                                                                 })
-                                                                                .flatMap(objectLockRetention -> s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention))
+                                                                                .flatMap(objectLockRetention -> s3Service.putObjectRetention(documentKey, bucketName.ssHotName(), objectLockRetention))
                                                                                 .onErrorResume(RetentionToIgnoreException.class, e ->
                                                                                 {
                                                                                     log.debug(e.getMessage());
@@ -310,19 +313,19 @@ public class RetentionServiceImpl implements RetentionService {
                    })
                    .switchIfEmpty(Mono.error(new RetentionException(String.format(
                            "Object (in bucket) Data Creation not present (documentKey: %s)",
-                           documentEntity.getDocumentKey()))))
+                           documentKey))))
 
                    // gestione errore
                    .onErrorResume(NoSuchKeyException.class, throwable -> {
                        log.debug("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore = {}",
-                                 documentEntity.getDocumentKey(),
+                    		   	documentKey,
                                  throwable.getMessage(),
                                  throwable);
                        return Mono.error(new RetentionException(throwable.getMessage()));
                    })
                    .onErrorResume(DateTimeException.class, throwable -> {
                        log.error("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore formattazione instant retention " +
-                                 "util = {}", documentEntity.getDocumentKey(), throwable.getMessage(), throwable);
+                                 "util = {}", documentKey, throwable.getMessage(), throwable);
                        return Mono.error(new RetentionException(throwable.getMessage()));
                    })
                    .onErrorResume(throwable -> {

@@ -33,6 +33,8 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -202,7 +204,7 @@ public class DocumentServiceImpl implements DocumentService {
 	                                                                 .getStorage();
 	                               putObjectTaggingRequest = PutObjectTaggingRequest.builder()
 	                                                                                .bucket(bucketName.ssHotName())
-	                                                                                .key(documentKey)
+	                                                                                .key(URLDecoder.decode(documentKey, StandardCharsets.UTF_8))
 	                                                                                .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
 	                                                                                    setTag.key(STORAGE_TYPE);
 	                                                                                    setTag.value(storageType);

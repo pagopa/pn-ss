@@ -39,6 +39,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.math.BigDecimal;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -332,7 +333,7 @@ public class UriBuilderService {
                                    } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) ) {
                                 	   try {
                                 		   log.debug("before check presence in createUriForDownloadFile");
-                                		   s3Service.headObject(fileKey, bucketName.ssHotName());
+                                		   s3Service.headObject(URLDecoder.decode(fileKey, StandardCharsets.UTF_8), bucketName.ssHotName());
                                     	   synchronousSink.next(document);
                                 	   } catch (software.amazon.awssdk.services.s3.model.NoSuchKeyException e) {
                                            synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -354,7 +355,7 @@ public class UriBuilderService {
 
         // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
         // non viene creata e viene ritornato un Mono.empty()
-        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly)
+        return createFileDownloadInfo(URLDecoder.decode(fileKey, StandardCharsets.UTF_8), xTraceIdValue, doc.getDocumentState(), metadataOnly)
                 .map(fileDownloadInfo -> new FileDownloadResponse().download(fileDownloadInfo))
                 .switchIfEmpty(Mono.just(new FileDownloadResponse()))
                 .map(fileDownloadResponse ->
@@ -386,7 +387,7 @@ public class UriBuilderService {
 	                        return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
 	                    } else {
 	             		    log.debug("before check presence in getFileDownloadResponse");
-	                        return s3Service.headObject(fileKey, bucketName.ssHotName())
+	                        return s3Service.headObject(URLDecoder.decode(fileKey, StandardCharsets.UTF_8), bucketName.ssHotName())
 	                                .map(HeadObjectResponse::objectLockRetainUntilDate)
 	                                .flatMap(retentionInstant ->
 	                                        documentClientCall

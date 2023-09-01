@@ -36,7 +36,7 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
         String pagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(pagopaSafestorageCxId);
         String apiKeyValue = exchange.getRequest().getHeaders().getFirst(apiKey);
 
-        return updateFileMetadataRequest.flatMap(request -> fileMetadataUpdateService.updateMetadata(URLDecoder.decode(fileKey, StandardCharsets.UTF_8),
+        return updateFileMetadataRequest.flatMap(request -> fileMetadataUpdateService.updateMetadata(fileKey,
                                                                                                      xPagopaSafestorageCxId,
                                                                                                      request,
                                                                                                      pagopaSafestorageCxIdValue,

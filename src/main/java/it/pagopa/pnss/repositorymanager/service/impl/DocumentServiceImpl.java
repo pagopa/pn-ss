@@ -184,8 +184,8 @@ public class DocumentServiceImpl implements DocumentService {
 
 
                        if ( documentChanges.getDocumentState() != null && (
-                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
-                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
+                    		   documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
+                    		   documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))) {
 
 	                       log.debug("patchDocument() : START Tagging");
 	                       Region region = Region.of(awsConfigurationProperties.regionCode());
@@ -208,7 +208,6 @@ public class DocumentServiceImpl implements DocumentService {
 	                                                                                    setTag.value(storageType);
 	                                                                                }))
 	                                                                                .build();
-	                               CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse =
 	                                       s3.putObjectTagging(putObjectTaggingRequest);
 	                               log.debug("patchDocument() : Tagging : storageType {}", storageType);
 	                           } else {
@@ -222,8 +221,8 @@ public class DocumentServiceImpl implements DocumentService {
                    .flatMap(documentEntityStored -> { 
 
                        if ( documentChanges.getDocumentState() != null && (
-                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
-                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
+                    		   documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
+                    		   documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))) {
 
 		                   return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
 		                           authApiKey,

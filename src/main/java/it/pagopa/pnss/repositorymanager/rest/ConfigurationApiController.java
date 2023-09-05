@@ -48,7 +48,7 @@ public class ConfigurationApiController implements CfgApi {
         return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
     }
 
-    private Mono<ResponseEntity<UserConfiguration>> getUserConfigurationErrorResponse(String clientId, Throwable throwable) {
+    private Mono<ResponseEntity<UserConfiguration>> getUserConfigurationErrorResponse(Throwable throwable) {
 
         if (throwable instanceof RepositoryManagerException) {
             return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null));
@@ -86,6 +86,6 @@ public class ConfigurationApiController implements CfgApi {
                                        .map(userConfigurationInternal -> ResponseEntity.ok(objectMapper.convertValue(
                                                userConfigurationInternal,
                                                UserConfiguration.class)))
-                                       .onErrorResume(throwable -> getUserConfigurationErrorResponse(clientId, throwable));
+                                       .onErrorResume(this::getUserConfigurationErrorResponse);
     }
 }

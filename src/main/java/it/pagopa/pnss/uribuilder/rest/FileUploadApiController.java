@@ -40,10 +40,9 @@ public class FileUploadApiController implements FileUploadApi {
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
         return fileCreationRequest.flatMap(request -> {
         								String checksumValue = null;
-										if (headerXChecksumValue != null && !headerXChecksumValue.isBlank()) {
-											if (exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
+										if (headerXChecksumValue != null && !headerXChecksumValue.isBlank()
+												&& exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
 												checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
-											}
 										}
         								return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
         																				request,

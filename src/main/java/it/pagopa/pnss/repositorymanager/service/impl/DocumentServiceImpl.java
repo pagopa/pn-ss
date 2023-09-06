@@ -275,7 +275,7 @@ public class DocumentServiceImpl implements DocumentService {
     private boolean hasBeenPatched(DocumentEntity documentEntity, DocumentChanges documentChanges) {
         boolean hasBeenPatched = true;
         if (!Objects.isNull(documentChanges.getDocumentState())) {
-            hasBeenPatched = Objects.equals(documentChanges.getDocumentState(), documentEntity.getDocumentState());
+            hasBeenPatched = documentChanges.getDocumentState().equalsIgnoreCase(documentEntity.getDocumentState());
         }
         if (!Objects.isNull(documentChanges.getRetentionUntil())) {
             hasBeenPatched = Objects.equals(documentChanges.getRetentionUntil(), documentEntity.getRetentionUntil());

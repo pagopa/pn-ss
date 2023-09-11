@@ -98,7 +98,7 @@ public class RetentionServiceImpl implements RetentionService {
         }
     }
 
-    private Mono<Integer> getRetentionPeriodInDays(String documentKey, String documentState, String documentType,
+    protected Mono<Integer> getRetentionPeriodInDays(String documentKey, String documentState, String documentType,
                                                    String authPagopaSafestorageCxId, String authApiKey)
             throws RetentionException {
         log.info("getRetentionPeriod() : START : documentKey '{}' : documentState '{}' : documentType '{}'",
@@ -144,7 +144,7 @@ public class RetentionServiceImpl implements RetentionService {
 
     }
 
-    private Instant getRetainUntilDate(Instant dataCreazione, Integer retentionPeriod) throws RetentionException {
+    protected Instant getRetainUntilDate(Instant dataCreazione, Integer retentionPeriod) throws RetentionException {
         try {
             log.debug("getRetainUntilDate() : START, retentionPeriod : {}", retentionPeriod);
             return dataCreazione.plus(Period.ofDays(retentionPeriod));

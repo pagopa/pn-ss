@@ -355,7 +355,7 @@ public class UriBuilderService {
 
         // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
         // non viene creata e viene ritornato un Mono.empty()
-        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly)
+        return createFileDownloadInfo(URLDecoder.decode(fileKey, StandardCharsets.UTF_8), xTraceIdValue, doc.getDocumentState(), metadataOnly)
                 .map(fileDownloadInfo -> new FileDownloadResponse().download(fileDownloadInfo))
                 .switchIfEmpty(Mono.just(new FileDownloadResponse()))
                 .map(fileDownloadResponse ->

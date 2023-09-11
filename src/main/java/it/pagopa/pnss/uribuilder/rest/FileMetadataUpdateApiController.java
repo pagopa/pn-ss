@@ -10,9 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-
 @RestController
 public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
 
@@ -36,7 +33,7 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
         String pagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(pagopaSafestorageCxId);
         String apiKeyValue = exchange.getRequest().getHeaders().getFirst(apiKey);
 
-        return updateFileMetadataRequest.flatMap(request -> fileMetadataUpdateService.updateMetadata(URLDecoder.decode(fileKey, StandardCharsets.UTF_8),
+        return updateFileMetadataRequest.flatMap(request -> fileMetadataUpdateService.updateMetadata(fileKey,
                                                                                                      xPagopaSafestorageCxId,
                                                                                                      request,
                                                                                                      pagopaSafestorageCxIdValue,

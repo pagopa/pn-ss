@@ -10,8 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 
 @RestController
 public class FileDownloadApiController implements FileDownloadApi {
@@ -25,6 +23,6 @@ public class FileDownloadApiController implements FileDownloadApi {
     public Mono<ResponseEntity<FileDownloadResponse>> getFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly,
                                                               final ServerWebExchange exchange) {
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
-        return uriBuilderService.createUriForDownloadFile(URLDecoder.decode(fileKey, StandardCharsets.UTF_8), xPagopaSafestorageCxId, xTraceIdValue, metadataOnly).map(ResponseEntity::ok);
+        return uriBuilderService.createUriForDownloadFile(fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly).map(ResponseEntity::ok);
     }
 }

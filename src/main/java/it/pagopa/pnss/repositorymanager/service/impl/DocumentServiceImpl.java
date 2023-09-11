@@ -33,6 +33,8 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -90,21 +92,22 @@ public class DocumentServiceImpl implements DocumentService {
         if (documentInput.getDocumentKey() == null || documentInput.getDocumentKey().isBlank()) {
             throw new RepositoryManagerException("Document Key is null");
         }
+        String decodedDocumentKey = URLDecoder.decode(documentInput.getDocumentKey(), StandardCharsets.UTF_8);
         String key = documentInput.getDocumentType();
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
-                                                                                    .partitionValue(documentInput.getDocumentKey())
+                                                                                    .partitionValue(decodedDocumentKey)
                                                                                     .build()))
                    .handle((documentFounded, sink) -> {
                        if (documentFounded != null) {
                            log.debug("insertDocument() : document found : {}", documentFounded);
-                           sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
+                           sink.error(new ItemAlreadyPresent(decodedDocumentKey));
                        }
                    })
                    .switchIfEmpty(Mono.just(documentInput))
                    .flatMap(o -> docTypesService.getDocType(key))
                    .flatMap(o -> {
                        resp.setDocumentType(o);
-                       resp.setDocumentKey(documentInput.getDocumentKey());
+                       resp.setDocumentKey(decodedDocumentKey);
                        resp.setDocumentState(documentInput.getDocumentState());
                        resp.setCheckSum(documentInput.getCheckSum());
                        resp.setRetentionUntil(documentInput.getRetentionUntil());
@@ -128,9 +131,10 @@ public class DocumentServiceImpl implements DocumentService {
                  documentChanges);
 
         AtomicReference<String> oldState = new AtomicReference<>();
+        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
 
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
-                   .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
+        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(decodedDocumentKey).build()))
+                   .switchIfEmpty(getErrorIdDocNotFoundException(decodedDocumentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(documentEntity -> {
 
@@ -202,7 +206,7 @@ public class DocumentServiceImpl implements DocumentService {
 	                                                                 .getStorage();
 	                               putObjectTaggingRequest = PutObjectTaggingRequest.builder()
 	                                                                                .bucket(bucketName.ssHotName())
-	                                                                                .key(documentKey)
+	                                                                                .key(decodedDocumentKey)
 	                                                                                .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
 	                                                                                    setTag.key(STORAGE_TYPE);
 	                                                                                    setTag.value(storageType);
@@ -243,10 +247,11 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public Mono<Document> deleteDocument(String documentKey) {
         log.info("deleteDocument() : IN : documentKey {}", documentKey);
-        Key typeKey = Key.builder().partitionValue(documentKey).build();
+        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
+        Key typeKey = Key.builder().partitionValue(decodedDocumentKey).build();
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(typeKey))
-                   .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
+                   .switchIfEmpty(getErrorIdDocNotFoundException(decodedDocumentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(documentToDelete -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));

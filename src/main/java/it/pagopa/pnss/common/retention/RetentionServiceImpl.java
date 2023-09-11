@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
+
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -194,6 +197,8 @@ public class RetentionServiceImpl implements RetentionService {
                  documentChanges,
                  documentEntity,
                  oldState);
+
+        String decodedDocumentKey = URLDecoder.decode(documentEntity.getDocumentKey(), StandardCharsets.UTF_8);
         String msg = null;
         if (documentChanges != null) {
             if (documentChanges.getRetentionUntil() == null) {
@@ -206,7 +211,7 @@ public class RetentionServiceImpl implements RetentionService {
         }
         log.debug("setRetentionPeriodInBucketObjectMetadata() : INPUT : retentionUntil = {} : ", msg);
 
-                  return s3Service.headObject(documentEntity.getDocumentKey(), bucketName.ssHotName())
+                  return s3Service.headObject(decodedDocumentKey, bucketName.ssHotName())
                    .flatMap(headObjectResponse -> {
                        log.debug("setRetentionPeriodInBucketObjectMetadata() : " + "headOjectResponse.lastModified() = {} :" +
                                 "headOjectResponse.objectLockRetainUntilDate() = {} :" + "objectLockRetentionMode = {} ",
@@ -245,7 +250,7 @@ public class RetentionServiceImpl implements RetentionService {
                                                                               .mode(objectLockRetentionMode)
                                                                               .build());
                                       })
-                                     .flatMap(objectLockRetention -> s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention))
+                                     .flatMap(objectLockRetention -> s3Service.putObjectRetention(decodedDocumentKey, bucketName.ssHotName(), objectLockRetention))
                                      .thenReturn(documentEntity);
                        } else if (
                            // 1. l'oggetto nel bucket non ha una retaintUntilDate impostata
@@ -296,7 +301,7 @@ public class RetentionServiceImpl implements RetentionService {
                                                                                                                         .mode(objectLockRetentionMode)
                                                                                                                         .build());
                                                                                 })
-                                                                                .flatMap(objectLockRetention -> s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention))
+                                                                                .flatMap(objectLockRetention -> s3Service.putObjectRetention(decodedDocumentKey, bucketName.ssHotName(), objectLockRetention))
                                                                                 .onErrorResume(RetentionToIgnoreException.class, e ->
                                                                                 {
                                                                                     log.debug(e.getMessage());

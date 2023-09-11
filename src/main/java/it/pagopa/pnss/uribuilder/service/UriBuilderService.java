@@ -39,6 +39,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.math.BigDecimal;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -332,7 +333,7 @@ public class UriBuilderService {
                                    } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) ) {
                                 	   try {
                                 		   log.debug("before check presence in createUriForDownloadFile");
-                                		   s3Service.headObject(fileKey, bucketName.ssHotName());
+                                		   s3Service.headObject(URLDecoder.decode(fileKey, StandardCharsets.UTF_8), bucketName.ssHotName());
                                     	   synchronousSink.next(document);
                                 	   } catch (software.amazon.awssdk.services.s3.model.NoSuchKeyException e) {
                                            synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -386,7 +387,7 @@ public class UriBuilderService {
 	                        return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
 	                    } else {
 	             		    log.debug("before check presence in getFileDownloadResponse");
-	                        return s3Service.headObject(fileKey, bucketName.ssHotName())
+	                        return s3Service.headObject(URLDecoder.decode(fileKey, StandardCharsets.UTF_8), bucketName.ssHotName())
 	                                .map(HeadObjectResponse::objectLockRetainUntilDate)
 	                                .flatMap(retentionInstant ->
 	                                        documentClientCall
@@ -430,7 +431,7 @@ public class UriBuilderService {
                 .glacierJobParameters(GlacierJobParameters.builder().tier(Tier.STANDARD).build())
                 .build();
 
-        return s3Service.restoreObject(keyName, bucketName, restoreRequest)
+        return s3Service.restoreObject(URLDecoder.decode(keyName, StandardCharsets.UTF_8), bucketName, restoreRequest)
                 //Eccezioni S3: RestoreAlreadyInProgress viene ignorata.
                 .onErrorResume(AwsServiceException.class, ase ->
                 {
@@ -464,7 +465,7 @@ public class UriBuilderService {
         log.debug("INIZIO CREAZIONE getObjectRequest");
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
-                .key(keyName)
+                .key(URLDecoder.decode(keyName, StandardCharsets.UTF_8))
                 .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
                         queryParamPresignedUrlTraceId,
                         xTraceIdValue))

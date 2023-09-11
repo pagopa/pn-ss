@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;

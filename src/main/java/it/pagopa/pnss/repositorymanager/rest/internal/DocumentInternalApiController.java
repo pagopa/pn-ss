@@ -24,6 +24,9 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+
 @RestController
 @Slf4j
 public class DocumentInternalApiController implements DocumentInternalApi {
@@ -96,7 +99,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	@Override
 	public Mono<ResponseEntity<DocumentResponse>> getDocument(String documentKey, final ServerWebExchange exchange) {
 
-		return documentService.getDocument(documentKey)
+		return documentService.getDocument(URLDecoder.decode(documentKey, StandardCharsets.UTF_8))
 				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
 				.onErrorResume(throwable -> getResponse(documentKey, throwable));
 
@@ -119,7 +122,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
     	String xPagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(xPagopaSafestorageCxId);
     	String xApiKeyValue = exchange.getRequest().getHeaders().getFirst(xApiKey);
 
-        return documentChanges.flatMap(request -> documentService.patchDocument(documentKey, 
+        return documentChanges.flatMap(request -> documentService.patchDocument(URLDecoder.decode(documentKey, StandardCharsets.UTF_8),
         																		request, 
         																		xPagopaSafestorageCxIdValue, 
         																		xApiKeyValue))
@@ -131,7 +134,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	@Override
 	public Mono<ResponseEntity<Void>> deleteDocument(String documentKey, final ServerWebExchange exchange) {
 
-		return documentService.deleteDocument(documentKey).map(docType -> ResponseEntity.noContent().<Void>build())
+		return documentService.deleteDocument(URLDecoder.decode(documentKey, StandardCharsets.UTF_8)).map(docType -> ResponseEntity.noContent().<Void>build())
 				.onErrorResume(DocumentKeyNotPresentException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
 						throwable.getMessage(), throwable.getCause())));
 

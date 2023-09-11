@@ -99,7 +99,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	@Override
 	public Mono<ResponseEntity<DocumentResponse>> getDocument(String documentKey, final ServerWebExchange exchange) {
 
-		return documentService.getDocument(URLDecoder.decode(documentKey, StandardCharsets.UTF_8))
+		return documentService.getDocument(documentKey)
 				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
 				.onErrorResume(throwable -> getResponse(documentKey, throwable));
 
@@ -122,7 +122,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
     	String xPagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(xPagopaSafestorageCxId);
     	String xApiKeyValue = exchange.getRequest().getHeaders().getFirst(xApiKey);
 
-        return documentChanges.flatMap(request -> documentService.patchDocument(URLDecoder.decode(documentKey, StandardCharsets.UTF_8),
+        return documentChanges.flatMap(request -> documentService.patchDocument(documentKey,
         																		request, 
         																		xPagopaSafestorageCxIdValue, 
         																		xApiKeyValue))
@@ -134,7 +134,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	@Override
 	public Mono<ResponseEntity<Void>> deleteDocument(String documentKey, final ServerWebExchange exchange) {
 
-		return documentService.deleteDocument(URLDecoder.decode(documentKey, StandardCharsets.UTF_8)).map(docType -> ResponseEntity.noContent().<Void>build())
+		return documentService.deleteDocument(documentKey).map(docType -> ResponseEntity.noContent().<Void>build())
 				.onErrorResume(DocumentKeyNotPresentException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
 						throwable.getMessage(), throwable.getCause())));
 

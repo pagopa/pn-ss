@@ -76,8 +76,9 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public Mono<Document> getDocument(String documentKey) {
         log.info("getDocument() : IN : documentKey {}", documentKey);
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
-                   .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
+        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
+        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(decodedDocumentKey).build()))
+                   .switchIfEmpty(getErrorIdDocNotFoundException(decodedDocumentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class));
     }

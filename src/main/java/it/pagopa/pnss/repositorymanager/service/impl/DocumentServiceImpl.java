@@ -75,8 +75,8 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Mono<Document> getDocument(String documentKey) {
+        log.info("getDocument() : IN : documentKey {}", documentKey);
         String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
-        log.info("getDocument() : IN : documentKey {}", decodedDocumentKey);
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(decodedDocumentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(decodedDocumentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
@@ -125,14 +125,14 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges, String authPagopaSafestorageCxId,
                                         String authApiKey) {
-        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
         log.info("patchDocument() : START : authPagopaSafestorageCxId = {} : authApiKey = {} : documentKey = {} : documentChanges  = {}",
                  authPagopaSafestorageCxId,
                  authApiKey,
-                 decodedDocumentKey,
+                 documentKey,
                  documentChanges);
 
         AtomicReference<String> oldState = new AtomicReference<>();
+        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(decodedDocumentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(decodedDocumentKey))
@@ -247,8 +247,8 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Mono<Document> deleteDocument(String documentKey) {
+        log.info("deleteDocument() : IN : documentKey {}", documentKey);
         String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
-        log.info("deleteDocument() : IN : documentKey {}", decodedDocumentKey);
         Key typeKey = Key.builder().partitionValue(decodedDocumentKey).build();
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(typeKey))

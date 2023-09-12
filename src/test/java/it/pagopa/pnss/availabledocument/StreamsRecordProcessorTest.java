@@ -14,8 +14,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import reactor.core.publisher.Flux;
-import reactor.test.StepVerifier;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.util.ArrayList;
@@ -36,7 +34,7 @@ class StreamsRecordProcessorTest {
     @Autowired
     AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
     @Test
-    void testSendMessageEventBridgeOk() {
+    void testSendMessageEventBridgeOk(){
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
@@ -46,12 +44,12 @@ class StreamsRecordProcessorTest {
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
-        Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
-        StepVerifier.create(eventSendToBridge).expectNextCount(1).verifyComplete();
+        List<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
+        Assertions.assertEquals(1, eventSendToBridge.size());
     }
 
     @Test
-    void testSendMessageEventBridgeInsert() {
+    void testSendMessageEventBridgeInsert(){
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
@@ -61,8 +59,8 @@ class StreamsRecordProcessorTest {
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
-        Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
-        StepVerifier.create(eventSendToBridge).expectNextCount(0).verifyComplete();
+        List<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
+        Assertions.assertEquals(0, eventSendToBridge.size());
     }
 
     @Test
@@ -76,8 +74,8 @@ class StreamsRecordProcessorTest {
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
-        Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
-        StepVerifier.create(eventSendToBridge).expectNextCount(0).verifyComplete();
+        List<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
+        Assertions.assertEquals(0, eventSendToBridge.size());
     }
 
     @Test
@@ -91,8 +89,8 @@ class StreamsRecordProcessorTest {
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
-        Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
-        StepVerifier.create(eventSendToBridge).expectNextCount(0).verifyComplete();
+        List<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
+        Assertions.assertEquals(0, eventSendToBridge.size());
     }
     @NotNull
     private  com.amazonaws.services.dynamodbv2.model.Record createRecorDynamo(String eventName ,String documentStateNew,  String documentStateOld) {

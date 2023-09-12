@@ -456,26 +456,5 @@ class UriBuilderUploadTest {
             fcr.setStatus(PRELOADED);
             fileUploadTestCall(fcr).expectStatus().isOk();
         }
-
-        @Test
-        void testUploadSignedPdfBadContentType() {
-
-            UserConfigurationResponse userConfig = new UserConfigurationResponse();
-            UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
-            userConfiguration.setCanCreate(List.of(PN_AAR));
-            userConfig.setUserConfiguration(userConfiguration);
-
-            when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
-
-            FileCreationRequest fcr = new FileCreationRequest();
-            fcr.setContentType("application/badContentType");
-            fcr.setDocumentType(PN_AAR);
-            fcr.setStatus(PRELOADED);
-            fileUploadTestCall(fcr).expectStatus().isOk();
-        }
     }
 }

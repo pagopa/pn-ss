@@ -103,16 +103,19 @@ public class RetentionServiceImpl implements RetentionService {
     private Mono<Integer> getRetentionPeriodInDays(String documentKey, String documentState, String documentType,
                                                    String authPagopaSafestorageCxId, String authApiKey)
             throws RetentionException {
+        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
+
         log.info("getRetentionPeriod() : START : documentKey '{}' : documentState '{}' : documentType '{}'",
-                 documentKey,
+                decodedDocumentKey,
                  documentState,
                  documentType);
 
+
         if (documentState == null || documentState.isBlank()) {
-            throw new RetentionException(String.format("Document State not present for Key '%s'", documentKey));
+            throw new RetentionException(String.format("Document State not present for Key '%s'", decodedDocumentKey));
         }
         if (documentType == null || documentType.isBlank()) {
-            throw new RetentionException(String.format("Document Type not present for Key '%s'", documentKey));
+            throw new RetentionException(String.format("Document Type not present for Key '%s'", decodedDocumentKey));
         }
 
         return configurationApiCall.getDocumentsConfigs(authPagopaSafestorageCxId, authApiKey).map(response -> {
@@ -130,7 +133,7 @@ public class RetentionServiceImpl implements RetentionService {
                 throw new RetentionException(String.format(
                         "DocumentTypeConfiguration not found for Document Type '%s' not found for Key '%s'",
                         documentType,
-                        documentKey));
+                        decodedDocumentKey));
             }
 
             for (StorageConfiguration sc : response.getStorageConfigurations()) {
@@ -141,7 +144,7 @@ public class RetentionServiceImpl implements RetentionService {
                     return getRetentionPeriodInDays(retentionPeriod);
                 }
             }
-            throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", documentKey));
+            throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", decodedDocumentKey));
         }).doOnError(e -> {
             log.error("getDefaultRetention() : errore : {}", e.getMessage(), e);
         });
@@ -164,7 +167,7 @@ public class RetentionServiceImpl implements RetentionService {
             throws RetentionException {
 
         log.info("getRetentionUntil() : START : authPagopaSafestorageCxId {} : authApiKey {} : documentKey {} : documentState {} : " +
-                 "documentType {}", authPagopaSafestorageCxId, authApiKey, documentKey, documentState, documentType);
+                 "documentType {}", authPagopaSafestorageCxId, authApiKey, URLDecoder.decode(documentKey, StandardCharsets.UTF_8), documentState, documentType);
 
         // se manca anche solo un elemento di autenticazione, imposto le credenziali con "utente interno"
         if (authPagopaSafestorageCxId == null || authPagopaSafestorageCxId.isBlank() || authApiKey == null || authApiKey.isBlank()) {
@@ -315,19 +318,19 @@ public class RetentionServiceImpl implements RetentionService {
                    })
                    .switchIfEmpty(Mono.error(new RetentionException(String.format(
                            "Object (in bucket) Data Creation not present (documentKey: %s)",
-                           documentEntity.getDocumentKey()))))
+                           decodedDocumentKey))))
 
                    // gestione errore
                    .onErrorResume(NoSuchKeyException.class, throwable -> {
                        log.debug("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore = {}",
-                                 documentEntity.getDocumentKey(),
+                               decodedDocumentKey,
                                  throwable.getMessage(),
                                  throwable);
                        return Mono.error(new RetentionException(throwable.getMessage()));
                    })
                    .onErrorResume(DateTimeException.class, throwable -> {
                        log.error("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore formattazione instant retention " +
-                                 "util = {}", documentEntity.getDocumentKey(), throwable.getMessage(), throwable);
+                                 "util = {}", decodedDocumentKey, throwable.getMessage(), throwable);
                        return Mono.error(new RetentionException(throwable.getMessage()));
                    })
                    .onErrorResume(throwable -> {

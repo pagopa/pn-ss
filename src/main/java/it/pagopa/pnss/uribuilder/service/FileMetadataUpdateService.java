@@ -19,6 +19,8 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 
 @Service
@@ -38,6 +40,7 @@ public class FileMetadataUpdateService {
     public Mono<OperationResultCodeResponse> updateMetadata(String fileKey, String xPagopaSafestorageCxId, UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {
         var retentionUntil = request.getRetentionUntil();
         var logicalState = request.getStatus();
+        String decodedFileKey = URLDecoder.decode(fileKey, StandardCharsets.UTF_8);
 
         return docClientCall.getDocument(fileKey)
                 .flatMap( documentResponse -> Mono.zipDelayError(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
@@ -83,16 +86,16 @@ public class FileMetadataUpdateService {
                         if (!isStatusPresent) {
                             log.debug("FileMetadataUpdateService.createUriForUploadFile() : Status '{}' not found for document" + " key {}",
                                       request.getStatus(),
-                                      fileKey);
+                                    decodedFileKey);
                             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                                          "Status not found for document key : " + fileKey));
+                                                                          "Status not found for document key : " + decodedFileKey));
                         }
 
                         if (StringUtils.isEmpty(technicalStatus)) {
                             log.debug("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found " +
-                                      "for document key {}", fileKey);
+                                      "for document key {}", decodedFileKey);
                             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                                          "Technical status not found for document key : " + fileKey));
+                                                                          "Technical status not found for document key : " + decodedFileKey));
                         }
 
                     }

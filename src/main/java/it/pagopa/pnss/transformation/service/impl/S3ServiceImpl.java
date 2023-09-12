@@ -80,7 +80,7 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<HeadObjectResponse> headObject(String key, String bucketName) {
-        return Mono.fromCompletionStage(s3AsyncClient.headObject(builder -> builder.key(key).bucket(bucketName).checksumMode(ChecksumMode.ENABLED)))
+        return Mono.fromCompletionStage(s3AsyncClient.headObject(builder -> builder.key(key).bucket(bucketName)))
                 .doOnNext(headObjectResponse -> log.debug("Head object in bucket {} having key {}", bucketName, key));
     }
 

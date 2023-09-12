@@ -15,8 +15,6 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionIn
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
-
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
 import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessorFactory;
@@ -56,7 +54,6 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Set;
 
 @Configuration
 public class AwsConfiguration {
@@ -244,32 +241,36 @@ public class AwsConfiguration {
             AmazonDynamoDBStreams dynamoDBStreamsClient =
                     AmazonDynamoDBStreamsClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
             AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
-
             KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(dynamoEventStreamName.tableMetadata(),
                                                                                            dynamoEventStreamName.documentName(),
                                                                                            awsCredentialsProvider,
-                                                                                           "streams-demo-worker")
-//            		.withMaxLeaseRenewalThreads(20)
-//            		.withMaxLeasesForWorker(5000)
+                                                                                           "streams-demo-worker").withMaxLeaseRenewalThreads(
+                                                                                                                         5000)
 
-//                   Fix temporanea per non
-//                   fare andare in errore
-//                   EventBridge.
-//                   Questo stream Kinesis,
-//                   agganciato a
-//                   DynamoDbStreams,
-//                   notifica a EventBridge
-//                   determinati eventi
-//                   provenienti dalla
-//                   tabella documenti. Dato
-//                   che la pubblicazione su
-//                   EventBridge accetta massimo
-//                   10 elementi, il numero
-//                   di eventi Kinesis è
-//                   impostato anch'esso a 10                                                                                             
-            		.withMaxRecords(1000)
-            		.withIdleTimeBetweenReadsInMillis(1000)
-            		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
+                                                                                                                 .withMaxLeasesForWorker(
+                                                                                                                         5000)
+
+//                                                                                                               Fix temporanea per non
+//                                                                                                               fare andare in errore
+//                                                                                                               EventBridge.
+//                                                                                                               Questo stream Kinesis,
+//                                                                                                               agganciato a
+//                                                                                                               DynamoDbStreams,
+//                                                                                                               notifica a EventBridge
+//                                                                                                               determinati eventi
+//                                                                                                               provenienti dalla
+//                                                                                                               tabella documenti. Dato
+//                                                                                                               che la pubblicazione su
+//                                                                                                               EventBridge accetta massimo
+//                                                                                                               10 elementi, il numero
+//                                                                                                               di eventi Kinesis è
+//                                                                                                               impostato anch'esso a 10
+                                                                                                                 .withMaxRecords(10)
+
+                                                                                                                 .withIdleTimeBetweenReadsInMillis(
+                                                                                                                         50)
+                                                                                                                 .withInitialPositionInStream(
+                                                                                                                         InitialPositionInStream.TRIM_HORIZON);
 
             IRecordProcessorFactory recordProcessorFactory =
                     new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());

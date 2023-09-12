@@ -47,7 +47,8 @@ public class RetentionServiceImpl implements RetentionService {
      */
     @Value("${object.lock.retention.mode}")
     private String objectLockRetentionMode;
-    private final Integer retentionToIgnore = 1;
+    @Value("${retention.days.toIgnore}")
+    private Integer retentionDaysToIgnore;
     private final ConfigurationApiCall configurationApiCall;
 
     private final BucketName bucketName;
@@ -180,7 +181,7 @@ public class RetentionServiceImpl implements RetentionService {
         return getRetentionPeriodInDays(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
                 .handle((retentionPeriodInDays, sink) ->
                 {
-                    if (Objects.equals(retentionPeriodInDays, retentionToIgnore))
+                    if (Objects.equals(retentionPeriodInDays, retentionDaysToIgnore))
                         sink.error(new RetentionToIgnoreException());
                     else sink.next(retentionPeriodInDays);
                 })

@@ -131,9 +131,9 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
     public Mono<SignReturnV2> pkcs7signV2(byte[] buf, Boolean marcatura) {
         return Mono.fromCallable(() -> {
                        var signRequestV2 = createAuthenticatedSignRequestV2();
-                       signRequestV2.setStream(new DataHandler(new ByteArrayDataSource(buf, APPLICATION_OCTET_STREAM_VALUE)));
-                       signRequestV2.setTransport(TypeTransport.STREAM);
                        signRequestV2.setRequiredmark(marcatura);
+                       signRequestV2.setBinaryinput(buf);
+                       signRequestV2.setTransport(TypeTransport.BYNARYNET);
                        setSignRequestV2WithTsaAuth(marcatura, signRequestV2);
                        return signRequestV2;
                    })

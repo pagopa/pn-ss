@@ -47,7 +47,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
     @Override
     public Mono<DocumentResponse> getDocument(String keyFile) throws DocumentKeyNotPresentException {
         return ssWebClient.get()
-                          .uri(String.format(anagraficaDocumentiClientEndpoint, URLDecoder.decode(keyFile, StandardCharsets.UTF_8)))
+                          .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                           .retrieve()
                           .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
                           .bodyToMono(DocumentResponse.class);
@@ -68,19 +68,16 @@ public class DocumentClientCallImpl implements DocumentClientCall {
     public Mono<DocumentResponse> patchDocument(String authPagopaSafestorageCxId, String authApiKey, String keyFile,
                                                 DocumentChanges document)
             throws DocumentKeyNotPresentException {
-
-        String decodedKeyFile = URLDecoder.decode(keyFile, StandardCharsets.UTF_8);
-
         return ssWebClient.patch()
-                          .uri(String.format(anagraficaDocumentiClientEndpoint, decodedKeyFile))
+                          .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                           .header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
                           .header(xApiKey, authApiKey)
                           .bodyValue(document)
                           .retrieve()
                           .onStatus(BAD_REQUEST::equals,
-                                    clientResponse -> Mono.error(new InvalidNextStatusException(document.getDocumentState(), decodedKeyFile)))
+                                    clientResponse -> Mono.error(new InvalidNextStatusException(document.getDocumentState(), keyFile)))
                           .onStatus(NOT_FOUND::equals,
-                                    clientResponse -> Mono.error(new DocumentKeyNotPresentException(decodedKeyFile)))
+                                    clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
                           .bodyToMono(DocumentResponse.class);
     }
 

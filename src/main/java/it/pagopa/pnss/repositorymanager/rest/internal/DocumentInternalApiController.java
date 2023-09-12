@@ -24,9 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-
 @RestController
 @Slf4j
 public class DocumentInternalApiController implements DocumentInternalApi {
@@ -122,7 +119,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
     	String xPagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(xPagopaSafestorageCxId);
     	String xApiKeyValue = exchange.getRequest().getHeaders().getFirst(xApiKey);
 
-        return documentChanges.flatMap(request -> documentService.patchDocument(documentKey,
+        return documentChanges.flatMap(request -> documentService.patchDocument(documentKey, 
         																		request, 
         																		xPagopaSafestorageCxIdValue, 
         																		xApiKeyValue))

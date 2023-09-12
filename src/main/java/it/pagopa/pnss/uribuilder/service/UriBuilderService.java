@@ -313,41 +313,72 @@ public class UriBuilderService {
                    .flatMap(userConfigurationResponse -> {
                        List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
-                       return documentClientCall.getDocument(fileKey)
-                                                .onErrorResume(DocumentKeyNotPresentException.class, throwable ->
-                                                    Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + fileKey)))
-                               .handle((documentResponse, synchronousSink) ->
-                               {
-                                   var document = documentResponse.getDocument();
-                                   var documentType = document.getDocumentType();
+                    return documentClientCall.getDocument(fileKey)
+                            .onErrorResume(DocumentKeyNotPresentException.class//
+                                    , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + fileKey)))
+                            .flatMap(documentResponse -> {
+                                var document = documentResponse.getDocument();
+                                var documentType = document.getDocumentType();
 
-                                   if (!canRead.contains(documentType.getTipoDocumento())) {
-                                       synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                               String.format("Client : %s not has privilege for read document type %s", xPagopaSafestorageCxId, documentType)));
-                                   } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
-                                       synchronousSink.error(new ResponseStatusException(HttpStatus.GONE,
-                                               "Document has been deleted"));
-                                   } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
-                                       synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                               "Document not found"));
-                                   } else if (document.getDocumentState().equalsIgnoreCase(BOOKED) ) {
-                                	   try {
-                                		   log.debug("before check presence in createUriForDownloadFile");
-                                		   s3Service.headObject(URLDecoder.decode(fileKey, StandardCharsets.UTF_8), bucketName.ssHotName());
-                                    	   synchronousSink.next(document);
-                                	   } catch (software.amazon.awssdk.services.s3.model.NoSuchKeyException e) {
-                                           synchronousSink.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                                   "Document not found"));
-                            		   }
-                                   } else synchronousSink.next(document);
-                               })
-                               .doOnSuccess(o -> log.debug("---  FINE  CHECK PERMESSI LETTURA"));
-                   })
-                   .cast(Document.class)
-                   .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))
-                   .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable ->
-                        Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
-                   .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "));
+                                if (!canRead.contains(documentType.getTipoDocumento())) {
+                                    return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN//
+                                            , String.format("Client : %s not has privilege for read document type %s", xPagopaSafestorageCxId, documentType)));
+                                } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
+                                    return Mono.error(new ResponseStatusException(HttpStatus.GONE//
+                                            , "Document has been deleted"));
+                                } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
+                                    return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND//
+                                            , "Document not found"));
+                                } else if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
+                                    log.debug(">> before check presence in createUriForDownloadFile");
+                                    return s3Service.headObject(fileKey, bucketName.ssHotName())//
+                                            .doOnSuccess(o -> {
+                                                log.debug(">> after check presence in createUriForDownloadFile {}", o);// HeadObjectResponse
+                                                fixBookedDocument(document, o);
+                                            })//
+                                            .thenReturn(document);
+                                } else
+                                    return Mono.just(document);
+
+                            })//
+                            .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class//
+                                    , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found")))
+                            .doOnSuccess(o ->
+                                log.debug("---  FINE  CHECK PERMESSI LETTURA {}", o)//Document
+                                );
+                })//
+                .cast(Document.class)//
+                .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))//
+                .onErrorResume(S3BucketException.NoSuchKeyException.class//
+                        , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
+                .doOnNext(o ->
+                    log.info("--- RECUPERO PRESIGNED URL OK {}", o)//FileDownloadResponse
+                    );
+    }
+
+    private void fixBookedDocument(Document document, HeadObjectResponse hor) {
+
+        if (document.getCheckSum() == null) {
+        	log.debug("fixBookedDocument() on {} - checksum null", document.getDocumentKey());
+        	if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {
+            	log.debug("fixBookedDocument() on {} - checksum MD5", document.getDocumentKey());
+                document.setCheckSum(hor.sseCustomerKeyMD5());
+            } else if (ChecksumEnum.SHA256.equals(document.getDocumentType().getChecksum())) {
+            	log.debug("fixBookedDocument() on {} - checksum SHA256", document.getDocumentKey());
+                document.setCheckSum(hor.checksumSHA256());
+            }
+        	log.debug("fixBookedDocument() on {} - new checksum {}", document.getDocumentKey(), document.getCheckSum());
+        }
+        if (document.getContentLenght() == null && hor.contentLength() != null) {
+        	log.debug("fixBookedDocument() on {} - contentLength null", document.getDocumentKey());
+            document.setContentLenght(new BigDecimal(hor.contentLength()));
+        	log.debug("fixBookedDocument() on {} - new contentLength {}", document.getDocumentKey(), document.getContentLenght());
+        }
+        if (document.getRetentionUntil() == null && hor.objectLockRetainUntilDate() != null) {
+        	log.debug("fixBookedDocument() on {} - retentionUntil null", document.getDocumentKey());
+            document.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
+        	log.debug("fixBookedDocument() on {} - retentionUntil {}", document.getDocumentKey(), document.getRetentionUntil());
+        }
     }
 
     @NotNull

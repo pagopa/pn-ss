@@ -224,7 +224,7 @@ public class UriBuilderService {
                         "contentType {} : secret {} : checksumType {} : checksumValue {}",
                 documentType,
                 documentState,
-                documentKey,
+                URLDecoder.decode(documentKey, StandardCharsets.UTF_8),
                 contentType,
                 secret,
                 checksumType,
@@ -255,10 +255,11 @@ public class UriBuilderService {
                                                        String documentState, String documentType, String contenType,
                                                        Map<String, String> secret, ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
 
+        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
         log.info("signBucket() : START : s3Presigner IN : " + "bucketName {} : keyName {} : " +
                   "documentState {} : documentType {} : contenType {} : " + "secret {} : checksumType{} : checksumValue {}",
                   bucketName,
-                  documentKey,
+                  decodedDocumentKey,
                   documentState,
                   documentType,
                   contenType,
@@ -276,7 +277,7 @@ public class UriBuilderService {
 
                        PutObjectRequest.Builder putObjectRequest = PutObjectRequest.builder()
                                .bucket(bucketName)
-                               .key(documentKey)
+                               .key(decodedDocumentKey)
                                .contentType(contenType)
                                .metadata(secret)
                                .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
@@ -310,6 +311,7 @@ public class UriBuilderService {
             String errorMsg = String.format("Header %s is missing", queryParamPresignedUrlTraceId);
             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg));
         }
+        String decodedFileKey = URLDecoder.decode(fileKey, StandardCharsets.UTF_8);
 
         return Mono.fromCallable(this::validationFieldCreateUri)//
                 .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))//
@@ -321,7 +323,7 @@ public class UriBuilderService {
 
                     return documentClientCall.getDocument(fileKey)
                             .onErrorResume(DocumentKeyNotPresentException.class//
-                                    , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + fileKey)))
+                                    , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + decodedFileKey)))
                             .flatMap(documentResponse -> {
                                 var document = documentResponse.getDocument();
                                 var documentType = document.getDocumentType();
@@ -337,7 +339,7 @@ public class UriBuilderService {
                                             , "Document not found"));
                                 } else if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
                                     log.debug(">> before check presence in createUriForDownloadFile");
-                                    return s3Service.headObject(fileKey, bucketName.ssHotName())//
+                                    return s3Service.headObject(decodedFileKey, bucketName.ssHotName())//
                                             .doOnSuccess(o -> {
                                                 log.debug(">> after check presence in createUriForDownloadFile {}", o);// HeadObjectResponse
                                                 fixBookedDocument(document, o);
@@ -364,26 +366,27 @@ public class UriBuilderService {
 
     private void fixBookedDocument(Document document, HeadObjectResponse hor) {
 
+        String decodedDocumentKey = URLDecoder.decode(document.getDocumentKey(), StandardCharsets.UTF_8);
         if (document.getCheckSum() == null) {
-        	log.debug("fixBookedDocument() on {} - checksum null", document.getDocumentKey());
+        	log.debug("fixBookedDocument() on {} - checksum null", decodedDocumentKey);
         	if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {
-            	log.debug("fixBookedDocument() on {} - checksum MD5", document.getDocumentKey());
+            	log.debug("fixBookedDocument() on {} - checksum MD5", decodedDocumentKey);
                 document.setCheckSum(hor.sseCustomerKeyMD5());
             } else if (ChecksumEnum.SHA256.equals(document.getDocumentType().getChecksum())) {
-            	log.debug("fixBookedDocument() on {} - checksum SHA256", document.getDocumentKey());
+            	log.debug("fixBookedDocument() on {} - checksum SHA256", decodedDocumentKey);
                 document.setCheckSum(hor.checksumSHA256());
             }
-        	log.debug("fixBookedDocument() on {} - new checksum {}", document.getDocumentKey(), document.getCheckSum());
+        	log.debug("fixBookedDocument() on {} - new checksum {}", decodedDocumentKey, document.getCheckSum());
         }
         if (document.getContentLenght() == null && hor.contentLength() != null) {
-        	log.debug("fixBookedDocument() on {} - contentLength null", document.getDocumentKey());
+        	log.debug("fixBookedDocument() on {} - contentLength null", decodedDocumentKey);
             document.setContentLenght(new BigDecimal(hor.contentLength()));
-        	log.debug("fixBookedDocument() on {} - new contentLength {}", document.getDocumentKey(), document.getContentLenght());
+        	log.debug("fixBookedDocument() on {} - new contentLength {}", decodedDocumentKey, document.getContentLenght());
         }
         if (document.getRetentionUntil() == null && hor.objectLockRetainUntilDate() != null) {
-        	log.debug("fixBookedDocument() on {} - retentionUntil null", document.getDocumentKey());
+        	log.debug("fixBookedDocument() on {} - retentionUntil null", decodedDocumentKey);
             document.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
-        	log.debug("fixBookedDocument() on {} - retentionUntil {}", document.getDocumentKey(), document.getRetentionUntil());
+        	log.debug("fixBookedDocument() on {} - retentionUntil {}", decodedDocumentKey, document.getRetentionUntil());
         }
     }
 
@@ -392,7 +395,7 @@ public class UriBuilderService {
 
         // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
         // non viene creata e viene ritornato un Mono.empty()
-        return createFileDownloadInfo(URLDecoder.decode(fileKey, StandardCharsets.UTF_8), xTraceIdValue, doc.getDocumentState(), metadataOnly)
+        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly)
                 .map(fileDownloadInfo -> new FileDownloadResponse().download(fileDownloadInfo))
                 .switchIfEmpty(Mono.just(new FileDownloadResponse()))
                 .map(fileDownloadResponse ->
@@ -469,14 +472,15 @@ public class UriBuilderService {
     }
     private Mono<FileDownloadInfo> recoverDocumentFromBucket(String bucketName, String keyName) throws S3BucketException.NoSuchKeyException {
 
-        log.info("--- STARTING RESTORE DOCUMENT : " + keyName);
+        String decodedKeyName = URLDecoder.decode(keyName, StandardCharsets.UTF_8);
+        log.info("--- STARTING RESTORE DOCUMENT : " + decodedKeyName);
 
         RestoreRequest restoreRequest = RestoreRequest.builder()
                 .days(stayHotTime)
                 .glacierJobParameters(GlacierJobParameters.builder().tier(Tier.STANDARD).build())
                 .build();
 
-        return s3Service.restoreObject(URLDecoder.decode(keyName, StandardCharsets.UTF_8), bucketName, restoreRequest)
+        return s3Service.restoreObject(decodedKeyName, bucketName, restoreRequest)
                 //Eccezioni S3: RestoreAlreadyInProgress viene ignorata.
                 .onErrorResume(AwsServiceException.class, ase ->
                 {
@@ -486,7 +490,7 @@ public class UriBuilderService {
                     }
                     else if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
                         log.error(" Errore AMAZON NoSuchKey S3Exception ", ase);
-                        return Mono.error(new S3BucketException.NoSuchKeyException(keyName));
+                        return Mono.error(new S3BucketException.NoSuchKeyException(decodedKeyName));
                     } else {
                         log.error(" Errore AMAZON S3Exception", ase);
                         return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));
@@ -505,12 +509,13 @@ public class UriBuilderService {
 
     private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
 
-        log.info("---> STARTING GET PRESIGNED URL <--- , fileKey : {}", keyName);
+        String decodedKeyName = URLDecoder.decode(keyName, StandardCharsets.UTF_8);
+        log.info("---> STARTING GET PRESIGNED URL <--- , fileKey : {}", decodedKeyName);
 
         log.debug("INIZIO CREAZIONE getObjectRequest");
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
-                .key(URLDecoder.decode(keyName, StandardCharsets.UTF_8))
+                .key(decodedKeyName)
                 .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
                         queryParamPresignedUrlTraceId,
                         xTraceIdValue))
@@ -523,7 +528,7 @@ public class UriBuilderService {
                 {
                     if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
                         log.error(" Errore AMAZON NoSuchKey S3Exception ", ase);
-                        return Mono.error(new S3BucketException.NoSuchKeyException(keyName));
+                        return Mono.error(new S3BucketException.NoSuchKeyException(decodedKeyName));
                     } else {
                         log.error(" Errore AMAZON S3Exception", ase);
                         return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));

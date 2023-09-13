@@ -24,6 +24,9 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+
 @RestController
 @Slf4j
 public class DocumentInternalApiController implements DocumentInternalApi {
@@ -68,11 +71,11 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 
 		if (throwable instanceof ItemAlreadyPresent) {
 			String errorMsg = documentKey == null ? "Document already present"
-					: String.format("Document with id %s already present", documentKey);
+					: String.format("Document with id %s already present", URLDecoder.decode(documentKey, StandardCharsets.UTF_8));
 			return buildErrorResponse(HttpStatus.CONFLICT, errorMsg);
 		} else if (throwable instanceof DocumentKeyNotPresentException) {
 			String errorMsg = documentKey == null ? "Document not found"
-					: String.format("Document with id %s not found", documentKey);
+					: String.format("Document with id %s not found", URLDecoder.decode(documentKey, StandardCharsets.UTF_8));
 			return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
 		} else if (throwable instanceof RepositoryManagerException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);

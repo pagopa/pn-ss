@@ -45,26 +45,27 @@ public class TransformationService {
     }
 
     @SqsListener(value = "${s3.queue.sign-queue-name}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
-    void newStagingBucketObjectCreatedEvent(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
+    void newStagingBucketObjectCreatedListener(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
+        newStagingBucketObjectCreatedEvent(newStagingBucketObject, acknowledgment).subscribe();
+    }
 
-        Mono.fromCallable(() -> {
-                logIncomingMessage(signQueueName, newStagingBucketObject);
-                return newStagingBucketObject;
-            })
-            .filter(createdS3ObjectDto -> {
-                var detailObject = createdS3ObjectDto.getCreationDetailObject();
-                return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
-            })
-            .doOnDiscard(CreatedS3ObjectDto.class,
-                         createdS3ObjectDto -> log.debug("The new staging bucket object with id {} was discarded",
-                                                         newStagingBucketObject.getId()))
-            .flatMap(createdS3ObjectDto -> {
-                var detailObject = createdS3ObjectDto.getCreationDetailObject();
-                return objectTransformation(detailObject.getObject().getKey(), detailObject.getBucketOriginDetail().getName(), true);
-            })
-            .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
-            .doOnError(throwable -> log.error("* FATAL * An error occurred during transformations -> {}", throwable.getMessage()))
-            .subscribe();
+    public Mono<Void> newStagingBucketObjectCreatedEvent(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
+        return Mono.fromCallable(() -> {
+                    logIncomingMessage(signQueueName, newStagingBucketObject);
+                    return newStagingBucketObject;
+                })
+                .filter(createdS3ObjectDto -> {
+                    var detailObject = createdS3ObjectDto.getCreationDetailObject();
+                    return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
+                })
+                .doOnDiscard(CreatedS3ObjectDto.class,
+                        createdS3ObjectDto -> log.debug("The new staging bucket object with id {} was discarded", newStagingBucketObject.getId()))
+                .flatMap(createdS3ObjectDto -> {
+                    var detailObject = createdS3ObjectDto.getCreationDetailObject();
+                    return objectTransformation(detailObject.getObject().getKey(), detailObject.getBucketOriginDetail().getName(), true);
+                })
+                .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
+                .doOnError(throwable -> log.error("* FATAL * An error occurred during transformations -> {}", throwable.getMessage()));
     }
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {

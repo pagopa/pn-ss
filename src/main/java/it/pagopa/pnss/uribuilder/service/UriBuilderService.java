@@ -344,13 +344,14 @@ public class UriBuilderService {
                         log.debug(">> before check presence in createUriForDownloadFile");
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
                                 .flatMap(headObjectResponse -> {
-                                    DocumentChanges documentChanges = new DocumentChanges();
+                                    DocumentChanges documentChanges;
                                     if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
                                         log.debug(">> after check presence in createUriForDownloadFile {}", headObjectResponse);// HeadObjectResponse
                                         documentChanges = fixBookedDocument(document, headObjectResponse);
                                     } else
-                                        documentChanges.setRetentionUntil(DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate()));
-                                    return documentClientCall.patchDocument(xPagopaSafestorageCxId, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges).map(DocumentResponse::getDocument);
+                                        documentChanges = new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate()));
+                                    return documentClientCall.patchDocument(xPagopaSafestorageCxId, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
+                                            .map(DocumentResponse::getDocument);
                                 });
                     }
                     else return Mono.just(document);
@@ -411,34 +412,6 @@ public class UriBuilderService {
                                 .documentType(doc.getDocumentType().getTipoDocumento())
                                 .key(fileKey)
                                 .versionId(null))
-
-//                //Check sul parsing corretto della retentionUntil
-//                .flatMap(fileDownloadResponse ->
-//                {
-//                    if (!doc.getDocumentState().equalsIgnoreCase(BOOKED)) {
-//                        if (!StringUtils.isBlank(doc.getRetentionUntil())) {
-//                            var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
-//                            return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
-//                        } else {
-//                            log.debug("before check presence in getFileDownloadResponse");
-//                            return s3Service.headObject(fileKey, bucketName.ssHotName())//
-//                                    .map(HeadObjectResponse::objectLockRetainUntilDate)
-//                                    .flatMap(retentionInstant ->
-//                                        documentClientCall.patchDocument(defaultInternalClientIdValue//
-//                                                , defaultInternalApiKeyValue//
-//                                                , fileKey//
-//                                                , new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(retentionInstant))).thenReturn(retentionInstant))
-//                                    .map(retentionInstant -> fileDownloadResponse.retentionUntil(Date.from(retentionInstant)));
-//                        }
-//                    } else {
-//                        if (!StringUtils.isBlank(doc.getRetentionUntil())) {
-//                            var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
-//                            return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
-//                        } else {
-//                            return Mono.just(fileDownloadResponse);
-//                        }
-//                    }
-//                })
                 .onErrorResume(DateTimeException.class, throwable ->
                 {
                     log.error("getFileDownloadResponse() : errore nel parsing o nella formattazione della data = {}", throwable.getMessage(), throwable);

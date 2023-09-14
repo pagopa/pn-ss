@@ -340,7 +340,7 @@ public class UriBuilderService {
                 })
                 .cast(Document.class)
                 .flatMap(document -> {
-                    if (document.getDocumentState().equalsIgnoreCase(BOOKED) || !StringUtils.isBlank(document.getRetentionUntil())) {
+                    if (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil())) {
                         log.debug(">> before check presence in createUriForDownloadFile");
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
                                 .flatMap(headObjectResponse -> {

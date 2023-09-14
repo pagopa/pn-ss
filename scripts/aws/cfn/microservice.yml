@@ -1007,6 +1007,9 @@ Resources:
                              .update(Body)
                              .digest("base64");
                         }
+          
+                        jsonDocument.lastStatusChangeTimestamp = bodyData.Records[0].eventTime;
+          
                       } catch (error) {
                         console.log(error);
                         const messageError = `* FATAL * Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}. Verificare che l'oggetto esiste nel bucket o sul database Dynamo.`;

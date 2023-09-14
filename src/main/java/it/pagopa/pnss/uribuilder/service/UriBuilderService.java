@@ -1,10 +1,7 @@
 package it.pagopa.pnss.uribuilder.service;
 
 import com.amazonaws.SdkClientException;
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
 import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
@@ -14,7 +11,6 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.*;
-import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -333,16 +329,7 @@ public class UriBuilderService {
                                 } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
                                     return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND//
                                             , "Document not found"));
-                                } else if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
-                                    log.debug(">> before check presence in createUriForDownloadFile");
-                                    return s3Service.headObject(fileKey, bucketName.ssHotName())//
-                                            .doOnSuccess(o -> {
-                                                log.debug(">> after check presence in createUriForDownloadFile {}", o);// HeadObjectResponse
-                                                fixBookedDocument(document, o);
-                                            })//
-                                            .thenReturn(document);
-                                } else
-                                    return Mono.just(document);
+                                } else return Mono.just(document);
 
                             })//
                             .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class//
@@ -350,8 +337,24 @@ public class UriBuilderService {
                             .doOnSuccess(o -> 
                                 log.debug("---  FINE  CHECK PERMESSI LETTURA {}", o)//Document
                                 );
-                })//
-                .cast(Document.class)//
+                })
+                .cast(Document.class)
+                .flatMap(document -> {
+                    if (document.getDocumentState().equalsIgnoreCase(BOOKED) || !StringUtils.isBlank(document.getRetentionUntil())) {
+                        log.debug(">> before check presence in createUriForDownloadFile");
+                        return s3Service.headObject(fileKey, bucketName.ssHotName())
+                                .flatMap(headObjectResponse -> {
+                                    DocumentChanges documentChanges = new DocumentChanges();
+                                    if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
+                                        log.debug(">> after check presence in createUriForDownloadFile {}", headObjectResponse);// HeadObjectResponse
+                                        documentChanges = fixBookedDocument(document, headObjectResponse);
+                                    } else
+                                        documentChanges.setRetentionUntil(DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate()));
+                                    return documentClientCall.patchDocument(xPagopaSafestorageCxId, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges).map(DocumentResponse::getDocument);
+                                });
+                    }
+                    else return Mono.just(document);
+                })
                 .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))//
                 .onErrorResume(S3BucketException.NoSuchKeyException.class//
                         , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
@@ -360,29 +363,34 @@ public class UriBuilderService {
                     );
     }
 
-    private void fixBookedDocument(Document document, HeadObjectResponse hor) {
-        
+    private DocumentChanges fixBookedDocument(Document document, HeadObjectResponse hor) {
+
+        DocumentChanges documentChanges = new DocumentChanges();
+
         if (document.getCheckSum() == null) {
-        	log.debug("fixBookedDocument() on {} - checksum null", document.getDocumentKey());
-        	if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {
-            	log.debug("fixBookedDocument() on {} - checksum MD5", document.getDocumentKey());
-                document.setCheckSum(hor.sseCustomerKeyMD5());
+            log.debug("fixBookedDocument() on {} - checksum null", document.getDocumentKey());
+            if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {
+                log.debug("fixBookedDocument() on {} - checksum MD5", document.getDocumentKey());
+                documentChanges.setCheckSum(hor.sseCustomerKeyMD5());
             } else if (ChecksumEnum.SHA256.equals(document.getDocumentType().getChecksum())) {
-            	log.debug("fixBookedDocument() on {} - checksum SHA256", document.getDocumentKey());
-                document.setCheckSum(hor.checksumSHA256());
+                log.debug("fixBookedDocument() on {} - checksum SHA256", document.getDocumentKey());
+                documentChanges.setCheckSum(hor.checksumSHA256());
             }
-        	log.debug("fixBookedDocument() on {} - new checksum {}", document.getDocumentKey(), document.getCheckSum());
+            log.debug("fixBookedDocument() on {} - new checksum {}", document.getDocumentKey(), document.getCheckSum());
         }
         if (document.getContentLenght() == null && hor.contentLength() != null) {
-        	log.debug("fixBookedDocument() on {} - contentLength null", document.getDocumentKey());
-            document.setContentLenght(new BigDecimal(hor.contentLength()));
-        	log.debug("fixBookedDocument() on {} - new contentLength {}", document.getDocumentKey(), document.getContentLenght());
+            log.debug("fixBookedDocument() on {} - contentLength null", document.getDocumentKey());
+            documentChanges.setContentLenght(new BigDecimal(hor.contentLength()));
+            log.debug("fixBookedDocument() on {} - new contentLength {}", document.getDocumentKey(), document.getContentLenght());
         }
         if (document.getRetentionUntil() == null && hor.objectLockRetainUntilDate() != null) {
-        	log.debug("fixBookedDocument() on {} - retentionUntil null", document.getDocumentKey());
-            document.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
-        	log.debug("fixBookedDocument() on {} - retentionUntil {}", document.getDocumentKey(), document.getRetentionUntil());
+            log.debug("fixBookedDocument() on {} - retentionUntil null", document.getDocumentKey());
+            documentChanges.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
+            log.debug("fixBookedDocument() on {} - retentionUntil {}", document.getDocumentKey(), document.getRetentionUntil());
         }
+        documentChanges.setDocumentState(AVAILABLE);
+        documentChanges.setLastStatusChangeTimestamp(Date.from(Instant.now()));
+        return documentChanges;
     }
 
     @NotNull
@@ -394,55 +402,43 @@ public class UriBuilderService {
                 .map(fileDownloadInfo -> new FileDownloadResponse().download(fileDownloadInfo))
                 .switchIfEmpty(Mono.just(new FileDownloadResponse()))
                 .map(fileDownloadResponse ->
-                {
-                    var checksum = doc.getCheckSum() != null ? doc.getCheckSum() : null;
-                    var contentLength = doc.getContentLenght();
-                    //var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
+                        fileDownloadResponse
+                                .checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
+                                .contentLength(doc.getContentLenght())
+                                .documentStatus(doc.getDocumentLogicalState() != null ? doc.getDocumentLogicalState() : "")
+                                .retentionUntil(doc.getRetentionUntil() != null ? Date.from(Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()))) : null)
+                                .contentType(doc.getContentType())
+                                .documentType(doc.getDocumentType().getTipoDocumento())
+                                .key(fileKey)
+                                .versionId(null))
 
-                    // NOTA: deve essere restituito lo stato logico, piuttosto che lo stato tecnico
-                    if (doc.getDocumentLogicalState() != null) {
-                        fileDownloadResponse.setDocumentStatus(doc.getDocumentLogicalState());
-                    } else {
-                        fileDownloadResponse.setDocumentStatus("");
-                    }
-
-                    return fileDownloadResponse
-                            .checksum(checksum)
-                            .contentLength(contentLength)
-                            //.retentionUntil(Date.from(retentionInstant))
-                            .contentType(doc.getContentType())
-                            .documentType(doc.getDocumentType().getTipoDocumento())
-                            .key(fileKey)
-                            .versionId(null);
-                })
-
-                //Check sul parsing corretto della retentionUntil
-                .flatMap(fileDownloadResponse ->
-                {
-                    if (!doc.getDocumentState().equalsIgnoreCase(BOOKED)) {
-                        if (!StringUtils.isBlank(doc.getRetentionUntil())) {
-                            var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
-                            return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
-                        } else {
-                            log.debug("before check presence in getFileDownloadResponse");
-                            return s3Service.headObject(fileKey, bucketName.ssHotName())//
-                                    .map(HeadObjectResponse::objectLockRetainUntilDate)
-                                    .flatMap(retentionInstant -> 
-                                        documentClientCall.patchDocument(defaultInternalClientIdValue//
-                                                , defaultInternalApiKeyValue//
-                                                , fileKey//
-                                                , new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(retentionInstant))).thenReturn(retentionInstant))
-                                    .map(retentionInstant -> fileDownloadResponse.retentionUntil(Date.from(retentionInstant)));
-                        }
-                    } else {
-                        if (!StringUtils.isBlank(doc.getRetentionUntil())) {
-                            var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
-                            return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
-                        } else {
-                            return Mono.just(fileDownloadResponse);
-                        }
-                    }
-                })
+//                //Check sul parsing corretto della retentionUntil
+//                .flatMap(fileDownloadResponse ->
+//                {
+//                    if (!doc.getDocumentState().equalsIgnoreCase(BOOKED)) {
+//                        if (!StringUtils.isBlank(doc.getRetentionUntil())) {
+//                            var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
+//                            return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
+//                        } else {
+//                            log.debug("before check presence in getFileDownloadResponse");
+//                            return s3Service.headObject(fileKey, bucketName.ssHotName())//
+//                                    .map(HeadObjectResponse::objectLockRetainUntilDate)
+//                                    .flatMap(retentionInstant ->
+//                                        documentClientCall.patchDocument(defaultInternalClientIdValue//
+//                                                , defaultInternalApiKeyValue//
+//                                                , fileKey//
+//                                                , new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(retentionInstant))).thenReturn(retentionInstant))
+//                                    .map(retentionInstant -> fileDownloadResponse.retentionUntil(Date.from(retentionInstant)));
+//                        }
+//                    } else {
+//                        if (!StringUtils.isBlank(doc.getRetentionUntil())) {
+//                            var retentionInstant = Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()));
+//                            return Mono.just(fileDownloadResponse.retentionUntil((Date.from(retentionInstant))));
+//                        } else {
+//                            return Mono.just(fileDownloadResponse);
+//                        }
+//                    }
+//                })
                 .onErrorResume(DateTimeException.class, throwable ->
                 {
                     log.error("getFileDownloadResponse() : errore nel parsing o nella formattazione della data = {}", throwable.getMessage(), throwable);

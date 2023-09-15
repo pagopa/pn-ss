@@ -23,7 +23,7 @@
           src/test/java/**
         </sonar.coverage.exclusions>
     </properties>
-
+ 
     <dependencies>
 
         <dependency>

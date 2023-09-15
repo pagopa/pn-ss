@@ -313,9 +313,6 @@ public class UriBuilderService {
 
         return Mono.fromCallable(this::validationFieldCreateUri)//
                 .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))//
-                .doOnSuccess(o -> 
-                    log.debug("--- REST FINE  CHIAMATA USER CONFIGURATION: {}", o)//UserConfigurationResponse
-                    )//
                 .flatMap(userConfigurationResponse -> {
                     List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 

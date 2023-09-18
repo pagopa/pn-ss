@@ -375,7 +375,7 @@ public class UriBuilderService {
             documentChanges.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
         }
         documentChanges.setDocumentState(AVAILABLE);
-        documentChanges.setLastStatusChangeTimestamp(Date.from(Instant.now()));
+        documentChanges.setLastStatusChangeTimestamp(OffsetDateTime.now());
         return documentChanges;
     }
 

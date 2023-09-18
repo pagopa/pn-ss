@@ -146,7 +146,7 @@ public class DocumentServiceImpl implements DocumentService {
                 .flatMap(documentEntity -> {
                     if (documentChanges.getLastStatusChangeTimestamp() != null) {
                         var storedLastStatusChangeTimestamp = documentEntity.getLastStatusChangeTimestamp();
-                        var lastStatusChangeTimestamp = documentChanges.getLastStatusChangeTimestamp().toInstant().atOffset(ZoneOffset.UTC);
+                        var lastStatusChangeTimestamp = documentChanges.getLastStatusChangeTimestamp();
                         if (lastStatusChangeTimestamp.isBefore(storedLastStatusChangeTimestamp))
                             return Mono.just(documentEntity);
                         documentEntity.setLastStatusChangeTimestamp(lastStatusChangeTimestamp);

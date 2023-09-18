@@ -88,7 +88,6 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public Mono<Document> insertDocument(DocumentInput documentInput) {
         final String DOCUMENT_INPUT = "documentInput in DocumentServiceImpl insertDocument()";
-
         log.info(Constant.CHECKING_VALIDATION_PROCESS, DOCUMENT_INPUT);
         Document resp = new Document();
         if (documentInput == null) {
@@ -99,6 +98,8 @@ public class DocumentServiceImpl implements DocumentService {
             log.warn(Constant.VALIDATION_PROCESS_FAILED, DOCUMENT_INPUT, "Document Key is null");
             throw new RepositoryManagerException("Document Key is null");
         }
+        documentInput.setLastStatusChangeTimestamp(OffsetDateTime.now());
+
         log.info(Constant.VALIDATION_PROCESS_PASSED, DOCUMENT_INPUT);
 
         String key = documentInput.getDocumentType();
@@ -147,9 +148,11 @@ public class DocumentServiceImpl implements DocumentService {
                     if (documentChanges.getLastStatusChangeTimestamp() != null) {
                         var storedLastStatusChangeTimestamp = documentEntity.getLastStatusChangeTimestamp();
                         var lastStatusChangeTimestamp = documentChanges.getLastStatusChangeTimestamp();
-                        if (lastStatusChangeTimestamp.isBefore(storedLastStatusChangeTimestamp))
+                        if (storedLastStatusChangeTimestamp!=null && lastStatusChangeTimestamp.isBefore(storedLastStatusChangeTimestamp))
                             return Mono.just(documentEntity);
                         documentEntity.setLastStatusChangeTimestamp(lastStatusChangeTimestamp);
+                    } else if (documentChanges.getDocumentState() != null && !documentChanges.getDocumentState().equals(documentEntity.getDocumentState())) {
+                        documentEntity.setLastStatusChangeTimestamp(OffsetDateTime.now());
                     }
                     return executePatch(documentEntity, documentChanges, oldState, documentKey, authPagopaSafestorageCxId, authApiKey);
                 })
@@ -209,9 +212,6 @@ public class DocumentServiceImpl implements DocumentService {
                     if (documentChanges.getContentLenght() != null) {
                         documentEntityStored.setContentLenght(documentChanges.getContentLenght());
                     }
-
-                    var storedLastStatusChangeTimestamp = documentEntityStored.getLastStatusChangeTimestamp();
-                    var lastStatusChangeTimestamp = documentChanges.getLastStatusChangeTimestamp();
 
                     log.debug("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}",
                             documentEntityStored);

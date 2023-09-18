@@ -331,15 +331,14 @@ public class UriBuilderService {
                                             , "Document not found"));
                                 } else return Mono.just(document);
 
-                            })//
-                            .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class//
-                                    , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found")));
+                            });
                 })
                 .cast(Document.class)
                 .flatMap(document -> {
                     if (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil())) {
                         log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
+                                .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
                                 .flatMap(headObjectResponse -> {
                                     DocumentChanges documentChanges;
                                     if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
@@ -347,15 +346,14 @@ public class UriBuilderService {
                                         documentChanges = fixBookedDocument(document, headObjectResponse);
                                     } else
                                         documentChanges = new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate()));
-                                    return documentClientCall.patchDocument(xPagopaSafestorageCxId, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
+                                    return documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
                                             .map(DocumentResponse::getDocument);
                                 });
                     }
                     else return Mono.just(document);
                 })
                 .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))//
-                .onErrorResume(S3BucketException.NoSuchKeyException.class//
-                        , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
+                .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
                 .doOnSuccess(fileDownloadResponse -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, fileKey, "UriBuilderService.createUriForDownloadFile()", fileDownloadResponse));
     }
 
@@ -367,14 +365,14 @@ public class UriBuilderService {
             if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {
                 documentChanges.setCheckSum(hor.sseCustomerKeyMD5());
             } else if (ChecksumEnum.SHA256.equals(document.getDocumentType().getChecksum())) {
-                document.setCheckSum(hor.checksumSHA256());
+                documentChanges.setCheckSum(hor.checksumSHA256());
             }
         }
         if (document.getContentLenght() == null && hor.contentLength() != null) {
-            document.setContentLenght(new BigDecimal(hor.contentLength()));
+            documentChanges.setContentLenght(new BigDecimal(hor.contentLength()));
         }
         if (document.getRetentionUntil() == null && hor.objectLockRetainUntilDate() != null) {
-            document.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
+            documentChanges.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
         }
         documentChanges.setDocumentState(AVAILABLE);
         documentChanges.setLastStatusChangeTimestamp(Date.from(Instant.now()));

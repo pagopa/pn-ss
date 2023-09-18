@@ -1,5 +1,6 @@
 package it.pagopa.pnss.uribuilder.rest;
 
+import it.pagopa.pnss.common.constant.Constant;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,9 @@ public class FileUploadApiController implements FileUploadApi {
     public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId,
                                                                  Mono<FileCreationRequest> fileCreationRequest,
                                                                  final ServerWebExchange exchange) {
+		final String CREATE_FILE = "createFile";
+
+		log.info(Constant.STARTING_PROCESS_ON, CREATE_FILE, xPagopaSafestorageCxId);
 
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
         return fileCreationRequest.flatMap(request -> {
@@ -45,15 +49,19 @@ public class FileUploadApiController implements FileUploadApi {
 												checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
 											}
 										}
-        								return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
+										log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG, "createUriForUploadFile", xPagopaSafestorageCxId, request, checksumValue, xTraceIdValue);
+										return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
         																				request,
         																				checksumValue,
         																				xTraceIdValue);
         						  })
         						  .onErrorResume(ChecksumException.class, throwable -> {
-        							  log.debug("FileUploadApiController.createFile() : errore checksum = {}", throwable.getMessage(), throwable);
+									  log.info(Constant.ENDING_PROCESS_WITH_ERROR, CREATE_FILE, throwable, throwable.getMessage());
         							  throw new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage());
         						  })
-                                  .map(ResponseEntity::ok);
+								  .map(fileCreationResponse -> {
+									  log.info(Constant.ENDING_PROCESS_ON, CREATE_FILE, fileCreationResponse.getKey());
+									  return ResponseEntity.ok(fileCreationResponse);
+								  });
     }
 }

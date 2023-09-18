@@ -42,7 +42,6 @@ import java.util.function.Predicate;
 import static it.pagopa.pnss.common.constant.Constant.STORAGE_TYPE;
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
 
-
 @Service
 @Slf4j
 public class DocumentServiceImpl implements DocumentService {

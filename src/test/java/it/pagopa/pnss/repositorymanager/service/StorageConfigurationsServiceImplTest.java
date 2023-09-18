@@ -28,7 +28,7 @@ public class StorageConfigurationsServiceImplTest {
     S3ServiceImpl s3Service;
 
     @Test
-    void getLifecycleConfiguration(){
+    void getLifecycleConfigurationOk(){
         List<Transition> transitions = new ArrayList<>();
         transitions.add(Transition.builder().days(1).build());
         transitions.add(Transition.builder().days(2).build());

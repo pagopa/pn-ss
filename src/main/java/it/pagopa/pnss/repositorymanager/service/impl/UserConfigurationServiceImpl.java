@@ -1,6 +1,7 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
 import it.pagopa.pnss.common.constant.Constant;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,9 +28,9 @@ import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKIN
 public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     private final ObjectMapper objectMapper;
-
     private final DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationEntityDynamoDbAsyncTable;
-    private static final String TABLE_NAME = "PnSsTableAnagraficaClient";
+    @Autowired
+    RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                         RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
@@ -112,12 +113,12 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                        return entityStored;
                    })
                    .zipWhen(userConfigurationUpdated -> {
-                       log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, userConfigurationUpdated, TABLE_NAME);
+                       log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, userConfigurationUpdated, managerDynamoTableName.anagraficaClientName());
                        return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
                                userConfigurationUpdated));
                    }).retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
                    .map(objects -> {
-                       log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                       log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.anagraficaClientName());
                        return objectMapper.convertValue(objects.getT2(), UserConfiguration.class);
                    })
                    .doOnSuccess(userConfiguration -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, name, "UserConfigurationServiceImpl.patchUserConfiguration()", userConfiguration));
@@ -131,12 +132,12 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(userConfigurationToDelete -> {
-                       log.debug(Constant.DELETING_DATA_IN_DYNAMODB_TABLE, userConfigurationKey, TABLE_NAME);
+                       log.debug(Constant.DELETING_DATA_IN_DYNAMODB_TABLE, userConfigurationKey, managerDynamoTableName.anagraficaClientName());
                        return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.deleteItem(
                                userConfigurationKey));
                    })
                    .map(userConfigurationEntity -> {
-                       log.debug(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                       log.debug(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.anagraficaClientName());
                        return objectMapper.convertValue(userConfigurationEntity.getT1(), UserConfiguration.class);
                    })
                    .doOnSuccess(userConfiguration -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, name, "UserConfigurationServiceImpl.deleteUserConfiguration()", userConfiguration));

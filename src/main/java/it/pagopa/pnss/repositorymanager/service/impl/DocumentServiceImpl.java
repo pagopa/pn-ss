@@ -54,6 +54,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final AwsConfigurationProperties awsConfigurationProperties;
     private final BucketName bucketName;
     private final CallMacchinaStati callMacchinaStati;
+    private static final String TABLE_NAME = "PnSsTableDocumenti";
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
@@ -75,24 +76,31 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Mono<Document> getDocument(String documentKey) {
+        final String GET_DOCUMENT = "DocumentServiceImpl.getDocument()";
         String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
-        log.info("getDocument() : IN : documentKey {}", decodedDocumentKey);
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(decodedDocumentKey).build()))
-                   .switchIfEmpty(getErrorIdDocNotFoundException(decodedDocumentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
-                   .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class));
+                   .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
+                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
+                   .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class))
+                   .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, GET_DOCUMENT, documentType));
     }
 
     @Override
     public Mono<Document> insertDocument(DocumentInput documentInput) {
-        log.info("insertDocument() : IN : documentInput : {}", documentInput);
+        final String DOCUMENT_INPUT = "documentInput in DocumentServiceImpl insertDocument()";
+
+        log.info(Constant.CHECKING_VALIDATION_PROCESS, DOCUMENT_INPUT);
         Document resp = new Document();
         if (documentInput == null) {
+            log.warn(Constant.VALIDATION_PROCESS_FAILED, DOCUMENT_INPUT, "Document is null");
             throw new RepositoryManagerException("Document is null");
         }
         if (documentInput.getDocumentKey() == null || documentInput.getDocumentKey().isBlank()) {
+            log.warn(Constant.VALIDATION_PROCESS_FAILED, DOCUMENT_INPUT, "Document Key is null");
             throw new RepositoryManagerException("Document Key is null");
         }
+        log.info(Constant.VALIDATION_PROCESS_PASSED, DOCUMENT_INPUT);
+
         String decodedDocumentKey = URLDecoder.decode(documentInput.getDocumentKey(), StandardCharsets.UTF_8);
         String key = documentInput.getDocumentType();
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
@@ -117,8 +125,13 @@ public class DocumentServiceImpl implements DocumentService {
                        resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
                        resp.setClientShortCode(documentInput.getClientShortCode());
                        DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
+                       log.debug(Constant.INSERTING_DATA_IN_DYNAMODB_TABLE, documentEntityInput, TABLE_NAME);
                        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(documentEntityInput)));
                    })
+                    .doOnSuccess(unused -> {
+                        log.info(Constant.INSERTED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                        log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentInput.getDocumentKey(), "DocumentServiceImpl.insertDocument()", resp);
+                    })
                    .thenReturn(resp);
     }
 
@@ -126,11 +139,6 @@ public class DocumentServiceImpl implements DocumentService {
     public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges, String authPagopaSafestorageCxId,
                                         String authApiKey) {
         String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
-        log.info("patchDocument() : START : authPagopaSafestorageCxId = {} : authApiKey = {} : documentKey = {} : documentChanges  = {}",
-                 authPagopaSafestorageCxId,
-                 authApiKey,
-                 decodedDocumentKey,
-                 documentChanges);
 
         AtomicReference<String> oldState = new AtomicReference<>();
 
@@ -138,13 +146,17 @@ public class DocumentServiceImpl implements DocumentService {
                    .switchIfEmpty(getErrorIdDocNotFoundException(decodedDocumentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(documentEntity -> {
+                       final String DOCUMENT_STATE = "documentState in DocumentServiceImpl.patchDocument()";
 
+                       log.info(Constant.CHECKING_VALIDATION_PROCESS, DOCUMENT_STATE);
                        if(!StringUtils.isBlank(documentChanges.getDocumentState())) {
                            var documentStatusChange = new DocumentStatusChange();
                            documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
                            documentStatusChange.setProcessId("SS");
                            documentStatusChange.setCurrentStatus(documentEntity.getDocumentState().toLowerCase());
                            documentStatusChange.setNextStatus(documentChanges.getDocumentState().toLowerCase());
+                           log.info(Constant.VALIDATION_PROCESS_PASSED, DOCUMENT_STATE);
+                           log.info(Constant.INVOKING_EXTERNAL_SERVICE, "pn-statemachinemanager statusValidation");
                            return callMacchinaStati.statusValidation(documentStatusChange);
                        } else {
                            return Mono.just(new MacchinaStatiValidateStatoResponseDto());
@@ -213,6 +225,7 @@ public class DocumentServiceImpl implements DocumentService {
 	                                                                                    setTag.value(storageType);
 	                                                                                }))
 	                                                                                .build();
+                                   log.info(Constant.CLIENT_METHOD_INVOCATION, "s3Service.putObjectTagging()", putObjectTaggingRequest);
 	                               CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse =
 	                                       s3.putObjectTagging(putObjectTaggingRequest);
 	                               log.debug("patchDocument() : Tagging : storageType {}", storageType);
@@ -240,15 +253,20 @@ public class DocumentServiceImpl implements DocumentService {
                     	   return Mono.just(documentEntityStored);
                        }
                    })
-                   .zipWhen(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
+                   .zipWhen(documentUpdated -> {
+                       log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentUpdated, TABLE_NAME);
+                       CompletableFuture<DocumentEntity> document = documentEntityDynamoDbAsyncTable.updateItem(documentUpdated);
+                       log.info(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                       return Mono.fromCompletionStage(document);
+                   })
                    .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
-                   .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
+                   .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
+                   .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, "DocumentServiceImpl.patchDocument()", documentType));
     }
 
     @Override
     public Mono<Document> deleteDocument(String documentKey) {
         String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
-        log.info("deleteDocument() : IN : documentKey {}", decodedDocumentKey);
         Key typeKey = Key.builder().partitionValue(decodedDocumentKey).build();
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(typeKey))

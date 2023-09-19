@@ -34,12 +34,13 @@ import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 import static it.pagopa.pnss.common.constant.Constant.STORAGE_TYPE;
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
-
 
 @Service
 @Slf4j
@@ -138,9 +139,25 @@ public class DocumentServiceImpl implements DocumentService {
         AtomicReference<String> oldState = new AtomicReference<>();
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
-                   .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
-                   .zipWhen(documentEntity -> {
+                .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
+                .flatMap(documentEntity ->
+                {
+                    if (hasBeenPatched(documentEntity, documentChanges)) {
+                        log.debug("Same changes have been already applied to document '{}'", documentKey);
+                        return Mono.just(objectMapper.convertValue(documentEntity, Document.class));
+                    } else {
+                        log.debug("Applying patch to document '{}'", documentKey);
+                        return applyPatch(documentEntity, documentKey, documentChanges, authPagopaSafestorageCxId, authApiKey, oldState);
+                    }
+                });
+    }
+
+    private Mono<Document> applyPatch(DocumentEntity docEntity, String documentKey, DocumentChanges documentChanges, String authPagopaSafestorageCxId,
+                           String authApiKey, AtomicReference<String> oldState)
+    {
+        return Mono.just(docEntity)
+            .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
+            .zipWhen(documentEntity -> {
                        final String DOCUMENT_STATE = "documentState in DocumentServiceImpl.patchDocument()";
 
                        log.info(Constant.CHECKING_VALIDATION_PROCESS, DOCUMENT_STATE);
@@ -166,97 +183,97 @@ public class DocumentServiceImpl implements DocumentService {
                            boolean statusFound= false;
                            documentEntityStored.setDocumentState(documentChanges.getDocumentState());
 
-                           if(documentEntityStored.getDocumentType().getStatuses() != null){
-                               for (Map.Entry<String, CurrentStatusEntity> entry : documentEntityStored.getDocumentType().getStatuses().entrySet()) {
-                                   if (entry.getValue().getTechnicalState().equals(documentChanges.getDocumentState())) {
-                                       documentEntityStored.setDocumentLogicalState(entry.getKey());
-                                       statusFound=true;
-                                       break;
-                                   }
-                               }
-                               if(!statusFound){
-                                   log.debug("New status inserted is invalid for the documentType, DocumentLogicalState was not updated");
-                               }
-                           } else {
-                        	   String sMsg = "Cannot read statuses of Document cause statuses is null, therefore new status inserted is invalid";
-                               throw new IllegalDocumentStateException(sMsg);
-                           }
-                       }
-                       if (documentChanges.getRetentionUntil() != null && !documentChanges.getRetentionUntil().isBlank()) {
-                           documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
-                       }
-                       if (documentChanges.getCheckSum() != null) {
-                           documentEntityStored.setCheckSum(documentChanges.getCheckSum());
-                       }
-                       if (documentChanges.getContentLenght() != null) {
-                           documentEntityStored.setContentLenght(documentChanges.getContentLenght());
-                       }
-                       log.debug("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}",
-                                documentEntityStored);
+                    if(documentEntityStored.getDocumentType().getStatuses() != null){
+                        for (Map.Entry<String, CurrentStatusEntity> entry : documentEntityStored.getDocumentType().getStatuses().entrySet()) {
+                            if (entry.getValue().getTechnicalState().equals(documentChanges.getDocumentState())) {
+                                documentEntityStored.setDocumentLogicalState(entry.getKey());
+                                statusFound=true;
+                                break;
+                            }
+                        }
+                        if(!statusFound){
+                            log.debug("New status inserted is invalid for the documentType, DocumentLogicalState was not updated");
+                        }
+                    } else {
+                        String sMsg = "Cannot read statuses of Document cause statuses is null, therefore new status inserted is invalid";
+                        throw new IllegalDocumentStateException(sMsg);
+                    }
+                }
+                if (documentChanges.getRetentionUntil() != null && !documentChanges.getRetentionUntil().isBlank()) {
+                    documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
+                }
+                if (documentChanges.getCheckSum() != null) {
+                    documentEntityStored.setCheckSum(documentChanges.getCheckSum());
+                }
+                if (documentChanges.getContentLenght() != null) {
+                    documentEntityStored.setContentLenght(documentChanges.getContentLenght());
+                }
+                log.debug("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}",
+                        documentEntityStored);
 
 
-                       if ( documentChanges.getDocumentState() != null && (
-                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
-                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
+                if ( documentChanges.getDocumentState() != null && (
+                        documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
+                                documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
 
-	                       log.debug("patchDocument() : START Tagging");
-	                       Region region = Region.of(awsConfigurationProperties.regionCode());
-	                       S3AsyncClient s3 = S3AsyncClient.builder().region(region).build();
-	                       String storageType;
-	                       PutObjectTaggingRequest putObjectTaggingRequest;
-	                       if (documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
-	                           if (documentEntityStored.getDocumentType()
-	                                                   .getStatuses()
-	                                                   .containsKey(documentEntityStored.getDocumentLogicalState())) {
-	                               storageType = documentEntityStored.getDocumentType()
-	                                                                 .getStatuses()
-	                                                                 .get(documentEntityStored.getDocumentLogicalState())
-	                                                                 .getStorage();
-	                               putObjectTaggingRequest = PutObjectTaggingRequest.builder()
-	                                                                                .bucket(bucketName.ssHotName())
-	                                                                                .key(documentKey)
-	                                                                                .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
-	                                                                                    setTag.key(STORAGE_TYPE);
-	                                                                                    setTag.value(storageType);
-	                                                                                }))
-	                                                                                .build();
-                                   log.info(Constant.CLIENT_METHOD_INVOCATION, "s3Service.putObjectTagging()", putObjectTaggingRequest);
-	                               CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse =
-	                                       s3.putObjectTagging(putObjectTaggingRequest);
-	                               log.debug("patchDocument() : Tagging : storageType {}", storageType);
-	                           } else {
-	                               log.debug("patchDocument() : Tagging : storageTypeEmpty");
-	                           }
-	                           log.debug("patchDocument() : END Tagging");
-	                       }
-                       }
-                       return documentEntityStored;
-                   })
-                   .flatMap(documentEntityStored -> { 
+                    log.debug("patchDocument() : START Tagging");
+                    Region region = Region.of(awsConfigurationProperties.regionCode());
+                    S3AsyncClient s3 = S3AsyncClient.builder().region(region).build();
+                    String storageType;
+                    PutObjectTaggingRequest putObjectTaggingRequest;
+                    if (documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
+                        if (documentEntityStored.getDocumentType()
+                                .getStatuses()
+                                .containsKey(documentEntityStored.getDocumentLogicalState())) {
+                            storageType = documentEntityStored.getDocumentType()
+                                    .getStatuses()
+                                    .get(documentEntityStored.getDocumentLogicalState())
+                                    .getStorage();
+                            putObjectTaggingRequest = PutObjectTaggingRequest.builder()
+                                    .bucket(bucketName.ssHotName())
+                                    .key(documentKey)
+                                    .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
+                                        setTag.key(STORAGE_TYPE);
+                                        setTag.value(storageType);
+                                    }))
+                                    .build();
+                            log.info(Constant.CLIENT_METHOD_INVOCATION, "s3Service.putObjectTagging()", putObjectTaggingRequest);
+                            CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse =
+                                    s3.putObjectTagging(putObjectTaggingRequest);
+                            log.debug("patchDocument() : Tagging : storageType {}", storageType);
+                        } else {
+                            log.debug("patchDocument() : Tagging : storageTypeEmpty");
+                        }
+                        log.debug("patchDocument() : END Tagging");
+                    }
+                }
+                return documentEntityStored;
+            })
+            .flatMap(documentEntityStored -> {
 
-                       if ( documentChanges.getDocumentState() != null && (
-                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
-                    		   documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
+                if ( documentChanges.getDocumentState() != null && (
+                        documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
+                                documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
 
-		                   return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
-		                           authApiKey,
-		                           documentChanges,
-		                           documentEntityStored,
-		                           oldState.get());
-                       }
-                       else {
-                    	   return Mono.just(documentEntityStored);
-                       }
-                   })
-                   .zipWhen(documentUpdated -> {
-                       log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentUpdated, TABLE_NAME);
-                       CompletableFuture<DocumentEntity> document = documentEntityDynamoDbAsyncTable.updateItem(documentUpdated);
-                       log.info(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
-                       return Mono.fromCompletionStage(document);
-                   })
-                   .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
-                   .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
-                   .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, "DocumentServiceImpl.patchDocument()", documentType));
+                    return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
+                            authApiKey,
+                            documentChanges,
+                            documentEntityStored,
+                            oldState.get());
+                }
+                else {
+                    return Mono.just(documentEntityStored);
+                }
+            })
+            .zipWhen(documentUpdated -> {
+                log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentUpdated, TABLE_NAME);
+                CompletableFuture<DocumentEntity> document = documentEntityDynamoDbAsyncTable.updateItem(documentUpdated);
+                log.info(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                return Mono.fromCompletionStage(document);
+            })
+            .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
+            .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
+            .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, "DocumentServiceImpl.patchDocument()", documentType));
     }
 
     @Override
@@ -273,6 +290,23 @@ public class DocumentServiceImpl implements DocumentService {
                    .doOnSuccess(unused -> log.info(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
                    .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, "DocumentServiceImpl.deleteDocument()", documentType));
+    }
+
+    private boolean hasBeenPatched(DocumentEntity documentEntity, DocumentChanges documentChanges) {
+        boolean hasBeenPatched = true;
+        if (!Objects.isNull(documentChanges.getDocumentState())) {
+            hasBeenPatched = documentChanges.getDocumentState().equalsIgnoreCase(documentEntity.getDocumentState());
+        }
+        if (!Objects.isNull(documentChanges.getRetentionUntil())) {
+            hasBeenPatched = Objects.equals(documentChanges.getRetentionUntil(), documentEntity.getRetentionUntil());
+        }
+        if (!Objects.isNull(documentChanges.getContentLenght())) {
+            hasBeenPatched = Objects.equals(documentChanges.getContentLenght(), documentEntity.getContentLenght());
+        }
+        if (!Objects.isNull(documentChanges.getCheckSum())) {
+            hasBeenPatched = Objects.equals(documentChanges.getCheckSum(), documentEntity.getCheckSum());
+        }
+        return hasBeenPatched;
     }
 
 }

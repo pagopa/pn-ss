@@ -33,15 +33,11 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
-
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Predicate;
-import java.util.function.Function;
 
 import static it.pagopa.pnss.common.constant.Constant.STORAGE_TYPE;
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
@@ -163,7 +159,6 @@ public class DocumentServiceImpl implements DocumentService {
                 })
                 .map(documentEntity -> objectMapper.convertValue(documentEntity, Document.class));
     }
-//                       final String DOCUMENT_STATE = "documentState in DocumentServiceImpl.patchDocument()";
 
     private Mono<DocumentEntity> executePatch(DocumentEntity docEntity, DocumentChanges documentChanges, AtomicReference<String> oldState, String documentKey, String authPagopaSafestorageCxId, String authApiKey) {
        final String DOCUMENT_STATE = "documentState in DocumentServiceImpl.patchDocument()";
@@ -298,23 +293,6 @@ public class DocumentServiceImpl implements DocumentService {
                    .doOnSuccess(unused -> log.info(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName()))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
                    .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, "DocumentServiceImpl.deleteDocument()", documentType));
-    }
-
-    private boolean hasBeenPatched(DocumentEntity documentEntity, DocumentChanges documentChanges) {
-        boolean hasBeenPatched = true;
-        if (!Objects.isNull(documentChanges.getDocumentState())) {
-            hasBeenPatched = documentChanges.getDocumentState().equalsIgnoreCase(documentEntity.getDocumentState());
-        }
-        if (!Objects.isNull(documentChanges.getRetentionUntil())) {
-            hasBeenPatched = Objects.equals(documentChanges.getRetentionUntil(), documentEntity.getRetentionUntil());
-        }
-        if (!Objects.isNull(documentChanges.getContentLenght())) {
-            hasBeenPatched = Objects.equals(documentChanges.getContentLenght(), documentEntity.getContentLenght());
-        }
-        if (!Objects.isNull(documentChanges.getCheckSum())) {
-            hasBeenPatched = Objects.equals(documentChanges.getCheckSum(), documentEntity.getCheckSum());
-        }
-        return hasBeenPatched;
     }
 
 }

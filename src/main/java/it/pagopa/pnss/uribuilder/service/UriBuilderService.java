@@ -17,6 +17,7 @@ import it.pagopa.pnss.common.client.exception.*;
 import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.exception.ContentTypeNotFoundException;
 import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -86,11 +88,10 @@ public class UriBuilderService {
     private final S3Service s3Service;
     private final S3Presigner s3Presigner;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
-
     private final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
-
-    private static final String TABLE_NAME = "PnSsTableDocumenti";
+    @Autowired
+    RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
                              BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner) {
@@ -175,7 +176,7 @@ public class UriBuilderService {
                                                                              checksumValue,
                                                                              metadata,
                                                                              xTraceIdValue).map(presignedPutObjectRequest -> {
-                                                                 log.info(INSERTED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                                                                 log.info(INSERTED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName());
                                                                  FileCreationResponse response = new FileCreationResponse();
                                                                  response.setKey(insertedDocument.getDocument().getDocumentKey());
                                                                  response.setSecret(secret.toString());

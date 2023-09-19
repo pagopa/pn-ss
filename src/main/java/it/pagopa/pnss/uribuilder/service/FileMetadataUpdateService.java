@@ -11,9 +11,11 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -29,7 +31,8 @@ public class FileMetadataUpdateService {
     private final UserConfigurationClientCall userConfigClientCall;
     private final DocumentClientCall docClientCall;
     private final DocTypesClientCall docTypesClientCall;
-    private static final String TABLE_NAME = "PnSsTableDocumenti";
+    @Autowired
+    RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall) {
         this.userConfigClientCall = userConfigurationClientCall;
@@ -108,10 +111,10 @@ public class FileMetadataUpdateService {
                         documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
                     }
 
-                    log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentChanges, TABLE_NAME);
+                    log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentChanges, managerDynamoTableName.documentiName());
                     return docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                                         .flatMap(documentResponsePatch -> {
-                                            log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME);
+                                            log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName());
                                             OperationResultCodeResponse resp = new OperationResultCodeResponse();
                                             resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
                                             resp.setResultDescription(ResultCodeWithDescription.OK.getDescription());

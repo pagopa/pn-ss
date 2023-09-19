@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -88,6 +90,7 @@ public class DocumentInternalApiControllerTest {
 		documentEntity.setDocumentType(docTypeEntity);
 		documentEntity.setDocumentState(AVAILABLE);
 		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setLastStatusChangeTimestamp(OffsetDateTime.now());
 		dynamoDbTable.putItem(builder -> builder.item(documentEntity));
 	}
 
@@ -270,6 +273,7 @@ public class DocumentInternalApiControllerTest {
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(AVAILABLE);
 		docChanges.setContentLenght(new BigDecimal(50));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
 
 		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
 				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON).body(BodyInserters.fromValue(docChanges))

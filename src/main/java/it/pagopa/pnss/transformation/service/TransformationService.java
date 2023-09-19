@@ -24,6 +24,9 @@ import static it.pagopa.pnss.common.utils.SqsUtils.logIncomingMessage;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 
 @Service
 @Slf4j
@@ -70,10 +73,10 @@ public class TransformationService {
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
         final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
-
+        String encodedKey = URLEncoder.encode(key, StandardCharsets.UTF_8);
         log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG, OBJECT_TRANSFORMATION, key, stagingBucketName, marcatura);
         log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.getObject()", key, stagingBucketName);
-        return Mono.zipDelayError(documentClientCall.getDocument(key), s3Service.getObject(key, stagingBucketName))
+        return Mono.zipDelayError(documentClientCall.getDocument(encodedKey), s3Service.getObject(key, stagingBucketName))
                    .filter(objects -> {
                        var document = objects.getT1().getDocument();
                        var transformations = document.getDocumentType().getTransformations();

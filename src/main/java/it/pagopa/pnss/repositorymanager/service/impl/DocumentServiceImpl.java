@@ -33,6 +33,8 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -75,9 +77,10 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public Mono<Document> getDocument(String documentKey) {
         final String GET_DOCUMENT = "DocumentServiceImpl.getDocument()";
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
+        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
+        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(decodedDocumentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
+                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class))
                    .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, GET_DOCUMENT, documentType));
     }
@@ -98,21 +101,22 @@ public class DocumentServiceImpl implements DocumentService {
         }
         log.info(Constant.VALIDATION_PROCESS_PASSED, DOCUMENT_INPUT);
 
+        String decodedDocumentKey = URLDecoder.decode(documentInput.getDocumentKey(), StandardCharsets.UTF_8);
         String key = documentInput.getDocumentType();
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
-                                                                                    .partitionValue(documentInput.getDocumentKey())
+                                                                                    .partitionValue(decodedDocumentKey)
                                                                                     .build()))
                    .handle((documentFounded, sink) -> {
                        if (documentFounded != null) {
                            log.debug("insertDocument() : document found : {}", documentFounded);
-                           sink.error(new ItemAlreadyPresent(documentInput.getDocumentKey()));
+                           sink.error(new ItemAlreadyPresent(decodedDocumentKey));
                        }
                    })
                    .switchIfEmpty(Mono.just(documentInput))
                    .flatMap(o -> docTypesService.getDocType(key))
                    .flatMap(o -> {
                        resp.setDocumentType(o);
-                       resp.setDocumentKey(documentInput.getDocumentKey());
+                       resp.setDocumentKey(decodedDocumentKey);
                        resp.setDocumentState(documentInput.getDocumentState());
                        resp.setCheckSum(documentInput.getCheckSum());
                        resp.setRetentionUntil(documentInput.getRetentionUntil());
@@ -134,11 +138,12 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges, String authPagopaSafestorageCxId,
                                         String authApiKey) {
+        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
 
         AtomicReference<String> oldState = new AtomicReference<>();
 
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
-                   .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
+        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(decodedDocumentKey).build()))
+                   .switchIfEmpty(getErrorIdDocNotFoundException(decodedDocumentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(documentEntity -> {
                        final String DOCUMENT_STATE = "documentState in DocumentServiceImpl.patchDocument()";
@@ -214,7 +219,7 @@ public class DocumentServiceImpl implements DocumentService {
 	                                                                 .getStorage();
 	                               putObjectTaggingRequest = PutObjectTaggingRequest.builder()
 	                                                                                .bucket(bucketName.ssHotName())
-	                                                                                .key(documentKey)
+	                                                                                .key(decodedDocumentKey)
 	                                                                                .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
 	                                                                                    setTag.key(STORAGE_TYPE);
 	                                                                                    setTag.value(storageType);
@@ -261,18 +266,14 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Mono<Document> deleteDocument(String documentKey) {
-        Key typeKey = Key.builder().partitionValue(documentKey).build();
+        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
+        Key typeKey = Key.builder().partitionValue(decodedDocumentKey).build();
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(typeKey))
-                   .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error("Error in DocumentServiceImpl.deleteDocument(): DocumentKeyNotPresentException - '{}'", throwable.getMessage()))
-                   .zipWhen(documentToDelete -> {
-                       log.debug(Constant.DELETING_DATA_IN_DYNAMODB_TABLE, typeKey, TABLE_NAME);
-                       return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey));
-                   })
-                   .doOnSuccess(unused -> log.info(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, TABLE_NAME))
-                   .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
-                   .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, "DocumentServiceImpl.deleteDocument()", documentType));
+                   .switchIfEmpty(getErrorIdDocNotFoundException(decodedDocumentKey))
+                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
+                   .zipWhen(documentToDelete -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
+                   .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class));
     }
 
 }

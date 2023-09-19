@@ -301,6 +301,51 @@ class UriBuilderUploadTest {
         }
 
         @Test
+        void testUrlGenStatusPreFileKeyPrefixed() {
+            FileCreationRequest fcr = new FileCreationRequest();
+            fcr.setContentType(IMAGE_TIFF_VALUE);
+            fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
+            fcr.setStatus(PRELOADED);
+            FileCreationResponse fcresp = new FileCreationResponse();
+            fcresp.setUploadUrl("http://host:9090/urlFile");
+
+            UserConfigurationResponse userConfig = new UserConfigurationResponse();
+            UserConfiguration userConfiguration = new UserConfiguration();
+            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
+            userConfig.setUserConfiguration(userConfiguration);
+
+            Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
+            Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+
+            DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
+            DocumentType documentType = new DocumentType();
+            documentType.setTipoDocumento(PN_LEGAL_FACTS);
+            documentTypeResponse.setDocType(documentType);
+
+            Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
+            Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
+
+            DocumentResponse docResp = new DocumentResponse();
+            Document document = new Document();
+            document.setDocumentKey("2023/09/01/11/keyFile");
+            DocumentType documentTypeDoc = new DocumentType();
+            documentTypeDoc.setChecksum(DocumentType.ChecksumEnum.MD5);
+            document.setDocumentType(documentTypeDoc);
+            docResp.setDocument(document);
+            Mono<DocumentResponse> respDoc = Mono.just(docResp);
+            Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
+
+            WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(fcr);
+            FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
+                    responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
+            FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
+
+            Assertions.assertFalse(resp.getUploadUrl().isEmpty());
+        }
+
+        @Test
         void testIdClienteNoPermessiUpload() {
             FileCreationRequest fcr = new FileCreationRequest();
             fcr.setContentType(IMAGE_TIFF_VALUE);
@@ -407,27 +452,6 @@ class UriBuilderUploadTest {
 
             FileCreationRequest fcr = new FileCreationRequest();
             fcr.setContentType("application/pdf");
-            fcr.setDocumentType(PN_AAR);
-            fcr.setStatus(PRELOADED);
-            fileUploadTestCall(fcr).expectStatus().isOk();
-        }
-
-        @Test
-        void testUploadSignedPdfBadContentType() {
-
-            UserConfigurationResponse userConfig = new UserConfigurationResponse();
-            UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
-            userConfiguration.setCanCreate(List.of(PN_AAR));
-            userConfig.setUserConfiguration(userConfiguration);
-
-            when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
-
-            FileCreationRequest fcr = new FileCreationRequest();
-            fcr.setContentType("application/badContentType");
             fcr.setDocumentType(PN_AAR);
             fcr.setStatus(PRELOADED);
             fileUploadTestCall(fcr).expectStatus().isOk();

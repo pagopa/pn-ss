@@ -17,6 +17,9 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
+
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -94,13 +97,16 @@ public class RetentionServiceImpl implements RetentionService {
     private Mono<Integer> getRetentionPeriodInDays(String documentKey, String documentState, String documentType,
                                                    String authPagopaSafestorageCxId, String authApiKey)
             throws RetentionException {
+        String decodedDocumentKey = URLDecoder.decode(documentKey, StandardCharsets.UTF_8);
+        
+
         log.debug(Constant.INVOKING_METHOD + ARG + ARG, "RetentionServiceImpl.getRetentionPeriodInDays()", documentKey, documentState, documentType);
 
         if (documentState == null || documentState.isBlank()) {
-            throw new RetentionException(String.format("Document State not present for Key '%s'", documentKey));
+            throw new RetentionException(String.format("Document State not present for Key '%s'", decodedDocumentKey));
         }
         if (documentType == null || documentType.isBlank()) {
-            throw new RetentionException(String.format("Document Type not present for Key '%s'", documentKey));
+            throw new RetentionException(String.format("Document Type not present for Key '%s'", decodedDocumentKey));
         }
 
         return configurationApiCall.getDocumentsConfigs(authPagopaSafestorageCxId, authApiKey).map(response -> {
@@ -115,7 +121,7 @@ public class RetentionServiceImpl implements RetentionService {
                 throw new RetentionException(String.format(
                         "DocumentTypeConfiguration not found for Document Type '%s' not found for Key '%s'",
                         documentType,
-                        documentKey));
+                        decodedDocumentKey));
             }
 
             for (StorageConfiguration sc : response.getStorageConfigurations()) {
@@ -124,7 +130,7 @@ public class RetentionServiceImpl implements RetentionService {
                     return getRetentionPeriodInDays(retentionPeriod);
                 }
             }
-            throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", documentKey));
+            throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", decodedDocumentKey));
         }).doOnError(e -> {
             log.error("getDefaultRetention() : errore : {}", e.getMessage(), e);
         });
@@ -144,6 +150,7 @@ public class RetentionServiceImpl implements RetentionService {
     public Mono<Instant> getRetentionUntil(String authPagopaSafestorageCxId, String authApiKey, String documentKey, String documentState,
                                            String documentType, Instant dataCreazioneObjectForBucket)
             throws RetentionException {
+
         log.debug(Constant.INVOKING_METHOD + ARG + ARG + ARG, "RetentionServiceImpl.getRetentionUntil()", documentKey, documentState, documentType, dataCreazioneObjectForBucket);
         // se manca anche solo un elemento di autenticazione, imposto le credenziali con "utente interno"
         if (authPagopaSafestorageCxId == null || authPagopaSafestorageCxId.isBlank() || authApiKey == null || authApiKey.isBlank()) {
@@ -168,9 +175,25 @@ public class RetentionServiceImpl implements RetentionService {
     public Mono<DocumentEntity> setRetentionPeriodInBucketObjectMetadata(String authPagopaSafestorageCxId, String authApiKey,
                                                                          DocumentChanges documentChanges, DocumentEntity documentEntity,
                                                                          String oldState) {
+
         log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG, "RetentionServiceImpl.getRetentionUntil()", authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
         log.info(CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.headObject()", documentEntity.getDocumentKey(), bucketName.ssHotName());
-                  return s3Service.headObject(documentEntity.getDocumentKey(), bucketName.ssHotName())
+
+
+        String decodedDocumentKey = URLDecoder.decode(documentEntity.getDocumentKey(), StandardCharsets.UTF_8);
+        String msg = null;
+        if (documentChanges != null) {
+            if (documentChanges.getRetentionUntil() == null) {
+                msg = "valore puntatore null";
+            } else if (documentChanges.getRetentionUntil() != null && documentChanges.getRetentionUntil().isBlank()) {
+                msg = "valore stringa vuota";
+            } else {
+                msg = "(altro valore = <" + documentChanges.getRetentionUntil() + ">)";
+            }
+        }
+        log.debug("setRetentionPeriodInBucketObjectMetadata() : INPUT : retentionUntil = {} : ", msg);
+
+                  return s3Service.headObject(decodedDocumentKey, bucketName.ssHotName())
                    .flatMap(headObjectResponse -> {
                        log.debug("setRetentionPeriodInBucketObjectMetadata() : " + "headOjectResponse.lastModified() = {} :" +
                                 "headOjectResponse.objectLockRetainUntilDate() = {} :" + "objectLockRetentionMode = {} ",
@@ -203,10 +226,10 @@ public class RetentionServiceImpl implements RetentionService {
                                                                               .mode(objectLockRetentionMode)
                                                                               .build());
                                       })
-                                     .flatMap(objectLockRetention -> {
-                                         log.info(CLIENT_METHOD_INVOCATION + ARG + ARG, "s3Service.putObjectRetention()", documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
-                                         return s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
-                                     })
+                                      .flatMap(objectLockRetention -> {
+                                          log.info(CLIENT_METHOD_INVOCATION + ARG + ARG, "s3Service.putObjectRetention()", documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
+                                          return s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
+                                      })
                                      .thenReturn(documentEntity);
                        } else if (
                            // 1. l'oggetto nel bucket non ha una retaintUntilDate impostata
@@ -254,10 +277,10 @@ public class RetentionServiceImpl implements RetentionService {
                                                                                                                         .mode(objectLockRetentionMode)
                                                                                                                         .build());
                                                                                 })
-                                                                                .flatMap(objectLockRetention -> {
-                                                                                    log.info(CLIENT_METHOD_INVOCATION + ARG + ARG, "s3Service.putObjectRetention()", documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
-                                                                                    return s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
-                                                                                })
+                                   .flatMap(objectLockRetention -> {
+                                       log.info(CLIENT_METHOD_INVOCATION + ARG + ARG, "s3Service.putObjectRetention()", documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
+                                       return s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
+                                   })
                                                                                 .onErrorResume(RetentionToIgnoreException.class, e ->
                                                                                 {
                                                                                     log.debug(e.getMessage());
@@ -270,19 +293,19 @@ public class RetentionServiceImpl implements RetentionService {
                    })
                    .switchIfEmpty(Mono.error(new RetentionException(String.format(
                            "Object (in bucket) Data Creation not present (documentKey: %s)",
-                           documentEntity.getDocumentKey()))))
+                           decodedDocumentKey))))
 
                    // gestione errore
                    .onErrorResume(NoSuchKeyException.class, throwable -> {
                        log.debug("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore = {}",
-                                 documentEntity.getDocumentKey(),
+                               decodedDocumentKey,
                                  throwable.getMessage(),
                                  throwable);
                        return Mono.error(new RetentionException(throwable.getMessage()));
                    })
                    .onErrorResume(DateTimeException.class, throwable -> {
                        log.error("setRetentionPeriodInBucketObjectMetadata() : documentKey = {} : errore formattazione instant retention " +
-                                 "util = {}", documentEntity.getDocumentKey(), throwable.getMessage(), throwable);
+                                 "util = {}", decodedDocumentKey, throwable.getMessage(), throwable);
                        return Mono.error(new RetentionException(throwable.getMessage()));
                    })
                    .onErrorResume(throwable -> {

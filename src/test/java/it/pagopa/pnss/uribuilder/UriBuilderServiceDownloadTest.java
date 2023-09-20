@@ -1,5 +1,6 @@
 package it.pagopa.pnss.uribuilder;
 
+import com.amazonaws.SdkClientException;
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.DocTypesConstant;
@@ -31,6 +32,8 @@ import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
 
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
@@ -241,6 +244,76 @@ class UriBuilderServiceDownloadTest {
 
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
         StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
+    }
+
+    @Test
+    void recoverDocumentFromBucketRestoreAlreadyInProgress() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("RestoreAlreadyInProgress").build();
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
+    }
+
+    @Test
+    void recoverDocumentFromBucketNoSuchKey() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("NoSuchKey").build();
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono).expectError(S3BucketException.NoSuchKeyException.class).verify();
+    }
+
+    @Test
+    void recoverDocumentFromBucketError() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("Errore Generico").build();
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).statusCode(500).build()));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
+    }
+
+    @Test
+    void recoverDocumentFromBucketSdkClientException() {
+
+        SdkClientException sdkClientException = new SdkClientException("SdkClientException");
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(sdkClientException));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
+    }
+
+    @Test
+    void getPresignedUrlNoSuchKey() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("NoSuchKey").build();
+        Mockito.doReturn(Mono.error(S3Exception.builder().awsErrorDetails(awsErrorDetails).build())).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", AVAILABLE, false);
+        StepVerifier.create(testMono).expectError(S3BucketException.NoSuchKeyException.class).verify();
+    }
+
+    @Test
+    void getPresignedUrlError() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("Errore Generico").errorMessage("Errore Generico").build();
+        Mockito.doReturn(Mono.error(S3Exception.builder().awsErrorDetails(awsErrorDetails).statusCode(500).build())).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", AVAILABLE, false);
+        StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
+    }
+
+    @Test
+    void getPresignedUrlSdkClientException() {
+
+        SdkClientException sdkClientException = new SdkClientException("SdkClientException");
+        Mockito.doReturn(Mono.error(sdkClientException)).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", AVAILABLE, false);
+        StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
     }
 
     @Test

@@ -30,12 +30,11 @@ import org.springframework.web.server.ResponseStatusException;
 import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
 
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.StorageClass;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
@@ -234,6 +233,15 @@ class UriBuilderServiceDownloadTest {
         fileDownloadTestCall(docId, true).expectStatus().isOk();
     }
 
+    @Test
+    void createFileDownloadInfoOk() {
+
+        RestoreObjectResponse restoreObjectResponse = RestoreObjectResponse.builder().build();
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.just(restoreObjectResponse));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
+    }
 
     @Test
     void testFileTrovatoBasketHot(){
@@ -289,7 +297,15 @@ class UriBuilderServiceDownloadTest {
     	d.setDocumentState(TECHNICAL_STATUS_BOOKED);
     	
     	when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
-    	
+
+        HeadObjectResponse headObjectResponse =  HeadObjectResponse.builder()
+                .sseCustomerKeyMD5("keymd5")
+                .checksumSHA256("sha256")
+                .contentLength(3L)
+                .objectLockRetainUntilDate(Instant.now())
+                .build();
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(headObjectResponse));
+
     	mockGetDocument(d, docId);
     	fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
     }
@@ -398,6 +414,7 @@ class UriBuilderServiceDownloadTest {
         Document doc = new Document();
         DocumentType type = new DocumentType();
         type.setTipoDocumento(d.getDocumentType());
+        type.setChecksum(DocumentType.ChecksumEnum.MD5);
         doc.setDocumentType(type);
         doc.setDocumentState(d.getDocumentState());
         doc.setDocumentLogicalState(d.getDocumentLogicalState());

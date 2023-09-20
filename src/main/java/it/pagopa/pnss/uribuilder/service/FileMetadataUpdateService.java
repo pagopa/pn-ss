@@ -10,6 +10,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.constant.Constant;
+import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
@@ -18,7 +19,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
@@ -123,9 +123,9 @@ public class FileMetadataUpdateService {
 
                 })
 
-                            .onErrorResume(WebClientResponseException.class, e -> {
+                            .onErrorResume(PatchDocumentException.class, e -> {
                                 log.debug(
-                                        "FileMetadataUpdateService.createUriForUploadFile() : rilevata una WebClientResponseException : " +
+                                        "FileMetadataUpdateService.createUriForUploadFile() : rilevata una PatchDocumentException : " +
 										"errore = {}",
                                         e.getMessage(),
                                         e);

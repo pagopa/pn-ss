@@ -8,7 +8,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.common.exception.InvalidNextStatusException;
+import it.pagopa.pnss.common.exception.PatchDocumentException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -73,9 +73,10 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                           .header(xApiKey, authApiKey)
                           .bodyValue(document)
                           .retrieve()
-                          .onStatus(BAD_REQUEST::equals,
-                                    clientResponse -> Mono.error(new InvalidNextStatusException(document.getDocumentState(), keyFile)))
-                          .onStatus(NOT_FOUND::equals,
+                          .onStatus(BAD_REQUEST::equals, clientResponse -> clientResponse.bodyToMono(DocumentResponse.class)
+                                  .map(documentResponse -> new PatchDocumentException(documentResponse.getError().getDescription(), HttpStatus.valueOf(documentResponse.getError().getCode())))
+                                  .flatMap(Mono::error))
+                         .onStatus(NOT_FOUND::equals,
                                     clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
                           .bodyToMono(DocumentResponse.class);
     }

@@ -24,6 +24,7 @@ import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import java.time.DateTimeException;
 
 @RestController
 @Slf4j
@@ -49,14 +50,18 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 
 	private Mono<ResponseEntity<DocumentResponse>> buildErrorResponse(HttpStatus httpStatus, String errorMsg) {
 		DocumentResponse response = new DocumentResponse();
-		response.setError(new Error());
+		Error error=new Error();
+		error.setCode(httpStatus.name());
+		response.setError(error);
 		response.getError().setDescription(errorMsg);
 		return Mono.just(ResponseEntity.status(httpStatus).body(response));
 	}
 
 	private Mono<ResponseEntity<DocumentResponse>> buildErrorResponse(HttpStatus httpStatus, Throwable throwable) {
 		DocumentResponse response = new DocumentResponse();
-		response.setError(new Error());
+		Error error=new Error();
+		error.setCode(httpStatus.name());
+		response.setError(error);
 		response.getError().setDescription(throwable.getMessage());
 		return Mono.just(ResponseEntity.status(httpStatus).body(response));
 	}
@@ -77,7 +82,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 			return buildErrorResponse(HttpStatus.NOT_FOUND, errorMsg);
 		} else if (throwable instanceof RepositoryManagerException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
-		}else if (throwable instanceof IllegalDocumentStateException) {
+		} else if (throwable instanceof IllegalDocumentStateException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		} else if (throwable instanceof DocumentTypeNotPresentException) {
 			String errorMsg = "Document type not present";
@@ -85,8 +90,15 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 		} else if (throwable instanceof InvalidNextStatusException) {
 			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
 		}
+		else if (throwable instanceof NoSuchKeyException) {
+			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
+		}
 		else if (throwable instanceof RetentionException) {
-			return buildErrorResponse(HttpStatus.NOT_FOUND, throwable);
+			return buildErrorResponse(HttpStatus.BAD_REQUEST, throwable);
+		}
+		else if (throwable instanceof DateTimeException) {
+			String errorMsg = "Exception in retention date formatting: ";
+			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, errorMsg + throwable.getMessage());
 		}
 		else {
 			log.error("Internal Error ---> {}", throwable.getMessage());

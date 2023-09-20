@@ -146,7 +146,11 @@ public class DocumentServiceImpl implements DocumentService {
                 .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                 .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                 .flatMap(documentEntity -> {
-                    if (documentChanges.getLastStatusChangeTimestamp() != null) {
+                    if (hasBeenPatched(documentEntity, documentChanges)) {
+                        log.debug("Same changes have been already applied to document '{}'", documentKey);
+                        return Mono.just(documentEntity);
+                    }
+                    else if (documentChanges.getLastStatusChangeTimestamp() != null) {
                         var storedLastStatusChangeTimestamp = documentEntity.getLastStatusChangeTimestamp();
                         var lastStatusChangeTimestamp = documentChanges.getLastStatusChangeTimestamp();
                         if (storedLastStatusChangeTimestamp!=null && lastStatusChangeTimestamp.isBefore(storedLastStatusChangeTimestamp))
@@ -293,6 +297,23 @@ public class DocumentServiceImpl implements DocumentService {
                    .doOnSuccess(unused -> log.info(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName()))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
                    .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, "DocumentServiceImpl.deleteDocument()", documentType));
+    }
+
+    private boolean hasBeenPatched(DocumentEntity documentEntity, DocumentChanges documentChanges) {
+        boolean hasBeenPatched = true;
+        if (!Objects.isNull(documentChanges.getDocumentState())) {
+            hasBeenPatched = documentChanges.getDocumentState().equalsIgnoreCase(documentEntity.getDocumentState());
+        }
+        if (!Objects.isNull(documentChanges.getRetentionUntil())) {
+            hasBeenPatched = Objects.equals(documentChanges.getRetentionUntil(), documentEntity.getRetentionUntil());
+        }
+        if (!Objects.isNull(documentChanges.getContentLenght())) {
+            hasBeenPatched = Objects.equals(documentChanges.getContentLenght(), documentEntity.getContentLenght());
+        }
+        if (!Objects.isNull(documentChanges.getCheckSum())) {
+            hasBeenPatched = Objects.equals(documentChanges.getCheckSum(), documentEntity.getCheckSum());
+        }
+        return hasBeenPatched;
     }
 
 }

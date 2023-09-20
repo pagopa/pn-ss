@@ -19,6 +19,7 @@ import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
@@ -192,7 +193,7 @@ public class RetentionServiceImpl implements RetentionService {
                            ZonedDateTime zonedDateTime = localDateTime.atZone(ZoneId.systemDefault());
                            Instant parsedRetentionUntil = zonedDateTime.toInstant();
 
-                           if (headObjectResponse.objectLockRetainUntilDate().equals(parsedRetentionUntil))
+                           if (headObjectResponse.objectLockRetainUntilDate().truncatedTo(ChronoUnit.SECONDS).equals(parsedRetentionUntil))
                                return Mono.just(documentEntity);
 
                            return Mono.just(ObjectLockRetention.builder()

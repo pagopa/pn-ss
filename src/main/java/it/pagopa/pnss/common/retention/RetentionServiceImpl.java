@@ -178,13 +178,6 @@ public class RetentionServiceImpl implements RetentionService {
                                 headObjectResponse.objectLockRetainUntilDate(),
                                 objectLockRetentionMode);
 
-                       LocalDateTime localDateTime = LocalDateTime.parse(documentChanges.getRetentionUntil(), FORMATTER);
-                       ZonedDateTime zonedDateTime = localDateTime.atZone(ZoneId.systemDefault());
-                       Instant parsedRetentionUntil = zonedDateTime.toInstant();
-
-                       if (headObjectResponse.objectLockRetainUntilDate().equals(parsedRetentionUntil))
-                           return Mono.just(documentEntity);
-
                        if (objectLockRetentionMode == null || objectLockRetentionMode.isBlank()) {
                            return Mono.error(new RetentionException("Valore non trovato per la variabile \"PnSsBucketLockRetentionMode\""));
                        }
@@ -194,6 +187,14 @@ public class RetentionServiceImpl implements RetentionService {
                        // l'applicazione esterna impone la modifica della retentionUntil
                        if (documentChanges.getRetentionUntil() != null && !documentChanges.getRetentionUntil().isBlank() &&
                            !documentChanges.getRetentionUntil().equalsIgnoreCase("null")) {
+
+                           LocalDateTime localDateTime = LocalDateTime.parse(documentChanges.getRetentionUntil(), FORMATTER);
+                           ZonedDateTime zonedDateTime = localDateTime.atZone(ZoneId.systemDefault());
+                           Instant parsedRetentionUntil = zonedDateTime.toInstant();
+
+                           if (headObjectResponse.objectLockRetainUntilDate().equals(parsedRetentionUntil))
+                               return Mono.just(documentEntity);
+
                            return Mono.just(ObjectLockRetention.builder()
                                            .retainUntilDate(parsedRetentionUntil)
                                            .mode(objectLockRetentionMode)

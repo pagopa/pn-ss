@@ -221,8 +221,8 @@ public class DocumentServiceImpl implements DocumentService {
 
 
                 if ( documentChanges.getDocumentState() != null && (
-                        documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
-                                documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
+                        documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
+                                documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))) {
 
                     String storageType;
                     if (documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
@@ -253,8 +253,8 @@ public class DocumentServiceImpl implements DocumentService {
             .flatMap(documentEntityStored -> {
 
                 if (!StringUtils.isBlank(documentChanges.getRetentionUntil()) || (documentChanges.getDocumentState() != null && (
-                        documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
-                                documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED)))) {
+                        documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
+                                documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED)))) {
 
 		                   return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
 		                           authApiKey,

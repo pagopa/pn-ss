@@ -90,4 +90,10 @@ public class S3ServiceImpl implements S3Service {
                 .doOnNext(putObjectRetentionResponse -> log.debug("Put retention to object in bucket {} having key {}", bucketName, key));
     }
 
+    @Override
+    public Mono<PutObjectTaggingResponse> putObjectTagging(String key, String bucketName, Tagging tagging) {
+        return Mono.fromCompletionStage(s3AsyncClient.putObjectTagging(builder -> builder.key(key).bucket(bucketName).tagging(tagging)))
+                .doOnNext(putObjectTaggingResponse -> log.debug("Put tagging to object in bucket {} having key {}", bucketName, key));
+    }
+
 }

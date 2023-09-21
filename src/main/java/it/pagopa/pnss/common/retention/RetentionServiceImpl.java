@@ -203,6 +203,7 @@ public class RetentionServiceImpl implements RetentionService {
                                      .flatMap(objectLockRetention -> {
                                          log.info(CLIENT_METHOD_INVOCATION + ARG + ARG, "s3Service.putObjectRetention()", documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
                                          return s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention)
+                                                 .doOnSuccess(result -> documentEntity.setRetentionUntil(documentChanges.getRetentionUntil()))
                                                  .onErrorResume(S3Exception.class, throwable -> {
                                                      String errMsg = String.format("Error updating retention date '%s' from S3 bucket '%s' on document '%s'", objectLockRetention.retainUntilDate().toString(), bucketName.ssHotName(), documentEntity.getDocumentKey());
                                                      return Mono.error(new RetentionException(errMsg));

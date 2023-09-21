@@ -6,7 +6,6 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
 import it.pagopa.pnss.common.constant.*;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
@@ -20,6 +19,7 @@ import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
+import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,10 +29,8 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.PutObjectTaggingRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
+import software.amazon.awssdk.services.s3.model.Tagging;
+
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Objects;
@@ -54,15 +52,17 @@ public class DocumentServiceImpl implements DocumentService {
     private final AwsConfigurationProperties awsConfigurationProperties;
     private final BucketName bucketName;
     private final CallMacchinaStati callMacchinaStati;
+    private final S3Service s3Service;
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
                                RetentionService retentionService, AwsConfigurationProperties awsConfigurationProperties,
-                               BucketName bucketName, CallMacchinaStati callMacchinaStati) {
+                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service) {
         this.docTypesService = docTypesService;
         this.callMacchinaStati = callMacchinaStati;
+        this.s3Service = s3Service;
         this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
                                                                                   TableSchema.fromBean(DocumentEntity.class));
         this.objectMapper = objectMapper;
@@ -183,7 +183,7 @@ public class DocumentServiceImpl implements DocumentService {
                         return Mono.just(documentEntity);
                     }
                 })
-                .map(documentEntityStored -> {
+                .flatMap(documentEntityStored -> {
                     log.debug("patchDocument() : (recupero documentEntity dal DB) documentEntityStored = {}", documentEntityStored);
                     if (!StringUtils.isBlank(documentChanges.getDocumentState())) {
                         // il vecchio stato viene considerato nella gestione della retentionUntil
@@ -224,38 +224,31 @@ public class DocumentServiceImpl implements DocumentService {
                         documentChanges.getDocumentState().toUpperCase().equals(Constant.AVAILABLE) ||
                                 documentChanges.getDocumentState().toUpperCase().equals(Constant.ATTACHED))) {
 
-                    log.debug("patchDocument() : START Tagging");
-                    Region region = Region.of(awsConfigurationProperties.regionCode());
-                    S3AsyncClient s3 = S3AsyncClient.builder().region(region).build();
                     String storageType;
-                    PutObjectTaggingRequest putObjectTaggingRequest;
                     if (documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
                         if (documentEntityStored.getDocumentType()
                                 .getStatuses()
                                 .containsKey(documentEntityStored.getDocumentLogicalState())) {
+                            log.debug("patchDocument() : START Tagging");
                             storageType = documentEntityStored.getDocumentType()
                                     .getStatuses()
                                     .get(documentEntityStored.getDocumentLogicalState())
                                     .getStorage();
-                            putObjectTaggingRequest = PutObjectTaggingRequest.builder()
-                                    .bucket(bucketName.ssHotName())
-                                    .key(documentKey)
-                                    .tagging(taggingBuilder -> taggingBuilder.tagSet(setTag -> {
-                                        setTag.key(STORAGE_TYPE);
-                                        setTag.value(storageType);
-                                    }))
-                                    .build();
-                            log.info(Constant.CLIENT_METHOD_INVOCATION, "s3Service.putObjectTagging()", putObjectTaggingRequest);
-                            CompletableFuture<PutObjectTaggingResponse> putObjectTaggingResponse =
-                                    s3.putObjectTagging(putObjectTaggingRequest);
+                            Tagging tagging = Tagging.builder().tagSet(setTag -> {
+                                setTag.key(STORAGE_TYPE);
+                                setTag.value(storageType);
+                            }).build();
+                            log.info(Constant.CLIENT_METHOD_INVOCATION, "s3Service.putObjectTagging()", tagging);
                             log.debug("patchDocument() : Tagging : storageType {}", storageType);
+                            return s3Service.putObjectTagging(documentKey, bucketName.ssHotName(), tagging)
+                                    .doOnSuccess(result -> log.debug("patchDocument() : END Tagging"))
+                                    .thenReturn(documentEntityStored);
                         } else {
                             log.debug("patchDocument() : Tagging : storageTypeEmpty");
                         }
-                        log.debug("patchDocument() : END Tagging");
                     }
                 }
-                return documentEntityStored;
+                return Mono.just(documentEntityStored);
             })
             .flatMap(documentEntityStored -> {
 

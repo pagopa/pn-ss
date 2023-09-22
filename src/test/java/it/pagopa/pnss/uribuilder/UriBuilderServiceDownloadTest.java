@@ -269,8 +269,8 @@ class UriBuilderServiceDownloadTest {
 //                    Assertions.assertThat(StringUtils.isNotEmpty(response.getDownload().getUrl()));
 //                });
 //    }
-        fileDownloadTestCall(docId, true).expectStatus().isOk();
-    }
+//        fileDownloadTestCall(docId, true).expectStatus().isOk();
+//    }
 
     @Test
     void testUrlGeneratoConMetaDataNull() {

@@ -25,6 +25,6 @@
     "MinTasksNumber": "3",
     "MaxTasksNumber": "13",
     "AutoscalingThreshold": "15000",
-    "PnSsUriBuilderGetFileCanExecutePatch": "true"
+    "PnSsUriBuilderGetFileCanExecutePatch": "false"
   }
 }

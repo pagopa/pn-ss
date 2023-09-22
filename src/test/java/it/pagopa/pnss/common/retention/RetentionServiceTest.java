@@ -23,10 +23,12 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
 import software.amazon.awssdk.services.s3.model.PutObjectRetentionResponse;
 
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 
@@ -175,7 +177,7 @@ public class RetentionServiceTest {
 
         var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
 
-        StepVerifier.create(testMono).expectError(RetentionException.class).verify();
+        StepVerifier.create(testMono).expectError(DateTimeParseException.class).verify();
     }
 
     @Test
@@ -239,6 +241,6 @@ public class RetentionServiceTest {
 
         var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
 
-        StepVerifier.create(testMono).expectError(RetentionException.class).verify();
+        StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
     }
 }

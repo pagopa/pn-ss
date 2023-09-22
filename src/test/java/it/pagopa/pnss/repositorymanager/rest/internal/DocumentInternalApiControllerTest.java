@@ -303,7 +303,7 @@ public class DocumentInternalApiControllerTest {
 	void patchItemIdempotenceOk() {
 
 		DocumentChanges docChanges = new DocumentChanges();
-		docChanges.setDocumentState(AVAILABLE);
+		docChanges.setDocumentState(SAVED);
 		docChanges.setContentLenght(new BigDecimal(50));
 
 		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))

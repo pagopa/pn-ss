@@ -41,29 +41,13 @@ public class JettyHttpClientConf {
 
     private Request enhance(Request request) {
 
-        request.onRequestBegin(theRequest -> log.info("Start {} request to {}", theRequest.getMethod(), theRequest.getURI()));
+        request.onRequestBegin(theRequest -> log.debug("Start {} request to {}", theRequest.getMethod(), theRequest.getURI()));
 
-        request.onRequestHeaders(theRequest -> {
-            for (HttpField header : theRequest.getHeaders()) {
-                log.debug("Header {} --> {}", header.getName(), header.getValue());
-            }
-        });
-
-        request.onRequestContent((theRequest, content) -> {
-            try {
-                log.debug("Request body --> {}", decodeContent(content));
-            } catch (Exception e) {
-                log.error(e.getMessage(), e);
-            }
-        });
+        request.onRequestContent((theRequest, content) -> log.debug("Request body --> {}", decodeContent(content)));
 
         request.onResponseContent((theResponse, content) -> {
             if (CONTENT_TYPE_OF_RESPONSE_BODY_TO_LOG.contains(theResponse.getHeaders().get(CONTENT_TYPE))) {
-                try {
-                    log.debug("Response body --> {}", decodeContent(content));
-                } catch (Exception e) {
-                    log.error(e.getMessage(), e);
-                }
+                log.debug("Response body --> {}", decodeContent(content));
             }
         });
 

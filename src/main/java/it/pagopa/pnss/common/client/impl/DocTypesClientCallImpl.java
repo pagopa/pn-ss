@@ -3,12 +3,15 @@ package it.pagopa.pnss.common.client.impl;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 public class DocTypesClientCallImpl implements DocTypesClientCall {
@@ -27,6 +30,7 @@ public class DocTypesClientCallImpl implements DocTypesClientCall {
         return ssWebClient.get()
                           .uri(String.format(anagraficaDocTypesInternalClientEndpoint, tipologiaDocumento))
                           .retrieve()
+                          .onStatus(NOT_FOUND::equals, response -> Mono.error(new DocumentTypeNotPresentException(tipologiaDocumento)))
                           .bodyToMono(DocumentTypeResponse.class);
     }
 

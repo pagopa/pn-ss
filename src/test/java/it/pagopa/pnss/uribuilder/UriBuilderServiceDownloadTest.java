@@ -1,5 +1,6 @@
 package it.pagopa.pnss.uribuilder;
 
+import com.amazonaws.SdkClientException;
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
 import it.pagopa.pnss.common.DocTypesConstant;
@@ -8,15 +9,14 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.S3BucketException;
+import it.pagopa.pnss.common.client.impl.DocumentClientCallImpl;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,16 +27,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
-import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
-
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.StorageClass;
-
+import software.amazon.awssdk.services.s3.model.*;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -109,6 +107,9 @@ class UriBuilderServiceDownloadTest {
 
     @Value("${default.internal.x-api-key.value:#{null}}")
     private String defaultInternalApiKeyValue;
+
+    @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
+    private String defaultInternalClientIdValue;
 
     private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(String requestIdx, Boolean metadataOnly)
     {
@@ -193,12 +194,15 @@ class UriBuilderServiceDownloadTest {
 //
 //        var now = Instant.now();
 //
+//        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class)))
+//                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
 //        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
 //        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(now).build()));
-//        when(documentClientCall.patchDocument(USER_CONFIGURATION_RESPONSE.getUserConfiguration().getName(), defaultInternalApiKeyValue, docId, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(now))))
+//        when(documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, docId, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(now))))
 //                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
 //
-//        fileDownloadTestCall(docId, true).expectStatus().isOk();
+//
+//        fileDownloadTestCall(docId, false).expectStatus().isOk();
 //    }
 
 //    @Test
@@ -223,6 +227,7 @@ class UriBuilderServiceDownloadTest {
 //        fileDownloadTestCall(docId, true).expectStatus().isOk();
 //    }
 
+
 //    @Test
 //    void testUrlGeneratoConMetaDataNull() {
 //        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
@@ -246,6 +251,85 @@ class UriBuilderServiceDownloadTest {
 //        fileDownloadTestCall(docId, true).expectStatus().isOk();
 //    }
 
+    @Test
+    void createFileDownloadInfoOk() {
+
+        RestoreObjectResponse restoreObjectResponse = RestoreObjectResponse.builder().build();
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.just(restoreObjectResponse));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
+    }
+
+    @Test
+    void recoverDocumentFromBucketRestoreAlreadyInProgress() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("RestoreAlreadyInProgress").build();
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
+    }
+
+    @Test
+    void recoverDocumentFromBucketNoSuchKey() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("NoSuchKey").build();
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono).expectError(S3BucketException.NoSuchKeyException.class).verify();
+    }
+
+    @Test
+    void recoverDocumentFromBucketError() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("Errore Generico").build();
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).statusCode(500).build()));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
+    }
+
+    @Test
+    void recoverDocumentFromBucketSdkClientException() {
+
+        SdkClientException sdkClientException = new SdkClientException("SdkClientException");
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(sdkClientException));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
+    }
+
+    @Test
+    void getPresignedUrlNoSuchKey() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("NoSuchKey").build();
+        Mockito.doReturn(Mono.error(S3Exception.builder().awsErrorDetails(awsErrorDetails).build())).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", AVAILABLE, false);
+        StepVerifier.create(testMono).expectError(S3BucketException.NoSuchKeyException.class).verify();
+    }
+
+    @Test
+    void getPresignedUrlError() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("Errore Generico").errorMessage("Errore Generico").build();
+        Mockito.doReturn(Mono.error(S3Exception.builder().awsErrorDetails(awsErrorDetails).statusCode(500).build())).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", AVAILABLE, false);
+        StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
+    }
+
+    @Test
+    void getPresignedUrlSdkClientException() {
+
+        SdkClientException sdkClientException = new SdkClientException("SdkClientException");
+        Mockito.doReturn(Mono.error(sdkClientException)).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", AVAILABLE, false);
+        StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
+    }
 
 //    @Test
 //    void testFileTrovatoBasketHot(){
@@ -288,7 +372,7 @@ class UriBuilderServiceDownloadTest {
 
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE);
     }
-    
+
 //    @Test
 //    void testDocumentMissingFromBucket() {
 //
@@ -301,6 +385,14 @@ class UriBuilderServiceDownloadTest {
 //    	d.setDocumentState(TECHNICAL_STATUS_BOOKED);
 //
 //    	when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+//
+//        HeadObjectResponse headObjectResponse =  HeadObjectResponse.builder()
+//                .sseCustomerKeyMD5("keymd5")
+//                .checksumSHA256("sha256")
+//                .contentLength(3L)
+//                .objectLockRetainUntilDate(Instant.now())
+//                .build();
+//        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(headObjectResponse));
 //
 //    	mockGetDocument(d, docId);
 //    	fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
@@ -410,6 +502,7 @@ class UriBuilderServiceDownloadTest {
         Document doc = new Document();
         DocumentType type = new DocumentType();
         type.setTipoDocumento(d.getDocumentType());
+        type.setChecksum(DocumentType.ChecksumEnum.MD5);
         doc.setDocumentType(type);
         doc.setDocumentState(d.getDocumentState());
         doc.setDocumentLogicalState(d.getDocumentLogicalState());

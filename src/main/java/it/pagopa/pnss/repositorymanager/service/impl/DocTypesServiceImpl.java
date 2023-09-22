@@ -52,9 +52,7 @@ public class DocTypesServiceImpl implements DocTypesService {
     	if (listEntity == null || listEntity.isEmpty()) {
     		return listDto;
     	}
-    	listEntity.forEach(entity -> {
-    		listDto.add(objectMapper.convertValue(entity, DocumentType.class));
-    	});
+    	listEntity.forEach(entity -> listDto.add(objectMapper.convertValue(entity, DocumentType.class)));
     	return listDto;
     }
 
@@ -70,7 +68,6 @@ public class DocTypesServiceImpl implements DocTypesService {
     }
 
     @Override
-//    public Flux<DocumentType> getAllDocumentType() {
     public Mono<List<DocumentType>> getAllDocumentType() {
         final String GET_ALL_DOCUMENT_TYPE = "DocTypesServiceImpl.getAllDocumentType()";
         log.debug(Constant.INVOKING_METHOD, GET_ALL_DOCUMENT_TYPE, "");

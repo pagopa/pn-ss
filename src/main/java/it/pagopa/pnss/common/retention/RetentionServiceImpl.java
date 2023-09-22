@@ -91,7 +91,7 @@ public class RetentionServiceImpl implements RetentionService {
         }
     }
 
-    private Mono<Integer> getRetentionPeriodInDays(String documentKey, String documentState, String documentType,
+    protected Mono<Integer> getRetentionPeriodInDays(String documentKey, String documentState, String documentType,
                                                    String authPagopaSafestorageCxId, String authApiKey)
             throws RetentionException {
         log.debug(Constant.INVOKING_METHOD + ARG + ARG, "RetentionServiceImpl.getRetentionPeriodInDays()", documentKey, documentState, documentType);
@@ -125,13 +125,11 @@ public class RetentionServiceImpl implements RetentionService {
                 }
             }
             throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", documentKey));
-        }).doOnError(e -> {
-            log.error("getDefaultRetention() : errore : {}", e.getMessage(), e);
-        });
+        }).doOnError(e -> log.error("getDefaultRetention() : errore : {}", e.getMessage(), e));
 
     }
 
-    private Instant getRetainUntilDate(Instant dataCreazione, Integer retentionPeriod) throws RetentionException {
+    protected Instant getRetainUntilDate(Instant dataCreazione, Integer retentionPeriod) throws RetentionException {
         try {
             return dataCreazione.plus(Period.ofDays(retentionPeriod));
         } catch (Exception e) {

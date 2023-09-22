@@ -3,11 +3,9 @@ package it.pagopa.pnss.transformation.service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.model.*;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.time.Duration;
-import java.util.Map;
 
 public interface S3Service {
 

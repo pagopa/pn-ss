@@ -15,7 +15,6 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionIn
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
 
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
@@ -56,7 +55,6 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Set;
 
 @Configuration
 public class AwsConfiguration {

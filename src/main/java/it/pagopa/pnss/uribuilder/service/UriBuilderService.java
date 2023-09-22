@@ -84,8 +84,9 @@ public class UriBuilderService {
     private final S3Service s3Service;
     private final S3Presigner s3Presigner;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
-    private final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
-    private final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
+    private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
+
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
@@ -395,7 +396,7 @@ public class UriBuilderService {
                                 .contentType(doc.getContentType())
                                 .documentType(doc.getDocumentType().getTipoDocumento())
                                 .key(fileKey)
-                                .versionId(null))                
+                                .versionId(null))
                 .onErrorResume(DateTimeException.class, throwable ->
                 {
                     log.error("getFileDownloadResponse() : errore nel parsing o nella formattazione della data = {}", throwable.getMessage(), throwable);
@@ -425,7 +426,7 @@ public class UriBuilderService {
 
         RestoreRequest restoreRequest = RestoreRequest.builder()
                 .days(stayHotTime)
-                .glacierJobParameters(GlacierJobParameters.builder().tier(Tier.STANDARD).build())
+                .glacierJobParameters(builder -> builder.tier(Tier.STANDARD))
                 .build();
 
         log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG + Constant.ARG, "s3Service.restoreObject()", keyName, bucketName, restoreRequest);

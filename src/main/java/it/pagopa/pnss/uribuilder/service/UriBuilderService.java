@@ -74,7 +74,7 @@ public class UriBuilderService {
     @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
     private String defaultInternalClientIdValue;
 
-    @Value("${uri.builder.can-execute-patch}")
+    @Value("${uri.builder.get-file.can-execute-patch}")
     private boolean canExecutePatch;
 
     private final UserConfigurationClientCall userConfigurationClientCall;

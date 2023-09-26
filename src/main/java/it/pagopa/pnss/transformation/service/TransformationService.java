@@ -63,7 +63,7 @@ public class TransformationService {
                 return objectTransformation(detailObject.getObject().getKey(), detailObject.getBucketOriginDetail().getName(), true);
             })
             .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
-            .doOnError(throwable -> log.error("* FATAL * An error occurred during transformations -> {}", throwable.getMessage()))
+            .doOnError(throwable -> log.error("An error occurred during transformations -> {}", throwable.getMessage()))
             .subscribe();
     }
 

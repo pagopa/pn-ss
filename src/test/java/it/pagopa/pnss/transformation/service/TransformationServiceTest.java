@@ -4,6 +4,7 @@ import io.awspring.cloud.messaging.listener.Acknowledgment;
 import it.pagopa.pn.template.internal.rest.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.exception.S3BucketException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.model.dto.BucketOriginDetail;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
@@ -23,6 +24,7 @@ import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.List;
 import java.util.Map;
@@ -62,6 +64,35 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+    }
+
+    @Test
+    void newStagingBucketObjectCreatedEventKo() {
+
+        S3Object s3Object = new S3Object();
+        s3Object.setKey("111-DDD");
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+
+        mockGetDocument("application/pdf");
+        when(s3Service.getObject(anyString(), anyString())).thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), new byte[10])));
+        mockArubaCalls();
+
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
+        StepVerifier.create(testMono).expectError().verify();
+
     }
 
     @ParameterizedTest

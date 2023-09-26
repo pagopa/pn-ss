@@ -19,7 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
-
+import java.util.concurrent.atomic.AtomicReference;
+import static it.pagopa.pnss.common.constant.Constant.NOT_VALID_OBJECT_OR_KEY;
 import static it.pagopa.pnss.common.utils.SqsUtils.logIncomingMessage;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
@@ -51,6 +52,9 @@ public class TransformationService {
     }
 
     public Mono<Void> newStagingBucketObjectCreatedEvent(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
+
+        AtomicReference<String> fileKeyReference = new AtomicReference<>("");
+
         return Mono.fromCallable(() -> {
                     logIncomingMessage(signQueueName, newStagingBucketObject);
                     return newStagingBucketObject;
@@ -63,10 +67,12 @@ public class TransformationService {
                         createdS3ObjectDto -> log.debug("The new staging bucket object with id {} was discarded", newStagingBucketObject.getId()))
                 .flatMap(createdS3ObjectDto -> {
                     var detailObject = createdS3ObjectDto.getCreationDetailObject();
-                    return objectTransformation(detailObject.getObject().getKey(), detailObject.getBucketOriginDetail().getName(), true);
+                    var key = detailObject.getObject().getKey();
+                    fileKeyReference.set(key);
+                    return objectTransformation(key, detailObject.getBucketOriginDetail().getName(), true);
                 })
                 .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
-                .doOnError(throwable -> log.error("* FATAL * An error occurred during transformations -> {}", throwable.getMessage()));
+                .doOnError(throwable -> log.error("An error occurred during transformations on file with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()));
     }
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {

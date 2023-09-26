@@ -49,6 +49,22 @@ class StreamsRecordProcessorTest {
         Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
         StepVerifier.create(eventSendToBridge).expectNextCount(1).verifyComplete();
     }
+    @Test
+    void testProcessRecordsOk() {
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+
+        ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
+        List<Record> records = new ArrayList<>();
+
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,SAVED);
+
+        records.add(new RecordAdapter(recordDyanmo));
+        processRecordsInput.withRecords(records);
+
+        Assertions.assertDoesNotThrow(() -> {
+            srp.processRecords(processRecordsInput);
+        });
+    }
 
     @Test
     void testSendMessageEventBridgeInsert() {

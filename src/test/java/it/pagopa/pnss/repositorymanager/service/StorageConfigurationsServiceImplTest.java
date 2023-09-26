@@ -19,7 +19,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
-public class StorageConfigurationsServiceImplTest {
+class StorageConfigurationsServiceImplTest {
 
     @Autowired
     StorageConfigurationsServiceImpl storageConfigurationsService;

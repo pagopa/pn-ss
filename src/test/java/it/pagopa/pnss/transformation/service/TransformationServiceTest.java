@@ -33,7 +33,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @SpringBootTestWebEnv
-public class TransformationServiceTest {
+class TransformationServiceTest {
 
     @SpyBean
     private TransformationService transformationService;

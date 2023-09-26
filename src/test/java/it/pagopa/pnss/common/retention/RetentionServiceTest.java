@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-public class RetentionServiceTest {
+class RetentionServiceTest {
 
     @Autowired
     private RetentionServiceImpl retentionService;

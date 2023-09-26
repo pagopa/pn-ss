@@ -166,7 +166,8 @@ public class RetentionServiceImpl implements RetentionService {
     public Mono<DocumentEntity> setRetentionPeriodInBucketObjectMetadata(String authPagopaSafestorageCxId, String authApiKey,
                                                                          DocumentChanges documentChanges, DocumentEntity documentEntity,
                                                                          String oldState) {
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG, "RetentionServiceImpl.setRetentionPeriodInBucketObjectMetadata()", authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
+        final String METHOD_NAME = "RetentionServiceImpl.setRetentionPeriodInBucketObjectMetadata()";
+        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG, METHOD_NAME, authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
         log.info(CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.headObject()", documentEntity.getDocumentKey(), bucketName.ssHotName());
 
                   return s3Service.headObject(documentEntity.getDocumentKey(), bucketName.ssHotName())
@@ -270,8 +271,8 @@ public class RetentionServiceImpl implements RetentionService {
                        return Mono.just(documentEntity);
                    })
                    // gestione errore
-                   .doOnError(throwable -> log.error(ENDING_PROCESS_WITH_ERROR,"RetentionServiceImpl.setRetentionPeriodInBucketObjectMetadata()", throwable, throwable.getMessage()))
-                   .doOnSuccess(document -> log.info(SUCCESSFUL_OPERATION_LABEL, document.getDocumentKey(), "RetentionServiceImpl.setRetentionPeriodInBucketObjectMetadata()", document));
+                   .doOnError(throwable -> log.error(ENDING_PROCESS_WITH_ERROR, METHOD_NAME, throwable, throwable.getMessage()))
+                   .doOnSuccess(document -> log.info(SUCCESSFUL_OPERATION_LABEL, document.getDocumentKey(), METHOD_NAME, document));
     }
 
 }

@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
-public class DocumentsConfigsServiceImplTest {
+class DocumentsConfigsServiceImplTest {
 
     @Autowired
     StorageConfigurationsServiceImpl storageConfigurationsService;

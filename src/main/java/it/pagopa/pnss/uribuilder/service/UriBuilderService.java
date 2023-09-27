@@ -300,6 +300,7 @@ public class UriBuilderService {
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, String xTraceIdValue, Boolean metadataOnly) {
         final String XTRACEIDVALUE = "xTraceIdValue in UriBuilderService createUriForDownloadFile()";
+        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG, "createUriForDownloadFile", fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly);
 
         log.info(Constant.CHECKING_VALIDATION_PROCESS, XTRACEIDVALUE);
         if (xTraceIdValue == null || StringUtils.isBlank(xTraceIdValue)) {

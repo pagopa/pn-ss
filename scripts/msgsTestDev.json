@@ -1,0 +1,94 @@
+[
+    {
+        "eventName": "ObjectCreated:Put",
+        "eventSource": "aws:s3",
+        "eventTime": "2023-09-26T08:51:43.814Z",
+        "s3": {
+            "bucket": {
+                "arn": "arn:aws:s3:::pn-safestorage-eu-south-1-089813480515",
+                "name": "pn-safestorage-eu-south-1-089813480515",
+                "ownerIdentity": {
+                    "principalId": "A3FTK2F08564LO"
+                }
+            },
+            "configurationId": "25d4e300-4a41-452b-ba32-b903e6e31db6",
+            "object": {
+                "eTag": "379eb218bf7b58bc526c342ad38fc621",
+                "key": "PN_LEGAL_FACTS-14585f7814614c17ae29bde18fa31b08.pdf",
+                "sequencer": "0065129B9FC06FAAE0",
+                "size": 70060,
+                "versionId": "R57Pqigi4vuNGjcfCUictLT2IPkpt.TT"
+            },
+            "s3SchemaVersion": "1.0"
+        }
+    },
+    {
+        "eventName": "ObjectCreated:Put",
+        "eventSource": "aws:s3",
+        "eventTime": "2023-09-26T08:51:43.814Z",
+        "s3": {
+            "bucket": {
+                "arn": "arn:aws:s3:::pn-safestorage-eu-south-1-089813480515",
+                "name": "pn-safestorage-eu-south-1-089813480515",
+                "ownerIdentity": {
+                    "principalId": "A3FTK2F08564LO"
+                }
+            },
+            "configurationId": "25d4e300-4a41-452b-ba32-b903e6e31db6",
+            "object": {
+                "eTag": "379eb218bf7b58bc526c342ad38fc621",
+                "key": "PN_NOTIFICATION_ATTACHMENTS-b2e1e4a2f1ff4facbc583c45a364f067.pdf",
+                "sequencer": "0065129B9FC06FAAE0",
+                "size": 70060,
+                "versionId": "R57Pqigi4vuNGjcfCUictLT2IPkpt.TT"
+            },
+            "s3SchemaVersion": "1.0"
+        }
+    },
+    {
+        "eventName": "ObjectCreated:Put",
+        "eventSource": "aws:s3",
+        "eventTime": "2023-09-26T08:51:43.814Z",
+        "s3": {
+            "bucket": {
+                "arn": "arn:aws:s3:::pn-safestorage-eu-south-1-089813480515",
+                "name": "pn-safestorage-eu-south-1-089813480515",
+                "ownerIdentity": {
+                    "principalId": "A3FTK2F08564LO"
+                }
+            },
+            "configurationId": "25d4e300-4a41-452b-ba32-b903e6e31db6",
+            "object": {
+                "eTag": "379eb218bf7b58bc526c342ad38fc621",
+                "key": "PN_NOTIFICATION_ATTACHMENTS-notFound.pdf",
+                "sequencer": "0065129B9FC06FAAE0",
+                "size": 70060,
+                "versionId": "R57Pqigi4vuNGjcfCUictLT2IPkpt.TT"
+            },
+            "s3SchemaVersion": "1.0"
+        }
+    },
+    {
+        "eventName": "eventNotManaged",
+        "eventSource": "aws:s3",
+        "eventTime": "2023-09-26T08:51:43.814Z",
+        "s3": {
+            "bucket": {
+                "arn": "arn:aws:s3:::pn-safestorage-eu-south-1-089813480515",
+                "name": "pn-safestorage-eu-south-1-089813480515",
+                "ownerIdentity": {
+                    "principalId": "A3FTK2F08564LO"
+                }
+            },
+            "configurationId": "25d4e300-4a41-452b-ba32-b903e6e31db6",
+            "object": {
+                "eTag": "379eb218bf7b58bc526c342ad38fc621",
+                "key": "PN_NOTIFICATION_ATTACHMENTS-b2e1e4a2f1ff4facbc583c45a364f067.pdf",
+                "sequencer": "0065129B9FC06FAAE0",
+                "size": 70060,
+                "versionId": "R57Pqigi4vuNGjcfCUictLT2IPkpt.TT"
+            },
+            "s3SchemaVersion": "1.0"
+        }
+    }
+]

@@ -337,6 +337,7 @@ Resources:
         SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
+        VisibilityTimeout: 60
         QueueHasAlarm: 'false'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 

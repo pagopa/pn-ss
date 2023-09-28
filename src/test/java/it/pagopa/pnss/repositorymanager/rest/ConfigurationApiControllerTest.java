@@ -1,10 +1,20 @@
 package it.pagopa.pnss.repositorymanager.rest;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.*;
+import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
+import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
+import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import it.pagopa.pnss.repositorymanager.exception.BucketException;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
+import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,9 +28,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
@@ -30,6 +37,7 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.services.s3.model.*;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
@@ -48,14 +56,15 @@ public class ConfigurationApiControllerTest {
 	private final String userConfigurationApiKey = "sortedKey2";
 	private final String xApiKeyValue = userConfigurationApiKey;
 	private final String xPagopaSafestorageCxIdValue = userConfigurationName;
-	
 	private static Mono<UserConfigurationResponse> userConfigurationResponse;
-	
     @MockBean
     UserConfigurationClientCall userConfigurationClientCall;
-	
-//	private static final String BASE_URL_CONFIGURATIONS_DOC_TYPE = "/safe-storage/v1/configurations/documents-types";
-	
+	@MockBean
+	S3ServiceImpl s3Service;
+	@MockBean
+	DocTypesService docTypesService;
+
+	private static final String BASE_URL_CONFIGURATIONS_DOC_TYPE = "/safe-storage/v1/configurations/documents-types";
 	private static final String BASE_PATH_CONFIGURATIONS_USER_CONF = "/safe-storage/v1/configurations/clients/";
 	private static final String BASE_PATH_CONFIGURATIONS_USER_CONF_WITH_PARAM = String.format("%s/{clientId}", BASE_PATH_CONFIGURATIONS_USER_CONF);
 	
@@ -140,100 +149,96 @@ public class ConfigurationApiControllerTest {
 	@Test
 	void getDocumentsConfigs() {
 		log.info("Test 1. getDocumentsConfigs() : START");
-		
-		//TODO ripristinare, dopo aver aggiunto lifecycleRule per bucket relativo a PnSsBucketName
-		
-//		final TipoDocumentoEnum namePrimo = TipoDocumentoEnum.AAR;
-//		DocumentType docTypePrimoInput = getDocumentType(namePrimo);
-//		
-//		EntityExchangeResult<DocumentType> resultPrimo =
-//			webTestClient.get()
-//				.uri(uriBuilder -> uriBuilder.path(BASE_URL_DOC_TYPE_WITH_PARAM).build(namePrimo.getValue()))
-//				.accept(APPLICATION_JSON)
-//				.exchange()
-//				.expectBody(DocumentType.class).returnResult();
-//		boolean inseritoPrimo = false;
-//		if (resultPrimo != null && resultPrimo.getResponseBody() != null) 
-//		{
-//			webTestClient.post()
-//				.uri(BASE_URL_DOC_TYPE)
-//				.accept(APPLICATION_JSON)
-//				.contentType(APPLICATION_JSON)
-//				.body(BodyInserters.fromValue(docTypePrimoInput))
-//				.exchange()
-//				.expectStatus().isOk();
-//			
-//			inseritoPrimo = true;
-//			
-//			log.info("Test 1. getDocumentsConfigs() : docType (Primo Input) inserito : {}", docTypePrimoInput);
-//		}
-//		else {
-//			log.info("Test 1. getDocumentsConfigs() : docType (Primo Input) presente : key {}", namePrimo.getValue());
-//		}
-//		
-//		TipoDocumentoEnum nameSecondo = TipoDocumentoEnum.EXTERNAL_LEGAL_FACTS;
-//		DocumentType docTypeSecondoInput = getDocumentType(nameSecondo);
-//
-//		EntityExchangeResult<DocumentType> resultSecondo =
-//				webTestClient.get()
-//					.uri(uriBuilder -> uriBuilder.path(BASE_URL_DOC_TYPE_WITH_PARAM).build(nameSecondo.getValue()))
-//					.accept(APPLICATION_JSON)
-//					.exchange()
-//					.expectBody(DocumentType.class).returnResult();
-//		boolean inseritoSecondo = false;
-//		if (resultSecondo != null && resultSecondo.getResponseBody() != null) 
-//		{
-//			webTestClient.post()
-//				.uri(BASE_URL_DOC_TYPE)
-//				.accept(APPLICATION_JSON)
-//				.contentType(APPLICATION_JSON)
-//				.body(BodyInserters.fromValue(docTypeSecondoInput))
-//				.exchange()
-//				.expectStatus().isOk();
-//			
-//			inseritoSecondo = true;
-//			
-//			log.info("Test 1. getDocumentsConfigs() : docType (Secondo Input) inserito : {}", docTypeSecondoInput);
-//		}
-//		else {
-//			log.info("Test 1. getDocumentsConfigs() : docType (Secondo Input) presente : key {}", nameSecondo.getValue());
-//		}
-//		
-//		EntityExchangeResult<DocumentTypesConfigurations> docTypeInserted = webTestClient.get()
-//				.uri(BASE_URL_CONFIGURATIONS_DOC_TYPE)
-//		        .accept(APPLICATION_JSON)
-//		        .exchange()
-//		        .expectStatus().isOk()
-//		        .expectBody(DocumentTypesConfigurations.class).returnResult();
-//		
-//		DocumentTypesConfigurations result = docTypeInserted.getResponseBody();
-//		
-//		log.info("Test 1. getDocumentsConfigs() : get list docTypes : {}", docTypeInserted.getResponseBody());
-//		
-//		Assertions.assertNotNull(result);
-//		Assertions.assertNotNull(result.getDocumentsTypes());
-////		Assertions.assertEquals(2,result.getDocumentsTypes().size());
-//		
-//		log.info("Test 1. getDocumentsConfigs() : test passed");
-//		
-//		if (inseritoPrimo) {
-//			webTestClient.delete()
-//				.uri(BASE_URL_DOC_TYPE+"/"+ namePrimo.getValue())
-//		        .accept(APPLICATION_JSON)
-//		        .exchange()
-//		        .expectStatus().isOk();
-//		}
-//		
-//		if (inseritoSecondo) {
-//			webTestClient.delete()
-//				.uri(BASE_URL_DOC_TYPE+"/"+ nameSecondo.getValue())
-//		        .accept(APPLICATION_JSON)
-//		        .exchange()
-//		        .expectStatus().isOk();
-//		}
 
+		List<DocumentType> documentTypeList = new ArrayList<>();
+		createListDocType(documentTypeList);
+
+		LifecycleRule lifecycleRule = createLifeCycleRule();
+
+		GetBucketLifecycleConfigurationResponse getBucketResponse = GetBucketLifecycleConfigurationResponse.builder().rules(List.of(lifecycleRule)).build();
+
+		when(s3Service.getBucketLifecycleConfiguration(anyString())).thenReturn(Mono.just(getBucketResponse));
+		when(docTypesService.getAllDocumentType()).thenReturn(Mono.just(documentTypeList));
+
+		EntityExchangeResult<DocumentTypesConfigurations> docTypeInserted = webTestClient.get()
+				.uri(BASE_URL_CONFIGURATIONS_DOC_TYPE)
+		        .accept(APPLICATION_JSON)
+		        .exchange()
+		        .expectStatus().isOk()
+		        .expectBody(DocumentTypesConfigurations.class).returnResult();
+
+		DocumentTypesConfigurations result = docTypeInserted.getResponseBody();
+
+		log.info("Test 1. getDocumentsConfigs() : get list docTypes : {}", docTypeInserted.getResponseBody());
+
+		Assertions.assertNotNull(result);
+		Assertions.assertNotNull(result.getDocumentsTypes());
 	}
-	
+
+	@Test
+	void getDocumentsConfigsDocumentTypeNotPresentException() {
+
+		LifecycleRule lifecycleRule = createLifeCycleRule();
+
+		GetBucketLifecycleConfigurationResponse getBucketResponse = GetBucketLifecycleConfigurationResponse.builder().rules(List.of(lifecycleRule)).build();
+		when(s3Service.getBucketLifecycleConfiguration(anyString())).thenReturn(Mono.just(getBucketResponse));
+		when(docTypesService.getAllDocumentType()).thenReturn(Mono.error(new DocumentTypeNotPresentException("key")));
+
+		webTestClient.get()
+				.uri(BASE_URL_CONFIGURATIONS_DOC_TYPE)
+				.accept(APPLICATION_JSON)
+				.exchange()
+				.expectStatus().isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
+	void getDocumentsConfigsBucketException() {
+
+		LifecycleRule lifecycleRule = createLifeCycleRule();
+
+		GetBucketLifecycleConfigurationResponse getBucketResponse = GetBucketLifecycleConfigurationResponse.builder().rules(List.of(lifecycleRule)).build();
+		when(s3Service.getBucketLifecycleConfiguration(anyString())).thenReturn(Mono.just(getBucketResponse));
+		when(docTypesService.getAllDocumentType()).thenReturn(Mono.error(new BucketException()));
+
+		webTestClient.get()
+				.uri(BASE_URL_CONFIGURATIONS_DOC_TYPE)
+				.accept(APPLICATION_JSON)
+				.exchange()
+				.expectStatus().isEqualTo(HttpStatus.BAD_REQUEST);
+	}
+
+	@Test
+	void getDocumentsConfigsIdClientNotFoundException() {
+
+		LifecycleRule lifecycleRule = createLifeCycleRule();
+
+		GetBucketLifecycleConfigurationResponse getBucketResponse = GetBucketLifecycleConfigurationResponse.builder().rules(List.of(lifecycleRule)).build();
+		when(s3Service.getBucketLifecycleConfiguration(anyString())).thenReturn(Mono.just(getBucketResponse));
+		when(docTypesService.getAllDocumentType()).thenReturn(Mono.error(new IdClientNotFoundException("idClient123")));
+
+		webTestClient.get()
+				.uri(BASE_URL_CONFIGURATIONS_DOC_TYPE)
+				.accept(APPLICATION_JSON)
+				.exchange()
+				.expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+	}
+
+	@Test
+	void getDocumentsConfigsException() {
+
+		LifecycleRule lifecycleRule = createLifeCycleRule();
+
+		GetBucketLifecycleConfigurationResponse getBucketResponse = GetBucketLifecycleConfigurationResponse.builder().rules(List.of(lifecycleRule)).build();
+		when(s3Service.getBucketLifecycleConfiguration(anyString())).thenReturn(Mono.just(getBucketResponse));
+		when(docTypesService.getAllDocumentType()).thenReturn(Mono.error(new Exception("Exception Generica")));
+
+		webTestClient.get()
+				.uri(BASE_URL_CONFIGURATIONS_DOC_TYPE)
+				.accept(APPLICATION_JSON)
+				.exchange()
+				.expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
 	@Test
 	void getCurrentClientConfig() {
 		
@@ -293,6 +298,62 @@ public class ConfigurationApiControllerTest {
 	    
 	    log.info("\n Test 4 (getCurrentClientIncorrectParameter) test passed \n");
 	}
-	
 
+	void createListDocType(List<DocumentType> listDocTypes){
+		DocumentType documentType1 = new DocumentType();
+		DocumentType documentType2 = new DocumentType();
+
+		documentType1.setTipoDocumento("PN_NOTIFICATION_ATTACHMENTS");
+		documentType2.setTipoDocumento("PN_LEGAL_FACTS");
+
+		documentType1.setInitialStatus("PRELOADED");
+		documentType1.setInitialStatus("SAVED");
+
+		CurrentStatus documentTypeConfigurationStatuses = new CurrentStatus();
+		documentTypeConfigurationStatuses.setStorage("AVAILABLE");
+
+		List<String> allowedStatusTransitions = new ArrayList<>();
+		allowedStatusTransitions.add("ATTACHED");
+		documentTypeConfigurationStatuses.setAllowedStatusTransitions(allowedStatusTransitions);
+
+		documentType1.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
+		documentType2.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
+
+		documentType1.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
+		documentType2.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
+
+		documentType1.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+		documentType2.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+
+		documentType1.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
+		documentType2.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
+
+		documentType1.setChecksum(DocumentType.ChecksumEnum.SHA256);
+		documentType2.setChecksum(DocumentType.ChecksumEnum.SHA256);
+
+		listDocTypes.add(documentType1);
+		listDocTypes.add(documentType2);
+	}
+
+	LifecycleRule createLifeCycleRule(){
+
+		List<Transition> transitions = new ArrayList<>();
+		transitions.add(Transition.builder().days(1).build());
+		transitions.add(Transition.builder().days(2).build());
+
+		return LifecycleRule.builder()
+				.id("01")
+				.filter(LifecycleRuleFilter.builder()
+						.and(LifecycleRuleAndOperator.builder()
+								.prefix("prefix")
+								.tags(Tag.builder()
+										.key("storageType")
+										.value("value")
+										.build())
+								.build())
+						.build())
+				.expiration(LifecycleExpiration.builder().days(500).build())
+				.transitions(transitions)
+				.build();
+	}
 }

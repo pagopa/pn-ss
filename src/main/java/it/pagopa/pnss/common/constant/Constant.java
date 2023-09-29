@@ -20,14 +20,14 @@ public final class Constant {
                                                                                           entry(APPLICATION_XML_VALUE, ".xml"),
                                                                                           entry(IMAGE_TIFF_VALUE, ".tiff"),
                                                                                           entry(APPLICATION_PKCS7_MIME, ".p7m"));
-    public static final String PRELOADED = "preloaded";
-    public static final String ATTACHED = "attached";
-    public static final String SAVED = "saved";
-    public static final String BOOKED = "booked";
-    public static final String FREEZED = "freezed";
-    public static final String AVAILABLE = "available";
-    public static final String STAGED = "staged";
-    public static final String DELETED = "deleted";
+    public static final String PRELOADED = "PRELOADED";
+    public static final String ATTACHED = "ATTACHED";
+    public static final String SAVED = "SAVED";
+    public static final String BOOKED = "BOOKED";
+    public static final String FREEZED = "FREEZED";
+    public static final String AVAILABLE = "AVAILABLE";
+    public static final String STAGED = "STAGED";
+    public static final String DELETED = "DELETED";
 
     public static final String STORAGE_TYPE = "storageType";
     public static final List<String> LISTA_TIPO_DOCUMENTI =

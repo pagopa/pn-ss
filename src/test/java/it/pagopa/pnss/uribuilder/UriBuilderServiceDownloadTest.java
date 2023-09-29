@@ -491,7 +491,7 @@ class UriBuilderServiceDownloadTest {
 
         DocumentInput d = new DocumentInput();
         d.setDocumentType(DocTypesConstant.PN_AAR);
-        d.setDocumentState(TECHNICAL_STATUS_AVAILABLE);
+        d.setDocumentState(AVAILABLE);
 
         mockGetDocument(d, docId);
         fileDownloadTestCall(docId, false).expectStatus().isForbidden();

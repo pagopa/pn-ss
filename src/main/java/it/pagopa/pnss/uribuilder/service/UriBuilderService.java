@@ -414,7 +414,7 @@ public class UriBuilderService {
         log.debug(Constant.INVOKING_METHOD, "UriBuilderService.createFileDownloadInfo()", metadataOnly);
         if (Boolean.TRUE.equals(metadataOnly))
             return Mono.empty();
-        if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
+        if (!status.equalsIgnoreCase(FREEZED)) {
             return getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue);
         } else {
             return recoverDocumentFromBucket(bucketName.ssHotName(), fileKey);

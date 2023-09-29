@@ -11,15 +11,7 @@ public final class Constant {
         throw new IllegalStateException("Constant is a constant class");
     }
 
-    public static final String APPLICATION_ZIP_VALUE = "application/zip";
-    public static final String IMAGE_TIFF_VALUE = "image/tiff";
-    public static final String APPLICATION_PKCS7_MIME = "application/pkcs7-mime";
-    public static final Map<String, String> MEDIA_TYPE_WITH_EXTENSION_MAP = Map.ofEntries(entry(APPLICATION_PDF_VALUE, ".pdf"),
-                                                                                          entry(APPLICATION_ZIP_VALUE, ".zip"),
-                                                                                          entry(APPLICATION_OCTET_STREAM_VALUE, ".bin"),
-                                                                                          entry(APPLICATION_XML_VALUE, ".xml"),
-                                                                                          entry(IMAGE_TIFF_VALUE, ".tiff"),
-                                                                                          entry(APPLICATION_PKCS7_MIME, ".p7m"));
+    //DOCUMENT STATUSES
     public static final String PRELOADED = "preloaded";
     public static final String ATTACHED = "attached";
     public static final String SAVED = "saved";
@@ -29,15 +21,7 @@ public final class Constant {
     public static final String STAGED = "staged";
     public static final String DELETED = "deleted";
 
-    public static final String STORAGE_TYPE = "storageType";
-    public static final List<String> LISTA_TIPO_DOCUMENTI =
-            List.of(APPLICATION_PDF_VALUE, APPLICATION_ZIP_VALUE, APPLICATION_OCTET_STREAM_VALUE, APPLICATION_XML_VALUE, IMAGE_TIFF_VALUE, APPLICATION_PKCS7_MIME);
-    public static final String TECHNICAL_STATUS_BOOKED = "BOOKED";
-    public static final String TECHNICAL_STATUS_ATTACHED = "ATTACHED";
-    public static final String TECHNICAL_STATUS_AVAILABLE = "AVAILABLE";
-    public static final String TECHNICAL_STATUS_FREEZED = "FREEZED";
-    public static final String EVENT_BUS_SOURCE_AVAILABLE_DOCUMENT = "SafeStorageOutcomeEvent";
-    public static final String GESTORE_DISPONIBILITA_EVENT_NAME = "GESTORE DISPONIBILITA";
+    //LOGS CONSTANTS
     public static final String STARTING_PROCESS = "Starting '{}' Process";
     public static final String CHECKING_VALIDATION_PROCESS = "Checking '{}'";
     public static final String VALIDATION_PROCESS_PASSED = "'{}' passed";
@@ -58,4 +42,10 @@ public final class Constant {
     public static final String INVOKING_INTERNAL_SERVICE = "Invoking internal service '{}' '{}'. Waiting Sync response.";
     public static final String CLIENT_METHOD_INVOCATION = "Client method '{}' - args: '{}'";
     public static final String ARG = " - '{}'";
+
+    //OTHER
+    public static final String STORAGE_TYPE = "storageType";
+    public static final String EVENT_BUS_SOURCE_AVAILABLE_DOCUMENT = "SafeStorageOutcomeEvent";
+    public static final String GESTORE_DISPONIBILITA_EVENT_NAME = "GESTORE DISPONIBILITA";
+    public static final String IMAGE_TIFF_VALUE = "image/tiff";
 }

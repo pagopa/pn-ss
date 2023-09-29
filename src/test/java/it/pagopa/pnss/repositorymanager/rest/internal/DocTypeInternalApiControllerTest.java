@@ -7,12 +7,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
+import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -27,6 +32,7 @@ import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
@@ -50,6 +56,8 @@ public class DocTypeInternalApiControllerTest {
 	private static DocumentType docTypesUpdateDeleteInput;
 
 	private static DynamoDbTable<DocTypeEntity> dynamoDbTable;
+	@SpyBean
+	DocTypesService docTypesService;
 
 	private static void insertDocTypeEntity(String tipoDocumento) {
 		log.info("execute insertDocTypeEntity()");
@@ -124,6 +132,17 @@ public class DocTypeInternalApiControllerTest {
 
 		log.info("\n Test 1 (postItem) passed \n");
 
+	}
+
+	@Test
+		// Codice test: DTSS.101.1
+	void postItemInternalServerError() {
+
+			Mockito.doReturn(Mono.error(new Exception("Exception Generica"))).when(docTypesService).insertDocType(Mockito.any(DocumentType.class));
+
+			webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
+					.body(BodyInserters.fromValue(docTypesInsertInput)).exchange().expectStatus()
+					.isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
 	@Test

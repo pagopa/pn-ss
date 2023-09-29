@@ -432,5 +432,43 @@ class UriBuilderUploadTest {
             fcr.setStatus(PRELOADED);
             fileUploadTestCall(fcr).expectStatus().isOk();
         }
+
+        @Test
+        void testContentTypeBlank()
+        {
+            UserConfigurationResponse userConfig = new UserConfigurationResponse();
+            UserConfiguration userConfiguration = new UserConfiguration();
+            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setCanCreate(List.of(PN_AAR));
+            userConfig.setUserConfiguration(userConfiguration);
+
+            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+
+            FileCreationRequest fcr = new FileCreationRequest();
+            fcr.setContentType("");
+            fcr.setDocumentType(PN_AAR);
+            fcr.setStatus(PRELOADED);
+            fileUploadTestCall(fcr).expectStatus().isBadRequest();
+        }
+
+        @Test
+        void testdocumentTypeBlank()
+        {
+            UserConfigurationResponse userConfig = new UserConfigurationResponse();
+            UserConfiguration userConfiguration = new UserConfiguration();
+            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setCanCreate(List.of(PN_AAR));
+            userConfig.setUserConfiguration(userConfiguration);
+
+            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+
+            FileCreationRequest fcr = new FileCreationRequest();
+            fcr.setContentType("application/pdf");
+            fcr.setDocumentType("");
+            fcr.setStatus(PRELOADED);
+            fileUploadTestCall(fcr).expectStatus().isBadRequest();
+        }
     }
 }

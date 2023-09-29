@@ -5,12 +5,16 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -24,6 +28,7 @@ import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
@@ -40,12 +45,15 @@ public class UserConfigurationInternalApiControllerTest {
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{name}", BASE_PATH);
 	private static final String PARTITION_ID_ENTITY = "key";
 //	private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
-	private static final String PARTITION_ID_NO_EXISTENT = "name_bad";
+private static final String PARTITION_ID_NO_EXISTENT = "name_bad";
 
 	private static UserConfiguration userConfigurationInput;
 	private static UserConfigurationChanges userConfigurationChanges;
 
 	private static DynamoDbTable<UserConfigurationEntity> dynamoDbTable;
+
+	@SpyBean
+	UserConfigurationService userConfigurationService;
 
 	private static void insertUserConfigurationEntity(String name) {
 		log.info("execute insertUserConfigurationEntity()");
@@ -56,7 +64,7 @@ public class UserConfigurationInternalApiControllerTest {
 
 	@BeforeAll
 	public static void insertDefaultUserConfiguration(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-			@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+													  @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
 		log.info("execute insertDefaultDocType()");
 		dynamoDbTable = dynamoDbEnhancedClient.table(
 //        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
@@ -99,7 +107,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.101.1
+		// codice test: ANSS.101.1
 	void postItem() {
 
 		EntityExchangeResult<UserConfigurationResponse> resultPreInsert = webTestClient.get()
@@ -118,7 +126,17 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.101.1
+	void postItemInternalServerError() {
+
+		Mockito.doReturn(Mono.error(new Exception("Exception Generica"))).when(userConfigurationService).insertUserConfiguration(Mockito.any(UserConfiguration.class));
+
+		webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(userConfigurationInput)).exchange().expectStatus()
+				.isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
+	@Test
+		// codice test: ANSS.101.1
 	void postItemPartitionKeyDuplicated() {
 
 		EntityExchangeResult<UserConfigurationResponse> resultPreInsert = webTestClient.get()
@@ -139,7 +157,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.101.1
+		// codice test: ANSS.101.1
 	void postItemIncorrectParameter() {
 
 		userConfigurationInput.setName(null);
@@ -152,7 +170,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.100.1
+		// codice test: ANSS.100.1
 	void getItem() {
 
 		webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
@@ -162,7 +180,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.100.2
+		// codice test: ANSS.100.2
 	void getItemIncorrectParameter() {
 
 		webTestClient.get().uri(BASE_PATH).accept(APPLICATION_JSON).exchange().expectStatus()
@@ -172,7 +190,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.100.3
+		// codice test: ANSS.100.3
 	void getItemNoExistentKey() {
 
 		webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
@@ -182,7 +200,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.102.1
+		// codice test: ANSS.102.1
 	void patchItem() {
 
 		EntityExchangeResult<UserConfigurationResponse> documentInDb = webTestClient.get()
@@ -213,7 +231,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.102.2
+		// codice test: ANSS.102.2
 	void patchItemNoExistentKey() {
 
 		userConfigurationInput.setName(PARTITION_ID_NO_EXISTENT);
@@ -227,7 +245,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.102.3
+		// codice test: ANSS.102.3
 	void patchItemIncorrectParameter() {
 
 		webTestClient.patch().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
@@ -238,7 +256,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.103.1
+		// codice test: ANSS.103.1
 	void deleteItem() {
 
 		webTestClient.delete().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
@@ -248,7 +266,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.103.2
+		// codice test: ANSS.103.2
 	void deleteItemNoExistentKey() {
 
 		webTestClient.delete().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
@@ -258,7 +276,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.103.2
+		// codice test: ANSS.103.2
 	void deleteItemIncorrectParameter() {
 
 		webTestClient.delete().uri(BASE_PATH).accept(APPLICATION_JSON).exchange().expectStatus()

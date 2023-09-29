@@ -48,6 +48,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import static it.pagopa.pnss.common.DocTypesConstant.PN_AAR;
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -250,6 +251,31 @@ class UriBuilderServiceDownloadTest {
 //
 //        fileDownloadTestCall(docId, true).expectStatus().isOk();
 //    }
+
+    @Test
+    void createUriForDownloadFileInternalServerError() {
+
+        String docId = "1111-aaaa";
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState("BOOKED");
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+        mockGetDocument(d, docId);
+
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.apiKey(X_API_KEY_VALUE);
+        userConfiguration.setCanRead(List.of(PN_AAR));
+
+        UserConfigurationResponse userConfigurationResponse = new UserConfigurationResponse();
+        userConfigurationResponse.setUserConfiguration(userConfiguration);
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfigurationResponse));
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().contentLength(5L).objectLockRetainUntilDate(Instant.now()).lastModified(Instant.now()).build()));
+
+//        Mockito.when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class))).thenReturn(Mono.error(new Exception("Errore Generico")));
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 
     @Test
     void createFileDownloadInfoOk() {

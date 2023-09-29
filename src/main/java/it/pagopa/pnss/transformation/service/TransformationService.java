@@ -25,6 +25,7 @@ import reactor.util.retry.Retry;
 import javax.print.Doc;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static it.pagopa.pnss.common.constant.Constant.STAGED;
@@ -55,7 +56,7 @@ public class TransformationService {
     private static Function<Mono<Void>, Mono<Void>> getRetryStrategy(String key) {
         return documentMono -> documentMono.retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
                 .filter(ArubaSignException.class::isInstance)
-                .doBeforeRetry(retrySignal -> log.warn("Retry number {}, caused by : {}", retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
+                .doBeforeRetry(retrySignal -> log.warn("Retry number {} for document with key '{}', caused by : {}", retrySignal.totalRetries(), key, retrySignal.failure().getMessage(), retrySignal.failure()))
                 .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
                     throw new ArubaSignExceptionLimitCall(key);
                 }));
@@ -67,6 +68,9 @@ public class TransformationService {
     }
 
     public Mono<Void> newStagingBucketObjectCreatedEvent(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
+
+        AtomicReference<String> fileKeyReference = new AtomicReference<>("");
+
         return Mono.fromCallable(() -> {
                     logIncomingMessage(signQueueName, newStagingBucketObject);
                     return newStagingBucketObject;
@@ -75,14 +79,15 @@ public class TransformationService {
                     var detailObject = createdS3ObjectDto.getCreationDetailObject();
                     return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
                 })
-                .doOnDiscard(CreatedS3ObjectDto.class,
-                        createdS3ObjectDto -> log.debug("The new staging bucket object with id {} was discarded", newStagingBucketObject.getId()))
+                .doOnDiscard(CreatedS3ObjectDto.class, createdS3ObjectDto -> log.debug("The new staging bucket object with id '{}' was discarded", newStagingBucketObject.getId()))
                 .flatMap(createdS3ObjectDto -> {
                     var detailObject = createdS3ObjectDto.getCreationDetailObject();
-                    return objectTransformation(detailObject.getObject().getKey(), detailObject.getBucketOriginDetail().getName(), true);
+                    var fileKey = detailObject.getObject().getKey();
+                    fileKeyReference.set(fileKey);
+                    return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), true);
                 })
                 .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
-                .doOnError(throwable -> log.error("An error occurred during transformations -> {}", throwable.getMessage()));
+                .doOnError(throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()));
     }
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
@@ -90,7 +95,7 @@ public class TransformationService {
                 .map(DocumentResponse::getDocument)
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
-                    log.debug("Transformations list of document with key {}", document.getDocumentKey());
+                    log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
                     return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK) && document.getDocumentState().equals(STAGED);
                 })
                 .doOnDiscard(Document.class, document -> log.debug("Document with key '{}' has been discarded", document.getDocumentKey()))
@@ -99,7 +104,7 @@ public class TransformationService {
                     var document = objects.getT1();
                     var s3ObjectBytes = objects.getT2().asByteArray();
 
-                    log.debug("Content type of document with key {}", document.getDocumentKey());
+                    log.debug("Content type of document with key '{}' : {}", document.getDocumentKey(), document.getContentType());
 
                        return switch (document.getContentType()) {
                            case APPLICATION_PDF_VALUE -> arubaSignServiceCall.signPdfDocument(s3ObjectBytes, marcatura);
@@ -107,10 +112,10 @@ public class TransformationService {
                            default -> arubaSignServiceCall.pkcs7signV2(s3ObjectBytes, marcatura);
                        };
                    })
-                   .doOnNext(signReturnV2 -> log.debug("Aruba sign service return status {}, return code {}, description {}",
+                   .doOnNext(signReturnV2 -> log.debug("Aruba sign service return status {}, return code {}, description {}, for document with key {}",
                                                        signReturnV2.getStatus(),
                                                        signReturnV2.getReturnCode(),
-                                                       signReturnV2.getDescription()))
+                                                       signReturnV2.getDescription(), key))
                    .flatMap(signReturnV2 -> changeFromStagingBucketToHotBucket(key, signReturnV2.getBinaryoutput(), stagingBucketName))
                    .transform(getRetryStrategy(key))
                    .then();

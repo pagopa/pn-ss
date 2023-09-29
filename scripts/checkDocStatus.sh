@@ -35,15 +35,8 @@ if [[ ! -f ${inputFileName} ]] ; then
   exit 1
 fi
 
-case "${region}-${account}" in
-  "eu-south-1-089813480515")
-    balancer=internal-EcsA-20230406081307135800000004-20484703.eu-south-1.elb.amazonaws.com
-  ;;
-  *)
-    >&2 echo "balancer not defined"
-  ;;
-esac
-
+echo "{ \"#K\": \"documentKey\",\"#S\": \"documentState\"}" > projection.json
+          
 >&2 echo -e "Questa versione esegue gli step seguenti:\n\
   1. per i soli eventi di creazione 'ObjectCreated:Put' di oggetti nel bucket hot\n\
      reperisce e stampa lo stato dell'oggetto\n\
@@ -53,24 +46,23 @@ Se non sono specificati i parametri opzionali vengono usati i parametri dell'amb
 jq -r '.[] | .eventName + " " + .s3.bucket.name + " " + .s3.object.key' ${inputFileName} \
 | while read -r eventName bucketName objectKey ; do
   if [ ${eventName} != "ObjectCreated:Put" ] ; then
-    echo "${objectKey} not verified; event ${eventName}"
+    echo "[ERROR] ${objectKey} - event ${eventName} not recognized"
     continue
   fi
   if [ ${bucketName} != "pn-safestorage-${region}-${account}" ] ; then
-    echo "${objectKey} not verified; bucket ${bucketName}"
+    echo "[ERROR] ${objectKey} - bucket ${bucketName} not recognized"
     continue
   fi
   
-  response=$(curl -s -H "x-pagopa-safestorage-cx-id: internal" http://${balancer}:8080/safe-storage/v1/files/${objectKey}?metadataOnly=true)
-  rc=$?
-  if [ $rc -eq 0 ] ; then
-    httpStatus=$(echo ${response} | jq '.status')
-    if [ "x${httpStatus}" == "xnull" ] ; then
-      echo ${objectKey} documentStatus: $(echo ${response} | jq '.documentStatus')
-    else
-      echo ${objectKey} HTTP status: ${httpStatus}
-    fi
-  else
-    echo ${objectKey} response error: curl returns ${rc}
+  response=$(aws dynamodb get-item --table-name pn-SsDocumenti --key "{\"documentKey\": {\"S\": \"${objectKey}\"}}" --projection-expression "#K, #S" --expression-attribute-names file://projection.json)
+  documentKey=$(echo ${response} | jq -r '.Item.documentKey.S')
+  if [ "x${documentKey}" == "x" ] ; then
+    echo "[ERROR] ${objectKey} - documentKey not found"
+    continue
   fi
+  if [ "${documentKey}" != "${objectKey}" ] ; then
+    echo "[ERROR] ${objectKey} - documentKey mismatch ${documentKey}"
+    continue
+  fi
+  echo "[INFO] ${objectKey} documentStatus: $(echo ${response} | jq -r '.Item.documentState.S')"
 done

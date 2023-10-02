@@ -3,7 +3,7 @@
 region=eu-south-1
 account=089813480515
 
-while getopts 'a:i:r:' opt ; do
+while getopts 'a:i:r:p:' opt ; do
   case "$opt" in 
     r)
       region=${OPTARG}
@@ -14,12 +14,15 @@ while getopts 'a:i:r:' opt ; do
     i)
       inputFileName=${OPTARG}
     ;;
+    p)
+      profile=${OPTARG}
+    ;;
     :)
-      >&2 echo -e "option requires an argument.\nUsage: $(basename $0) -i <input_file_name> [-a <aws_account>] [-r <aws_region>]"
+      >&2 echo -e "option requires an argument.\nUsage: $(basename $0) -i <input_file_name> -p <aws_profile> [-a <aws_account>] [-r <aws_region>]"
       exit 1
     ;;
     ?|h)
-      >&2 echo "Usage: $(basename $0) -i <input_file_name> [-a <aws_account>] [-r <aws_region>]"
+      >&2 echo "Usage: $(basename $0) -i <input_file_name> -p <aws_profile> [-a <aws_account>] [-r <aws_region>]"
       exit 1
     ;;
   esac
@@ -27,6 +30,11 @@ done
 
 if [[ ! $inputFileName ]] ; then
   >&2 echo "-i parameter is mandatory"
+  exit 1
+fi
+
+if [[ ! $profile ]] ; then
+  >&2 echo "-p parameter is mandatory"
   exit 1
 fi
 
@@ -54,7 +62,7 @@ jq -r '.[] | .eventName + " " + .s3.bucket.name + " " + .s3.object.key' ${inputF
     continue
   fi
   
-  response=$(aws dynamodb get-item --table-name pn-SsDocumenti --key "{\"documentKey\": {\"S\": \"${objectKey}\"}}" --projection-expression "#K, #S" --expression-attribute-names file://projection.json)
+  response=$(aws --profile ${profile} --region ${region} dynamodb get-item --table-name pn-SsDocumenti --key "{\"documentKey\": {\"S\": \"${objectKey}\"}}" --projection-expression "#K, #S" --expression-attribute-names file://projection.json)
   documentKey=$(echo ${response} | jq -r '.Item.documentKey.S')
   if [ "x${documentKey}" == "x" ] ; then
     echo "[ERROR] ${objectKey} - documentKey not found"

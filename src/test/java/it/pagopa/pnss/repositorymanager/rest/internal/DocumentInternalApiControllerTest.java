@@ -1,7 +1,6 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
-import static it.pagopa.pnss.common.constant.Constant.AVAILABLE;
-import static it.pagopa.pnss.common.constant.Constant.FREEZED;
+import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.io.ByteArrayOutputStream;
@@ -10,17 +9,26 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
+import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
+import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
+import it.pagopa.pnss.common.retention.RetentionService;
+import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -40,6 +48,7 @@ import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -47,6 +56,10 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
@@ -63,9 +76,7 @@ public class DocumentInternalApiControllerTest {
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
-
 	private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_NOTIFICATION_ATTACHMENTS";
-
 	private static final String PARTITION_ID_ENTITY = "documentKeyEnt";
 	private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
 	private static final String PARTITION_ID_NO_EXISTENT = "documentKey_bad";
@@ -73,19 +84,39 @@ public class DocumentInternalApiControllerTest {
 
 	private static DocumentInput documentInput;
 	private static DocumentChanges documentChanges;
-
 	private static DynamoDbTable<DocumentEntity> dynamoDbTable;
+
+	@MockBean
+	private CallMacchinaStati callMacchinaStati;
+	@MockBean
+	private RetentionService retentionService;
 
 	private static void insertDocumentEntity(String documentKey) {
 		log.info("execute insertDocumentEntity()");
 
+		List<String> allowedStatusTransitions1 = new ArrayList<>();
+		allowedStatusTransitions1.add("AVAILABLE");
+
+		CurrentStatusEntity currentStatus1 = new CurrentStatusEntity();
+		currentStatus1.setStorage(DOCTYPE_ID_LEGAL_FACTS);
+		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
+		currentStatus1.setTechnicalState("SAVED");
+
+		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
+		statuses1.put("SAVED", currentStatus1);
+
 		DocTypeEntity docTypeEntity = new DocTypeEntity();
-		docTypeEntity.setTipoDocumento(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS);
+		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
+		docTypeEntity.setStatuses(statuses1);
 		log.info("execute insertDocumentEntity() : docTypeEntity : {}", docTypeEntity);
 
 		var documentEntity = new DocumentEntity();
 		documentEntity.setDocumentKey(documentKey);
 		documentEntity.setDocumentType(docTypeEntity);
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setLastStatusChangeTimestamp(OffsetDateTime.now());
+		documentEntity.setDocumentState(SAVED);
+		documentEntity.setDocumentLogicalState(AVAILABLE);
 		dynamoDbTable.putItem(builder -> builder.item(documentEntity));
 	}
 
@@ -107,14 +138,14 @@ public class DocumentInternalApiControllerTest {
 		allowedStatusTransitions1.add("AVAILABLE");
 
 		CurrentStatus currentStatus1 = new CurrentStatus();
-		currentStatus1.setStorage("PN_NOTIFICATION_ATTACHMENTS");
+		currentStatus1.setStorage(DOCTYPE_ID_LEGAL_FACTS);
 		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
 
 		Map<String, CurrentStatus> statuses1 = new HashMap<>();
 		statuses1.put("PRELOADED", currentStatus1);
 
 		DocumentType docTypes = new DocumentType();
-		docTypes.setTipoDocumento(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS);
+		docTypes.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
 		docTypes.setChecksum(DocumentType.ChecksumEnum.SHA256);
 		docTypes.setInitialStatus("SAVED");
 		docTypes.setStatuses(statuses1);
@@ -129,12 +160,12 @@ public class DocumentInternalApiControllerTest {
 		documentInput.setRetentionUntil("2032-04-12T12:32:04.000Z");
 		documentInput.setCheckSum(CHECKSUM);
 		documentInput.setContentType("xxxxx");
-		documentInput.setDocumentType("PN_NOTIFICATION_ATTACHMENTS");
+		documentInput.setDocumentType(DOCTYPE_ID_LEGAL_FACTS);
 		documentInput.setContentLenght(new BigDecimal(100));
 		log.info("execute createDocument() : documentInput : {}", documentInput);
 
 		documentChanges = new DocumentChanges();
-		documentChanges.setDocumentState(AVAILABLE);
+		documentChanges.setDocumentState(SAVED);
 		documentChanges.setContentLenght(new BigDecimal(50));
 	}
 
@@ -232,32 +263,66 @@ public class DocumentInternalApiControllerTest {
 	// codice test: DCSS.102.1
 	void patchItem() {
 
-		log.warn("DocumentInternalApiControllerTest.patchItem() : decommentare");
+		log.warn("DocumentInternalApiControllerTest.patchItem() : START");
 
-//		EntityExchangeResult<DocumentResponse> documentInDb = webTestClient.get()
-//				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentInput.getDocumentKey()))
-//				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
-//				.returnResult();
-//		log.info("\n Test 6 (patchItem) : document before {}", documentInDb.getResponseBody().getDocument());
-//
-//		log.info("\n Test 6 (patchItem) : documentChanges {}", documentChanges);
-//
-//		addFileToBucket(PARTITION_ID_DEFAULT);
-//
-//		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
-//				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON).body(BodyInserters.fromValue(documentChanges))
-//				.exchange().expectStatus().isOk();
-//
-//		EntityExchangeResult<DocumentResponse> documentUpdated = webTestClient.get()
-//				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
-//				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
-//				.returnResult();
-//
-//		log.info("\n Test 6 (patchItem) : documentUpdated : {} \n", documentUpdated.getResponseBody().getDocument());
-//
-//		Assertions.assertEquals(documentChanges.getContentLenght(),
-//				documentUpdated.getResponseBody().getDocument().getContentLenght());
+		EntityExchangeResult<DocumentResponse> documentInDb = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentInput.getDocumentKey()))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+				.returnResult();
+		log.info("\n Test 6 (patchItem) : document before {}", documentInDb.getResponseBody().getDocument());
 
+		log.info("\n Test 6 (patchItem) : documentChanges {}", documentChanges);
+
+		addFileToBucket(PARTITION_ID_DEFAULT);
+
+		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
+		var docEntity=new DocumentEntity();
+		docEntity.setDocumentKey(documentInput.getDocumentKey());
+		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(docEntity));
+
+		webTestClient.patch()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
+				.accept(APPLICATION_JSON)
+				.contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(documentChanges))
+				.exchange().expectStatus().isOk();
+
+		EntityExchangeResult<DocumentResponse> documentUpdated = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+				.returnResult();
+
+		log.info("\n Test 6 (patchItem) : documentUpdated : {} \n", documentUpdated.getResponseBody().getDocument());
+
+		Assertions.assertEquals(documentChanges.getContentLenght(),
+				documentUpdated.getResponseBody().getDocument().getContentLenght());
+		log.info("\n Test 6 (patchItem) passed \n");
+	}
+
+	@Test
+	void patchItemIdempotenceOk() {
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(SAVED);
+		docChanges.setContentLenght(new BigDecimal(50));
+
+		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
+				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON).body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isEqualTo(HttpStatus.OK);
+		log.info("\n Test 6 (patchItem) passed \n");
+	}
+
+	@Test
+	void patchItemLastStatusChangeOk() {
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(AVAILABLE);
+		docChanges.setContentLenght(new BigDecimal(60));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
+
+		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
+				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON).body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isEqualTo(HttpStatus.OK);
 		log.info("\n Test 6 (patchItem) passed \n");
 	}
 

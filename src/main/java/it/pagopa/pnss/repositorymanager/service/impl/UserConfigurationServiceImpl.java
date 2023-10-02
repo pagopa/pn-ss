@@ -1,5 +1,7 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
+import it.pagopa.pnss.common.constant.Constant;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,8 +28,9 @@ import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKIN
 public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     private final ObjectMapper objectMapper;
-
     private final DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationEntityDynamoDbAsyncTable;
+    @Autowired
+    RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                         RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
@@ -43,23 +46,27 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     @Override
     public Mono<UserConfiguration> getUserConfiguration(String name) {
-        log.info("getUserConfiguration() : IN : name {}", name);
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
-                   .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity, UserConfiguration.class));
+                   .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity, UserConfiguration.class))
+                   .doOnSuccess(userConfiguration -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, name, "UserConfigurationServiceImpl.getUserConfiguration()", userConfiguration));
     }
 
     @Override
     public Mono<UserConfiguration> insertUserConfiguration(UserConfiguration userConfigurationInput) {
-        log.info("insertUserConfiguration() : IN : userConfigurationInput : {}", userConfigurationInput);
+        final String USER_CONFIGURATION_INPUT = "userConfigurationInput in UserConfigurationServiceImpl.insertUserConfiguration()";
 
+        log.info(Constant.CHECKING_VALIDATION_PROCESS, USER_CONFIGURATION_INPUT);
         if (userConfigurationInput == null) {
+            log.warn(Constant.VALIDATION_PROCESS_FAILED, USER_CONFIGURATION_INPUT, "UserConfiguration is null");
             throw new RepositoryManagerException("UserConfiguration is null");
         }
         if (userConfigurationInput.getName() == null || userConfigurationInput.getName().isBlank()) {
+            log.warn(Constant.VALIDATION_PROCESS_FAILED, USER_CONFIGURATION_INPUT, "UserConfiguration Name is null");
             throw new RepositoryManagerException("UserConfiguration Name is null");
         }
+        log.info(Constant.VALIDATION_PROCESS_PASSED, USER_CONFIGURATION_INPUT);
 
         UserConfigurationEntity userConfigurationEntity = objectMapper.convertValue(userConfigurationInput, UserConfigurationEntity.class);
 
@@ -69,20 +76,25 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                 .flatMap(foundedClientConfiguration -> Mono.error(new ItemAlreadyPresent(userConfigurationInput.getApiKey())))
                 .doOnError(ItemAlreadyPresent.class, throwable -> log.debug(throwable.getMessage()))
                 .switchIfEmpty(Mono.just(userConfigurationInput))
-                .flatMap(unused -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
-                        userConfigurationEntity))))
+                .flatMap(unused -> {
+                    log.debug(Constant.INSERTING_DATA_IN_DYNAMODB_TABLE, userConfigurationInput, userConfigurationEntity);
+                    return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
+                            userConfigurationEntity)));
+                })
+                .doOnSuccess(unused -> {
+                    log.info(Constant.INSERTED_DATA_IN_DYNAMODB_TABLE, userConfigurationEntity);
+                    log.info(Constant.SUCCESSFUL_OPERATION_LABEL, userConfigurationInput.getName(), "UserConfigurationServiceImpl.insertUserConfiguration()", userConfigurationInput);
+                })
                 .thenReturn(userConfigurationInput);
     }
 
     @Override
     public Mono<UserConfiguration> patchUserConfiguration(String name, UserConfigurationChanges userConfigurationChanges) {
-        log.info("patchUserConfiguration() : IN : name : {} , userConfigurationChanges {}", name, userConfigurationChanges);
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(entityStored -> {
-                       log.debug("patchUserConfiguration() : userConfigurationEntity begore patch : {}", entityStored);
                        if (userConfigurationChanges.getCanCreate() != null && !userConfigurationChanges.getCanCreate().isEmpty()) {
                            entityStored.setCanCreate(userConfigurationChanges.getCanCreate());
                        }
@@ -98,24 +110,36 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                        if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
                            entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
                        }
-                       log.debug("patchUserConfiguration() : userConfigurationEntity for patch : {}", entityStored);
                        return entityStored;
                    })
-                   .zipWhen(userConfigurationUpdated -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
-                           userConfigurationUpdated))).retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
-                   .map(objects -> objectMapper.convertValue(objects.getT2(), UserConfiguration.class));
+                   .zipWhen(userConfigurationUpdated -> {
+                       log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, userConfigurationUpdated, managerDynamoTableName.anagraficaClientName());
+                       return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
+                               userConfigurationUpdated));
+                   }).retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
+                   .map(objects -> {
+                       log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.anagraficaClientName());
+                       return objectMapper.convertValue(objects.getT2(), UserConfiguration.class);
+                   })
+                   .doOnSuccess(userConfiguration -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, name, "UserConfigurationServiceImpl.patchUserConfiguration()", userConfiguration));
     }
 
     @Override
     public Mono<UserConfiguration> deleteUserConfiguration(String name) {
-        log.info("deleteUserConfiguration() : IN : name {}", name);
         Key userConfigurationKey = Key.builder().partitionValue(name).build();
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(userConfigurationKey))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
-                   .zipWhen(userConfigurationToDelete -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.deleteItem(
-                           userConfigurationKey)))
-                   .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity.getT1(), UserConfiguration.class));
+                   .zipWhen(userConfigurationToDelete -> {
+                       log.debug(Constant.DELETING_DATA_IN_DYNAMODB_TABLE, userConfigurationKey, managerDynamoTableName.anagraficaClientName());
+                       return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.deleteItem(
+                               userConfigurationKey));
+                   })
+                   .map(userConfigurationEntity -> {
+                       log.debug(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.anagraficaClientName());
+                       return objectMapper.convertValue(userConfigurationEntity.getT1(), UserConfiguration.class);
+                   })
+                   .doOnSuccess(userConfiguration -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, name, "UserConfigurationServiceImpl.deleteUserConfiguration()", userConfiguration));
     }
 }

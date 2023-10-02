@@ -10,6 +10,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
+import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
@@ -91,6 +92,10 @@ public class TransformationService {
     }
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
+        final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
+
+        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG, OBJECT_TRANSFORMATION, key, stagingBucketName, marcatura);
+        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.getObject()", key, stagingBucketName);
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
                 .filter(document -> {
@@ -122,8 +127,12 @@ public class TransformationService {
     }
 
     private Mono<Void> changeFromStagingBucketToHotBucket(String key, byte[] objectBytes, String stagingBucketName) {
+        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG + Constant.ARG, "s3Service.putObject()", key, objectBytes, bucketName.ssHotName());
         return s3Service.putObject(key, objectBytes, bucketName.ssHotName())
-                        .flatMap(putObjectResponse -> s3Service.deleteObject(key, stagingBucketName))
+                        .flatMap(putObjectResponse -> {
+                            log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.deleteObject()", key, stagingBucketName);
+                            return s3Service.deleteObject(key, stagingBucketName);
+                        })
                         .then();
     }
 }

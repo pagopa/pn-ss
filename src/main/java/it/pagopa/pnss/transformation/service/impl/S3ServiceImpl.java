@@ -12,12 +12,9 @@ import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 @Service
 @Slf4j
@@ -88,6 +85,12 @@ public class S3ServiceImpl implements S3Service {
     public Mono<PutObjectRetentionResponse> putObjectRetention(String key, String bucketName, ObjectLockRetention objectLockRetention) {
         return Mono.fromCompletionStage(s3AsyncClient.putObjectRetention(builder -> builder.key(key).bucket(bucketName).retention(objectLockRetention)))
                 .doOnNext(putObjectRetentionResponse -> log.debug("Put retention to object in bucket {} having key {}", bucketName, key));
+    }
+
+    @Override
+    public Mono<PutObjectTaggingResponse> putObjectTagging(String key, String bucketName, Tagging tagging) {
+        return Mono.fromCompletionStage(s3AsyncClient.putObjectTagging(builder -> builder.key(key).bucket(bucketName).tagging(tagging)))
+                .doOnNext(putObjectTaggingResponse -> log.debug("Put tagging to object in bucket {} having key {}", bucketName, key));
     }
 
 }

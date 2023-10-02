@@ -95,7 +95,7 @@ public class TransformationService {
         final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
 
         log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG, OBJECT_TRANSFORMATION, key, stagingBucketName, marcatura);
-        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.getObject()", key, stagingBucketName);
+        log.info(Constant.CLIENT_METHOD_INVOCATION, "DocumentClientCall.getDocument()", key);
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
                 .filter(document -> {
@@ -127,7 +127,7 @@ public class TransformationService {
     }
 
     private Mono<Void> changeFromStagingBucketToHotBucket(String key, byte[] objectBytes, String stagingBucketName) {
-        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG + Constant.ARG, "s3Service.putObject()", key, objectBytes, bucketName.ssHotName());
+        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG + Constant.ARG, "S3Service.putObject()", key, objectBytes, bucketName.ssHotName());
         return s3Service.putObject(key, objectBytes, bucketName.ssHotName())
                         .flatMap(putObjectResponse -> {
                             log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.deleteObject()", key, stagingBucketName);

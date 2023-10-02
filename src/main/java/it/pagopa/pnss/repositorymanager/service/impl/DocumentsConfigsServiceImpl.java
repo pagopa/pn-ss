@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import it.pagopa.pnss.common.constant.Constant;
 import org.springframework.stereotype.Service;
 
 import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
@@ -106,6 +107,7 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         }).flatMap(lifecycleRule -> docTypesService.getAllDocumentType()).doOnNext(documentTypeList -> {
             log.debug("getDocumentsConfigs() : elem documentTypeList {}", documentTypeList);
             dtc.setDocumentsTypes(convertDocumentTypeConfigurationList(documentTypeList));
-        }).then(Mono.just(dtc));
+        }).then(Mono.just(dtc)
+         .doOnSuccess(documentTypesConfigurations -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, "", "DocumentConfigsServiceImpl.getDocumentsConfigs()", documentTypesConfigurations)));
     }
 }

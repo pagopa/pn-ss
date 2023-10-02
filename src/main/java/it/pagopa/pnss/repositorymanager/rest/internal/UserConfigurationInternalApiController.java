@@ -1,5 +1,6 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
+import it.pagopa.pnss.common.constant.Constant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -68,40 +69,82 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 	@Override
 	public Mono<ResponseEntity<UserConfigurationResponse>> getUserConfiguration(String name,
 			final ServerWebExchange exchange) {
+		final String GET_USER_CONFIGURATION = "getUserConfiguration";
 
+		log.info(Constant.STARTING_PROCESS_ON, GET_USER_CONFIGURATION, name);
+
+		log.debug(Constant.INVOKING_METHOD, GET_USER_CONFIGURATION, name);
 		return userConfigurationService.getUserConfiguration(name)
-				.map(userConfiguration -> ResponseEntity.ok(getResponse(userConfiguration)))
-				.onErrorResume(throwable -> getResponse(name, throwable));
+				.map(userConfiguration -> {
+					log.info(Constant.ENDING_PROCESS_ON, GET_USER_CONFIGURATION, name);
+					return ResponseEntity.ok(getResponse(userConfiguration));
+				})
+				.onErrorResume(throwable -> {
+					log.info(Constant.ENDING_PROCESS_WITH_ERROR, GET_USER_CONFIGURATION, throwable, throwable.getMessage());
+					return getResponse(name, throwable);
+				});
 
 	}
 
 	@Override
 	public Mono<ResponseEntity<UserConfigurationResponse>> insertUserConfiguration(
 			Mono<UserConfiguration> userConfiguration, final ServerWebExchange exchange) {
+		final String INSERT_USER_CONFIGURATION = "insertUserConfiguration";
 
-		return userConfiguration.flatMap(request -> userConfigurationService.insertUserConfiguration(request))
-				.map(userConfigurationOutput -> ResponseEntity.ok(getResponse(userConfigurationOutput)))
-				.onErrorResume(throwable -> getResponse(null, throwable));
+
+		return userConfiguration.doOnNext(userConfig -> log.info(Constant.STARTING_PROCESS_ON, INSERT_USER_CONFIGURATION, userConfig == null ? null : userConfig.getName()))
+				.flatMap(request -> {
+				log.debug(Constant.INVOKING_METHOD, INSERT_USER_CONFIGURATION, request);
+				return userConfigurationService.insertUserConfiguration(request);
+				})
+				.map(userConfigurationOutput -> {
+					log.info(Constant.ENDING_PROCESS_ON, INSERT_USER_CONFIGURATION, userConfigurationOutput.getName());
+					return ResponseEntity.ok(getResponse(userConfigurationOutput));
+				})
+				.onErrorResume(throwable -> {
+					log.info(Constant.ENDING_PROCESS_WITH_ERROR, INSERT_USER_CONFIGURATION, throwable, throwable.getMessage());
+					return getResponse(null, throwable);
+				});
 
 	}
 
 	@Override
 	public Mono<ResponseEntity<UserConfigurationResponse>> patchUserConfiguration(String name,
 			Mono<UserConfigurationChanges> userConfigurationChanges, final ServerWebExchange exchange) {
+		final String PATCH_USER_CONFIGURATION = "patchUserConfiguration";
 
-		return userConfigurationChanges
-				.flatMap(request -> userConfigurationService.patchUserConfiguration(name, request))
-				.map(userConfigurationOutput -> ResponseEntity.ok(getResponse(userConfigurationOutput)))
-				.onErrorResume(throwable -> getResponse(name, throwable));
+		return userConfigurationChanges.doOnNext(userConfig -> log.info(Constant.STARTING_PROCESS_ON, PATCH_USER_CONFIGURATION, userConfig == null ? null : userConfig.getApiKey()))
+				.flatMap(request -> {
+					log.debug(Constant.INVOKING_METHOD + Constant.ARG, PATCH_USER_CONFIGURATION, name, request);
+					return userConfigurationService.patchUserConfiguration(name, request);
+				})
+				.map(userConfigurationOutput -> {
+					log.info(Constant.ENDING_PROCESS_ON, PATCH_USER_CONFIGURATION, userConfigurationOutput.getApiKey());
+					return ResponseEntity.ok(getResponse(userConfigurationOutput));
+				})
+				.onErrorResume(throwable -> {
+					log.info(Constant.ENDING_PROCESS_WITH_ERROR, PATCH_USER_CONFIGURATION, throwable, throwable.getMessage());
+					return getResponse(name, throwable);
+				});
 	}
 
 	@Override
 	public Mono<ResponseEntity<Void>> deleteUserConfiguration(String name, final ServerWebExchange exchange) {
+		final String DELETE_USER_CONFIGURATION = "deleteUserConfiguration";
 
+		log.info(Constant.STARTING_PROCESS_ON, DELETE_USER_CONFIGURATION, name);
+
+		log.debug(Constant.INVOKING_METHOD, DELETE_USER_CONFIGURATION, name);
 		return userConfigurationService.deleteUserConfiguration(name)
-				.map(docType -> ResponseEntity.noContent().<Void>build()).onErrorResume(IdClientNotFoundException.class,
-						throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-								throwable.getMessage(), throwable.getCause())));
+				.map(docType -> {
+					log.info(Constant.ENDING_PROCESS_ON, DELETE_USER_CONFIGURATION, name);
+					return ResponseEntity.noContent().<Void>build();
+				}).onErrorResume(IdClientNotFoundException.class,
+						throwable -> {
+							log.info(Constant.ENDING_PROCESS_WITH_ERROR, DELETE_USER_CONFIGURATION, throwable, throwable.getMessage());
+						return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+									throwable.getMessage(), throwable.getCause()));
+						});
 
 	}
 

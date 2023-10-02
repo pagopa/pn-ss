@@ -8,6 +8,7 @@ import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
+import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
@@ -45,29 +46,34 @@ public class TransformationService {
     }
 
     @SqsListener(value = "${s3.queue.sign-queue-name}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
-    void newStagingBucketObjectCreatedEvent(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
+    void newStagingBucketObjectCreatedListener(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
+        newStagingBucketObjectCreatedEvent(newStagingBucketObject, acknowledgment).subscribe();
+    }
 
-        Mono.fromCallable(() -> {
-                logIncomingMessage(signQueueName, newStagingBucketObject);
-                return newStagingBucketObject;
-            })
-            .filter(createdS3ObjectDto -> {
-                var detailObject = createdS3ObjectDto.getCreationDetailObject();
-                return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
-            })
-            .doOnDiscard(CreatedS3ObjectDto.class,
-                         createdS3ObjectDto -> log.debug("The new staging bucket object with id {} was discarded",
-                                                         newStagingBucketObject.getId()))
-            .flatMap(createdS3ObjectDto -> {
-                var detailObject = createdS3ObjectDto.getCreationDetailObject();
-                return objectTransformation(detailObject.getObject().getKey(), detailObject.getBucketOriginDetail().getName(), true);
-            })
-            .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
-            .doOnError(throwable -> log.error("* FATAL * An error occurred during transformations -> {}", throwable.getMessage()))
-            .subscribe();
+    public Mono<Void> newStagingBucketObjectCreatedEvent(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
+        return Mono.fromCallable(() -> {
+                    logIncomingMessage(signQueueName, newStagingBucketObject);
+                    return newStagingBucketObject;
+                })
+                .filter(createdS3ObjectDto -> {
+                    var detailObject = createdS3ObjectDto.getCreationDetailObject();
+                    return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
+                })
+                .doOnDiscard(CreatedS3ObjectDto.class,
+                        createdS3ObjectDto -> log.debug("The new staging bucket object with id {} was discarded", newStagingBucketObject.getId()))
+                .flatMap(createdS3ObjectDto -> {
+                    var detailObject = createdS3ObjectDto.getCreationDetailObject();
+                    return objectTransformation(detailObject.getObject().getKey(), detailObject.getBucketOriginDetail().getName(), true);
+                })
+                .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
+                .doOnError(throwable -> log.error("* FATAL * An error occurred during transformations -> {}", throwable.getMessage()));
     }
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
+        final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
+
+        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG, OBJECT_TRANSFORMATION, key, stagingBucketName, marcatura);
+        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.getObject()", key, stagingBucketName);
         return Mono.zipDelayError(documentClientCall.getDocument(key), s3Service.getObject(key, stagingBucketName))
                    .filter(objects -> {
                        var document = objects.getT1().getDocument();
@@ -99,8 +105,12 @@ public class TransformationService {
     }
 
     private Mono<Void> changeFromStagingBucketToHotBucket(String key, byte[] objectBytes, String stagingBucketName) {
+        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG + Constant.ARG, "s3Service.putObject()", key, objectBytes, bucketName.ssHotName());
         return s3Service.putObject(key, objectBytes, bucketName.ssHotName())
-                        .flatMap(putObjectResponse -> s3Service.deleteObject(key, stagingBucketName))
+                        .flatMap(putObjectResponse -> {
+                            log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.deleteObject()", key, stagingBucketName);
+                            return s3Service.deleteObject(key, stagingBucketName);
+                        })
                         .then();
     }
 }

@@ -702,6 +702,12 @@ components:
           type: string
         documentType:
           $ref: '#/components/schemas/DocumentType'
+        lastStatusChangeTimestamp:
+          type: string
+          format: date-time
+          description: >-
+            Timestamp dell'ultima variazione di stato del documento.
+
     DocumentInput:
       allOf:
         - $ref: '#/components/schemas/Document'
@@ -736,6 +742,11 @@ components:
           type: string
         contentLenght:
           type: number
+        lastStatusChangeTimestamp:
+          type: string
+          format: date-time
+          description: >-
+            Timestamp dell'ultima variazione di stato del documento.
     UserConfiguration:
       type: object
       properties:

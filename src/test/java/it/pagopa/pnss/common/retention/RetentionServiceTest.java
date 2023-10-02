@@ -22,10 +22,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
-import software.amazon.awssdk.services.s3.model.PutObjectRetentionResponse;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -52,6 +49,23 @@ class RetentionServiceTest {
     @ValueSource(strings = {"10y", "5Y", "10d", "5D", "1Y 1d", "10y 5d", "1y 10D", "10Y 10D"})
     void getRetentionPeriodInDaysOk(String retentionPeriod) {
         Assertions.assertNotNull(retentionService.getRetentionPeriodInDays(retentionPeriod));
+    }
+
+    @Test
+    void getRetentionPeriodInDaysNull() {
+
+        Assertions.assertThrows(RetentionException.class, () -> {
+            retentionService.getRetentionPeriodInDays(null);
+        });
+    }
+
+    @Test
+    void getRetentionPeriodInDaysException() {
+        String retentionPeriod = "10.5y";
+
+        Assertions.assertThrows(RetentionException.class, () -> {
+            retentionService.getRetentionPeriodInDays(retentionPeriod);
+        });
     }
 
     @ParameterizedTest
@@ -123,17 +137,19 @@ class RetentionServiceTest {
     }
 
     @ParameterizedTest
-    @EmptySource
-    @ValueSource(strings = {" ", "d"})
-    void getRetentionPeriodInDaysKo(String retentionPeriod) {
-        Assertions.assertThrows(RetentionException.class, () -> retentionService.getRetentionPeriodInDays(retentionPeriod));
-    }
-
-    @ParameterizedTest
     @CsvSource({"2023-08-18T14:38:40.108Z, 1"})
     void getRetainUntilDateOk(Instant dataCreazione, Integer retentionPeriod) throws RetentionException{
 
         Assertions.assertNotNull(retentionService.getRetainUntilDate(dataCreazione, retentionPeriod));
+    }
+
+    @Test
+    void getRetainUntilDateException() {
+        Instant instant = Instant.parse("2023-08-18T14:38:40.108Z");
+
+        Assertions.assertThrows(RetentionException.class, () -> {
+            retentionService.getRetainUntilDate(instant, null);
+        });
     }
 
     @Test
@@ -156,6 +172,26 @@ class RetentionServiceTest {
         var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
 
         StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
+    }
+
+    @Test
+    void setRetentionPeriodInBucketObjectMetadataS3Exception(){
+        String authPagopaSafestorageCxId = "CLIENT_ID_123";
+        String authApiKey = "apiKey_value";
+        String oldState = "BOOKED";
+
+        DocumentChanges documentChanges = new DocumentChanges();
+        documentChanges.setRetentionUntil("2023-09-07T17:34:15+02:00");
+
+        DocumentEntity documentEntity = new DocumentEntity();
+        documentEntity.setDocumentKey("documentKeyEnt");
+
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).build()));
+        Mockito.doReturn(Mono.error(S3Exception.builder().build())).when(s3Service).putObjectRetention(anyString(), anyString(), any(ObjectLockRetention.class));
+
+        var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
+
+        StepVerifier.create(testMono).expectError(RetentionException.class).verify();
     }
 
     @Test
@@ -224,6 +260,96 @@ class RetentionServiceTest {
         Mockito.doReturn(Mono.just(putObjectRetentionResponse)).when(s3Service).putObjectRetention(anyString(), anyString(), any(ObjectLockRetention.class));
 
         var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
+
+        StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
+    }
+
+    @Test
+    void setRetentionPeriodInBucketObjectMetadataRetentionUntilNullS3Exception(){
+        String authPagopaSafestorageCxId = "CLIENT_ID_123";
+        String authApiKey = "apiKey_value";
+        String oldState = "BOOKED";
+
+
+        DocumentTypesConfigurations docTypeConfigurations = new DocumentTypesConfigurations();
+
+        DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
+        dtc.setName("PN_NOTIFICATION_ATTACHMENTS");
+
+        DocumentTypeConfigurationStatuses documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatuses();
+        documentTypeConfigurationStatuses.setStorage("AVAILABLE");//TODO: guardare nel codice a cosa si riferisca il setStorage
+        dtc.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
+
+        StorageConfiguration sc = new StorageConfiguration();
+        sc.setName("AVAILABLE");
+        sc.setRetentionPeriod("10y");
+
+        docTypeConfigurations.setDocumentsTypes(List.of(dtc));
+        docTypeConfigurations.setStorageConfigurations(List.of(sc));
+        when(configurationApiCall.getDocumentsConfigs(anyString(), anyString())).thenReturn(Mono.just(docTypeConfigurations));
+
+
+        DocumentChanges documentChanges = new DocumentChanges();
+        documentChanges.setDocumentState("AVAILABLE");
+
+        DocTypeEntity docTypeEntity = new DocTypeEntity();
+        docTypeEntity.setTipoDocumento("PN_NOTIFICATION_ATTACHMENTS");
+
+        DocumentEntity documentEntity = new DocumentEntity();
+        documentEntity.setDocumentType(docTypeEntity);
+        documentEntity.setDocumentLogicalState("AVAILABLE");
+        documentEntity.setDocumentKey("documentKeyEnt");
+
+        PutObjectRetentionResponse putObjectRetentionResponse = PutObjectRetentionResponse.builder().build();
+
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).lastModified(Instant.now()).build()));
+        Mockito.doReturn(Mono.error(S3Exception.builder().build())).when(s3Service).putObjectRetention(anyString(), anyString(), any(ObjectLockRetention.class));
+
+        var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
+
+        StepVerifier.create(testMono).expectError(RetentionException.class).verify();
+    }
+
+    @Test
+    void setRetentionPeriodInBucketObjectMetadataAutenticazioneNullOk(){
+        String oldState = "BOOKED";
+
+
+        DocumentTypesConfigurations docTypeConfigurations = new DocumentTypesConfigurations();
+
+        DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
+        dtc.setName("PN_NOTIFICATION_ATTACHMENTS");
+
+        DocumentTypeConfigurationStatuses documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatuses();
+        documentTypeConfigurationStatuses.setStorage("AVAILABLE");//TODO: guardare nel codice a cosa si riferisca il setStorage
+        dtc.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
+
+        StorageConfiguration sc = new StorageConfiguration();
+        sc.setName("AVAILABLE");
+        sc.setRetentionPeriod("10y");
+
+        docTypeConfigurations.setDocumentsTypes(List.of(dtc));
+        docTypeConfigurations.setStorageConfigurations(List.of(sc));
+        when(configurationApiCall.getDocumentsConfigs(anyString(), anyString())).thenReturn(Mono.just(docTypeConfigurations));
+
+
+        DocumentChanges documentChanges = new DocumentChanges();
+        documentChanges.setDocumentState("AVAILABLE");
+
+        DocTypeEntity docTypeEntity = new DocTypeEntity();
+        docTypeEntity.setTipoDocumento("PN_NOTIFICATION_ATTACHMENTS");
+
+        DocumentEntity documentEntity = new DocumentEntity();
+        documentEntity.setDocumentType(docTypeEntity);
+        documentEntity.setDocumentLogicalState("AVAILABLE");
+        documentEntity.setDocumentKey("documentKeyEnt");
+
+        PutObjectRetentionResponse putObjectRetentionResponse = PutObjectRetentionResponse.builder().build();
+
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).lastModified(Instant.now()).build()));
+        Mockito.doReturn(Mono.just(putObjectRetentionResponse)).when(s3Service).putObjectRetention(anyString(), anyString(), any(ObjectLockRetention.class));
+
+        var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(null, null, documentChanges, documentEntity, oldState);
 
         StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
     }

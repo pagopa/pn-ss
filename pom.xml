@@ -7,7 +7,6 @@
         <version>2.0.0</version>
         <relativePath />
     </parent>
-	
     <artifactId>pn-ss</artifactId>
     <version>2.1.0-RC.1</version>
     <name>pn-ss</name>
@@ -24,7 +23,7 @@
           src/test/java/**
         </sonar.coverage.exclusions>
     </properties>
- 
+
     <dependencies>
 
         <dependency>

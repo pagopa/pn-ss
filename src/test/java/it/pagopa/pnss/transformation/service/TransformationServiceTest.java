@@ -6,6 +6,7 @@ import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
+import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.model.dto.BucketOriginDetail;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
@@ -14,20 +15,27 @@ import it.pagopa.pnss.transformation.model.dto.S3Object;
 import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
@@ -39,15 +47,21 @@ public class TransformationServiceTest {
 
     @SpyBean
     private TransformationService transformationService;
-
     @MockBean
     private DocumentClientCall documentClientCall;
-
     @MockBean
     private ArubaSignServiceCall arubaSignServiceCall;
+    @Autowired
+    private BucketName bucketName;
+    @Autowired
+    private S3Service s3Service;
 
-    @MockBean
-    S3ServiceImpl s3Service;
+    private static final String FILE_KEY = "FILE_KEY";
+
+    @BeforeEach
+    void initialize(@Autowired BucketName bucketName) {
+        s3Service.putObject(FILE_KEY, new byte[10], bucketName.ssStageName()).block();
+    }
 
     @Test
     void newStagingBucketObjectCreatedEventBlankDetail() {
@@ -70,10 +84,10 @@ public class TransformationServiceTest {
     void newStagingBucketObjectCreatedEventDiscarded() {
 
         S3Object s3Object = new S3Object();
-        s3Object.setKey("111-DDD");
+        s3Object.setKey(FILE_KEY);
 
         BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName("prova");
+        bucketOriginDetail.setName(bucketName.ssStageName());
 
         CreationDetail creationDetail = new CreationDetail();
         creationDetail.setObject(s3Object);
@@ -101,10 +115,10 @@ public class TransformationServiceTest {
     void newStagingBucketObjectCreatedEventArubaKo() {
 
         S3Object s3Object = new S3Object();
-        s3Object.setKey("111-DDD");
+        s3Object.setKey(FILE_KEY);
 
         BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName("prova");
+        bucketOriginDetail.setName(bucketName.ssStageName());
 
         CreationDetail creationDetail = new CreationDetail();
         creationDetail.setObject(s3Object);
@@ -121,7 +135,6 @@ public class TransformationServiceTest {
         };
 
         mockGetDocument("application/pdf", STAGED);
-        when(s3Service.getObject(anyString(), anyString())).thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), new byte[10])));
         when(arubaSignServiceCall.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.error(new ArubaSignException()));
 
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
@@ -131,13 +144,13 @@ public class TransformationServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"application/pdf", "application/xml", "other"})
-    void newStagingBucketObjectCreatedEventOk(String contentType){
+    void newStagingBucketObjectCreatedEventOk(String contentType) {
 
         S3Object s3Object = new S3Object();
-        s3Object.setKey("111-DDD");
+        s3Object.setKey(FILE_KEY);
 
         BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName("prova");
+        bucketOriginDetail.setName(bucketName.ssStageName());
 
         CreationDetail creationDetail = new CreationDetail();
         creationDetail.setObject(s3Object);
@@ -154,11 +167,7 @@ public class TransformationServiceTest {
         };
 
         mockGetDocument(contentType, STAGED);
-        when(s3Service.getObject(anyString(), anyString())).thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), new byte[10])));
         mockArubaCalls();
-
-        when(s3Service.putObject(anyString(), any(), anyString())).thenReturn(Mono.just(PutObjectResponse.builder().build()));
-        when(s3Service.deleteObject(anyString(), anyString())).thenReturn(Mono.just(DeleteObjectResponse.builder().build()));
 
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
@@ -184,10 +193,10 @@ public class TransformationServiceTest {
         signReturnV2.setReturnCode("ok");
         signReturnV2.setStatus("ok");
         signReturnV2.setBinaryoutput(new byte[10]);
+
         when(arubaSignServiceCall.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
-
         when(arubaSignServiceCall.xmlSignature(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
-
         when(arubaSignServiceCall.pkcs7signV2(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
     }
+
 }

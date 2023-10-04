@@ -21,6 +21,7 @@ import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
+import it.pagopa.pnss.transformation.service.S3Service;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,6 +74,8 @@ public class DocumentInternalApiControllerTest {
     private WebTestClient webTestClient;
     @Autowired
     private BucketName bucketName;
+	@Autowired
+	private S3Service s3Service;
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
@@ -383,15 +386,9 @@ public class DocumentInternalApiControllerTest {
 
     }
 
-    private void addFileToBucket(String fileName) {
-        S3ClientBuilder s3ClientBuilder = S3Client.builder();
-        s3ClientBuilder.endpointOverride(URI.create(testAwsS3Endpoint));
-        S3Client s3Client = s3ClientBuilder.build();
-        PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(bucketName.ssStageName()).key(fileName).build();
-
-        s3Client.putObject(request, RequestBody.fromBytes(readPdfDocoument()));
-    }
+	private void addFileToBucket(String fileName) {
+		s3Service.putObject(fileName, readPdfDocoument(), bucketName.ssStageName()).block();
+	}
 
     private byte[] readPdfDocoument() {
         byte[] byteArray=null;

@@ -478,6 +478,30 @@ paths:
             - se il file identificato da fileKey non è ancora stato salvato; <br/>
             
   ### WORK ITEM
+  '/safe-storage/v1/files/metadata': 
+    parameters:
+      - $ref: '#/components/parameters/clientIdHeader'
+    post:
+      operationId: massiveUpdateAdditionalFileMetadata
+      tags:
+        - additionalFileMetadataUpdate
+      summary: Modifica massiva dei metadati addizionali di uno o più file.
+      description: >-
+        __Il contenuto del file è immodificabile__. <br/>
+        La struttura metadata è una lista di oggetti con i campi fileKey, metadataKey, metadataOperation e metadataValue (se metadataOperation è SET).<br/>
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MassiveUpdateAdditionalFileMetadataRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/MassiveUpdateAdditionalFileMetadataResponse'
+
   '/safe-storage/v1/files/{fileKey}/metadata':
     parameters:
       - $ref: '#/components/parameters/fileKey'
@@ -690,9 +714,6 @@ components:
             Stima del numero di secondi da aspettare prima che il contenuto del 
             documento sia scaricabile.
 
-        
-
-
     UpdateFileMetadataRequest:
       type: object 
       properties:  
@@ -720,6 +741,16 @@ components:
           items: 
             $ref: '#/components/schemas/AdditionalMetadataUpdateElement'
     
+    MassiveUpdateAdditionalFileMetadataRequest:
+      type: object 
+      required:
+        - metadata
+      properties:
+        metadata:
+          type: array
+          items: 
+            $ref: '#/components/schemas/AdditionalMetadataMassiveUpdateElement'
+
     AdditionalMetadataUpdateElement:
       type: object 
       required:
@@ -739,10 +770,35 @@ components:
           description: L'operazione, SET o DELETE
           example: SET
 
+    AdditionalMetadataMassiveUpdateElement:
+      type: object 
+      required:
+        - fileKey
+        - metadataKey
+        - metadataOperation
+      properties:
+        fileKey:
+          type: string
+          description: La chiave del del documento
+        metadataKey:
+          type: string
+          description: La chiave del metadato
+          example: CONSERVATION_STATUS
+        metadataValue:
+          type: string
+          description: Il valore del metadato
+          example: OK   
+        metadataOperation:
+          type: string
+          description: L'operazione, SET o DELETE
+          example: SET
+          
     UpdateAdditionalFileMetadataResponse:
       $ref: '#/components/schemas/OperationResultCodeResponse'
 
-
+    MassiveUpdateAdditionalFileMetadataResponse:
+      $ref: '#/components/schemas/OperationResultCodeResponse'
+      
     GetAdditionalFileMetadataResponse:
       type: array
       items:
@@ -759,6 +815,7 @@ components:
           type: string
           description: Il valore del metadato
           example: OK   
+
 
     UserConfiguration:
       type: object

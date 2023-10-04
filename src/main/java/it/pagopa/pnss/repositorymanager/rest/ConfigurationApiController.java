@@ -1,5 +1,6 @@
 package it.pagopa.pnss.repositorymanager.rest;
 
+import it.pagopa.pnss.common.constant.Constant;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,27 +45,35 @@ public class ConfigurationApiController implements CfgApi {
         } else if (throwable instanceof IdClientNotFoundException) {
             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(null));
         }
-        log.error("getErrorResponse() : {}", throwable.getClass());
         return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
     }
 
-    private Mono<ResponseEntity<UserConfiguration>> getUserConfigurationErrorResponse(String clientId, Throwable throwable) {
+    private Mono<ResponseEntity<UserConfiguration>> getUserConfigurationErrorResponse(Throwable throwable) {
 
         if (throwable instanceof RepositoryManagerException) {
             return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null));
         } else if (throwable instanceof IdClientNotFoundException) {
             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(null));
         }
-        log.error("getErrorResponse() : {}", throwable.getClass());
         return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
     }
 
     @Override
     public Mono<ResponseEntity<DocumentTypesConfigurations>> getDocumentsConfigs(final ServerWebExchange exchange) {
+        final String GET_DOCUMENTS_CONFIGS = "getDocumentsConfigs";
 
+        log.info(Constant.STARTING_PROCESS, GET_DOCUMENTS_CONFIGS);
+
+        log.debug(Constant.INVOKING_METHOD, GET_DOCUMENTS_CONFIGS, "");
         return documentsConfigsService.getDocumentsConfigs()
-                                      .map(ResponseEntity::ok)
-                                      .onErrorResume(this::getDocumentTypesConfigurationsErrorResponse);
+                                      .map(documentTypesConfigurations -> {
+                                          log.info(Constant.ENDING_PROCESS, GET_DOCUMENTS_CONFIGS);
+                                          return ResponseEntity.ok(documentTypesConfigurations);
+                                      })
+                                      .onErrorResume(throwable -> {
+                                          log.info(Constant.ENDING_PROCESS_WITH_ERROR, GET_DOCUMENTS_CONFIGS, throwable, throwable.getMessage());
+                                          return this.getDocumentTypesConfigurationsErrorResponse(throwable);
+                                      });
     }
 
     /**
@@ -81,11 +90,21 @@ public class ConfigurationApiController implements CfgApi {
      */
     @Override
     public Mono<ResponseEntity<UserConfiguration>> getCurrentClientConfig(String clientId, final ServerWebExchange exchange) {
+        final String GET_CURRENT_CLIENT_CONFIGS = "getCurrentClientConfig";
 
+        log.info(Constant.STARTING_PROCESS_ON, GET_CURRENT_CLIENT_CONFIGS, clientId);
+
+        log.debug(Constant.INVOKING_METHOD, GET_CURRENT_CLIENT_CONFIGS, clientId);
         return userConfigurationService.getUserConfiguration(clientId)
-                                       .map(userConfigurationInternal -> ResponseEntity.ok(objectMapper.convertValue(
-                                               userConfigurationInternal,
-                                               UserConfiguration.class)))
-                                       .onErrorResume(throwable -> getUserConfigurationErrorResponse(clientId, throwable));
+                                       .map(userConfigurationInternal -> {
+                                           log.info(Constant.ENDING_PROCESS_ON, GET_CURRENT_CLIENT_CONFIGS, clientId);
+                                           return ResponseEntity.ok(objectMapper.convertValue(
+                                                   userConfigurationInternal,
+                                                   UserConfiguration.class));
+                                       })
+                                       .onErrorResume(throwable -> {
+                                           log.info(Constant.ENDING_PROCESS_WITH_ERROR, GET_CURRENT_CLIENT_CONFIGS, throwable, throwable.getMessage());
+                                           return getUserConfigurationErrorResponse(throwable);
+                                       });
     }
 }

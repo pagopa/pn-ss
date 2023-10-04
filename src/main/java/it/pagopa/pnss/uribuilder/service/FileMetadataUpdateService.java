@@ -9,13 +9,16 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.constant.Constant;
+import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
@@ -28,6 +31,8 @@ public class FileMetadataUpdateService {
     private final UserConfigurationClientCall userConfigClientCall;
     private final DocumentClientCall docClientCall;
     private final DocTypesClientCall docTypesClientCall;
+    @Autowired
+    RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall) {
         this.userConfigClientCall = userConfigurationClientCall;
@@ -46,15 +51,19 @@ public class FileMetadataUpdateService {
                     var userConfiguration = objects.getT1().getUserConfiguration();
                     var document = objects.getT2().getDocument();
                     var tipoDocumento = document.getDocumentType().getTipoDocumento();
+                    final String USER_CONFIGURATION = "userConfiguration in FileMetadataUpdateService updateMetadata()";
 
+                    log.info(Constant.CHECKING_VALIDATION_PROCESS, USER_CONFIGURATION);
                     if (userConfiguration == null || userConfiguration.getCanModifyStatus() == null || !userConfiguration.getCanModifyStatus().contains(tipoDocumento)) {
                         String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
                                 xPagopaSafestorageCxId,
                                 tipoDocumento);
-                        log.debug("FileMetadataUpdateService.createUriForUploadFile() : errore = {}", errore);
+                        log.warn(Constant.VALIDATION_PROCESS_FAILED, USER_CONFIGURATION, "Client " + xPagopaSafestorageCxId +" not has privilege for change document");
                         synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, errore));
-                    } else synchronousSink.next(document);
-
+                    } else {
+                        log.info(Constant.VALIDATION_PROCESS_PASSED, USER_CONFIGURATION);
+                        synchronousSink.next(document);
+                    }
                 }))
                             .flatMap(object -> {
                                 Document document = (Document) object;
@@ -102,8 +111,10 @@ public class FileMetadataUpdateService {
                         documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
                     }
 
+                    log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentChanges, managerDynamoTableName.documentiName());
                     return docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                                         .flatMap(documentResponsePatch -> {
+                                            log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName());
                                             OperationResultCodeResponse resp = new OperationResultCodeResponse();
                                             resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
                                             resp.setResultDescription(ResultCodeWithDescription.OK.getDescription());
@@ -112,9 +123,9 @@ public class FileMetadataUpdateService {
 
                 })
 
-                            .onErrorResume(WebClientResponseException.class, e -> {
+                            .onErrorResume(PatchDocumentException.class, e -> {
                                 log.debug(
-                                        "FileMetadataUpdateService.createUriForUploadFile() : rilevata una WebClientResponseException : " +
+                                        "FileMetadataUpdateService.createUriForUploadFile() : rilevata una PatchDocumentException : " +
 										"errore = {}",
                                         e.getMessage(),
                                         e);
@@ -144,7 +155,8 @@ public class FileMetadataUpdateService {
                             .onErrorResume(e -> {
                                 log.error("FileMetadataUpdateService.createUriForUploadFile() : errore generico = {}", e.getMessage(), e);
                                 return Mono.error(e);
-                            });
+                            })
+                            .doOnSuccess(operationResultCodeResponse -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, fileKey, "FileMetadataUpdateService.updateMetadata()", operationResultCodeResponse));
     }
 
     private Mono<String> checkLookUp(String documentType, String logicalState) {

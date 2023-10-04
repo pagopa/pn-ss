@@ -377,6 +377,7 @@ Parameters:
   JavaToolOptions:
     Type: String
     Description: 'System properties and parameters for the JVM'
+    Default: ''
 
   # Log group parameters
   EcsLogGroup:

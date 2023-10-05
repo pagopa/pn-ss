@@ -15,6 +15,8 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -63,7 +65,6 @@ class UriBuilderServiceDownloadTest {
     private String X_PAGOPA_SAFESTORAGE_CX_ID;
     @Value("${queryParam.presignedUrl.traceId:#{null}}")
     private String queryParamPresignedUrlTraceId;
-
     @Value("${max.restore.time.cold}")
     BigDecimal maxRestoreTimeCold;
 
@@ -103,6 +104,9 @@ class UriBuilderServiceDownloadTest {
 
     @Autowired
     BucketName bucketName;
+
+    @Autowired
+    S3Client s3TestClient;
     private static final String CHECKSUM = "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
 
     @Value("${default.internal.x-api-key.value:#{null}}")
@@ -549,6 +553,21 @@ class UriBuilderServiceDownloadTest {
         }
         return byteArray;
 
+    }
+
+    private void putObjectInGlacier(String fileKey, byte[] fileBytes) {
+        s3TestClient.putObject(builder -> builder.key(fileKey)
+                .bucket(bucketName.ssHotName())
+                .storageClass(StorageClass.GLACIER)
+                .contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(fileBytes)))).build(), RequestBody.fromBytes(fileBytes));
+    }
+
+    private void restoreObjectInGlacier(String fileKey) {
+        var restoreRequest = RestoreRequest.builder()
+                .days(1)
+                .glacierJobParameters(builder -> builder.tier(Tier.STANDARD))
+                .build();
+        s3TestClient.restoreObject(builder -> builder.key(fileKey).bucket(bucketName.ssHotName()).restoreRequest(restoreRequest));
     }
 
 }

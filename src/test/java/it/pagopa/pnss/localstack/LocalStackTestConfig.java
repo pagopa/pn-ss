@@ -188,6 +188,9 @@ public class LocalStackTestConfig {
                 .rule(ObjectLockRule.builder().defaultRetention(DefaultRetention.builder().days(1).mode(ObjectLockRetentionMode.GOVERNANCE).build()).build())
                 .build();
 
+        LifecycleRule lifecycleRule = LifecycleRule.builder().transitions(builder -> builder.storageClass(StorageClass.GLACIER.name()).days(1)).build();
+        BucketLifecycleConfiguration bucketLifecycleConfiguration = BucketLifecycleConfiguration.builder().rules(lifecycleRule).build();
+
         bucketNames.forEach(bucket -> {
             log.info("<-- START S3 init-->");
             try {
@@ -196,7 +199,7 @@ public class LocalStackTestConfig {
             } catch (NoSuchBucketException noSuchBucketException) {
                 s3Client.createBucket(builder -> builder.bucket(bucket).objectLockEnabledForBucket(true));
                 s3Client.putObjectLockConfiguration(builder -> builder.bucket(bucket).objectLockConfiguration(objectLockConfiguration));
-
+                s3Client.putBucketLifecycleConfiguration(builder -> builder.bucket(bucket).lifecycleConfiguration(bucketLifecycleConfiguration));
                 log.info("New bucket {} created on local stack S3", bucket);
             }
         });

@@ -21,7 +21,7 @@ public class LocalStackClientConfig {
     String sqsLocalStackEndpoint;
 
     @Bean
-    public S3Client s3Client() {
+    public S3Client s3TestClient() {
         return S3Client.builder()
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .region(Region.of(awsConfigurationProperties.regionCode()))

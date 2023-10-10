@@ -41,6 +41,8 @@ public class FileMetadataUpdateService {
     }
 
     public Mono<OperationResultCodeResponse> updateMetadata(String fileKey, String xPagopaSafestorageCxId, UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {
+        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG, "updateMetadata", fileKey, xPagopaSafestorageCxId, request, authPagopaSafestorageCxId, authApiKey);
+
         var retentionUntil = request.getRetentionUntil();
         var logicalState = request.getStatus();
 

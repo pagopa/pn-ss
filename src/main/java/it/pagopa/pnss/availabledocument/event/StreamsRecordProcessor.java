@@ -61,7 +61,10 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 })
                 .then()
                 .doOnError(e -> log.error("* FATAL * DBStream: Errore generico ", e))
-                .doOnSuccess(unused -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, PROCESS_RECORDS, "StreamsRecordProcessor.processRecords()", processRecordsInput))
+                .doOnSuccess(unused -> {
+                    log.info(Constant.SUCCESSFUL_OPERATION_LABEL, PROCESS_RECORDS, "StreamsRecordProcessor.processRecords()", processRecordsInput);
+                    setCheckpoint(processRecordsInput);
+                })
                 .subscribe();
     }
 
@@ -80,7 +83,6 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 })
                 .doOnError(e -> log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> {
-                    setCheckpoint(processRecordsInput);
                     log.info(Constant.SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, "StreamsRecordProcessor.findEventSendToBridge()", processRecordsInput);
                 });
     }
@@ -88,7 +90,11 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     private void setCheckpoint(ProcessRecordsInput processRecordsInput) {
         try {
             if (!test) {
+
+                    log.info("Setting checkpoint on id {}", processRecordsInput.getRecords().get(processRecordsInput.getRecords().size() - 1));
+
                     processRecordsInput.getCheckpointer().checkpoint();
+
             }
         } catch (ShutdownException e) {
             log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
@@ -108,6 +114,5 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 log.error("* FATAL * DBStream: Errore durante il processo di shutDown", e);
             }
         }
-
     }
 }

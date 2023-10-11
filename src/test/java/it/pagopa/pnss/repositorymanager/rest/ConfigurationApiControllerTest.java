@@ -2,6 +2,10 @@ package it.pagopa.pnss.repositorymanager.rest;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +34,9 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+
+
+
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
@@ -293,6 +300,17 @@ public class ConfigurationApiControllerTest {
 	    
 	    log.info("\n Test 4 (getCurrentClientIncorrectParameter) test passed \n");
 	}
-	
+
+
+
+
+
+
 
 }
+
+
+
+
+
+

@@ -39,4 +39,9 @@ public class WebClientConf {
     public WebClient ssWebClient() {
         return defaultJsonWebClientBuilder().baseUrl(internalBaseUrl).build();
     }
+
+    @Bean
+    public WebClient genericWebClient() {
+        return defaultJsonWebClientBuilder().build();
+    }
 }

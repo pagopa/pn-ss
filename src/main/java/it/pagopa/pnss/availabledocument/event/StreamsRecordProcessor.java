@@ -7,7 +7,6 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownInput;
-import com.amazonaws.services.kinesis.model.Record;
 import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +16,6 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
-import java.nio.charset.StandardCharsets;
 
 import static it.pagopa.pnss.common.constant.Constant.CLIENT_METHOD_INVOCATION;
 
@@ -47,7 +45,8 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     @Override
     public void processRecords(ProcessRecordsInput processRecordsInput) {
         final String PROCESS_RECORDS = "processRecords";
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG, PROCESS_RECORDS, processRecordsInput, processRecordsInput.getMillisBehindLatest());
+
+        log.debug(Constant.INVOKING_METHOD + Constant.ARG, PROCESS_RECORDS,((RecordAdapter) processRecordsInput.getRecords().get(0)).getInternalObject() , processRecordsInput.getMillisBehindLatest());
         findEventSendToBridge(processRecordsInput)
                 .buffer(10)
                 .map(putEventsRequestEntries -> {

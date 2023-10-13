@@ -17,6 +17,7 @@ import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
+import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -30,12 +31,12 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     private final ObjectMapper objectMapper;
     private final DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationEntityDynamoDbAsyncTable;
-    private final Retry dynamoRetryStrategy;
+    private final RetryBackoffSpec dynamoRetryStrategy;
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, Retry dynamoRetryStrategy) {
+                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy) {
         this.objectMapper = objectMapper;
         this.dynamoRetryStrategy = dynamoRetryStrategy;
         this.userConfigurationEntityDynamoDbAsyncTable =
@@ -50,6 +51,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
     @Override
     public Mono<UserConfiguration> getUserConfiguration(String name) {
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
+                   .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity, UserConfiguration.class))
@@ -82,7 +84,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                 .flatMap(unused -> {
                     log.debug(Constant.INSERTING_DATA_IN_DYNAMODB_TABLE, userConfigurationInput, userConfigurationEntity);
                     return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
-                            userConfigurationEntity)));
+                            userConfigurationEntity))).retryWhen(dynamoRetryStrategy);
                 })
                 .doOnSuccess(unused -> {
                     log.info(Constant.INSERTED_DATA_IN_DYNAMODB_TABLE, userConfigurationEntity);
@@ -95,6 +97,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
     public Mono<UserConfiguration> patchUserConfiguration(String name, UserConfigurationChanges userConfigurationChanges) {
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
+                   .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(entityStored -> {
@@ -118,8 +121,8 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                    .zipWhen(userConfigurationUpdated -> {
                        log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, userConfigurationUpdated, managerDynamoTableName.anagraficaClientName());
                        return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
-                               userConfigurationUpdated));
-                   }).retryWhen(dynamoRetryStrategy)
+                               userConfigurationUpdated)).retryWhen(dynamoRetryStrategy);
+                   })
                    .map(objects -> {
                        log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.anagraficaClientName());
                        return objectMapper.convertValue(objects.getT2(), UserConfiguration.class);
@@ -137,7 +140,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                    .zipWhen(userConfigurationToDelete -> {
                        log.debug(Constant.DELETING_DATA_IN_DYNAMODB_TABLE, userConfigurationKey, managerDynamoTableName.anagraficaClientName());
                        return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.deleteItem(
-                               userConfigurationKey));
+                               userConfigurationKey)).retryWhen(dynamoRetryStrategy);
                    })
                    .map(userConfigurationEntity -> {
                        log.debug(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.anagraficaClientName());

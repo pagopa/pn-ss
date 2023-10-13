@@ -32,7 +32,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @SpringBootTestWebEnv
-@AutoConfigureWebTestClient
+@AutoConfigureWebTestClient(timeout = "36000")
 @Slf4j
 class FileMetadataUpdateApiControllerTest {
 

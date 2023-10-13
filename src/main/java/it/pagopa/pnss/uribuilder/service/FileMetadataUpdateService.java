@@ -16,11 +16,11 @@ import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.RetryBackoffSpec;
 
 import java.text.SimpleDateFormat;
 
@@ -31,13 +31,17 @@ public class FileMetadataUpdateService {
     private final UserConfigurationClientCall userConfigClientCall;
     private final DocumentClientCall docClientCall;
     private final DocTypesClientCall docTypesClientCall;
-    @Autowired
-    RepositoryManagerDynamoTableName managerDynamoTableName;
+    private final RepositoryManagerDynamoTableName managerDynamoTableName;
+    private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
+    private final RetryBackoffSpec s3RetryStrategy;
 
-    public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall) {
+    public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall, RepositoryManagerDynamoTableName managerDynamoTableName, RetryBackoffSpec gestoreRepositoryRetryStrategy, RetryBackoffSpec s3RetryStrategy) {
         this.userConfigClientCall = userConfigurationClientCall;
         this.docClientCall = documentClientCall;
         this.docTypesClientCall = docTypesClientCall;
+        this.managerDynamoTableName = managerDynamoTableName;
+        this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
+        this.s3RetryStrategy = s3RetryStrategy;
     }
 
     public Mono<OperationResultCodeResponse> updateMetadata(String fileKey, String xPagopaSafestorageCxId, UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {
@@ -45,6 +49,7 @@ public class FileMetadataUpdateService {
         var logicalState = request.getStatus();
 
         return docClientCall.getDocument(fileKey)
+                .retryWhen(gestoreRepositoryRetryStrategy)
                 .flatMap( documentResponse -> Mono.zipDelayError(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
                 .handle(((objects, synchronousSink) -> {
 
@@ -113,6 +118,7 @@ public class FileMetadataUpdateService {
 
                     log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentChanges, managerDynamoTableName.documentiName());
                     return docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
+                                        .retryWhen(gestoreRepositoryRetryStrategy)
                                         .flatMap(documentResponsePatch -> {
                                             log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName());
                                             OperationResultCodeResponse resp = new OperationResultCodeResponse();
@@ -160,7 +166,8 @@ public class FileMetadataUpdateService {
     }
 
     private Mono<String> checkLookUp(String documentType, String logicalState) {
-        return docTypesClientCall.getdocTypes(documentType)//
+        return docTypesClientCall.getdocTypes(documentType)
+                                 .retryWhen(gestoreRepositoryRetryStrategy)
                                  .map(item -> item.getDocType().getStatuses().get(logicalState).getTechnicalState())//
                                  .onErrorResume(NullPointerException.class, e -> {
                                      String errorMsg =

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationResponse;
 import software.amazon.awssdk.services.s3.model.LifecycleRule;
 
@@ -23,6 +24,8 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
 
     @Autowired
     private S3Service s3Service;
+    @Autowired
+    private RetryBackoffSpec s3RetryStrategy;
     private static final String TAG_KEY = "storageType";
 
     @Autowired
@@ -92,6 +95,7 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
 
         log.info(CLIENT_METHOD_INVOCATION, "s3Service.getBucketLifecycleConfiguration()", bucketName.ssHotName());
         return s3Service.getBucketLifecycleConfiguration(bucketName.ssHotName())
+                .retryWhen(s3RetryStrategy)
                 .handle((response, sink) -> {
                     if (response == null || response.rules() == null) {
                         sink.error(new BucketException("No Rules founded"));

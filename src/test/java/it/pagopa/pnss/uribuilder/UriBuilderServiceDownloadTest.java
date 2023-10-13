@@ -53,7 +53,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @SpringBootTestWebEnv
-@AutoConfigureWebTestClient
+@AutoConfigureWebTestClient(timeout = "36000")
 @Slf4j
 class UriBuilderServiceDownloadTest {
 

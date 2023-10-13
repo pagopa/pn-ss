@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
+import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.services.s3.model.*;
@@ -40,6 +41,7 @@ import java.security.SecureRandom;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Predicate;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 
@@ -83,7 +85,8 @@ public class UriBuilderService {
     private final DocTypesClientCall docTypesClientCall;
     private final S3Service s3Service;
     private final S3Presigner s3Presigner;
-    private final Retry uriBuilderRetryStrategy;
+    private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
+    private final RetryBackoffSpec s3RetryStrategy;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
     private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
@@ -92,14 +95,15 @@ public class UriBuilderService {
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner, Retry uriBuilderRetryStrategy) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner, RetryBackoffSpec gestoreRepositoryRetryStrategy, RetryBackoffSpec s3RetryStrategy) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.docTypesClientCall = docTypesClientCall;
         this.s3Service = s3Service;
         this.s3Presigner = s3Presigner;
-        this.uriBuilderRetryStrategy = uriBuilderRetryStrategy;
+        this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
+        this.s3RetryStrategy = s3RetryStrategy;
     }
 
     private Mono<String> getBucketName(DocumentType docType) {
@@ -122,7 +126,7 @@ public class UriBuilderService {
         metadata.put("secret", secret.toString());
 
         return validationField(contentType, documentType, xTraceIdValue)
-                .flatMap(booleanMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
+                .flatMap(booleanMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId).retryWhen(gestoreRepositoryRetryStrategy))
                                             .handle((userConfiguration, synchronousSink) -> {
                                                 if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
                                                     synchronousSink.error((new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -152,9 +156,12 @@ public class UriBuilderService {
                                                         .clientShortCode(
                                                                 xPagopaSafestorageCxId)
                                                         .documentType(request.getDocumentType());
-                                                return documentClientCall.postDocument(documentInput).retryWhen(uriBuilderRetryStrategy);
+                                                return documentClientCall.postDocument(documentInput)
+                                                                         .retryWhen(Retry.max(10)
+                                                                                         .filter(DocumentkeyPresentException.class::isInstance)
+                                                                                         .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
+                                                                                             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Non e' stato possibile produrre una chiave per user " + xPagopaSafestorageCxId);}));
                                             })
-                                            .onErrorResume(DocumentkeyPresentException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Non e' stato possibile produrre una chiave per user " + xPagopaSafestorageCxId)))
                                             .flatMap(insertedDocument ->
 
                                                              buildsUploadUrl(insertedDocument.getDocument(),
@@ -200,7 +207,7 @@ public class UriBuilderService {
                         sink.next(contentType);
                     }
                 })
-                .flatMap(mono -> docTypesClientCall.getdocTypes(documentType))
+                .flatMap(mono -> docTypesClientCall.getdocTypes(documentType).retryWhen(gestoreRepositoryRetryStrategy))
                 .onErrorResume(DocumentTypeNotPresentException.class, e -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid")))
                 .map(o -> true);
     }
@@ -283,7 +290,7 @@ public class UriBuilderService {
                                                                    .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
                                                                    .putObjectRequest(putObjectRequest)
                                                                    .build())
-                   .flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest)));
+                   .flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest)).retryWhen(s3RetryStrategy));
     }
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, String xTraceIdValue, Boolean metadataOnly) {
@@ -298,11 +305,12 @@ public class UriBuilderService {
         log.info(Constant.VALIDATION_PROCESS_PASSED, XTRACEIDVALUE);
 
         return Mono.fromCallable(this::validationFieldCreateUri)//
-                .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))//
+                .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId).retryWhen(gestoreRepositoryRetryStrategy))//
                 .flatMap(userConfigurationResponse -> {
                     List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
                     return documentClientCall.getDocument(fileKey)
+                            .retryWhen(gestoreRepositoryRetryStrategy)
                             .onErrorResume(DocumentKeyNotPresentException.class//
                                     , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + fileKey)))
                             .flatMap(documentResponse -> {
@@ -327,7 +335,8 @@ public class UriBuilderService {
                     if (canExecutePatch && (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil()))) {
                         log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
-                                .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
+                                .retryWhen(s3RetryStrategy.filter(Predicate.not(NoSuchKeyException.class::isInstance)))
+                                .onErrorResume(NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
                                 .flatMap(headObjectResponse -> {
                                     DocumentChanges documentChanges;
                                     if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
@@ -336,7 +345,7 @@ public class UriBuilderService {
                                     } else
                                         documentChanges = new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate()));
                                     return documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
-                                            .retryWhen(uriBuilderRetryStrategy)
+                                            .retryWhen(gestoreRepositoryRetryStrategy)
                                             .map(DocumentResponse::getDocument);
                                 });
                     }

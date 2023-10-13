@@ -58,7 +58,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                           .uri(anagraficaDocumentiClientEndpointPost)
                           .bodyValue(document)
                           .retrieve()
-                          .onStatus(FORBIDDEN::equals,
+                          .onStatus(CONFLICT::equals,
                                     clientResponse -> Mono.error(new DocumentkeyPresentException(document.getDocumentKey())))
                           .bodyToMono(DocumentResponse.class);
     }

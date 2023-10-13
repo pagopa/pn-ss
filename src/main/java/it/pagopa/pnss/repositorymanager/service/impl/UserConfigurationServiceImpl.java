@@ -16,6 +16,7 @@ import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -29,12 +30,14 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     private final ObjectMapper objectMapper;
     private final DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationEntityDynamoDbAsyncTable;
+    private final Retry dynamoRetryStrategy;
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
+                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, Retry dynamoRetryStrategy) {
         this.objectMapper = objectMapper;
+        this.dynamoRetryStrategy = dynamoRetryStrategy;
         this.userConfigurationEntityDynamoDbAsyncTable =
                 dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.anagraficaClientName(),
                                                   TableSchema.fromBean(UserConfigurationEntity.class));
@@ -116,7 +119,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                        log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, userConfigurationUpdated, managerDynamoTableName.anagraficaClientName());
                        return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
                                userConfigurationUpdated));
-                   }).retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
+                   }).retryWhen(dynamoRetryStrategy)
                    .map(objects -> {
                        log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.anagraficaClientName());
                        return objectMapper.convertValue(objects.getT2(), UserConfiguration.class);

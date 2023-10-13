@@ -57,5 +57,6 @@ public final class Constant {
     public static final String SUCCESSFUL_OPERATION_LABEL = "Successful operation on '{}': '{}' = '{}'";
     public static final String INVOKING_INTERNAL_SERVICE = "Invoking internal service '{}' '{}'. Waiting Sync response.";
     public static final String CLIENT_METHOD_INVOCATION = "Client method '{}' - args: '{}'";
+    public static final String RETRY_ATTEMPT = "Retry attempt number '{}' caused by : {} - {}";
     public static final String ARG = " - '{}'";
 }

@@ -25,6 +25,7 @@ import org.apache.tika.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -52,16 +53,18 @@ public class DocumentServiceImpl implements DocumentService {
     private final BucketName bucketName;
     private final CallMacchinaStati callMacchinaStati;
     private final S3Service s3Service;
+    private final Retry dynamoRetryStrategy;
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
                                RetentionService retentionService, AwsConfigurationProperties awsConfigurationProperties,
-                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service) {
+                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service, Retry dynamoRetryStrategy) {
         this.docTypesService = docTypesService;
         this.callMacchinaStati = callMacchinaStati;
         this.s3Service = s3Service;
+        this.dynamoRetryStrategy = dynamoRetryStrategy;
         this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
                                                                                   TableSchema.fromBean(DocumentEntity.class));
         this.objectMapper = objectMapper;
@@ -271,7 +274,7 @@ public class DocumentServiceImpl implements DocumentService {
                        log.info(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName());
                        return Mono.fromCompletionStage(document);
                    })
-                   .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
+                   .retryWhen(dynamoRetryStrategy)
                    .doOnSuccess(documentType -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, documentKey, "DocumentServiceImpl.patchDocument()", documentChanges));
     }
 

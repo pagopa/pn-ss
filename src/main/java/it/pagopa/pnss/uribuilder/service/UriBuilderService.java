@@ -83,6 +83,7 @@ public class UriBuilderService {
     private final DocTypesClientCall docTypesClientCall;
     private final S3Service s3Service;
     private final S3Presigner s3Presigner;
+    private final Retry uriBuilderRetryStrategy;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
     private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
@@ -91,13 +92,14 @@ public class UriBuilderService {
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner, Retry uriBuilderRetryStrategy) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.docTypesClientCall = docTypesClientCall;
         this.s3Service = s3Service;
         this.s3Presigner = s3Presigner;
+        this.uriBuilderRetryStrategy = uriBuilderRetryStrategy;
     }
 
     private Mono<String> getBucketName(DocumentType docType) {
@@ -150,23 +152,9 @@ public class UriBuilderService {
                                                         .clientShortCode(
                                                                 xPagopaSafestorageCxId)
                                                         .documentType(request.getDocumentType());
-                                                return documentClientCall.postDocument(documentInput)
-                                                                         .retryWhen(Retry.max(10)
-                                                                                         .filter(DocumentkeyPresentException.class::isInstance)
-                                                                                         .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
-                                                                                             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                                                                                                               "Non e' " +
-                                                                                                                               "stato " +
-                                                                                                                               "possibile" +
-                                                                                                                               " " +
-                                                                                                                               "produrre " +
-                                                                                                                               "una " +
-                                                                                                                               "chiave " +
-                                                                                                                               "per " +
-                                                                                                                               "user " +
-                                                                                                                               xPagopaSafestorageCxId);
-                                                                                         }));
+                                                return documentClientCall.postDocument(documentInput).retryWhen(uriBuilderRetryStrategy);
                                             })
+                                            .onErrorResume(DocumentkeyPresentException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Non e' stato possibile produrre una chiave per user " + xPagopaSafestorageCxId)))
                                             .flatMap(insertedDocument ->
 
                                                              buildsUploadUrl(insertedDocument.getDocument(),
@@ -348,6 +336,7 @@ public class UriBuilderService {
                                     } else
                                         documentChanges = new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate()));
                                     return documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
+                                            .retryWhen(uriBuilderRetryStrategy)
                                             .map(DocumentResponse::getDocument);
                                 });
                     }

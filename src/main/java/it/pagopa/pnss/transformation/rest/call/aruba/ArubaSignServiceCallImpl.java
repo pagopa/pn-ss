@@ -6,20 +6,19 @@ import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
 import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimeMark;
 import it.pagopa.pnss.transformation.wsdl.*;
 import jakarta.activation.DataHandler;
-import jakarta.mail.util.ByteArrayDataSource;
 import jakarta.xml.ws.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.util.retry.RetryBackoffSpec;
 
 import java.io.ByteArrayInputStream;
 import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 
 import static it.pagopa.pnss.transformation.wsdl.XmlSignatureType.XMLENVELOPED;
-import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @Service
@@ -29,6 +28,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
     private final ArubaSignService arubaSignService;
     private final IdentitySecretTimeMark identitySecretTimemark;
     private final ArubaSecretValue arubaSecretValue;
+    private final RetryBackoffSpec arubaRetryStrategy;
 
     @Value("${aruba.cert_id}")
     public String certificationID;
@@ -50,10 +50,11 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
     });
 
     public ArubaSignServiceCallImpl(ArubaSignService arubaSignService, IdentitySecretTimeMark identitySecretTimemark,
-                                    ArubaSecretValue arubaSecretValue, @Value("${aruba.sign.timeout}") String arubaSignTimeout) {
+                                    ArubaSecretValue arubaSecretValue, RetryBackoffSpec arubaRetryStrategy, @Value("${aruba.sign.timeout}") String arubaSignTimeout) {
         this.arubaSignService = arubaSignService;
         this.identitySecretTimemark = identitySecretTimemark;
         this.arubaSecretValue = arubaSecretValue;
+        this.arubaRetryStrategy = arubaRetryStrategy;
         this.arubaSignTimeout = Long.valueOf(arubaSignTimeout);
     }
 
@@ -122,6 +123,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                    .flatMap(pdfsignatureV2 -> Mono.create(sink -> arubaSignService.pdfsignatureV2Async(pdfsignatureV2,
                                                                                                        res -> createMonoFromSoapRequest(sink,
                                                                                                                                         res))))
+                   .retryWhen(arubaRetryStrategy)
                    .cast(PdfsignatureV2Response.class)
                    .map(PdfsignatureV2Response::getReturn)
                    .transform(CHECK_IF_RESPONSE_IS_OK);
@@ -145,6 +147,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                    .flatMap(pkcs7SignV2 -> Mono.create(sink -> arubaSignService.pkcs7SignV2Async(pkcs7SignV2,
                                                                                                  res -> createMonoFromSoapRequest(sink,
                                                                                                                                   res))))
+                   .retryWhen(arubaRetryStrategy)
                    .cast(Pkcs7SignV2Response.class)
                    .map(Pkcs7SignV2Response::getReturn)
                    .transform(CHECK_IF_RESPONSE_IS_OK);
@@ -171,6 +174,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                    .flatMap(xmlsignature -> Mono.create(sink -> arubaSignService.xmlsignatureAsync(xmlsignature,
                                                                                                    res -> createMonoFromSoapRequest(sink,
                                                                                                                                     res))))
+                   .retryWhen(arubaRetryStrategy)
                    .cast(XmlsignatureResponse.class)
                    .map(XmlsignatureResponse::getReturn)
                    .transform(CHECK_IF_RESPONSE_IS_OK);

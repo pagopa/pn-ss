@@ -126,7 +126,8 @@ public class UriBuilderService {
         metadata.put("secret", secret.toString());
 
         return validationField(contentType, documentType, xTraceIdValue)
-                .flatMap(booleanMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId).retryWhen(gestoreRepositoryRetryStrategy))
+                .flatMap(booleanMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
+                                            .retryWhen(gestoreRepositoryRetryStrategy))
                                             .handle((userConfiguration, synchronousSink) -> {
                                                 if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
                                                     synchronousSink.error((new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -304,8 +305,9 @@ public class UriBuilderService {
         }
         log.info(Constant.VALIDATION_PROCESS_PASSED, XTRACEIDVALUE);
 
-        return Mono.fromCallable(this::validationFieldCreateUri)//
-                .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId).retryWhen(gestoreRepositoryRetryStrategy))//
+        return Mono.fromCallable(this::validationFieldCreateUri)
+                .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
+                .retryWhen(gestoreRepositoryRetryStrategy))
                 .flatMap(userConfigurationResponse -> {
                     List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
@@ -429,6 +431,7 @@ public class UriBuilderService {
 
         log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG + Constant.ARG, "s3Service.restoreObject()", keyName, bucketName, restoreRequest);
         return s3Service.restoreObject(keyName, bucketName, restoreRequest)
+                .retryWhen(s3RetryStrategy)
                 //Eccezioni S3: RestoreAlreadyInProgress viene ignorata.
                 .onErrorResume(AwsServiceException.class, ase ->
                 {
@@ -470,6 +473,7 @@ public class UriBuilderService {
 
         log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.presignGetObject()", getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)));
         return s3Service.presignGetObject(getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)))
+                .retryWhen(s3RetryStrategy)
                 .map(presignedRequest -> new FileDownloadInfo().url(presignedRequest.url().toString()))
                 //Eccezioni S3
                 .onErrorResume(S3Exception.class, ase ->

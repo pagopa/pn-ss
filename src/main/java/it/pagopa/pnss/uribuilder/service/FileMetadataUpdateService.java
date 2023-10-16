@@ -33,7 +33,6 @@ public class FileMetadataUpdateService {
     private final DocTypesClientCall docTypesClientCall;
     private final RepositoryManagerDynamoTableName managerDynamoTableName;
     private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
-    private final RetryBackoffSpec s3RetryStrategy;
 
     public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall, RepositoryManagerDynamoTableName managerDynamoTableName, RetryBackoffSpec gestoreRepositoryRetryStrategy, RetryBackoffSpec s3RetryStrategy) {
         this.userConfigClientCall = userConfigurationClientCall;
@@ -41,7 +40,6 @@ public class FileMetadataUpdateService {
         this.docTypesClientCall = docTypesClientCall;
         this.managerDynamoTableName = managerDynamoTableName;
         this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
-        this.s3RetryStrategy = s3RetryStrategy;
     }
 
     public Mono<OperationResultCodeResponse> updateMetadata(String fileKey, String xPagopaSafestorageCxId, UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {

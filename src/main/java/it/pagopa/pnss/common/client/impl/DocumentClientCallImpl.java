@@ -74,7 +74,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                           .bodyValue(document)
                           .retrieve()
                           .onStatus(BAD_REQUEST::equals, clientResponse -> clientResponse.bodyToMono(DocumentResponse.class)
-                                  .map(documentResponse -> new PatchDocumentException(documentResponse.getError().getDescription(), HttpStatus.valueOf(documentResponse.getError().getCode())))
+                                  .map(documentResponse -> new PatchDocumentException(documentResponse.getError().getDescription(), HttpStatus.valueOf(Integer.parseInt(documentResponse.getError().getCode()))))
                                   .flatMap(Mono::error))
                          .onStatus(NOT_FOUND::equals,
                                     clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))

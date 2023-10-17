@@ -211,6 +211,12 @@ Resources:
             TagFilters:
               - Key: 'storageType'
                 Value: 'PN_NOTIFIED_DOCUMENTS'
+          - Id: 'PnSsAddressesStorage'
+            ExpirationInDays: 30
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storageType'
+                Value: 'PN_ADDRESSES_STORAGE'
           - Id: 'PnSsAar'
             ExpirationInDays: 3655
             Status: 'Enabled'

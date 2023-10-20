@@ -46,7 +46,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     public void processRecords(ProcessRecordsInput processRecordsInput) {
         final String PROCESS_RECORDS = "processRecords";
 
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG, PROCESS_RECORDS,((RecordAdapter) processRecordsInput.getRecords().get(0)).getInternalObject() , processRecordsInput.getMillisBehindLatest());
+        log.debug(Constant.INVOKING_METHOD + Constant.ARG, PROCESS_RECORDS , processRecordsInput.getMillisBehindLatest());
         findEventSendToBridge(processRecordsInput)
                 .buffer(10)
                 .map(putEventsRequestEntries -> {
@@ -77,8 +77,13 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))
                 .flatMap(streamRecord -> {
                     ManageDynamoEvent mde = new ManageDynamoEvent();
-                    return Mono.justOrEmpty(mde.manageItem(disponibilitaDocumentiEventBridge,
-                            streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage()));
+                    PutEventsRequestEntry putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
+                            streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage());
+                    if (putEventsRequestEntry != null) {
+                        log.info("Event send to bridge {}", putEventsRequestEntry);
+
+                    }
+                    return Mono.justOrEmpty(putEventsRequestEntry);
                 })
                 .doOnError(e -> log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> {

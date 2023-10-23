@@ -384,6 +384,10 @@ Parameters:
     Type: Number 
     Description: 'Numero di giorni di retention per i file di tipo PRELOADED'
 
+  JavaToolOptions:
+    Type: String
+    Description: 'System properties and parameters for the JVM'
+    Default: ''
 
   # Log group parameters
   EcsLogGroup:
@@ -452,6 +456,7 @@ Resources:
         AutoscalingStrategy: REST-API
         MinTasksNumber: !Ref MinTasksNumber
         MaxTasksNumber: !Ref MaxTasksNumber
+        JavaToolOptions: !Ref JavaToolOptions
         # HealthCheckPath:
 
   PnSsManagedPolicy:

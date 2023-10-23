@@ -26,6 +26,6 @@
     "MaxTasksNumber": "13",
     "AutoscalingThreshold": "15000",
     "PnSsUriBuilderGetFileCanExecutePatch": "true",
-    "PnSsTaskExecutionPoolMaxSize" : "512"
+    "JavaToolOptions": "-XX:MaxDirectMemorySize=128M"
   }
 }

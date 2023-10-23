@@ -372,6 +372,8 @@ public class UriBuilderService {
         if (document.getContentLenght() == null && hor.contentLength() != null) {
             documentChanges.setContentLenght(new BigDecimal(hor.contentLength()));
         }
+
+        documentChanges.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
         documentChanges.setDocumentState(AVAILABLE);
         documentChanges.setLastStatusChangeTimestamp(OffsetDateTime.now());
         return documentChanges;

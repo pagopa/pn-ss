@@ -15,162 +15,271 @@ Parameters:
   TemplateBucketBaseUrl:
     Type: String
     Description: URL da cui caricare i frammenti di template di infrastruttura
-  
+
   Version:
     Type: String
     Description: 'keep track of used projects commitIds'
-  
+
+  PnCoreTargetEventBus:
+    Type: String
+    Description: 'ARN of Pn Core Event Bus where to forward external notifications'
+    Default: ''
+    
   # CdcKinesisSourceStreamArn:
   #   Type: String
   #   Description: 'Where to send CDC'
 
+  SafeStorageBucketName:
+    Type: String
+    Description: 'Safe Storage bucket name'
+
+  PnSsGestoreBucketLambdaName:
+    Type: String
+    Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
+    Default: 'pn-safe-storage-gestore-bucket-lambda'
+  
+  PnSsEventBusExternalNotificationName:
+    Type: String 
+    Description: 'Nome del Event Bus che raccoglie gli eventi del microservizio Gestore Disponibilita'
+    Default: 'Pn-Ss-Notifications-Bus'
+  
+  PnSsPreloadedDocsRetentionDays:
+    Type: Number 
+    Description: 'Numero di giorni di retention per i file di tipo PRELOADED'
+    Default: 7
+
+  AlarmSNSTopicName:
+    Type: String
+    Description: 'Topic alarm'
+  
+  EnvType:
+    Type: String
+    Description: 'Deploy environment type'
+    Default: 'dev'
+    
+  LogsKinesisSourceStreamArn:
+    Type: String
+    Description: 'Where to send Logs'
+
+  LogRetention:
+    Type: Number
+    Default: 14
+
+Conditions:
+  IsDevEnv: !Equals [ !Ref EnvType, 'dev'] 
+
+
 Resources:
-  # NullResource:
-  #     Type: AWS::CloudFormation::WaitConditionHandle
+  PCKmsEncDecDynamoDataKey:
+    Type: 'AWS::KMS::Key'
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: A symmetric encryption KMS key AES-256-GCM
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
 
   PnSsTableAnagraficaClient:
     Type: AWS::DynamoDB::Table
     Properties:
+      TableName: 'pn-SsAnagraficaClient'
       AttributeDefinitions:
-        - AttributeName: "name"
-          AttributeType: "S"
+        - AttributeName: 'name'
+          AttributeType: 'S'
       KeySchema: 
-        - AttributeName: "name"
-          KeyType: "HASH"
-      #KinesisStreamSpecification:
-      #  StreamArn: "String"
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+        - AttributeName: 'name'
+          KeyType: 'HASH'
+      BillingMode: 'PAY_PER_REQUEST'
       SSESpecification:
         SSEEnabled: true
-        SSEType: "KMS"
-      TableClass: "STANDARD"
+        SSEType: 'KMS'
+        KMSMasterKeyId: !Ref PCKmsEncDecDynamoDataKey
+      TableClass: 'STANDARD'
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
 
   PnSsTableTipologieDocumenti:
     Type: AWS::DynamoDB::Table
     Properties:
+      TableName: 'pn-SsTipologieDocumenti'
       AttributeDefinitions:
-        - AttributeName: "tipoDocumento"
-          AttributeType: "S"
+        - AttributeName: 'tipoDocumento'
+          AttributeType: 'S'
       KeySchema: 
-        - AttributeName: "tipoDocumento"
-          KeyType: "HASH"
-      #KinesisStreamSpecification:
-      #  StreamArn: "String"
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
-      SSESpecification:
-        SSEEnabled: true
-        SSEType: "KMS"
-      TableClass: "STANDARD"
+        - AttributeName: 'tipoDocumento'
+          KeyType: 'HASH'
+      BillingMode: 'PAY_PER_REQUEST'
+      TableClass: 'STANDARD'
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
 
   PnSsTableDocumenti:
     Type: AWS::DynamoDB::Table
     Properties:
+      TableName: 'pn-SsDocumenti'
       AttributeDefinitions:
-        - AttributeName: "checksum"
-          AttributeType: "S"
+        - AttributeName: 'documentKey'
+          AttributeType: 'S'
       KeySchema: 
-        - AttributeName: "checksum"
-          KeyType: "HASH"
-      #KinesisStreamSpecification:
-      #  StreamArn: "String"
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
-      SSESpecification:
-        SSEEnabled: true
-        SSEType: "KMS"
-      TableClass: "STANDARD"
+        - AttributeName: 'documentKey'
+          KeyType: 'HASH'
+      StreamSpecification:
+          StreamViewType: 'NEW_AND_OLD_IMAGES'
+      BillingMode: 'PAY_PER_REQUEST'
+      TableClass: 'STANDARD'
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
 
+  PnSsKmsBucket:
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: "Symmetric Encryption KMS for Safe Storage's Buckets"
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Enable Permissions on all user and roles
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
+  
   PnSsBucket:
     Type: AWS::S3::Bucket
+    DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
     Properties:
+      BucketName: !Ref SafeStorageBucketName
       AccessControl: 'Private'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - BucketKeyEnabled: true
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
-              #  KMSMasterKeyID: KMS-KEY-AR
-      # IntelligentTieringConfigurations:
-      #   IntelligentTieringConfigurations
-      # InventoryConfigurations:
-      #   InventoryConfigurations
+              KMSMasterKeyID: !GetAtt PnSsKmsBucket.Arn
+      CorsConfiguration:  
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - 'GET'
+              - 'PUT'
+              - 'HEAD'
+              - 'POST'
+              - 'DELETE'
+            AllowedOrigins:
+              - '*'
+            ExposedHeaders:
+              - 'x-amz-version-id'
+            MaxAge: 3600
+            Id: 'CORSRuleSafeStorage'
       LifecycleConfiguration:
         Rules:
           - Id: 'PnSsAbortIncompleteMultipartUpload'
             AbortIncompleteMultipartUpload: 
                 DaysAfterInitiation: 1
             Status: 'Enabled'
-          - Id: 'PnSsAttachmentsPreloaded'
-            ExpirationInDays: 1
+          - Id: 'PnSsNotificationAttachmentTemporary'
+            ExpirationInDays: !Ref PnSsPreloadedDocsRetentionDays
             Status: 'Enabled'
             TagFilters: 
-              - Key: 'documentType'
-                Value: 'PN_NOTIFICATION_ATTACHMENTS'
-              - Key: 'attachmentAttached'
-                Value: 'false'
-          - Id: 'PnSsAttachmentsAttached'
+              - Key: 'storageType'
+                Value: 'PN_TEMPORARY_DOCUMENT'
+          - Id: 'PnSsNotificationAttachment'
             ExpirationInDays: 120
             Status: 'Enabled'
             TagFilters:
-              - Key: 'documentType'
-                Value: 'PN_NOTIFICATION_ATTACHMENTS'
-              - Key: 'attachmentAttached'
-                Value: 'true'
+              - Key: 'storageType'
+                Value: 'PN_NOTIFIED_DOCUMENTS'
           - Id: 'PnSsAar'
-            ExpirationInDays: 3650
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
-              - Key: 'documentType'
+              - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
-                TransitionInDays: 10
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 120
           - Id: 'PnSsLegalFacts'
-            ExpirationInDays: 2
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
-              - Key: 'documentType'
+              - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
-                TransitionInDays: 1
-          - Id: 'PnSsLegalFactsExternal'
-            ExpirationInDays: 2
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 120
+          - Id: 'PnSsLogsArchiveAudit5Y'
+            ExpirationInDays: 1830
             Status: 'Enabled'
             TagFilters: 
-              - Key: 'documentType'
-                Value: 'PN_EXTERNAL_LEGAL_FACTS'
+              - Key: 'storageType'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT5Y'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
+              - StorageClass: 'GLACIER'
                 TransitionInDays: 1
-          - Id: 'PnSsLegalFactsDowntime'
-            ExpirationInDays: 2
+          - Id: 'PnSsLogsArchiveAudit10Y'
+            ExpirationInDays: 3655
             Status: 'Enabled'
             TagFilters: 
-              - Key: 'documentType'
-                Value: 'PN_DOWNTIME_LEGAL_FACTS'
+              - Key: 'storageType'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
             Transitions: 
-              - StorageClass: 'DEEP_ARCHIVE'
+              - StorageClass: 'GLACIER'
                 TransitionInDays: 1
-      #LoggingConfiguration:
-      #  DestinationBucketName: "String"
-      #  LogFilePrefix: "String"
-      #MetricsConfigurations:
-      #  MetricsConfigurations
+          - Id: 'PnSsInvoicingActivityReport'
+            ExpirationInDays: 366
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storageType'
+                Value: 'PN_INVOICING_ACTIVITY_REPORT'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 70
       NotificationConfiguration:
-        EventBridgeConfiguration:
-          EventBridgeEnabled: true
-      #ObjectLockConfiguration:
-      #  ObjectLockEnabled: "String"
-      #ObjectLockEnabled: false
+        QueueConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+          - Event: 's3:ObjectRemoved:*'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+          - Event: 's3:ObjectRestore:*'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+          - Event: 's3:LifecycleExpiration:DeleteMarkerCreated'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+          - Event: 's3:LifecycleTransition'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+          # - Event: 's3:Replication'
+            # Function: !GetAtt PnSsGestoreBucket.Arn
+      ObjectLockEnabled: true
+      ObjectLockConfiguration:
+        ObjectLockEnabled: 'Enabled'
+        Rule:
+          DefaultRetention:
+            Days: !Ref PnSsPreloadedDocsRetentionDays
+            Mode: 'GOVERNANCE' # non modificare quando si decommenta la sezione
+            # Years:
+      VersioningConfiguration:
+        Status: Enabled
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
@@ -180,28 +289,34 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
       #ReplicationConfiguration:
-      #  Role: "false"
+      #  Role: 'false'
       #  Rules:
       #    -
 
   PnSsStagingBucket:
     Type: AWS::S3::Bucket
+    DependsOn: PnSsQueuePolicyGestoreBucketInvoke
     Properties:
+      BucketName: !Sub ${ProjectName}-safestorage-staging-${AWS::Region}-${AWS::AccountId}
       AccessControl: 'Private'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - BucketKeyEnabled: true
             ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
-              #  KMSMasterKeyID: KMS-KEY-AR
-      #LoggingConfiguration:
-      #  DestinationBucketName: "String"
-      #  LogFilePrefix: "String"
-      #MetricsConfigurations:
-      #  MetricsConfigurations
+              KMSMasterKeyID: !GetAtt PnSsKmsBucket.Arn
+      LifecycleConfiguration:
+        Rules:
+          - Id: 'PnSsStagingAbortIncompleteMultipartUpload'
+            AbortIncompleteMultipartUpload: 
+                DaysAfterInitiation: 1
+            Status: 'Enabled'
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
+        QueueConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
@@ -211,71 +326,204 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
-  PnSsQueueStagingBucket:
-    Type: AWS::SQS::Queue
+  PnSsQueueStagingBucketStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
     Properties:
-      KmsDataKeyReusePeriodSeconds: 300
-      KmsMasterKeyId: "alias/aws/sqs"
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 20      
-      RedrivePolicy:
-        deadLetterTargetArn : !GetAtt PnSsDLQueueStagingBucket.Arn
-        maxReceiveCount : 10
-      VisibilityTimeout: 30
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-staging-bucket-events-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        QueueHasAlarm: 'false'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
-  PnSsDLQueueStagingBucket:
-    Type: AWS::SQS::Queue
+########### GESTORE BUCKET INVOKE QUEUE ###########
+# La coda PnSsQueueGestoreBucketInvoke è il target delle S3 notifications provenienti dal bucket principale #
+# visibility timeout docs https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html#events-sqs-queueconfig
+  PnSsQueueGestoreBucketInvokeStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
     Properties:
-      KmsDataKeyReusePeriodSeconds: 300
-      KmsMasterKeyId: "alias/aws/sqs"
-      MessageRetentionPeriod: 1209600
-      ReceiveMessageWaitTimeSeconds: 20
-      VisibilityTimeout: 30 
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-main-bucket-events-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        VisibilityTimeout: 360 # currently ReceiveMessageWaitTimeSeconds + 3 times the timeout of Lambda Fun Gestore Bucket
+        QueueHasAlarm: 'false'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
-  PnSsSNSStagingBucket:
-    Type: AWS::SNS::Topic
-    Properties:
-      #DataProtectionPolicy: JSON
-      KmsMasterKeyId: alias/aws/sns
-      Subscription:
-        - Endpoint: !GetAtt PnSsQueueStagingBucket.Arn
-          Protocol: sqs
-  
-  PnSsSNSPolicyStagingBucket:
-    Type: AWS::SNS::TopicPolicy
-    Properties:
+  PnSsQueuePolicyGestoreBucketInvoke:
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueURL
       PolicyDocument:
+        Version: '2012-10-17'
         Statement: 
           - Action: 
-              - "sns:Publish"
+            - 'sqs:*'
             Effect: "Allow"
-            Principal:  
-              Service: 
-                - "events.amazonaws.com"
-            Resource: '*'
-      Topics: 
-        - !Ref PnSsSNSStagingBucket
+            Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+            Principal:
+              Service: 's3.amazonaws.com'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+          - Action: 
+            - 'sqs:*'
+            Effect: "Allow"
+            Resource: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+            Principal:
+              AWS: '*'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
 
-  PnSsEventRuleStagingBucket:
-    Type: AWS::Events::Rule
+########### GESTORE BUCKET INVOKE DLQ ###########
+# La coda PnSsQueueGestoreBucketInvokeErrors è la DLQ configurata per la risorsa Gestore Bucket (Lambda) #
+  PnSsQueueGestoreBucketInvokeErrorsStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
     Properties:
-      Description: Description
-      EventPattern:   
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-gestore-bucket-invocation-errors-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        QueueHasAlarm: 'true'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+
+########### GESTORE DISPONIBILITA' EXTERNAL NOTIFICATION ###########
+  PnSsEventBusExternalNotification: 
+    Type: AWS::Events::EventBus
+    Properties: 
+        Name: !Ref PnSsEventBusExternalNotificationName
+
+  PnSsEventBusPolicyECSExternalNotification:
+    Type: AWS::Events::EventBusPolicy
+    Properties:
+      EventBusName: !Ref PnSsEventBusExternalNotification
+      StatementId: 'PnSsCustomEventBusPolicyAllowS'
+      Statement:
+        Action: 
+          - "events:PutEvents"
+        Effect: "Allow"
+        Principal: 
+          Service:
+          - 'ecs.amazonaws.com'
+        Resource: !GetAtt PnSsEventBusExternalNotification.Arn
+
+  PnSsEventBusPolicyManageExternalNotification:
+    Type: AWS::Events::EventBusPolicy
+    Properties:
+      EventBusName: !Ref PnSsEventBusExternalNotification
+      StatementId: 'PnSsCustomEventBusPolicyManage'
+      Statement:
+        Action: 
+          - 'events:PutRule'
+          - 'events:PutTargets'
+          - 'events:DeleteRule'
+          - 'events:RemoveTargets'
+          - 'events:DisableRule'
+          - 'events:EnableRule'
+          - 'events:TagResource'
+          - 'events:UntagResource'
+          - 'events:DescribeRule'
+          - 'events:ListTargetsByRule'
+          - 'events:ListTagsForResource'
+        Effect: 'Allow'
+        Resource: !GetAtt PnSsEventBusExternalNotification.Arn
+        Principal: 
+          AWS: !Ref AWS::AccountId
+        Condition:
+          StringEqualsIfExists:
+            events:creatorAccount: !Ref AWS::AccountId
+
+  PnSsQueueNotificheDEVStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Condition: IsDevEnv
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-external-notification-DEV-queue'
+        SqsManagedSseEnabled: true
+        HasDLQ: False
+        QueueHasAlarm: 'true'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+  
+  PnSsEventRuleNotificheDEV:
+    Type: AWS::Events::Rule
+    Condition: IsDevEnv
+    Properties:
+      Description: 'This Event rule is used to forward event on a dummy queue instead of PnCoreTargetEventBus'
+      EventBusName: !Ref PnSsEventBusExternalNotification
+      EventPattern:
         source: 
-          - 'aws.s3' 
+          - "GESTORE DISPONIBILITA"
         account: 
-          - !Sub ${AWS::AccountId}
-        detail-type: 
-          - 'Object Created'
-        detail:
-          bucket:
-            name: 
-              - !Ref PnSsStagingBucket
+          - !Ref AWS::AccountId
+        region: 
+          - !Ref AWS::Region
       State: 'ENABLED'
       Targets:
-        - Arn: !Ref PnSsSNSStagingBucket
-          Id: "TopicTargetForStagingBucket"
-  
+        - Arn: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN
+          Id: 'PnSsDEVQueueTargetForExtNotification'
+
+  PnSsEventsDLQueuePnCoreTargetEventBusStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-forward-events-pncoreeventbus-DLQueue'
+        SqsManagedSseEnabled: true
+        HasDLQ: False
+        QueueHasAlarm: 'true'
+        OncallDLQLimit: '1'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+    
+  # ####### DENY POLICY FROM OUTSIDE ACCOUNT ########
+  # PnSsEventBusPolicyDenyExternalNotification:
+  #   Type: AWS::Events::EventBusPolicy
+  #   Properties:
+  #     EventBusName: !Ref PnSsEventBusExternalNotification
+  #     StatementId: 'PnEcCustomEventBusPolicyDenyCrossAccount'
+  #     Statement:
+  #       Action: 
+  #         - "events:*"
+  #       Effect: 'Deny'
+  #       Principal: 
+  #         Service:
+  #           - 'ecs.amazonaws.com'
+  #       Resource: !GetAtt PnSsEventBusExternalNotification.Arn
+  #       Condition:
+  #         StringNotEquals:
+  #           aws:SourceAccount: !Sub '${AWS::AccountId}'
+
+  ### LOG GROUP RESOURCES ###
+  EcsLogGroup:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain    
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
+      Parameters:
+        LogGroupName: !Sub '${ProjectName}-safe-storage'
+        LogsKinesisSourceStreamArn: !Ref LogsKinesisSourceStreamArn
+        LogGroupRetention: !Ref LogRetention
+
+
 Outputs:
   PnSsTableNameAnagraficaClient:
     Description: 'Nome della tabella SS Anagrafica Client'
@@ -301,6 +549,10 @@ Outputs:
     Description: 'ARN della tabella SS Documenti'
     Value: !GetAtt PnSsTableDocumenti.Arn
 
+  PnSsTableDocumentiStreamArn:
+    Description: 'Nome tabella SS Documenti'
+    Value: !GetAtt PnSsTableDocumenti.StreamArn
+
   PnSsBucketName:
     Description: 'Nome Bucket SS'
     Value: !Ref PnSsBucket
@@ -319,20 +571,116 @@ Outputs:
 
   PnSsQueueNameStagingBucket:
     Description: 'Nome coda per notifiche SS Staging Bucket'
-    Value: !GetAtt  PnSsQueueStagingBucket.QueueName
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueName
 
   PnSsQueueArnStagingBucket:
     Description: 'ARN coda per notifiche SS Staging Bucket'
-    Value: !GetAtt  PnSsQueueStagingBucket.Arn
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueARN
 
   PnSsQueueUrlStagingBucket:
     Description: 'URL coda per notifiche SS Staging Bucket'
-    Value: !Ref PnSsQueueStagingBucket
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueURL
 
   PnSsDLQueueNameStagingBucket:
     Description: 'Nome coda DLQ per notifiche SS Staging Bucket'
-    Value: !GetAtt PnSsDLQueueStagingBucket.QueueName
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.DeadLetterQueueName
 
-  PnSsSNSNameStagingBucket:
-    Description: 'Nome SNS Topic per notifiche SS Staging Bucket'
-    Value: !GetAtt PnSsSNSStagingBucket.TopicName
+  PnSsAlarmArnQueueStagingBucket:
+    Description: "ARN dell'allarme messaggi vecchi nella coda notifiche SS Staging Bucket"
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.SqsAgeAlarmArn
+  
+  PnSsAlarmArnDLQueueStagingBucket:
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ notifiche SS Staging Bucket"
+    Value: !GetAtt PnSsQueueStagingBucketStack.Outputs.SqsDLQAlarmArn
+
+  PnSsQueueNameGestoreBucketInvokeErrors:
+    Description: 'Nome coda per pubblicazione errori del Gestore Bucket'
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.QueueName
+
+  PnSsQueueArnGestoreBucketInvokeErrors:
+    Description: 'ARN coda per pubblicazione errori del Gestore Bucket'
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.QueueARN
+
+  PnSsQueueUrlGestoreBucketInvokeErrors:
+    Description: 'URL coda per pubblicazione errori del Gestore Bucket'
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.QueueURL
+
+  PnSsDLQueueNameGestoreBucketInvokeErrors:
+    Description: 'Nome coda DLQ per pubblicazione errori del Gestore Bucket'
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.DeadLetterQueueName
+
+  PnSsAlarmArnQueueGestoreBucketInvokeErrors:
+    Description: "ARN dell'allarme messaggi vecchi nella coda errori del Gestore Bucket"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.SqsAgeAlarmArn
+  
+  PnSsAlarmArnDLQueueGestoreBucketInvokeErrors:
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ errori del Gestore Bucket"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeErrorsStack.Outputs.SqsDLQAlarmArn
+
+  PnSsQueueNameGestoreBucketInvoke:
+    Description: 'Nome coda per pubblicazione notifiche di eventi sul bucket SS'
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueName
+
+  PnSsQueueArnGestoreBucketInvoke:
+    Description: 'ARN coda per pubblicazione notifiche di eventi sul bucket SS'
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+
+  PnSsQueueUrlGestoreBucketInvoke:
+    Description: 'URL coda per pubblicazione notifiche di eventi sul bucket SS'
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueURL
+
+  PnSsDLQueueNameGestoreBucketInvoke:
+    Description: 'Nome coda DLQ per pubblicazione notifiche di eventi sul bucket SS'
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.DeadLetterQueueName
+
+  PnSsAlarmArnQueueGestoreBucketInvoke:
+    Description: "ARN dell'allarme messaggi vecchi nella coda notifiche di eventi sul bucket SS"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.SqsAgeAlarmArn
+  
+  PnSsAlarmArnDLQueueGestoreBucketInvoke:
+    Description: "ARN dell'allarme per presenza di messaggi nella DLQ notifiche di eventi sul bucket SS"
+    Value: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.SqsDLQAlarmArn
+    
+  PnSsGestoreBucketLambdaName:
+    Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
+    Value: !Ref PnSsGestoreBucketLambdaName
+
+  PnSsEventBusNameExternalNotification:
+    Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'
+    Value: !Ref  PnSsEventBusExternalNotification
+
+  PnSsEventBusArnExternalNotification:
+    Description: 'Arn event bus per pubblicare eventi di Gestore Disponibilita'
+    Value: !GetAtt  PnSsEventBusExternalNotification.Arn
+
+  PnSsQueueNameEventsDLQueuePnCoreTargetEventBus:
+    Description: 'Nome DLQ per forward degli eventi al bus PnCoreTargetEventBus'
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.QueueName
+
+  PnSsQueueArnEventsDLQueuePnCoreTargetEventBus:
+    Description: 'ARN DLQ per forward degli eventi al bus PnCoreTargetEventBus'
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.QueueARN
+
+  PnSsQueueUrlEventsDLQueuePnCoreTargetEventBus:
+    Description: 'URL DLQ per forward degli eventi al bus PnCoreTargetEventBus'
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.QueueURL
+
+  PnSsAlarmArnEventsDLQueuePnCoreTargetEventBus:
+    Description: "ARN dell'allarme messaggi vecchi nella DLQ per forward degli eventi al bus PnCoreTargetEventBus"
+    Value: !GetAtt PnSsEventsDLQueuePnCoreTargetEventBusStack.Outputs.SqsAgeAlarmArn
+
+  PCKmsEncDecDynamoDataKeyARN:
+    Description: Name of KMS Key for Dynamo encode/decode data
+    Value: !Sub '${PCKmsEncDecDynamoDataKey.Arn}'
+
+  # Log group exports
+  EcsLogGroup:
+    Value: !GetAtt EcsLogGroup.Outputs.LogGroupName
+    
+  PnSsKmsArnBucket:
+    Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
+    Value: !GetAtt PnSsKmsBucket.Arn
+
+  PnSsPreloadedDocsRetentionDays: 
+    Description: 'Numero di giorni di retention per i file di tipo PRELOADED'
+    Value: !Ref PnSsPreloadedDocsRetentionDays

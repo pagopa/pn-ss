@@ -1,0 +1,7 @@
+{"processClientId":{"S":"SS"},"currStatus":{"S":"_start_"},"targetStatus":{"L":[{"S":"booked"}]}}
+{"processClientId":{"S":"SS"},"currStatus":{"S":"attached"},"targetStatus":{"L":[{"S":"deleted"},{"S":"attached"}]}}
+{"processClientId":{"S":"SS"},"currStatus":{"S":"available"},"targetStatus":{"L":[{"S":"freezed"},{"S":"attached"},{"S":"deleted"}]}}
+{"processClientId":{"S":"SS"},"currStatus":{"S":"booked"},"targetStatus":{"L":[{"S":"staged"},{"S":"available"}]}}
+{"processClientId":{"S":"SS"},"currStatus":{"S":"deleted"},"targetStatus":{"L":[{"S":"_end_"}]}}
+{"processClientId":{"S":"SS"},"currStatus":{"S":"freezed"},"targetStatus":{"L":[{"S":"deleted"},{"S":"available"}]}}
+{"processClientId":{"S":"SS"},"currStatus":{"S":"staged"},"targetStatus":{"L":[{"S":"available"}]}}

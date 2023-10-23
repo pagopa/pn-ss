@@ -1,20 +1,31 @@
 {
   "Parameters": {
-    "PnSs": "",
-
-    "PnSsBucketName": "pn-ss-bucket",
-    "PnSsStagingBucketName": "pn-ss-staging-bucket",
-
-    "PnSsTableNameAnagrafica": "pn-ss-anagrafica-client",
-    "PnSsTableNameTipologie": "pn-ss-tipologie-documenti",
-    "PnSsTableNameDocumenti": "pn-ss-documenti",
-
-    "PnSsQueueNameNotificaDisponibilita": "pn-ss-notifica-disponibilita-queue",
-    "PnSsSNSNameStagingBucket": "pn-ss-staging-bucket-queue",
-
-    "PnSsEventRuleNameNotificaDisponibilita": "pn-ss-notifica-disponibilita-event-rule",
-    "PnSsEventRuleNameStagingBucket": "pn-ss-staging-bucket-event-rule",
-
-    "PnSsSNSNameStagingBucket": "pn-ss-staging-bucket-topic"
+    "PnSsUriBuilderstayHotTime": "1",
+    "PresignedUrlMinutesLifespan": "60",
+    "PnSsGestoreRepositoryProtocol" : "http",
+    "PnSsGestoreRepositoryPort" : "8080",
+    "PnSsGestoreRepositoryPathGetDocument" : "/safestorage/internal/v1/documents",
+    "PnSsGestoreRepositoryPathPatchDocument" : "/safestorage/internal/v1/documents",
+    "PnSsTableDocumentiStreamMetadatiTable" : "PnSsTableDocumentiStreamMetadati",
+    "PnSsArubaCertId" : "AS0",
+    "PnSsArubaEnabledLog" : "false",
+    "PnSsArubaSignWsdlUrl" : "https://asbr-pagopa.arubapec.it/ArubaSignService/ArubaSignService",
+    "PnSsArubaQname" : "http://arubasignservice.arubapec.it/",
+    "PnSsArubaSignService" : "ArubaSignServiceService",
+    "PnSsTsaIdentity": "true",
+    "PnSsIdentityTimemark": "pn/identity/timemark",
+    "PnSsIdentitySignature": "pn/identity/signature",
+    "PnSsTimemarkUrl": "https://servizi.arubapec.it/tsa/ngrequest.php",
+    "PnSsGestoreBucketLambdaName" : "pn-safe-storage-gestore-bucket-lambda",
+    "PnSsGestoreBucketConcurrencyHandlerLambdaName" : "pn-ss-gestore-bucket-concurrency-handler-lambda",
+    "PnSsSecurityGroupNameSafeStorage" : "pn-ss-gestore-bucket-sec-group",
+    "PnSsEventRuleNameGestoreBucketConcurrencyHandler" : "pn-ss-gestore-bucket-concurrency-rule",
+    "PnSsGestoreBucketInstancesPerTaskInstance" : "20",
+    "PnSsGestoreBucketMinReservedConcurrentExecutions": "60",
+    "MinTasksNumber": "3",
+    "MaxTasksNumber": "13",
+    "AutoscalingThreshold": "15000",
+    "PnSsUriBuilderGetFileCanExecutePatch": "true",
+    "JavaToolOptions": "-XX:MaxDirectMemorySize=128M"
   }
 }

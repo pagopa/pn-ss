@@ -1,32 +1,37 @@
 package it.pagopa.pnss.common.client.impl;
 
-import it.pagopa.pn.commons.pnclients.CommonBaseClient;
 import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
+import it.pagopa.pnss.common.client.DocTypesClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
+import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-
-import it.pagopa.pnss.common.client.DocTypesClientCall;
-import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import reactor.core.publisher.Mono;
 
-//@Service
-public class DocTypesClientCallImpl extends CommonBaseClient implements DocTypesClientCall {
-    private final WebClient.Builder ecInternalWebClient= WebClient.builder();
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
-    @Value("${gestore.repository.anagrafica.docTypes}")
-    String anagraficaDocTypesClientEndpoint;
+@Service
+public class DocTypesClientCallImpl implements DocTypesClientCall {
+
+    private final WebClient ssWebClient;
 
     @Value("${gestore.repository.anagrafica.internal.docTypes}")
-    String anagraficaDocTypesInternalClientEndpoint;
+    private String anagraficaDocTypesInternalClientEndpoint;
 
+    public DocTypesClientCallImpl(WebClient ssWebClient) {
+        this.ssWebClient = ssWebClient;
+    }
 
     @Override
-    public ResponseEntity<DocumentType>  getdocTypes(String tipologiaDocumento) throws IdClientNotFoundException {
-        return getWebClient().get()
-                .uri(String.format(anagraficaDocTypesInternalClientEndpoint, tipologiaDocumento))
-                .retrieve()
-                .bodyToMono(ResponseEntity.class).block();
+    public Mono<DocumentTypeResponse> getdocTypes(String tipologiaDocumento) throws IdClientNotFoundException {
+        return ssWebClient.get()
+                          .uri(String.format(anagraficaDocTypesInternalClientEndpoint, tipologiaDocumento))
+                          .retrieve()
+                          .onStatus(NOT_FOUND::equals, response -> Mono.error(new DocumentTypeNotPresentException(tipologiaDocumento)))
+                          .bodyToMono(DocumentTypeResponse.class);
     }
 
     @Override
@@ -40,12 +45,7 @@ public class DocTypesClientCallImpl extends CommonBaseClient implements DocTypes
     }
 
     @Override
-    public ResponseEntity<DocumentType> deletedocTypes(String checksum) throws IdClientNotFoundException {
+    public ResponseEntity<DocumentType> deletedocTypes(String tipoDocumento) throws IdClientNotFoundException {
         return null;
-    }
-
-    public WebClient getWebClient(){
-        WebClient.Builder builder = enrichBuilder(ecInternalWebClient);
-        return builder.build();
     }
 }

@@ -9,7 +9,6 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.S3BucketException;
-import it.pagopa.pnss.common.client.impl.DocumentClientCallImpl;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -177,33 +176,33 @@ class UriBuilderServiceDownloadTest {
 
         noTraceIdFileDownloadTestCall(docId, true).expectStatus().isBadRequest();
     }
-//    @Test
-//    void testUrlGenerato() {
-//
-//        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
-//
-//        String docId = "1111-aaaa";
-//        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
-//
-//        DocumentInput d = new DocumentInput();
-//        d.setDocumentType(DocTypesConstant.PN_AAR);
-//        d.setDocumentState(AVAILABLE);
-//        d.setCheckSum(CHECKSUM);
-//
-//        mockGetDocument(d, docId);
-//
-//        var now = Instant.now();
-//
-//        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class)))
-//                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
-//        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
-//        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(now).build()));
-//        when(documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, docId, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(now))))
-//                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
-//
-//
-//        fileDownloadTestCall(docId, false).expectStatus().isOk();
-//    }
+    @Test
+    void testUrlGenerato() {
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+
+        mockGetDocument(d, docId);
+
+        var now = Instant.now();
+
+        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class)))
+                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(now).build()));
+        when(documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, docId, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(now))))
+                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
+
+
+        fileDownloadTestCall(docId, false).expectStatus().isOk();
+    }
 
 //    @Test
 //    void testUrlGeneratoConMetaDataTrue() {

@@ -357,9 +357,9 @@ Parameters:
     Description: 'Alarm threshold to trigger autoscaling of the microservice'
     Default: 20000
 
-  PnSsUriBuilderGetFileCanExecutePatch:
+  PnSsUriBuilderGetFileWithPatchConfiguration:
     Type: String
-    Description: 'Parametro canExecutePatch per UriBuilder'
+    Description: 'Parametro getFileWithPatchConfiguration per UriBuilder'
     Default: 'true'
 
 ### Altri parametri
@@ -431,7 +431,7 @@ Resources:
         ContainerEnvEntry36: !Sub 'PnSsIdentityTimemark=${PnSsIdentityTimemark}'
         ContainerEnvEntry37: !Sub 'PnSsIdentitySignature=${PnSsIdentitySignature}'
         ContainerEnvEntry38: !Sub 'PnSsTimemarkUrl=${PnSsTimemarkUrl}'
-        ContainerEnvEntry39: !Sub 'PnSsUriBuilderGetFileCanExecutePatch=${PnSsUriBuilderGetFileCanExecutePatch}'
+        ContainerEnvEntry39: !Sub 'PnSsUriBuilderGetFileWithPatchConfiguration=${PnSsUriBuilderGetFileWithPatchConfiguration}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         MappedPaths: '/safestorage/*,/safe-storage/*'

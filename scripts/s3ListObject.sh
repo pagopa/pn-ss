@@ -21,11 +21,11 @@ while getopts 'a:b:r:p:d:' opt ; do
       olderThan=${OPTARG}
     ;;
     :)
-      >&2 echo -e "option requires an argument.\nUsage: $(basename $0) -b <bucket_name> -p <aws_profile> -d <older than n days> [-a <aws_account>] [-r <aws_region>]"
+      >&2 echo -e "option requires an argument.\nUsage: $(basename $0) -b <bucket_name> -p <aws_profile> -d <older than n hours> [-a <aws_account>] [-r <aws_region>]"
       exit 1
     ;;
     ?|h)
-      >&2 echo "Usage: $(basename $0) -b <bucket_name> -p <aws_profile> -d <older than n days> [-a <aws_account>] [-r <aws_region>]"
+      >&2 echo "Usage: $(basename $0) -b <bucket_name> -p <aws_profile> -d <older than n hours> [-a <aws_account>] [-r <aws_region>]"
       exit 1
     ;;
   esac
@@ -51,7 +51,7 @@ aws s3 ls ${bucketName} |
 while read -r objDate objTime objSize objKey ; do
   objTimestamp=$(date -d "${objDate} ${objTime}" +"%s")
   delta=$((currentTS - objTimestamp))
-  deltaDays=$((delta/86400))
+  deltaDays=$((delta/3600))
   if [ $deltaDays -gt $olderThan ] ; then
     echo ${objKey}
   fi

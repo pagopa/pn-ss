@@ -53,6 +53,6 @@ while read -r objDate objTime objSize objKey ; do
   delta=$((currentTS - objTimestamp))
   deltaDays=$((delta/3600))
   if [ $deltaDays -gt $olderThan ] ; then
-    echo ${objKey}
+    echo ${bucketName} ${objKey}
   fi
 done

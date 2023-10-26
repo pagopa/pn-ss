@@ -1,15 +1,16 @@
 package it.pagopa.pnss.common.retention;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
-import it.pagopa.pn.template.rest.v1.dto.StorageConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypeConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.StorageConfiguration;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.common.client.exception.RetentionToIgnoreException;
-import it.pagopa.pnss.common.constant.Constant;
+import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.transformation.service.S3Service;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,7 +26,7 @@ import java.util.Objects;
 import static it.pagopa.pnss.common.constant.Constant.*;
 
 @Service
-@Slf4j
+@CustomLog
 public class RetentionServiceImpl implements RetentionService {
 
     @Autowired
@@ -60,7 +61,7 @@ public class RetentionServiceImpl implements RetentionService {
      * Controlla: StorageConfigurationsImpl.formatInYearsDays()
      */
     public Integer getRetentionPeriodInDays(String retentionPeriod) throws RetentionException {
-        log.debug(Constant.INVOKING_METHOD, "RetentionServiceImpl.getRetentionPeriodInDays()", retentionPeriod);
+        log.debug(LogUtils.INVOKING_METHOD, "RetentionServiceImpl.getRetentionPeriodInDays()", retentionPeriod);
 
         if (retentionPeriod == null || retentionPeriod.isBlank() || retentionPeriod.length() < 2) {
             throw new RetentionException("Storage Configuration : Retention Period not found");
@@ -94,7 +95,7 @@ public class RetentionServiceImpl implements RetentionService {
     protected Mono<Integer> getRetentionPeriodInDays(String documentKey, String documentState, String documentType,
                                                    String authPagopaSafestorageCxId, String authApiKey)
             throws RetentionException {
-        log.debug(Constant.INVOKING_METHOD + ARG + ARG, "RetentionServiceImpl.getRetentionPeriodInDays()", documentKey, documentState, documentType);
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG, "RetentionServiceImpl.getRetentionPeriodInDays()", documentKey, documentState, documentType);
 
         if (documentState == null || documentState.isBlank()) {
             throw new RetentionException(String.format("Document State not present for Key '%s'", documentKey));
@@ -142,7 +143,7 @@ public class RetentionServiceImpl implements RetentionService {
     public Mono<Instant> getRetentionUntil(String authPagopaSafestorageCxId, String authApiKey, String documentKey, String documentState,
                                            String documentType, Instant dataCreazioneObjectForBucket)
             throws RetentionException {
-        log.debug(Constant.INVOKING_METHOD + ARG + ARG + ARG, "RetentionServiceImpl.getRetentionUntil()", documentKey, documentState, documentType, dataCreazioneObjectForBucket);
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG, "RetentionServiceImpl.getRetentionUntil()", documentKey, documentState, documentType, dataCreazioneObjectForBucket);
         // se manca anche solo un elemento di autenticazione, imposto le credenziali con "utente interno"
         if (authPagopaSafestorageCxId == null || authPagopaSafestorageCxId.isBlank() || authApiKey == null || authApiKey.isBlank()) {
             log.debug("getRetentionUntil() : almeno uno tra authPagopaSafestorageCxId e authApiKey non e' valorizzato, utilizzo le " +
@@ -166,8 +167,8 @@ public class RetentionServiceImpl implements RetentionService {
     public Mono<DocumentEntity> setRetentionPeriodInBucketObjectMetadata(String authPagopaSafestorageCxId, String authApiKey,
                                                                          DocumentChanges documentChanges, DocumentEntity documentEntity,
                                                                          String oldState) {
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG, "RetentionServiceImpl.setRetentionPeriodInBucketObjectMetadata()", authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
-        log.info(CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.headObject()", documentEntity.getDocumentKey(), bucketName.ssHotName());
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG, "RetentionServiceImpl.setRetentionPeriodInBucketObjectMetadata()", authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
+        log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG, "s3Service.headObject()", documentEntity.getDocumentKey(), bucketName.ssHotName());
 
                   return s3Service.headObject(documentEntity.getDocumentKey(), bucketName.ssHotName())
                    .flatMap(headObjectResponse -> {
@@ -199,7 +200,7 @@ public class RetentionServiceImpl implements RetentionService {
                                            .mode(objectLockRetentionMode)
                                            .build())
                                      .flatMap(objectLockRetention -> {
-                                         log.info(CLIENT_METHOD_INVOCATION + ARG + ARG, "s3Service.putObjectRetention()", documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
+                                         log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG + LogUtils.ARG, "s3Service.putObjectRetention()", documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
                                          return s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention)
                                                  .doOnSuccess(result -> documentEntity.setRetentionUntil(documentChanges.getRetentionUntil()))
                                                  .onErrorResume(S3Exception.class, throwable -> {
@@ -252,7 +253,7 @@ public class RetentionServiceImpl implements RetentionService {
                                                                                                                         .build());
                                                                                 })
                                                                                 .flatMap(objectLockRetention -> {
-                                                                                    log.info(CLIENT_METHOD_INVOCATION + ARG + ARG, "s3Service.putObjectRetention()", documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
+                                                                                    log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG + LogUtils.ARG, "s3Service.putObjectRetention()", documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention);
                                                                                     return s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention)
                                                                                             .onErrorResume(S3Exception.class, throwable -> {
                                                                                                 String errMsg = String.format("Error updating retention date '%s' from S3 bucket '%s' on document '%s'", objectLockRetention.retainUntilDate().toString(), bucketName.ssHotName(), documentEntity.getDocumentKey());
@@ -270,8 +271,8 @@ public class RetentionServiceImpl implements RetentionService {
                        return Mono.just(documentEntity);
                    })
                    // gestione errore
-                   .doOnError(throwable -> log.error(ENDING_PROCESS_WITH_ERROR,"RetentionServiceImpl.setRetentionPeriodInBucketObjectMetadata()", throwable, throwable.getMessage()))
-                   .doOnSuccess(document -> log.info(SUCCESSFUL_OPERATION_LABEL, document.getDocumentKey(), "RetentionServiceImpl.setRetentionPeriodInBucketObjectMetadata()", document));
+                   .doOnError(throwable -> log.error(LogUtils.ENDING_PROCESS_WITH_ERROR,"RetentionServiceImpl.setRetentionPeriodInBucketObjectMetadata()", throwable, throwable.getMessage()))
+                   .doOnSuccess(document -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, document.getDocumentKey(), "RetentionServiceImpl.setRetentionPeriodInBucketObjectMetadata()", document));
     }
 
 }

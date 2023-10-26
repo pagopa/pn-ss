@@ -5,6 +5,7 @@ import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
 import it.pagopa.pnss.transformation.service.S3Service;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,10 +16,10 @@ import software.amazon.awssdk.services.s3.model.LifecycleRule;
 import java.util.ArrayList;
 import java.util.List;
 
-import static it.pagopa.pnss.common.constant.Constant.CLIENT_METHOD_INVOCATION;
+import static it.pagopa.pnss.common.utils.LogUtils.CLIENT_METHOD_INVOCATION;
 
 @Service
-@Slf4j
+@CustomLog
 public class StorageConfigurationsServiceImpl implements StorageConfigurationsService {
 
     @Autowired

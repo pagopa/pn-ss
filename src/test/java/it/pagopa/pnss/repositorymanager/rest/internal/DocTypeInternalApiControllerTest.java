@@ -7,6 +7,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.CurrentStatus;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypeResponse;
+import lombok.CustomLog;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,23 +21,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
-
-import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-@Slf4j
+@CustomLog
 public class DocTypeInternalApiControllerTest {
 
 	@Autowired
@@ -86,9 +83,9 @@ public class DocTypeInternalApiControllerTest {
 		docTypesInsertInput.setChecksum(DocumentType.ChecksumEnum.SHA256);
 		docTypesInsertInput.setInitialStatus("SAVED");
 		docTypesInsertInput.setStatuses(statuses1);
-		docTypesInsertInput.setInformationClassification(InformationClassificationEnum.HC);
+		docTypesInsertInput.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
 		docTypesInsertInput.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-		docTypesInsertInput.setTimeStamped(TimeStampedEnum.STANDARD);
+		docTypesInsertInput.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesInsertInput : {}", docTypesInsertInput);
 
 		Map<String, CurrentStatus> statuses2 = new HashMap<>();
@@ -99,9 +96,9 @@ public class DocTypeInternalApiControllerTest {
 		docTypesUpdateDeleteInput.setChecksum(DocumentType.ChecksumEnum.SHA256);
 		docTypesUpdateDeleteInput.setInitialStatus("PRELOADED");
 		docTypesUpdateDeleteInput.setStatuses(statuses2);
-		docTypesUpdateDeleteInput.setInformationClassification(InformationClassificationEnum.HC);
+		docTypesUpdateDeleteInput.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
 		docTypesUpdateDeleteInput.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-		docTypesUpdateDeleteInput.setTimeStamped(TimeStampedEnum.STANDARD);
+		docTypesUpdateDeleteInput.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesUpdateDeleteInput : {}", docTypesUpdateDeleteInput);
 	}
 

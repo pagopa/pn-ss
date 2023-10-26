@@ -1,6 +1,7 @@
 package it.pagopa.pnss.transformation.service.impl;
 
 import it.pagopa.pnss.transformation.service.S3Service;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -17,7 +18,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import java.time.Duration;
 
 @Service
-@Slf4j
+@CustomLog
 public class S3ServiceImpl implements S3Service {
 
     private final S3AsyncClient s3AsyncClient;

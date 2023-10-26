@@ -1,7 +1,7 @@
 package it.pagopa.pnss.repositorymanager.service;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.CurrentStatus;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.repositorymanager.service.impl.DocumentsConfigsServiceImpl;
 import it.pagopa.pnss.repositorymanager.service.impl.StorageConfigurationsServiceImpl;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;

@@ -7,9 +7,9 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownInput;
-import com.amazonaws.services.kinesis.model.Record;
-import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
+import it.pagopa.pnss.common.utils.LogUtils;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Flux;
@@ -17,11 +17,10 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
-import java.nio.charset.StandardCharsets;
 
-import static it.pagopa.pnss.common.constant.Constant.CLIENT_METHOD_INVOCATION;
+import static it.pagopa.pnss.common.utils.LogUtils.CLIENT_METHOD_INVOCATION;
 
-@Slf4j
+@CustomLog
 public class StreamsRecordProcessor implements IRecordProcessor {
     public static final String INSERT_EVENT = "INSERT";
     public static final String MODIFY_EVENT = "MODIFY";
@@ -47,7 +46,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     @Override
     public void processRecords(ProcessRecordsInput processRecordsInput) {
         final String PROCESS_RECORDS = "processRecords";
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG, PROCESS_RECORDS, processRecordsInput, processRecordsInput.getMillisBehindLatest());
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG, PROCESS_RECORDS, processRecordsInput, processRecordsInput.getMillisBehindLatest());
         findEventSendToBridge(processRecordsInput)
                 .buffer(10)
                 .map(putEventsRequestEntries -> {
@@ -61,14 +60,14 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 })
                 .then()
                 .doOnError(e -> log.error("* FATAL * DBStream: Errore generico ", e))
-                .doOnSuccess(unused -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, PROCESS_RECORDS, "StreamsRecordProcessor.processRecords()", processRecordsInput))
+                .doOnSuccess(unused -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PROCESS_RECORDS, "StreamsRecordProcessor.processRecords()", processRecordsInput))
                 .subscribe();
     }
 
     @NotNull
     public Flux<PutEventsRequestEntry> findEventSendToBridge(ProcessRecordsInput processRecordsInput) {
         final String FIND_EVENT_SEND_TO_BRIDGE = "findEventSendToBridge";
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput, processRecordsInput.getRecords().size());
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput, processRecordsInput.getRecords().size());
         return Flux.fromIterable(processRecordsInput.getRecords())
                 .filter(RecordAdapter.class::isInstance)
                 .map(recordEvent -> ((RecordAdapter) recordEvent).getInternalObject())
@@ -81,7 +80,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .doOnError(e -> log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> {
                     setCheckpoint(processRecordsInput);
-                    log.info(Constant.SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, "StreamsRecordProcessor.findEventSendToBridge()", processRecordsInput);
+                    log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, "StreamsRecordProcessor.findEventSendToBridge()", processRecordsInput);
                 });
     }
 

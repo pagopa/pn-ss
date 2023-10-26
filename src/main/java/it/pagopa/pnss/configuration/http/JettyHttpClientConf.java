@@ -1,5 +1,6 @@
 package it.pagopa.pnss.configuration.http;
 
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
@@ -18,7 +19,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @Configuration
-@Slf4j
+@CustomLog
 public class JettyHttpClientConf {
 
     @Value("${jetty.maxConnectionsPerDestination}")

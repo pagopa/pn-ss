@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.availabledocument.dto.NotificationMessage;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
@@ -14,7 +15,7 @@ import java.util.Map;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 
-@Slf4j
+@CustomLog
 public class ManageDynamoEvent {
 
 

@@ -1,7 +1,10 @@
 package it.pagopa.pnss.transformation.service;
 
 import io.awspring.cloud.messaging.listener.Acknowledgment;
-import it.pagopa.pn.template.internal.rest.v1.dto.*;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.CurrentStatus;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;

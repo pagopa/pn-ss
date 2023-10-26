@@ -29,7 +29,7 @@
         <dependency>
             <groupId>it.pagopa.pn</groupId>
             <artifactId>pn-commons</artifactId>
-            <version>2.0.0</version>
+            <version>2.2.0</version>
         </dependency>
 
         <dependency>
@@ -292,10 +292,10 @@
                                 <reactive>true</reactive>
                                 <skipDefaultInterface>false</skipDefaultInterface>
                                 <useTags>true</useTags>
-                                <basePackage>${project.groupId}.template.rest.v1</basePackage>
-                                <modelPackage>${project.groupId}.template.rest.v1.dto</modelPackage>
-                                <apiPackage>${project.groupId}.template.rest.v1.api</apiPackage>
-                                <configPackage>${project.groupId}.template.rest.v1.config</configPackage>
+                                <basePackage>${project.groupId}.safestorage.generated.openapi.server.v1</basePackage>
+                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto</modelPackage>
+                                <apiPackage>${project.groupId}.safestorage.generated.openapi.server.v1.api</apiPackage>
+                                <configPackage>${project.groupId}.safestorage.generated.openapi.server.v1.config</configPackage>
                             </configOptions>
                         </configuration>
                     </execution>
@@ -323,10 +323,10 @@
                                 <reactive>true</reactive>
                                 <skipDefaultInterface>false</skipDefaultInterface>
                                 <useTags>true</useTags>
-                                <basePackage>${project.groupId}.template.rest.v1</basePackage>
-                                <modelPackage>${project.groupId}.template.rest.v1.dto</modelPackage>
-                                <apiPackage>${project.groupId}.template.rest.v1.api</apiPackage>
-                                <configPackage>${project.groupId}.template.rest.v1.config</configPackage>
+                                <basePackage>${project.groupId}.safestorage.generated.openapi.server.v1</basePackage>
+                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto</modelPackage>
+                                <apiPackage>${project.groupId}.safestorage.generated.openapi.server.v1.api</apiPackage>
+                                <configPackage>${project.groupId}.safestorage.generated.openapi.server.v1.config</configPackage>
                             </configOptions>
                         </configuration>
                     </execution>
@@ -353,10 +353,10 @@
                                 <reactive>true</reactive>
                                 <skipDefaultInterface>false</skipDefaultInterface>
                                 <useTags>true</useTags>
-                                <basePackage>${project.groupId}.template.internal.rest.v1</basePackage>
-                                <modelPackage>${project.groupId}.template.internal.rest.v1.dto</modelPackage>
-                                <apiPackage>${project.groupId}.template.internal.rest.v1.api</apiPackage>
-                                <configPackage>${project.groupId}.template.internal.rest.v1.config</configPackage>
+                                <basePackage>${project.groupId}.safestorage.generated.openapi.server.v1</basePackage>
+                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto</modelPackage>
+                                <apiPackage>${project.groupId}.safestorage.generated.openapi.server.v1.api</apiPackage>
+                                <configPackage>${project.groupId}.safestorage.generated.openapi.server.config</configPackage>
                             </configOptions>
                         </configuration>
                     </execution>

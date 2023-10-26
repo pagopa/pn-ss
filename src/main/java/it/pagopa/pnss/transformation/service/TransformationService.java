@@ -4,26 +4,24 @@ package it.pagopa.pnss.transformation.service;
 import io.awspring.cloud.messaging.listener.Acknowledgment;
 import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
-import it.pagopa.pnss.common.constant.Constant;
+import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
-
-import javax.print.Doc;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,7 +34,7 @@ import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 
 @Service
-@Slf4j
+@CustomLog
 public class TransformationService {
 
     private final ArubaSignServiceCall arubaSignServiceCall;
@@ -94,8 +92,8 @@ public class TransformationService {
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
         final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
 
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG, OBJECT_TRANSFORMATION, key, stagingBucketName, marcatura);
-        log.info(Constant.CLIENT_METHOD_INVOCATION, "DocumentClientCall.getDocument()", key);
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG, OBJECT_TRANSFORMATION, key, stagingBucketName, marcatura);
+        log.info(LogUtils.CLIENT_METHOD_INVOCATION, "DocumentClientCall.getDocument()", key);
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
                 .filter(document -> {
@@ -127,10 +125,10 @@ public class TransformationService {
     }
 
     private Mono<Void> changeFromStagingBucketToHotBucket(String key, byte[] objectBytes, String stagingBucketName) {
-        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG + Constant.ARG, "S3Service.putObject()", key, objectBytes, bucketName.ssHotName());
+        log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG + LogUtils.ARG, "S3Service.putObject()", key, objectBytes, bucketName.ssHotName());
         return s3Service.putObject(key, objectBytes, bucketName.ssHotName())
                         .flatMap(putObjectResponse -> {
-                            log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.deleteObject()", key, stagingBucketName);
+                            log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG, "s3Service.deleteObject()", key, stagingBucketName);
                             return s3Service.deleteObject(key, stagingBucketName);
                         })
                         .then();

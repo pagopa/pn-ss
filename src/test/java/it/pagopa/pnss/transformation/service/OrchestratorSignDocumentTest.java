@@ -1,12 +1,13 @@
 package it.pagopa.pnss.transformation.service;
 
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-@Slf4j
+@CustomLog
 public class OrchestratorSignDocumentTest {
 
 //    @Value("${default.internal.x-api-key.value}")

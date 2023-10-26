@@ -12,6 +12,7 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import lombok.CustomLog;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,7 @@ import software.amazon.awssdk.services.s3.model.Transition;
 import software.amazon.awssdk.services.s3.model.TransitionStorageClass;
 
 @TestConfiguration
-@Slf4j
+@CustomLog
 public class LocalStackTestConfig {
 
     @Autowired

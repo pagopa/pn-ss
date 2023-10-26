@@ -1,21 +1,18 @@
 package it.pagopa.pnss.uribuilder.service;
 
 import com.amazonaws.SdkClientException;
-import it.pagopa.pn.template.internal.rest.v1.dto.*;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
-import it.pagopa.pn.template.rest.v1.dto.FileDownloadInfo;
-import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.*;
-import it.pagopa.pnss.common.constant.Constant;
+import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.S3Service;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tika.mime.MimeType;
@@ -42,9 +39,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static it.pagopa.pnss.common.utils.LogUtils.CREATE_URI_FOR_DOWNLOAD_FILE;
 
 @Service
-@Slf4j
+@CustomLog
 public class UriBuilderService {
 
     @Value("${uri.builder.presigned.url.duration.minutes}")
@@ -173,7 +171,7 @@ public class UriBuilderService {
                                                                              checksumValue,
                                                                              metadata,
                                                                              xTraceIdValue).map(presignedPutObjectRequest -> {
-                                                                 log.info(INSERTED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName());
+                                                                 log.info(LogUtils.INSERTED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName());
                                                                  FileCreationResponse response = new FileCreationResponse();
                                                                  response.setKey(insertedDocument.getDocument().getDocumentKey());
                                                                  response.setSecret(secret.toString());
@@ -185,7 +183,7 @@ public class UriBuilderService {
 
                                                     )
                                             .doOnNext(o -> log.info("--- RECUPERO PRESIGNED URL OK "))
-                                            .doOnSuccess(fileCreationResponse -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, xTraceIdValue, "UriBuilderService.createUriForUploadFile()", fileCreationResponse));
+                                            .doOnSuccess(fileCreationResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, xTraceIdValue, "UriBuilderService.createUriForUploadFile()", fileCreationResponse));
     }
 
     private Mono<Boolean> validationField(String contentType, String documentType, String xTraceIdValue) {
@@ -196,19 +194,19 @@ public class UriBuilderService {
                 .handle((s, sink) -> {
                     final String VALIDATION_FIELD = "contentType, documentType, xTraceIdValue in UriBuilderService validationField()";
 
-                    log.info(Constant.CHECKING_VALIDATION_PROCESS, VALIDATION_FIELD);
+                    log.info(LogUtils.CHECKING_VALIDATION_PROCESS, VALIDATION_FIELD);
 
                     if (contentType.isBlank()) {
-                        log.warn(Constant.VALIDATION_PROCESS_FAILED, VALIDATION_FIELD, MISSING_CONTENT_TYPE);
+                        log.warn(LogUtils.VALIDATION_PROCESS_FAILED, VALIDATION_FIELD, MISSING_CONTENT_TYPE);
                         sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, MISSING_CONTENT_TYPE));
                     } else if (documentType == null || documentType.isBlank()) {
-                        log.warn(Constant.VALIDATION_PROCESS_FAILED, VALIDATION_FIELD, "DocumentType : Is missing");
+                        log.warn(LogUtils.VALIDATION_PROCESS_FAILED, VALIDATION_FIELD, "DocumentType : Is missing");
                         sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType : Is missing"));
                     } else if (xTraceIdValue == null || xTraceIdValue.isBlank()) {
-                        log.warn(Constant.VALIDATION_PROCESS_FAILED, VALIDATION_FIELD, queryParamPresignedUrlTraceId + " : Is missing");
+                        log.warn(LogUtils.VALIDATION_PROCESS_FAILED, VALIDATION_FIELD, queryParamPresignedUrlTraceId + " : Is missing");
                         sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, queryParamPresignedUrlTraceId + " : Is missing"));
                     } else {
-                        log.info(Constant.VALIDATION_PROCESS_PASSED, VALIDATION_FIELD);
+                        log.info(LogUtils.VALIDATION_PROCESS_PASSED, VALIDATION_FIELD);
                         sink.next(contentType);
                     }
                 })
@@ -232,7 +230,7 @@ public class UriBuilderService {
         var contentType = document.getContentType();
         var checksumType = documentType.getChecksum();
 
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG, "UriBuilderService.buildsUploadUrl()", documentType, documentState, documentKey, contentType, secret, checksumType, checksumValue);
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG, "UriBuilderService.buildsUploadUrl()", documentType, documentState, documentKey, contentType, secret, checksumType, checksumValue);
 
         return getBucketName(documentType).flatMap(buckName -> signBucket(
                         buckName,
@@ -257,9 +255,9 @@ public class UriBuilderService {
 
     private Mono<PresignedPutObjectRequest> signBucket(String bucketName, String documentKey,
                                                        String documentState, String documentType, String contenType,
-                                                       Map<String, String> secret, ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
+                                                       Map<String, String> secret, it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType.ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
 
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG + Constant.ARG, "UriBuilderService.signBucket()", bucketName, documentKey, documentState, documentType, contenType, secret, checksumType, checksumValue );
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG, "UriBuilderService.signBucket()", bucketName, documentKey, documentState, documentType, contenType, secret, checksumType, checksumValue );
 
         if (queryParamPresignedUrlTraceId == null || queryParamPresignedUrlTraceId.isBlank()) {
             return Mono.error(new QueryParamException("Property \"queryParam.presignedUrl.traceId\" non impostata"));
@@ -299,15 +297,14 @@ public class UriBuilderService {
     }
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, String xTraceIdValue, Boolean metadataOnly) {
-        final String XTRACEIDVALUE = "xTraceIdValue in UriBuilderService createUriForDownloadFile()";
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG, CREATE_URI_FOR_DOWNLOAD_FILE, fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly);
 
-        log.info(Constant.CHECKING_VALIDATION_PROCESS, XTRACEIDVALUE);
         if (xTraceIdValue == null || StringUtils.isBlank(xTraceIdValue)) {
             String errorMsg = String.format("Header %s is missing", queryParamPresignedUrlTraceId);
-            log.warn(Constant.VALIDATION_PROCESS_FAILED, XTRACEIDVALUE, "Header %s is missing");
+            //log.warn(LogUtils.VALIDATION_PROCESS_FAILED, XTRACEIDVALUE, "Header %s is missing");
             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg));
         }
-        log.info(Constant.VALIDATION_PROCESS_PASSED, XTRACEIDVALUE);
+        //log.info(LogUtils.VALIDATION_PROCESS_PASSED, XTRACEIDVALUE);
 
         return Mono.fromCallable(this::validationFieldCreateUri)//
                 .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))//
@@ -337,7 +334,7 @@ public class UriBuilderService {
                 .cast(Document.class)
                 .flatMap(document -> {
                     if (canExecutePatch && (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil()))) {
-                        log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
+                        log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
                                 .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
                                 .flatMap(headObjectResponse -> {
@@ -355,7 +352,7 @@ public class UriBuilderService {
                 })
                 .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))//
                 .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
-                .doOnSuccess(fileDownloadResponse -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, fileKey, "UriBuilderService.createUriForDownloadFile()", fileDownloadResponse));
+                .doOnSuccess(fileDownloadResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, fileKey, CREATE_URI_FOR_DOWNLOAD_FILE, fileDownloadResponse));
     }
 
     private DocumentChanges fixBookedDocument(Document document, HeadObjectResponse hor) {
@@ -383,7 +380,7 @@ public class UriBuilderService {
     private Mono<FileDownloadResponse> getFileDownloadResponse(String fileKey, String xTraceIdValue, Document doc, Boolean metadataOnly) {
         final String GET_FILE_DOWNLOAD_RESPONSE = "UriBuilderService.getFileDownloadResponse()";
 
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG, GET_FILE_DOWNLOAD_RESPONSE, fileKey, xTraceIdValue, doc, metadataOnly);
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG, GET_FILE_DOWNLOAD_RESPONSE, fileKey, xTraceIdValue, doc, metadataOnly);
         // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
         // non viene creata e viene ritornato un Mono.empty()
         return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly)
@@ -405,7 +402,7 @@ public class UriBuilderService {
                     return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, throwable.getMessage()));
                 })
                 .cast(FileDownloadResponse.class)
-                .doOnSuccess(fileDownloadResponse -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, fileKey, GET_FILE_DOWNLOAD_RESPONSE, fileDownloadResponse));
+                .doOnSuccess(fileDownloadResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, fileKey, GET_FILE_DOWNLOAD_RESPONSE, fileDownloadResponse));
     }
 
     private Mono<Boolean> validationFieldCreateUri() {
@@ -413,7 +410,7 @@ public class UriBuilderService {
     }
 
     public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly ) throws S3BucketException.NoSuchKeyException{
-        log.debug(Constant.INVOKING_METHOD, "UriBuilderService.createFileDownloadInfo()", metadataOnly);
+        log.debug(LogUtils.INVOKING_METHOD, "UriBuilderService.createFileDownloadInfo()", metadataOnly);
         if (Boolean.TRUE.equals(metadataOnly))
             return Mono.empty();
         if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
@@ -424,14 +421,14 @@ public class UriBuilderService {
     }
     private Mono<FileDownloadInfo> recoverDocumentFromBucket(String bucketName, String keyName) throws S3BucketException.NoSuchKeyException {
 
-        log.debug(Constant.INVOKING_METHOD + ARG, "UriBuilderService.recoverDocumentFromBucket()", bucketName, keyName);
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG, "UriBuilderService.recoverDocumentFromBucket()", bucketName, keyName);
 
         RestoreRequest restoreRequest = RestoreRequest.builder()
                 .days(stayHotTime)
                 .glacierJobParameters(builder -> builder.tier(Tier.STANDARD))
                 .build();
 
-        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG + Constant.ARG, "s3Service.restoreObject()", keyName, bucketName, restoreRequest);
+        log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG + LogUtils.ARG, "s3Service.restoreObject()", keyName, bucketName, restoreRequest);
         return s3Service.restoreObject(keyName, bucketName, restoreRequest)
                 //Eccezioni S3: RestoreAlreadyInProgress viene ignorata.
                 .onErrorResume(AwsServiceException.class, ase ->
@@ -463,7 +460,7 @@ public class UriBuilderService {
 
         final String GET_PRESIGNED_URL = "UriBuilderService.getPresignedUrl()";
 
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG, GET_PRESIGNED_URL, bucketName, keyName, xTraceIdValue);
+        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG, GET_PRESIGNED_URL, bucketName, keyName, xTraceIdValue);
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(keyName)
@@ -472,7 +469,7 @@ public class UriBuilderService {
                         xTraceIdValue))
                 .build();
 
-        log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.presignGetObject()", getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)));
+        log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG, "s3Service.presignGetObject()", getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)));
         return s3Service.presignGetObject(getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)))
                 .map(presignedRequest -> new FileDownloadInfo().url(presignedRequest.url().toString()))
                 //Eccezioni S3

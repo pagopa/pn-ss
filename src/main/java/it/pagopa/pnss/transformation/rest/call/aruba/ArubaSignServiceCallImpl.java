@@ -8,6 +8,7 @@ import it.pagopa.pnss.transformation.wsdl.*;
 import jakarta.activation.DataHandler;
 import jakarta.mail.util.ByteArrayDataSource;
 import jakarta.xml.ws.Response;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @Service
-@Slf4j
+@CustomLog
 public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
 
     private final ArubaSignService arubaSignService;

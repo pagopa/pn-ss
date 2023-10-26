@@ -1,7 +1,6 @@
 package it.pagopa.pnss.uribuilder;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.*;
-import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
@@ -9,6 +8,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +33,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-@Slf4j
+@CustomLog
 class FileMetadataUpdateApiControllerTest {
 
 	@Autowired

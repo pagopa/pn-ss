@@ -1,6 +1,10 @@
 package it.pagopa.pnss.uribuilder.rest;
 
-import it.pagopa.pnss.common.constant.Constant;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.FileUploadApi;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.FileCreationRequest;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.FileCreationResponse;
+import it.pagopa.pnss.common.utils.LogUtils;
+import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,16 +12,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 
-import it.pagopa.pn.template.rest.v1.api.FileUploadApi;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
 import it.pagopa.pnss.common.client.exception.ChecksumException;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
-import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @RestController
-@Slf4j
+@CustomLog
 public class FileUploadApiController implements FileUploadApi {
 	
 	@Value("${header.x-checksum-value:#{null}}")
@@ -35,11 +35,11 @@ public class FileUploadApiController implements FileUploadApi {
 
     @Override
     public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId,
-                                                                 Mono<FileCreationRequest> fileCreationRequest,
-                                                                 final ServerWebExchange exchange) {
+																 Mono<FileCreationRequest> fileCreationRequest,
+																 final ServerWebExchange exchange) {
 		final String CREATE_FILE = "createFile";
 
-		log.info(Constant.STARTING_PROCESS_ON, CREATE_FILE, xPagopaSafestorageCxId);
+		log.info(LogUtils.STARTING_PROCESS_ON, CREATE_FILE, xPagopaSafestorageCxId);
 
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
         return fileCreationRequest.flatMap(request -> {
@@ -48,18 +48,18 @@ public class FileUploadApiController implements FileUploadApi {
 												&& exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
 												checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
 										}
-										log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG + Constant.ARG, "createUriForUploadFile", xPagopaSafestorageCxId, request, checksumValue, xTraceIdValue);
+										log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG, "createUriForUploadFile", xPagopaSafestorageCxId, request, checksumValue, xTraceIdValue);
 										return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
         																				request,
         																				checksumValue,
         																				xTraceIdValue);
         						  })
         						  .onErrorResume(ChecksumException.class, throwable -> {
-									  log.info(Constant.ENDING_PROCESS_WITH_ERROR, CREATE_FILE, throwable, throwable.getMessage());
+									  log.info(LogUtils.ENDING_PROCESS_WITH_ERROR, CREATE_FILE, throwable, throwable.getMessage());
         							  throw new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage());
         						  })
 								  .map(fileCreationResponse -> {
-									  log.info(Constant.ENDING_PROCESS_ON, CREATE_FILE, fileCreationResponse.getKey());
+									  log.info(LogUtils.ENDING_PROCESS_ON, CREATE_FILE, fileCreationResponse.getKey());
 									  return ResponseEntity.ok(fileCreationResponse);
 								  });
     }

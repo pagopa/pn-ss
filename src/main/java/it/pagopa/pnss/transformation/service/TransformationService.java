@@ -11,6 +11,8 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
 import it.pagopa.pnss.common.constant.Constant;
+import it.pagopa.pnss.common.exception.IllegalTransformationException;
+import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
@@ -19,11 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
-
-import javax.print.Doc;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
@@ -88,7 +87,7 @@ public class TransformationService {
                     return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), true);
                 })
                 .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
-                .doOnError(throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()));
+                .doOnError(throwable -> !(throwable instanceof InvalidStatusTransformationException || throwable instanceof IllegalTransformationException), throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()));
     }
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
@@ -98,12 +97,15 @@ public class TransformationService {
         log.info(Constant.CLIENT_METHOD_INVOCATION, "DocumentClientCall.getDocument()", key);
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
+                .filter(document -> document.getDocumentState().equalsIgnoreCase(STAGED))
+                .doOnDiscard(Document.class, document -> log.warn("Current status '{}' is not valid for transformation for document '{}'", document.getDocumentState(), key))
+                .switchIfEmpty(Mono.error(new InvalidStatusTransformationException(key)))
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK) && document.getDocumentState().equalsIgnoreCase(STAGED);
+                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK);
                 })
-                .doOnDiscard(Document.class, document -> log.debug("Document with key '{}' has been discarded", document.getDocumentKey()))
+                .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .zipWhen(document -> s3Service.getObject(key, stagingBucketName))
                 .flatMap(objects -> {
                     var document = objects.getT1();
@@ -123,6 +125,7 @@ public class TransformationService {
                                                        signReturnV2.getDescription(), key))
                    .flatMap(signReturnV2 -> changeFromStagingBucketToHotBucket(key, signReturnV2.getBinaryoutput(), stagingBucketName))
                    .transform(getRetryStrategy(key))
+                   .doOnError(IllegalTransformationException.class, throwable -> log.warn(throwable.getMessage()))
                    .then();
     }
 

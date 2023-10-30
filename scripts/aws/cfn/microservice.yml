@@ -361,7 +361,7 @@ Parameters:
     Type: String
     Description: 'Parametro getFileWithPatchConfiguration per UriBuilder'
     Default: 'NONE'
-    AllowedValues: [ ALL,CLIENT-SPECIFIC,NONE ]
+    AllowedValues: [ ALL,CLIENT_SPECIFIC,NONE ]
 
 ### Altri parametri
   AlarmSNSTopicName:

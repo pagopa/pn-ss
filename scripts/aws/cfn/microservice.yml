@@ -360,7 +360,8 @@ Parameters:
   PnSsUriBuilderGetFileWithPatchConfiguration:
     Type: String
     Description: 'Parametro getFileWithPatchConfiguration per UriBuilder'
-    Default: 'true'
+    Default: 'NONE'
+    AllowedValues: [ ALL,CLIENT-SPECIFIC,NONE ]
 
 ### Altri parametri
   AlarmSNSTopicName:

@@ -76,9 +76,7 @@ public class UriBuilderService {
     @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
     private String defaultInternalClientIdValue;
 
-    @Value("${uri.builder.get.file.with.patch.configuration}")
-    private GetFilePatchConfiguration getFileWithPatchConfiguration;
-
+    private final GetFilePatchConfiguration getFileWithPatchConfiguration;
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
@@ -93,13 +91,14 @@ public class UriBuilderService {
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.docTypesClientCall = docTypesClientCall;
         this.s3Service = s3Service;
         this.s3Presigner = s3Presigner;
+        this.getFileWithPatchConfiguration= GetFilePatchConfiguration.valueOf(getFileWithPatchConfigValue);
     }
 
     private Mono<String> getBucketName(DocumentType docType) {
@@ -342,7 +341,7 @@ public class UriBuilderService {
                     if (canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()) && (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil()))) {
                         log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
-                                .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
+                                .onErrorResume(NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
                                 .flatMap(headObjectResponse -> {
                                     DocumentChanges documentChanges;
                                     if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
@@ -358,6 +357,7 @@ public class UriBuilderService {
                 })
                 .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))//
                 .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
+                .onErrorResume(InvalidConfigurationException.class, throwable-> Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, throwable.getMessage())))
                 .doOnSuccess(fileDownloadResponse -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, fileKey, "UriBuilderService.createUriForDownloadFile()", fileDownloadResponse));
     }
 

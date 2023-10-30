@@ -15,11 +15,10 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 
 import java.io.ByteArrayInputStream;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 import java.util.function.UnaryOperator;
 
 import static it.pagopa.pnss.transformation.wsdl.XmlSignatureType.XMLENVELOPED;
-import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @Service
@@ -59,7 +58,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
 
     private <T> void createMonoFromSoapRequest(MonoSink<Object> sink, Response<T> response) {
         try {
-            sink.success(response.get(arubaSignTimeout, TimeUnit.SECONDS));
+            sink.success(response.get());
         } catch (Exception throwable) {
             endSoapRequest(sink, throwable);
         }
@@ -124,7 +123,8 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                                                                                                                                         res))))
                    .cast(PdfsignatureV2Response.class)
                    .map(PdfsignatureV2Response::getReturn)
-                   .transform(CHECK_IF_RESPONSE_IS_OK);
+                   .transform(CHECK_IF_RESPONSE_IS_OK)
+                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()));
     }
 
     @Override
@@ -147,7 +147,8 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                                                                                                                                   res))))
                    .cast(Pkcs7SignV2Response.class)
                    .map(Pkcs7SignV2Response::getReturn)
-                   .transform(CHECK_IF_RESPONSE_IS_OK);
+                   .transform(CHECK_IF_RESPONSE_IS_OK)
+                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()));
     }
 
     @Override
@@ -173,6 +174,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                                                                                                                                     res))))
                    .cast(XmlsignatureResponse.class)
                    .map(XmlsignatureResponse::getReturn)
-                   .transform(CHECK_IF_RESPONSE_IS_OK);
+                   .transform(CHECK_IF_RESPONSE_IS_OK)
+                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()));
     }
 }

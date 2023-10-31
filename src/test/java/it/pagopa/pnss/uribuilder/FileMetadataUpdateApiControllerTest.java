@@ -136,7 +136,7 @@ class FileMetadataUpdateApiControllerTest {
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED,
-																				new CurrentStatus().technicalState(Constant.TECHNICAL_STATUS_AVAILABLE))))
+																				new CurrentStatus().technicalState(AVAILABLE))))
 											  .tipoDocumento(DocTypesConstant.PN_AAR);
 		var documentTypeResponse = new DocumentTypeResponse().docType(documentType2);
 		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));
@@ -182,7 +182,7 @@ class FileMetadataUpdateApiControllerTest {
 		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED,
-																				new CurrentStatus().technicalState(Constant.TECHNICAL_STATUS_AVAILABLE))))
+																				new CurrentStatus().technicalState(AVAILABLE))))
 											  .tipoDocumento(DocTypesConstant.PN_AAR);
 		var documentTypeResponse = new DocumentTypeResponse().docType(documentType2);
 		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));

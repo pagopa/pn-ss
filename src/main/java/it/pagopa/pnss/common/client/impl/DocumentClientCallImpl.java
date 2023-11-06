@@ -1,5 +1,6 @@
 package it.pagopa.pnss.common.client.impl;
 
+import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentInput;
@@ -10,7 +11,7 @@ import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import static it.pagopa.pnss.common.utils.LogUtils.INVOKING_INTERNAL_SERVICE;
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 import static org.springframework.http.HttpStatus.*;
 
 @Service
@@ -45,29 +46,36 @@ public class DocumentClientCallImpl implements DocumentClientCall {
 
     @Override
     public Mono<DocumentResponse> getDocument(String keyFile) throws DocumentKeyNotPresentException {
+        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
+        log.info(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, GET_DOCUMENT);
         return ssWebClient.get()
                           .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                           .retrieve()
                           .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
-                          .bodyToMono(DocumentResponse.class);
+                          .bodyToMono(DocumentResponse.class)
+                          .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
     }
 
     @Override
     public Mono<DocumentResponse> postDocument(DocumentInput document) throws DocumentkeyPresentException {
-        log.info(INVOKING_INTERNAL_SERVICE, "ss-repositorymanager", "postDocument");
+        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
+        log.info(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, POST_DOCUMENT);
         return ssWebClient.post()
                           .uri(anagraficaDocumentiClientEndpointPost)
                           .bodyValue(document)
                           .retrieve()
                           .onStatus(FORBIDDEN::equals,
                                     clientResponse -> Mono.error(new DocumentkeyPresentException(document.getDocumentKey())))
-                          .bodyToMono(DocumentResponse.class);
+                          .bodyToMono(DocumentResponse.class)
+                          .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
     }
 
     @Override
     public Mono<DocumentResponse> patchDocument(String authPagopaSafestorageCxId, String authApiKey, String keyFile,
                                                 DocumentChanges document)
             throws DocumentKeyNotPresentException {
+        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
+        log.info(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, PATCH_DOCUMENT);
         return ssWebClient.patch()
                           .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                           .header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
@@ -79,7 +87,8 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                                   .flatMap(Mono::error))
                          .onStatus(NOT_FOUND::equals,
                                     clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
-                          .bodyToMono(DocumentResponse.class);
+                          .bodyToMono(DocumentResponse.class)
+                          .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
     }
 
     @Override

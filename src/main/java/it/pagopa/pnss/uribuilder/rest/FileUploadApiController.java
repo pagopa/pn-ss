@@ -1,10 +1,12 @@
 package it.pagopa.pnss.uribuilder.rest;
 
+import com.amazonaws.services.s3.model.CORSRule;
+import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.FileUploadApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.FileCreationRequest;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.FileCreationResponse;
-import it.pagopa.pnss.common.utils.LogUtils;
 import lombok.CustomLog;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,9 @@ import org.springframework.web.server.ServerWebExchange;
 import it.pagopa.pnss.common.client.exception.ChecksumException;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import reactor.core.publisher.Mono;
+
+import static it.pagopa.pnss.common.utils.LogUtils.CREATE_FILE;
+import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 
 @RestController
 @CustomLog
@@ -37,30 +42,27 @@ public class FileUploadApiController implements FileUploadApi {
     public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId,
 																 Mono<FileCreationRequest> fileCreationRequest,
 																 final ServerWebExchange exchange) {
-		final String CREATE_FILE = "createFile";
 
-		log.info(LogUtils.STARTING_PROCESS_ON, CREATE_FILE, xPagopaSafestorageCxId);
 
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
-        return fileCreationRequest.flatMap(request -> {
+		MDC.clear();
+		MDC.put(MDC_CORR_ID_KEY, xTraceIdValue);
+		log.logStartingProcess(CREATE_FILE);
+
+        return MDCUtils.addMDCToContextAndExecute(fileCreationRequest.flatMap(request -> {
         								String checksumValue = null;
 										if (headerXChecksumValue != null && !headerXChecksumValue.isBlank()
 												&& exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
 												checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
 										}
-										log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG, "createUriForUploadFile", xPagopaSafestorageCxId, request, checksumValue, xTraceIdValue);
 										return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
         																				request,
         																				checksumValue,
         																				xTraceIdValue);
         						  })
-        						  .onErrorResume(ChecksumException.class, throwable -> {
-									  log.info(LogUtils.ENDING_PROCESS_WITH_ERROR, CREATE_FILE, throwable, throwable.getMessage());
-        							  throw new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage());
-        						  })
-								  .map(fileCreationResponse -> {
-									  log.info(LogUtils.ENDING_PROCESS_ON, CREATE_FILE, fileCreationResponse.getKey());
-									  return ResponseEntity.ok(fileCreationResponse);
-								  });
+        						  .onErrorResume(ChecksumException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage())))
+								  .map(ResponseEntity::ok))
+				                  .doOnError(throwable -> log.logEndingProcess(CREATE_FILE, false, throwable.getMessage()))
+				                  .doOnSuccess(result->log.logEndingProcess(CREATE_FILE));
     }
 }

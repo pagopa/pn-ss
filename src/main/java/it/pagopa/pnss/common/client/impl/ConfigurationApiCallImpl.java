@@ -1,16 +1,22 @@
 package it.pagopa.pnss.common.client.impl;
 
+import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypesConfigurations;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import lombok.CustomLog;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import static it.pagopa.pnss.common.utils.LogUtils.*;
+
 
 @Service
+@CustomLog
 public class ConfigurationApiCallImpl implements ConfigurationApiCall {
 
     private final WebClient ssWebClient;
@@ -30,12 +36,15 @@ public class ConfigurationApiCallImpl implements ConfigurationApiCall {
 
     @Override
     public Mono<DocumentTypesConfigurations> getDocumentsConfigs(String authPagopaSafestorageCxId, String authApiKey) {
+        log.debug(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, GET_DOCUMENTS_CONFIGS);
+        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         return ssWebClient.get()
                           .uri(configurationApiDocumentsConfigClientEndpoint)
                           .header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
                           .header(xApiKey, authApiKey)
                           .retrieve()
-                          .bodyToMono(DocumentTypesConfigurations.class);
+                          .bodyToMono(DocumentTypesConfigurations.class)
+                          .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
     }
 
     @Override

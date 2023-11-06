@@ -16,8 +16,8 @@ import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -26,8 +26,10 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.STAGED;
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 import static it.pagopa.pnss.common.utils.SqsUtils.logIncomingMessage;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
@@ -63,13 +65,20 @@ public class TransformationService {
 
     @SqsListener(value = "${s3.queue.sign-queue-name}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     void newStagingBucketObjectCreatedListener(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
-        newStagingBucketObjectCreatedEvent(newStagingBucketObject, acknowledgment).subscribe();
+        MDC.clear();
+        MDC.put(MDC_CORR_ID_KEY, newStagingBucketObject.getId());
+        log.logStartingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER);
+        newStagingBucketObjectCreatedEvent(newStagingBucketObject, acknowledgment)
+                .doOnSuccess(result -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER))
+                .doOnError(throwable -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER, false, throwable.getMessage()))
+                .subscribe();
     }
 
     public Mono<Void> newStagingBucketObjectCreatedEvent(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
 
-        AtomicReference<String> fileKeyReference = new AtomicReference<>("");
+        log.debug(LogUtils.INVOKING_METHOD, NEW_STAGING_BUCKET_OBJECT_CREATED, newStagingBucketObject);
 
+        AtomicReference<String> fileKeyReference = new AtomicReference<>("");
         return Mono.fromCallable(() -> {
                     logIncomingMessage(signQueueName, newStagingBucketObject);
                     return newStagingBucketObject;
@@ -90,10 +99,8 @@ public class TransformationService {
     }
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
-        final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
 
-        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG, OBJECT_TRANSFORMATION, key, stagingBucketName, marcatura);
-        log.info(LogUtils.CLIENT_METHOD_INVOCATION, "DocumentClientCall.getDocument()", key);
+        log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName, marcatura).toList());
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
                 .filter(document -> {
@@ -121,16 +128,15 @@ public class TransformationService {
                                                        signReturnV2.getDescription(), key))
                    .flatMap(signReturnV2 -> changeFromStagingBucketToHotBucket(key, signReturnV2.getBinaryoutput(), stagingBucketName))
                    .transform(getRetryStrategy(key))
+                   .doOnSuccess(result -> log.info(SUCCESSFUL_OPERATION_LABEL, OBJECT_TRANSFORMATION, result))
                    .then();
     }
 
     private Mono<Void> changeFromStagingBucketToHotBucket(String key, byte[] objectBytes, String stagingBucketName) {
-        log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG + LogUtils.ARG, "S3Service.putObject()", key, objectBytes, bucketName.ssHotName());
+        log.debug(INVOKING_METHOD, CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET, Stream.of(key, stagingBucketName).toList());
         return s3Service.putObject(key, objectBytes, bucketName.ssHotName())
-                        .flatMap(putObjectResponse -> {
-                            log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG, "s3Service.deleteObject()", key, stagingBucketName);
-                            return s3Service.deleteObject(key, stagingBucketName);
-                        })
+                        .flatMap(putObjectResponse -> s3Service.deleteObject(key, stagingBucketName))
+                        .doOnSuccess(result->log.info(SUCCESSFUL_OPERATION_LABEL, CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET, result))
                         .then();
     }
 }

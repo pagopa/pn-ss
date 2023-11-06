@@ -18,7 +18,7 @@ import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
-import static it.pagopa.pnss.common.utils.LogUtils.CLIENT_METHOD_INVOCATION;
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @CustomLog
 public class StreamsRecordProcessor implements IRecordProcessor {
@@ -45,8 +45,8 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     @Override
     public void processRecords(ProcessRecordsInput processRecordsInput) {
-        final String PROCESS_RECORDS = "processRecords";
-        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG, PROCESS_RECORDS, processRecordsInput, processRecordsInput.getMillisBehindLatest());
+        final String PROCESS_RECORDS = "StreamsRecordProcessor.processRecords()";
+        log.debug(INVOKING_METHOD, PROCESS_RECORDS, processRecordsInput);
         findEventSendToBridge(processRecordsInput)
                 .buffer(10)
                 .map(putEventsRequestEntries -> {
@@ -60,14 +60,14 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 })
                 .then()
                 .doOnError(e -> log.error("* FATAL * DBStream: Errore generico ", e))
-                .doOnSuccess(unused -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PROCESS_RECORDS, "StreamsRecordProcessor.processRecords()", processRecordsInput))
+                .doOnSuccess(unused -> log.info(SUCCESSFUL_OPERATION_LABEL, PROCESS_RECORDS, processRecordsInput))
                 .subscribe();
     }
 
     @NotNull
     public Flux<PutEventsRequestEntry> findEventSendToBridge(ProcessRecordsInput processRecordsInput) {
-        final String FIND_EVENT_SEND_TO_BRIDGE = "findEventSendToBridge";
-        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput, processRecordsInput.getRecords().size());
+        final String FIND_EVENT_SEND_TO_BRIDGE = "StreamRecordProcessor.findEventSendToBridge()";
+        log.debug(INVOKING_METHOD, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput);
         return Flux.fromIterable(processRecordsInput.getRecords())
                 .filter(RecordAdapter.class::isInstance)
                 .map(recordEvent -> ((RecordAdapter) recordEvent).getInternalObject())
@@ -80,7 +80,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .doOnError(e -> log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> {
                     setCheckpoint(processRecordsInput);
-                    log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, "StreamsRecordProcessor.findEventSendToBridge()", processRecordsInput);
+                    log.info(SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput);
                 });
     }
 

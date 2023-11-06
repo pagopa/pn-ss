@@ -2,6 +2,7 @@ package it.pagopa.pnss.repositorymanager.service.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.utils.LogUtils;
@@ -23,6 +24,9 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
+
+import static it.pagopa.pnss.common.utils.LogUtils.DOC_TYPE_TABLE;
+import static it.pagopa.pnss.common.utils.LogUtils.SUCCESSFUL_OPERATION_LABEL;
 
 @Service
 @CustomLog
@@ -57,92 +61,99 @@ public class DocTypesServiceImpl implements DocTypesService {
 
     @Override
     public Mono<DocumentType> getDocType(String typeId) {
-        final String GET_DOC_TYPE = "DocTypesServiceImpl.getDocType()";
+        final String GET_DOC_TYPE = "DocTypesService.getDocType()";
         log.debug(LogUtils.INVOKING_METHOD, GET_DOC_TYPE, typeId);
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
+                   .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), typeId, result))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class))
-                   .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, typeId, GET_DOC_TYPE, documentType));
+                   .doOnSuccess(documentType -> log.info(SUCCESSFUL_OPERATION_LABEL, GET_DOC_TYPE, documentType));
     }
 
     @Override
     public Mono<List<DocumentType>> getAllDocumentType() {
-        final String GET_ALL_DOCUMENT_TYPE = "DocTypesServiceImpl.getAllDocumentType()";
+        final String GET_ALL_DOCUMENT_TYPE = "DocTypesService.getAllDocumentType()";
         log.debug(LogUtils.INVOKING_METHOD, GET_ALL_DOCUMENT_TYPE, "");
 
         return Mono.from(docTypeEntityDynamoDbAsyncTable.scan())
         		   .map(Page::items)
         		   .switchIfEmpty(Mono.empty())
         		   .map(this::convert)
-                   .doOnSuccess(documentTypes -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, "", GET_ALL_DOCUMENT_TYPE, documentTypes));
+                   .doOnSuccess(documentTypes -> log.info(SUCCESSFUL_OPERATION_LABEL, GET_ALL_DOCUMENT_TYPE, documentTypes));
     }
 
     @Override
     public Mono<DocumentType> insertDocType(DocumentType docTypeInput) {
+        final String INSERT_DOC_TYPE = "DocTypesService.insertDocType()";
+        log.debug(LogUtils.INVOKING_METHOD, INSERT_DOC_TYPE, docTypeInput);
+
         final String DOC_TYPE_INPUT = "docTypeInput in DocTypesServiceImpl insertDocType()";
 
-        log.info(LogUtils.CHECKING_VALIDATION_PROCESS, DOC_TYPE_INPUT);
+        log.logChecking(DOC_TYPE_INPUT);
         if (docTypeInput == null) {
-            log.warn(LogUtils.VALIDATION_PROCESS_FAILED, DOC_TYPE_INPUT, "The object DocumentType is null");
-            throw new RepositoryManagerException("The object DocumentType is null");
+            String errorMsg = "The object DocumentType is null";
+            log.logCheckingOutcome(DOC_TYPE_INPUT, false, errorMsg);
+            throw new RepositoryManagerException(errorMsg);
         }
         if (docTypeInput.getTipoDocumento() == null) {
-            log.warn(LogUtils.VALIDATION_PROCESS_FAILED, DOC_TYPE_INPUT, "The attribute tipoDocumento is null");
-            throw new RepositoryManagerException("The attribute tipoDocumento is null");
+            String errorMsg = "The attribute 'tipoDocumento' is null";
+            log.logCheckingOutcome(DOC_TYPE_INPUT, false, errorMsg);
+            throw new RepositoryManagerException(errorMsg);
         }
-        log.info(LogUtils.VALIDATION_PROCESS_PASSED, DOC_TYPE_INPUT);
+        log.logCheckingOutcome(DOC_TYPE_INPUT, true);
         
         DocTypeEntity docTypeEntityInput = objectMapper.convertValue(docTypeInput, DocTypeEntity.class);
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder()
                                                                                    .partitionValue(docTypeInput.getTipoDocumento())
                                                                                    .build()))
+                .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), docTypeInput.getTipoDocumento(), result))
                 .flatMap(foundedDocumentType -> Mono.error(new ItemAlreadyPresent(docTypeInput.getTipoDocumento())))
                 .doOnError(ItemAlreadyPresent.class, throwable -> log.error("Error in DocTypesServiceImpl.insertDocType(): ItemAlreadyPresent - '{}'", throwable.getMessage()))
                 .switchIfEmpty(Mono.just(docTypeInput))
                 .flatMap(unused -> {
-                    log.debug(LogUtils.INSERTING_DATA_IN_DYNAMODB_TABLE, docTypeEntityInput, managerDynamoTableName.tipologieDocumentiName());
+                    log.logPuttingDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), docTypeEntityInput);
                     return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
                             docTypeEntityInput)));
                 })
-                .doOnSuccess(unused -> {
-                    log.info(LogUtils.INSERTED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.tipologieDocumentiName());
-                    log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, docTypeInput.getTipoDocumento(), "DocTypesServiceImpl.insertDocType()", docTypeInput);
-                })
+                .doOnNext(result -> log.logPutDoneDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName()))
+                .doOnSuccess(unused -> log.info(SUCCESSFUL_OPERATION_LABEL, INSERT_DOC_TYPE, docTypeInput))
                 .thenReturn(docTypeInput);
     }
 
     @Override
     public Mono<DocumentType> updateDocType(String typeId, DocumentType docTypeInput) {
+        final String UPDATE_DOC_TYPE = "DocTypesService.updateDocType()";
+        log.debug(LogUtils.INVOKING_METHOD, UPDATE_DOC_TYPE, typeId);
+
         DocTypeEntity docTypeEntityInput = objectMapper.convertValue(docTypeInput, DocTypeEntity.class);
         docTypeEntityInput.setTipoDocumento(typeId);
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
+                   .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), typeId, result))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error("Error in DocTypesServiceImpl.updateDocType(): DocumentTypeNotPresentException - '{}'", throwable.getMessage()))
-                   .zipWhen(unused -> {
-                       log.debug(LogUtils.UPDATING_DATA_IN_DYNAMODB_TABLE, docTypeEntityInput, managerDynamoTableName.tipologieDocumentiName());
-                       return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.updateItem(docTypeEntityInput));
-                   })
-                   .doOnSuccess(unused -> log.info(LogUtils.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.tipologieDocumentiName()))
+                   .zipWhen(unused -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.updateItem(docTypeEntityInput)))
+                   .doOnNext(result -> log.logUpdateDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), result.getT2()))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), DocumentType.class))
-                   .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, typeId, "DocTypesServiceImpl.updateDocType()", documentType));
+                   .doOnSuccess(documentType -> log.info(SUCCESSFUL_OPERATION_LABEL, UPDATE_DOC_TYPE, documentType));
     }
 
     @Override
     public Mono<DocumentType> deleteDocType(String typeId) {
+        final String DELETE_DOC_TYPE = "DocTypesService.deleteDocType()";
+        log.debug(LogUtils.INVOKING_METHOD, DELETE_DOC_TYPE, typeId);
+
         Key typeKey = Key.builder().partitionValue(typeId).build();
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(typeKey))
+                   .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), typeId, result))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error("Error in DocTypesServiceImpl.deleteDocType(): DocumentTypeNotPresentException - '{}'", throwable.getMessage()))
-                   .zipWhen(docTypeToDelete -> {
-                       log.debug(LogUtils.DELETING_DATA_IN_DYNAMODB_TABLE, typeId, managerDynamoTableName.tipologieDocumentiName());
-                       return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.deleteItem(typeKey));
-                   })
-                   .doOnSuccess(unused -> log.info(LogUtils.DELETED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.tipologieDocumentiName()))
+                   .zipWhen(docTypeToDelete -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.deleteItem(typeKey)))
+                   .doOnNext(result -> log.logDeleteDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), typeId, result.getT2()))
                    .map(objects -> objectMapper.convertValue(objects.getT1(), DocumentType.class))
-                   .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, typeId, "DocTypesServiceImpl.deleteDocType()", documentType));
+                   .doOnSuccess(documentType -> log.info(SUCCESSFUL_OPERATION_LABEL, DELETE_DOC_TYPE, documentType));
     }
 }

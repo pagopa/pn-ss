@@ -27,7 +27,6 @@ public class CallMacchinaStatiImpl implements CallMacchinaStati {
 
     @Override
     public Mono<MacchinaStatiValidateStatoResponseDto> statusValidation(DocumentStatusChange documentStatusChange) throws InvalidNextStatusException {
-        var mdcContextMap= MDCUtils.retrieveMDCContextMap();
         log.logInvokingExternalService("pn-statemachinemanager", "statusValidation()");
         return stateMachineWebClient.get()
                 .uri(uriBuilder -> uriBuilder.path(stateMachineEndpointProperties.validate())
@@ -44,7 +43,6 @@ public class CallMacchinaStatiImpl implements CallMacchinaStati {
                     } else {
                         return Mono.just(macchinaStatiValidateStatoResponseDto);
                     }
-                })
-                .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
+                });
     }
 }

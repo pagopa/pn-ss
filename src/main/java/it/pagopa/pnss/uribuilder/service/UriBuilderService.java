@@ -171,7 +171,6 @@ public class UriBuilderService {
                                                                              checksumValue,
                                                                              metadata,
                                                                              xTraceIdValue).map(presignedPutObjectRequest -> {
-                                                                 log.info(LogUtils.INSERTED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName());
                                                                  FileCreationResponse response = new FileCreationResponse();
                                                                  response.setKey(insertedDocument.getDocument().getDocumentKey());
                                                                  response.setSecret(secret.toString());
@@ -290,11 +289,8 @@ public class UriBuilderService {
                                                                    .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
                                                                    .putObjectRequest(putObjectRequest)
                                                                    .build())
-                .flatMap(putObjectPresignRequest -> {
-                    log.info(CLIENT_METHOD_INVOCATION, PRESIGN_PUT_OBJECT, putObjectPresignRequest);
-                    return Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest))
-                            .doOnNext(result -> log.debug(CLIENT_METHOD_RETURN, PRESIGN_PUT_OBJECT, result));
-                });
+                .flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest))
+                       .doOnNext(result -> log.debug(CLIENT_METHOD_RETURN, PRESIGN_PUT_OBJECT, result)));
     }
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, String xTraceIdValue, Boolean metadataOnly) {
@@ -336,7 +332,6 @@ public class UriBuilderService {
                 .cast(Document.class)
                 .flatMap(document -> {
                     if (canExecutePatch && (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil()))) {
-                        log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
                                 .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
                                 .flatMap(headObjectResponse -> {
@@ -423,14 +418,13 @@ public class UriBuilderService {
     }
     private Mono<FileDownloadInfo> recoverDocumentFromBucket(String bucketName, String keyName) throws S3BucketException.NoSuchKeyException {
 
-        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG, "UriBuilderService.recoverDocumentFromBucket()", bucketName, keyName);
+        log.debug(LogUtils.INVOKING_METHOD, RECOVER_DOCUMENT_FROM_BUCKET, Stream.of(bucketName, keyName).toList());
 
         RestoreRequest restoreRequest = RestoreRequest.builder()
                 .days(stayHotTime)
                 .glacierJobParameters(builder -> builder.tier(Tier.STANDARD))
                 .build();
 
-        log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG + LogUtils.ARG, "s3Service.restoreObject()", keyName, bucketName, restoreRequest);
         return s3Service.restoreObject(keyName, bucketName, restoreRequest)
                 //Eccezioni S3: RestoreAlreadyInProgress viene ignorata.
                 .onErrorResume(AwsServiceException.class, ase ->
@@ -460,9 +454,7 @@ public class UriBuilderService {
 
     private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
 
-        final String GET_PRESIGNED_URL = "UriBuilderService.getPresignedUrl()";
-
-        log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG, GET_PRESIGNED_URL, bucketName, keyName, xTraceIdValue);
+        log.debug(LogUtils.INVOKING_METHOD, GET_PRESIGNED_URL, Stream.of(bucketName, keyName, xTraceIdValue).toList());
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(keyName)
@@ -471,8 +463,7 @@ public class UriBuilderService {
                         xTraceIdValue))
                 .build();
 
-        log.info(LogUtils.CLIENT_METHOD_INVOCATION + LogUtils.ARG, "s3Service.presignGetObject()", getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)));
-        return s3Service.presignGetObject(getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)))
+         return s3Service.presignGetObject(getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)))
                 .map(presignedRequest -> new FileDownloadInfo().url(presignedRequest.url().toString()))
                 //Eccezioni S3
                 .onErrorResume(S3Exception.class, ase ->

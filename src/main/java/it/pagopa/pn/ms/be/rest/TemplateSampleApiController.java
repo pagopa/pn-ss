@@ -22,12 +22,12 @@ public class TemplateSampleApiController implements TemplateSampleApi {
     public Mono<ResponseEntity<Map<String, List<String>>>> getHttpHeadersMap(ServerWebExchange exchange) {
 
         final String GET_HTTP_HEADERS_MAP = "getHttpHeadersMap";
-        log.info(LogUtils.STARTING_PROCESS, GET_HTTP_HEADERS_MAP);
+        log.logStartingProcess(GET_HTTP_HEADERS_MAP);
 
         return Mono.fromSupplier(() ->{
             Map<String, List<String>> headers = new HashMap<>();
             exchange.getRequest().getHeaders().forEach(headers::put);
-            log.info(LogUtils.ENDING_PROCESS, GET_HTTP_HEADERS_MAP);
+            log.logEndingProcess(GET_HTTP_HEADERS_MAP);
             return ResponseEntity.ok(headers);
         });
 

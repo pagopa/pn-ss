@@ -37,14 +37,12 @@ public class ConfigurationApiCallImpl implements ConfigurationApiCall {
     @Override
     public Mono<DocumentTypesConfigurations> getDocumentsConfigs(String authPagopaSafestorageCxId, String authApiKey) {
         log.debug(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, GET_DOCUMENTS_CONFIGS);
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         return ssWebClient.get()
                           .uri(configurationApiDocumentsConfigClientEndpoint)
                           .header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
                           .header(xApiKey, authApiKey)
                           .retrieve()
-                          .bodyToMono(DocumentTypesConfigurations.class)
-                          .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
+                          .bodyToMono(DocumentTypesConfigurations.class);
     }
 
     @Override

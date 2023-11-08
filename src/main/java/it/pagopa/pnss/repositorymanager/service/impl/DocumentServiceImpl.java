@@ -2,6 +2,7 @@ package it.pagopa.pnss.repositorymanager.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.commons.utils.MDCUtils;
+import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentInput;
@@ -52,7 +53,7 @@ import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKIN
 public class DocumentServiceImpl implements DocumentService {
 
     private final ObjectMapper objectMapper;
-    private final DynamoDbAsyncTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
+    private final DynamoDbAsyncTableDecorator<DocumentEntity> documentEntityDynamoDbAsyncTable;
     private final DocTypesService docTypesService;
     private final RetentionService retentionService;
     private final AwsConfigurationProperties awsConfigurationProperties;
@@ -69,8 +70,8 @@ public class DocumentServiceImpl implements DocumentService {
         this.docTypesService = docTypesService;
         this.callMacchinaStati = callMacchinaStati;
         this.s3Service = s3Service;
-        this.documentEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
-                                                                                  TableSchema.fromBean(DocumentEntity.class));
+        this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
+                                                                                  TableSchema.fromBean(DocumentEntity.class)));
         this.objectMapper = objectMapper;
         this.retentionService = retentionService;
         this.awsConfigurationProperties = awsConfigurationProperties;
@@ -83,21 +84,16 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Mono<Document> getDocument(String documentKey) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         final String GET_DOCUMENT = "DocumentService.getDocument()";
         log.debug(LogUtils.INVOKING_METHOD, GET_DOCUMENT, documentKey);
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
-                   .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
-                   .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.documentiName(), documentKey, result))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
-                   .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class))
-                   .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, GET_DOCUMENT, documentType));
+                   .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class));
     }
 
     @Override
     public Mono<Document> insertDocument(DocumentInput documentInput) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         final String INSERT_DOCUMENT = "DocumentService.insertDocument()";
         log.debug(LogUtils.INVOKING_METHOD, INSERT_DOCUMENT, documentInput);
 
@@ -122,8 +118,6 @@ public class DocumentServiceImpl implements DocumentService {
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
                                                                                     .partitionValue(documentInput.getDocumentKey())
                                                                                     .build()))
-                   .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
-                   .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.documentiName(), documentInput.getDocumentKey(), result))
                    .handle((documentFounded, sink) -> {
                        if (documentFounded != null) {
                            log.debug("insertDocument() : document found : {}", documentFounded);
@@ -143,11 +137,8 @@ public class DocumentServiceImpl implements DocumentService {
                        resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
                        resp.setClientShortCode(documentInput.getClientShortCode());
                        DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
-                       log.logPuttingDynamoDBEntity(managerDynamoTableName.documentiName(), documentEntityInput);
                        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(documentEntityInput)));
                    })
-                      .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
-                      .doOnNext(result -> log.logPutDoneDynamoDBEntity(managerDynamoTableName.documentiName()))
                       .doOnSuccess(unused -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, INSERT_DOCUMENT, resp))
                       .thenReturn(resp);
     }
@@ -155,15 +146,12 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges, String authPagopaSafestorageCxId,
                                         String authApiKey) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         final String PATCH_DOCUMENT = "DocumentService.patchDocument()";
         log.debug(LogUtils.INVOKING_METHOD, PATCH_DOCUMENT, Stream.of(documentKey, documentChanges, authPagopaSafestorageCxId).toList());
 
         AtomicReference<String> oldState = new AtomicReference<>();
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
-                .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
-                .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.documentiName(), documentKey, result))
                 .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                 .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                 .flatMap(documentEntity -> {
@@ -186,7 +174,6 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private Mono<DocumentEntity> executePatch(DocumentEntity docEntity, DocumentChanges documentChanges, AtomicReference<String> oldState, String documentKey, String authPagopaSafestorageCxId, String authApiKey) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         final String PATCH_DOCUMENT = "DocumentService.patchDocument()";
 
         return Mono.just(docEntity).flatMap(documentEntity ->
@@ -282,27 +269,20 @@ public class DocumentServiceImpl implements DocumentService {
                        }
                    })
                    .flatMap(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
-                   .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
-                   .doOnNext(result -> log.logUpdateDynamoDBEntity(managerDynamoTableName.documentiName(), result))
                    .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
                    .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentChanges));
     }
 
     @Override
     public Mono<Document> deleteDocument(String documentKey) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         final String DELETE_DOCUMENT = "DocumentService.deleteDocument()";
         log.debug(LogUtils.INVOKING_METHOD, DELETE_DOCUMENT, documentKey);
         Key typeKey = Key.builder().partitionValue(documentKey).build();
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(typeKey))
-                   .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
-                   .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.documentiName(), documentKey, result))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error("Error in DocumentServiceImpl.deleteDocument(): DocumentKeyNotPresentException - '{}'", throwable.getMessage()))
                    .zipWhen(documentToDelete -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
-                   .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
-                   .doOnNext(result -> log.logDeleteDynamoDBEntity(managerDynamoTableName.documentiName(), documentKey, result.getT2()))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
                    .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, DELETE_DOCUMENT, documentType));
     }

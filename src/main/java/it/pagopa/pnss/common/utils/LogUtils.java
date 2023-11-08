@@ -9,32 +9,16 @@ public class LogUtils {
     }
 
     //KEYS
-    public static final String MDC_CORR_ID_KEY = "correlation_id";
+    public static final String MDC_CORR_ID_KEY = MDCUtils.MDC_CX_ID_KEY;
 
     //LABELS
-    public static final String STARTING_PROCESS = "Starting '{}' Process";
-    public static final String CHECKING_VALIDATION_PROCESS = "Checking '{}'";
-    public static final String VALIDATION_PROCESS_PASSED = "'{}' passed";
-    public static final String VALIDATION_PROCESS_FAILED = "'{}' failed error = '{}'";
-    public static final String STARTING_PROCESS_ON = "Starting '{}' Process on '{}'";
-    public static final String ENDING_PROCESS = "Ending '{}' Process";
-    public static final String ENDING_PROCESS_ON = "Ending '{}' Process on '{}'";
     public static final String ENDING_PROCESS_WITH_ERROR = "Ending '{}' Process with error = '{}' - '{}'";
-    public static final String INSERTING_DATA_IN_DYNAMODB_TABLE = "Inserting data '{}' in DynamoDB table '{}'";
-    public static final String INSERTED_DATA_IN_DYNAMODB_TABLE = "Inserted data in DynamoDB table '{}'";
-    public static final String UPDATING_DATA_IN_DYNAMODB_TABLE = "Updating data '{}' in DynamoDB table '{}'";
-    public static final String UPDATED_DATA_IN_DYNAMODB_TABLE = "Updated data in DynamoDB table '{}'";
-    public static final String DELETING_DATA_IN_DYNAMODB_TABLE = "Deleting data '{}' in DynamoDB table '{}'";
-    public static final String DELETED_DATA_IN_DYNAMODB_TABLE = "Deleted data in DynamoDB table '{}'";
     public static final String INVOKING_METHOD = "Invoking operation '{}' with args: '{}'";
-    public static final String INVOKING_EXTERNAL_SERVICE = "Invoking external service '{}'. Waiting Sync response.";
     public static final String SUCCESSFUL_OPERATION_LABEL = "Successful operation: '{}' = '{}'";
     public static final String INVOKING_INTERNAL_SERVICE = "Invoking internal service '{}' '{}'. Waiting Sync response.";
     public static final String CLIENT_METHOD_INVOCATION = "Client method '{}' - args: '{}'";
     public static final String CLIENT_METHOD_RETURN = "Return client method: {} = {}";
     public static final String ARG = " - '{}'";
-    public static final String GET_FILE = "getFile()";
-    public static final String CREATE_FILE = "createFile()";
 
     //DYNAMODB
     public static final String DOC_TYPE_TABLE = "DocTypeEntity";
@@ -45,6 +29,10 @@ public class LogUtils {
     public static final String BUILDS_UPLOAD_URL = "UriBuilderService.buildsUploadUrl()";
     public static final String SIGN_BUCKET = "UriBuilderService.signBucket()";
     public static final String GET_FILE_DOWNLOAD_RESPONSE = "UriBuilderService.getFileDownloadResponse()";
+    public static final String RECOVER_DOCUMENT_FROM_BUCKET = "UriBuilderService.recoverDocumentFromBucket()";
+    public static final String GET_PRESIGNED_URL = "UriBuilderService.getPresignedUrl()";
+    public static final String GET_FILE = "getFile()";
+    public static final String CREATE_FILE = "createFile()";
 
     //UPDATE METADATA
     public static final String UPDATE_FILE_METADATA = "updateFileMetadata()";
@@ -102,5 +90,10 @@ public class LogUtils {
     //RETENTION SERVICE
     public static final String GET_RETENTION_UNTIL = "RetentionService.getRetentionUntil()";
     public static final String SET_RETENTION_PERIOD_IN_BUCKET_OBJECT_METADATA = "RetentionService.setRetentionPeriodInBucketObjectMetadata()";
+
+    //ARUBA
+    public static final String SIGN_PDF_DOCUMENT = "ArubaSignServiceCall.signPdfDocument()";
+    public static final String XML_SIGNATURE = "ArubaSignServiceCall.xmlSignature()";
+    public static final String PKCS_7_SIGN_V2 = "ArubaSignServiceCall.pkcs7signV2()";
 
 }

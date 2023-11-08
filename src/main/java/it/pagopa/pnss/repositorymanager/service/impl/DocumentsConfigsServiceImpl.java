@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.utils.LogUtils;
@@ -19,6 +20,8 @@ import it.pagopa.pnss.repositorymanager.service.DocumentsConfigsService;
 import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+
+import static it.pagopa.pnss.common.utils.LogUtils.SUCCESSFUL_OPERATION_LABEL;
 
 
 /**
@@ -89,6 +92,8 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
 
     @Override
     public Mono<DocumentTypesConfigurations> getDocumentsConfigs() {
+        final String GET_DOCUMENTS_CONFIGS = "DocumentConfigsServiceImpl.getDocumentsConfigs()";
+        log.debug(LogUtils.INVOKING_METHOD, GET_DOCUMENTS_CONFIGS, "");
 
         DocumentTypesConfigurations dtc = new DocumentTypesConfigurations();
         dtc.setDocumentsTypes(new ArrayList<>());
@@ -101,6 +106,6 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
             log.debug("getDocumentsConfigs() : elem documentTypeList {}", documentTypeList);
             dtc.setDocumentsTypes(convertDocumentTypeConfigurationList(documentTypeList));
         }).then(Mono.just(dtc)
-         .doOnSuccess(documentTypesConfigurations -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, "", "DocumentConfigsServiceImpl.getDocumentsConfigs()", documentTypesConfigurations)));
+         .doOnSuccess(documentTypesConfigurations -> log.info(SUCCESSFUL_OPERATION_LABEL, GET_DOCUMENTS_CONFIGS, documentTypesConfigurations)));
     }
 }

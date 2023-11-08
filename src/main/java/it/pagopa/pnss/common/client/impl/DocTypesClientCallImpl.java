@@ -33,13 +33,11 @@ public class DocTypesClientCallImpl implements DocTypesClientCall {
     @Override
     public Mono<DocumentTypeResponse> getdocTypes(String tipologiaDocumento) throws IdClientNotFoundException {
         log.debug(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, GET_DOC_TYPES);
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         return ssWebClient.get()
                           .uri(String.format(anagraficaDocTypesInternalClientEndpoint, tipologiaDocumento))
                           .retrieve()
                           .onStatus(NOT_FOUND::equals, response -> Mono.error(new DocumentTypeNotPresentException(tipologiaDocumento)))
-                          .bodyToMono(DocumentTypeResponse.class)
-                          .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
+                          .bodyToMono(DocumentTypeResponse.class);
     }
 
     @Override

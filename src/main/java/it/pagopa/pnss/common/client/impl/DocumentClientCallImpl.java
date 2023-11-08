@@ -46,19 +46,16 @@ public class DocumentClientCallImpl implements DocumentClientCall {
 
     @Override
     public Mono<DocumentResponse> getDocument(String keyFile) throws DocumentKeyNotPresentException {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         log.info(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, GET_DOCUMENT);
         return ssWebClient.get()
                           .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                           .retrieve()
                           .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
-                          .bodyToMono(DocumentResponse.class)
-                          .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
+                          .bodyToMono(DocumentResponse.class);
     }
 
     @Override
     public Mono<DocumentResponse> postDocument(DocumentInput document) throws DocumentkeyPresentException {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         log.info(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, POST_DOCUMENT);
         return ssWebClient.post()
                           .uri(anagraficaDocumentiClientEndpointPost)
@@ -66,15 +63,13 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                           .retrieve()
                           .onStatus(FORBIDDEN::equals,
                                     clientResponse -> Mono.error(new DocumentkeyPresentException(document.getDocumentKey())))
-                          .bodyToMono(DocumentResponse.class)
-                          .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
+                          .bodyToMono(DocumentResponse.class);
     }
 
     @Override
     public Mono<DocumentResponse> patchDocument(String authPagopaSafestorageCxId, String authApiKey, String keyFile,
                                                 DocumentChanges document)
             throws DocumentKeyNotPresentException {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         log.info(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, PATCH_DOCUMENT);
         return ssWebClient.patch()
                           .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
@@ -87,8 +82,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                                   .flatMap(Mono::error))
                          .onStatus(NOT_FOUND::equals,
                                     clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
-                          .bodyToMono(DocumentResponse.class)
-                          .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
+                          .bodyToMono(DocumentResponse.class);
     }
 
     @Override

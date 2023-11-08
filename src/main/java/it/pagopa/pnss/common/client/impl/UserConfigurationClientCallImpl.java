@@ -33,15 +33,13 @@ public class UserConfigurationClientCallImpl implements UserConfigurationClientC
 
     @Override
     public Mono<UserConfigurationResponse> getUser(String xPagopaSafestorageCxId) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         log.debug(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, GET_USER);
         return ssWebClient.get()
                           .uri(String.format(anagraficaUserConfigurationInternalClientEndpoint, xPagopaSafestorageCxId))
                           .retrieve()
                           .onStatus(HttpStatus::is4xxClientError,
                                     clientResponse -> Mono.error(new IdClientNotFoundException(xPagopaSafestorageCxId)))
-                          .bodyToMono(UserConfigurationResponse.class)
-                          .doFinally(signalType -> MDC.setContextMap(mdcContextMap));
+                          .bodyToMono(UserConfigurationResponse.class);
     }
 
     @Override

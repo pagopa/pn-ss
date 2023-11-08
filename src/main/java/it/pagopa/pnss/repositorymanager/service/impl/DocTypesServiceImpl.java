@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.utils.LogUtils;
 import lombok.CustomLog;
@@ -34,7 +35,7 @@ public class DocTypesServiceImpl implements DocTypesService {
 
     private final ObjectMapper objectMapper;
 
-    private final DynamoDbAsyncTable<DocTypeEntity> docTypeEntityDynamoDbAsyncTable;
+    private final DynamoDbAsyncTableDecorator<DocTypeEntity> docTypeEntityDynamoDbAsyncTable;
 
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
@@ -42,8 +43,8 @@ public class DocTypesServiceImpl implements DocTypesService {
     public DocTypesServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
         this.objectMapper = objectMapper;
-        this.docTypeEntityDynamoDbAsyncTable = dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.tipologieDocumentiName(),
-                                                                                 TableSchema.fromBean(DocTypeEntity.class));
+        this.docTypeEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.tipologieDocumentiName(),
+                                                                                 TableSchema.fromBean(DocTypeEntity.class)));
     }
 
     private Mono<DocTypeEntity> getErrorIdDocTypeNotFoundException(String typeId) {
@@ -64,7 +65,6 @@ public class DocTypesServiceImpl implements DocTypesService {
         final String GET_DOC_TYPE = "DocTypesService.getDocType()";
         log.debug(LogUtils.INVOKING_METHOD, GET_DOC_TYPE, typeId);
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
-                   .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), typeId, result))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class))
@@ -108,16 +108,10 @@ public class DocTypesServiceImpl implements DocTypesService {
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder()
                                                                                    .partitionValue(docTypeInput.getTipoDocumento())
                                                                                    .build()))
-                .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), docTypeInput.getTipoDocumento(), result))
                 .flatMap(foundedDocumentType -> Mono.error(new ItemAlreadyPresent(docTypeInput.getTipoDocumento())))
                 .doOnError(ItemAlreadyPresent.class, throwable -> log.error("Error in DocTypesServiceImpl.insertDocType(): ItemAlreadyPresent - '{}'", throwable.getMessage()))
                 .switchIfEmpty(Mono.just(docTypeInput))
-                .flatMap(unused -> {
-                    log.logPuttingDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), docTypeEntityInput);
-                    return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
-                            docTypeEntityInput)));
-                })
-                .doOnNext(result -> log.logPutDoneDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName()))
+                .flatMap(unused -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.putItem(builder -> builder.item(docTypeEntityInput))))
                 .doOnSuccess(unused -> log.info(SUCCESSFUL_OPERATION_LABEL, INSERT_DOC_TYPE, docTypeInput))
                 .thenReturn(docTypeInput);
     }
@@ -131,11 +125,9 @@ public class DocTypesServiceImpl implements DocTypesService {
         docTypeEntityInput.setTipoDocumento(typeId);
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
-                   .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), typeId, result))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error("Error in DocTypesServiceImpl.updateDocType(): DocumentTypeNotPresentException - '{}'", throwable.getMessage()))
                    .zipWhen(unused -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.updateItem(docTypeEntityInput)))
-                   .doOnNext(result -> log.logUpdateDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), result.getT2()))
                    .map(objects -> objectMapper.convertValue(objects.getT2(), DocumentType.class))
                    .doOnSuccess(documentType -> log.info(SUCCESSFUL_OPERATION_LABEL, UPDATE_DOC_TYPE, documentType));
     }
@@ -148,11 +140,9 @@ public class DocTypesServiceImpl implements DocTypesService {
         Key typeKey = Key.builder().partitionValue(typeId).build();
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(typeKey))
-                   .doOnNext(result -> log.logGetDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), typeId, result))
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error("Error in DocTypesServiceImpl.deleteDocType(): DocumentTypeNotPresentException - '{}'", throwable.getMessage()))
                    .zipWhen(docTypeToDelete -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.deleteItem(typeKey)))
-                   .doOnNext(result -> log.logDeleteDynamoDBEntity(managerDynamoTableName.tipologieDocumentiName(), typeId, result.getT2()))
                    .map(objects -> objectMapper.convertValue(objects.getT1(), DocumentType.class))
                    .doOnSuccess(documentType -> log.info(SUCCESSFUL_OPERATION_LABEL, DELETE_DOC_TYPE, documentType));
     }

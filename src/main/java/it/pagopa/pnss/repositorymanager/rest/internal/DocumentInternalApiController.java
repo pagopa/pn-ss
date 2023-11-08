@@ -107,15 +107,12 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	public Mono<ResponseEntity<DocumentResponse>> getDocument(String documentKey, final ServerWebExchange exchange) {
 		final String GET_DOCUMENT = "getDocument";
 
-		log.info(LogUtils.STARTING_PROCESS_ON, GET_DOCUMENT, documentKey);
-		log.debug(LogUtils.INVOKING_METHOD, GET_DOCUMENT, documentKey);
+		log.logStartingProcess(GET_DOCUMENT);
 		return documentService.getDocument(documentKey)
-				.map(documentOutput -> {
-					log.info(LogUtils.ENDING_PROCESS_ON, GET_DOCUMENT, documentKey);
-					return ResponseEntity.ok(getResponse(documentOutput));
-				})
+				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
+				.doOnSuccess(result -> log.logEndingProcess(GET_DOCUMENT))
 				.onErrorResume(throwable -> {
-					log.info(LogUtils.ENDING_PROCESS_WITH_ERROR, GET_DOCUMENT, throwable, throwable.getMessage());
+					log.logEndingProcess(GET_DOCUMENT, false, throwable.getMessage());
 					return getResponse(documentKey, throwable);
 				});
 
@@ -125,18 +122,15 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	public Mono<ResponseEntity<DocumentResponse>> insertDocument(Mono<DocumentInput> document,
 			final ServerWebExchange exchange) {
 		final String INSERT_DOCUMENT = "insertDocument";
-
-		return document.doOnNext(doc ->log.info(LogUtils.STARTING_PROCESS_ON, INSERT_DOCUMENT, doc == null ? null : doc.getDocumentKey()))
-				.flatMap(documentInput ->{
+		log.logStartingProcess(INSERT_DOCUMENT);
+		return document.flatMap(documentInput ->{
 					log.debug(LogUtils.INVOKING_METHOD, INSERT_DOCUMENT, documentInput);
 					return documentService.insertDocument(documentInput);
 				})
-				.map(documentOutput -> {
-					log.info(LogUtils.ENDING_PROCESS_ON, INSERT_DOCUMENT, documentOutput.getDocumentKey());
-					return ResponseEntity.ok(getResponse(documentOutput));
-				})
+				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
+				.doOnSuccess(result -> log.logEndingProcess(INSERT_DOCUMENT))
 				.onErrorResume(throwable -> {
-					log.info(LogUtils.ENDING_PROCESS_WITH_ERROR, INSERT_DOCUMENT, throwable, throwable.getMessage());
+					log.logEndingProcess(INSERT_DOCUMENT, false, throwable.getMessage());
 					return getResponse(null, throwable);
 				});
 
@@ -146,25 +140,19 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	public Mono<ResponseEntity<DocumentResponse>> patchDoc(String documentKey, Mono<DocumentChanges> documentChanges,
 			final ServerWebExchange exchange) {
 		final String PATCH_DOCUMENT = "patchDoc";
-
-		log.info(LogUtils.STARTING_PROCESS_ON, PATCH_DOCUMENT, documentKey);
+		log.logStartingProcess(PATCH_DOCUMENT);
 
     	String xPagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(xPagopaSafestorageCxId);
     	String xApiKeyValue = exchange.getRequest().getHeaders().getFirst(xApiKey);
 
-        return documentChanges.flatMap(request -> {
-					log.debug(LogUtils.INVOKING_METHOD + LogUtils.ARG + LogUtils.ARG + LogUtils.ARG, PATCH_DOCUMENT, documentKey, request, xPagopaSafestorageCxIdValue, xApiKeyValue);
-				return documentService.patchDocument(documentKey,
-							request,
-							xPagopaSafestorageCxIdValue,
-							xApiKeyValue);
-				})
-                       .map(documentOutput -> {
-						   log.info(LogUtils.ENDING_PROCESS_ON, PATCH_DOCUMENT, documentOutput.getDocumentKey());
-						   return ResponseEntity.ok(getResponse(documentOutput));
-					   })
+        return documentChanges.flatMap(request -> documentService.patchDocument(documentKey,
+					request,
+					xPagopaSafestorageCxIdValue,
+					xApiKeyValue))
+                       .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
+				       .doOnSuccess(result->log.logEndingProcess(PATCH_DOCUMENT))
                        .onErrorResume(throwable -> {
-						   log.info(LogUtils.ENDING_PROCESS_WITH_ERROR, PATCH_DOCUMENT, throwable, throwable.getMessage());
+						   log.logEndingProcess(PATCH_DOCUMENT, false, throwable.getMessage());
 						   return getResponse(documentKey, throwable);
 					   });
 
@@ -174,15 +162,11 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	public Mono<ResponseEntity<Void>> deleteDocument(String documentKey, final ServerWebExchange exchange) {
 		final String DELETE_DOCUMENT = "deleteDocument";
 
-		log.info(LogUtils.STARTING_PROCESS_ON, DELETE_DOCUMENT, documentKey);
-
-		log.debug(LogUtils.INVOKING_METHOD, DELETE_DOCUMENT, documentKey);
-		return documentService.deleteDocument(documentKey).map(docType -> {
-					log.info(LogUtils.ENDING_PROCESS_ON, DELETE_DOCUMENT, docType);
-			return ResponseEntity.noContent().<Void>build();
-				})
+		log.logStartingProcess(DELETE_DOCUMENT);
+		return documentService.deleteDocument(documentKey).map(docType -> ResponseEntity.noContent().<Void>build())
+				.doOnSuccess(result->log.logEndingProcess(DELETE_DOCUMENT))
 				.onErrorResume(DocumentKeyNotPresentException.class, throwable -> {
-					log.info(LogUtils.ENDING_PROCESS_WITH_ERROR, DELETE_DOCUMENT, throwable, throwable.getMessage());
+					log.logEndingProcess(DELETE_DOCUMENT, false, throwable.getMessage());
 					return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
 							throwable.getMessage(), throwable.getCause()));
 				});

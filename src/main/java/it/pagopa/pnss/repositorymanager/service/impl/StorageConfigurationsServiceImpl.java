@@ -16,7 +16,7 @@ import software.amazon.awssdk.services.s3.model.LifecycleRule;
 import java.util.ArrayList;
 import java.util.List;
 
-import static it.pagopa.pnss.common.utils.LogUtils.CLIENT_METHOD_INVOCATION;
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @Service
 @CustomLog
@@ -90,8 +90,8 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
 
     @Override
     public Mono<List<LifecycleRuleDTO>> getLifecycleConfiguration() {
-
-        log.info(CLIENT_METHOD_INVOCATION, "s3Service.getBucketLifecycleConfiguration()", bucketName.ssHotName());
+        final String GET_LIFECYCLE_CONFIGURATION="StorageConfigurationsService.getLifecycleConfiguration()";
+        log.debug(INVOKING_METHOD, GET_LIFECYCLE_CONFIGURATION, "");
         return s3Service.getBucketLifecycleConfiguration(bucketName.ssHotName())
                 .handle((response, sink) -> {
                     if (response == null || response.rules() == null) {
@@ -101,6 +101,7 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
                 .cast(GetBucketLifecycleConfigurationResponse.class)
                 .map(response -> filter(response.rules()))
                 .map(this::convert)
+                .doOnSuccess(result -> log.info(SUCCESSFUL_OPERATION_LABEL, GET_LIFECYCLE_CONFIGURATION, result))
                 .onErrorResume(throwable -> {
                     log.debug("getLifecycleConfiguration() : error", throwable);
                     return Mono.error(new BucketException(throwable.getMessage()));

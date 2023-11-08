@@ -55,7 +55,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                             .entries(putEventsRequestEntries)
                             .build();
 
-                    log.info(CLIENT_METHOD_INVOCATION, "eventBridgeClient.putEvents()", eventsRequest);
+                    log.debug(CLIENT_METHOD_INVOCATION, "eventBridgeClient.putEvents()", eventsRequest);
                     return eventBridgeClient.putEvents(eventsRequest);
                 })
                 .then()

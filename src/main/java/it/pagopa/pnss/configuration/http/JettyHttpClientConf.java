@@ -1,11 +1,8 @@
 package it.pagopa.pnss.configuration.http;
 
-import it.pagopa.pn.commons.utils.MDCUtils;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,7 +10,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -54,7 +50,6 @@ public class JettyHttpClientConf {
         });
 
         request.onRequestContent((theRequest, content) -> {
-            request.header(corrIdHeaderName, MDC.get(MDC_CORR_ID_KEY));
             log.debug("Request body --> {}", decodeContent(content));
         });
 

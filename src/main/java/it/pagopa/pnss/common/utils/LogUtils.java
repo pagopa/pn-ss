@@ -20,9 +20,6 @@ public class LogUtils {
     public static final String CLIENT_METHOD_RETURN = "Return client method: {} = {}";
     public static final String ARG = " - '{}'";
 
-    //DYNAMODB
-    public static final String DOC_TYPE_TABLE = "DocTypeEntity";
-
     //URI BUILDER
     public static final String CREATE_URI_FOR_DOWNLOAD_FILE = "UriBuilderService.createUriForDownloadFile()";
     public static final String CREATE_URI_FOR_UPLOAD_FILE = "UriBuilderService.createUriForUploadFile()";

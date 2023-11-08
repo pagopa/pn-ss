@@ -129,7 +129,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                 .cast(PdfsignatureV2Response.class)
                 .map(PdfsignatureV2Response::getReturn)
                 .transform(CHECK_IF_RESPONSE_IS_OK)
-                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, SIGN_PDF_DOCUMENT, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription())));
+                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, SIGN_PDF_DOCUMENT, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()));
     }
 
     @Override
@@ -154,7 +154,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                 .cast(Pkcs7SignV2Response.class)
                 .map(Pkcs7SignV2Response::getReturn)
                 .transform(CHECK_IF_RESPONSE_IS_OK)
-                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, PKCS_7_SIGN_V2, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription())));
+                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, PKCS_7_SIGN_V2, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()));
     }
 
     @Override
@@ -182,6 +182,6 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                 .cast(XmlsignatureResponse.class)
                 .map(XmlsignatureResponse::getReturn)
                 .transform(CHECK_IF_RESPONSE_IS_OK)
-                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, XML_SIGNATURE, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription())));
+                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, XML_SIGNATURE, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()));
     }
 }

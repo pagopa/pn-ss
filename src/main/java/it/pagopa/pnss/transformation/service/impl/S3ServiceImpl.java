@@ -36,24 +36,20 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<ResponseBytes<GetObjectResponse>> getObject(String key, String bucketName) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         log.debug(CLIENT_METHOD_INVOCATION, GET_OBJECT, Stream.of(key, bucketName).toList());
         return Mono.fromCompletionStage(s3AsyncClient.getObject(builder -> builder.key(key).bucket(bucketName),
                                                                 AsyncResponseTransformer.toBytes()))
-                   .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
                    .doOnNext(getObjectResponseResponseBytes -> log.info(CLIENT_METHOD_RETURN, GET_OBJECT, key));
     }
 
     @Override
     public Mono<PutObjectResponse> putObject(String key, byte[] fileBytes, String bucketName) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         log.debug(CLIENT_METHOD_INVOCATION, PUT_OBJECT, Stream.of(key, bucketName).toList());
         return Mono.fromCallable(() -> new String(Base64.encodeBase64(DigestUtils.md5(fileBytes))))
                    .flatMap(contentMD5 -> Mono.fromCompletionStage(s3AsyncClient.putObject(builder -> builder.key(key)
                                                                                                              .contentMD5(contentMD5)
                                                                                                              .bucket(bucketName),
                                                                                            AsyncRequestBody.fromBytes(fileBytes))))
-                   .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
                    .doOnNext(putObjectResponse -> log.info(CLIENT_METHOD_RETURN, PUT_OBJECT, putObjectResponse));
 
 
@@ -61,37 +57,29 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<DeleteObjectResponse> deleteObject(String key, String bucketName) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         log.debug(CLIENT_METHOD_INVOCATION, DELETE_OBJECT, Stream.of(key, bucketName).toList());
         return Mono.fromCompletionStage(s3AsyncClient.deleteObject(builder -> builder.key(key).bucket(bucketName)))
-                   .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
                    .doOnNext(deleteObjectResponse -> log.info(CLIENT_METHOD_RETURN, DELETE_OBJECT, deleteObjectResponse));
     }
 
     @Override
     public Mono<RestoreObjectResponse> restoreObject(String key, String bucketName, RestoreRequest restoreRequest) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         log.debug(CLIENT_METHOD_INVOCATION, RESTORE_OBJECT, Stream.of(key, bucketName, restoreRequest).toList());
         return Mono.fromCompletionStage(s3AsyncClient.restoreObject(builder -> builder.key(key).bucket(bucketName).restoreRequest(restoreRequest)))
-                .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
                 .doOnNext(restoreObjectResponse -> log.info(CLIENT_METHOD_RETURN, RESTORE_OBJECT, restoreObjectResponse));
     }
 
     @Override
     public Mono<PresignedGetObjectRequest> presignGetObject(GetObjectRequest getObjectRequest, Duration duration) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         log.debug(CLIENT_METHOD_INVOCATION, PRESIGN_GET_OBJECT, Stream.of(getObjectRequest, duration).toList());
         return Mono.just(s3Presigner.presignGetObject(builder -> builder.getObjectRequest(getObjectRequest).signatureDuration(duration)))
-                .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
                 .doOnNext(presignedGetObjectRequest -> log.info(CLIENT_METHOD_RETURN, PRESIGN_GET_OBJECT, presignedGetObjectRequest));
     }
 
     @Override
     public Mono<GetBucketLifecycleConfigurationResponse> getBucketLifecycleConfiguration(String bucketName) {
-            var mdcContextMap = MDCUtils.retrieveMDCContextMap();
             log.debug(CLIENT_METHOD_INVOCATION, GET_BUCKET_LIFECYCLE_CONFIGURATION, bucketName);
             return Mono.fromCompletionStage(s3AsyncClient.getBucketLifecycleConfiguration(builder -> builder.bucket(bucketName)))
-                    .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
                     .doOnNext(response -> log.info(CLIENT_METHOD_RETURN, GET_BUCKET_LIFECYCLE_CONFIGURATION, response));
 
     }
@@ -105,10 +93,8 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<PutObjectRetentionResponse> putObjectRetention(String key, String bucketName, ObjectLockRetention objectLockRetention) {
-        var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         log.debug(CLIENT_METHOD_INVOCATION, PUT_OBJECT_RETENTION, Stream.of(key, bucketName, objectLockRetention).toList());
         return Mono.fromCompletionStage(s3AsyncClient.putObjectRetention(builder -> builder.key(key).bucket(bucketName).retention(objectLockRetention)))
-                .doFinally(signalType -> MDC.setContextMap(mdcContextMap))
                 .doOnNext(putObjectRetentionResponse -> log.info(CLIENT_METHOD_RETURN, PUT_OBJECT_RETENTION, putObjectRetentionResponse));
     }
 

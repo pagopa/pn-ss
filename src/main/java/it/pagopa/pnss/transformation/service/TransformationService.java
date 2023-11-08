@@ -66,7 +66,8 @@ public class TransformationService {
     @SqsListener(value = "${s3.queue.sign-queue-name}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     void newStagingBucketObjectCreatedListener(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
         MDC.clear();
-        MDC.put(MDC_CORR_ID_KEY, newStagingBucketObject.getId());
+        var fileKey = isKeyPresent(newStagingBucketObject) ? newStagingBucketObject.getCreationDetailObject().getObject().getKey() : "null";
+        MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER);
         newStagingBucketObjectCreatedEvent(newStagingBucketObject, acknowledgment)
                 .doOnSuccess(result -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER))
@@ -83,10 +84,7 @@ public class TransformationService {
                     logIncomingMessage(signQueueName, newStagingBucketObject);
                     return newStagingBucketObject;
                 })
-                .filter(createdS3ObjectDto -> {
-                    var detailObject = createdS3ObjectDto.getCreationDetailObject();
-                    return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
-                })
+                .filter(this::isKeyPresent)
                 .doOnDiscard(CreatedS3ObjectDto.class, createdS3ObjectDto -> log.debug("The new staging bucket object with id '{}' was discarded", newStagingBucketObject.getId()))
                 .flatMap(createdS3ObjectDto -> {
                     var detailObject = createdS3ObjectDto.getCreationDetailObject();
@@ -138,5 +136,10 @@ public class TransformationService {
                         .flatMap(putObjectResponse -> s3Service.deleteObject(key, stagingBucketName))
                         .doOnSuccess(result->log.info(SUCCESSFUL_OPERATION_LABEL, CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET, result))
                         .then();
+    }
+
+    private boolean isKeyPresent(CreatedS3ObjectDto createdS3ObjectDto) {
+        var detailObject = createdS3ObjectDto.getCreationDetailObject();
+        return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
     }
 }

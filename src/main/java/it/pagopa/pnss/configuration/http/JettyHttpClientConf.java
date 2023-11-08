@@ -1,5 +1,6 @@
 package it.pagopa.pnss.configuration.http;
 
+import it.pagopa.pn.commons.utils.MDCUtils;
 import lombok.CustomLog;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
@@ -45,7 +46,10 @@ public class JettyHttpClientConf {
     private Request enhance(Request request) {
 
         request.onRequestBegin(theRequest -> {
-            request.header(corrIdHeaderName, MDC.get(MDC_CORR_ID_KEY));
+            var mdcContextMap = MDCUtils.retrieveMDCContextMap();
+            if (mdcContextMap != null && mdcContextMap.containsKey(MDC_CORR_ID_KEY)) {
+                request.header(corrIdHeaderName, MDC.get(MDC_CORR_ID_KEY));
+            }
             log.debug("Start {} request to {}", theRequest.getMethod(), theRequest.getURI());
         });
 

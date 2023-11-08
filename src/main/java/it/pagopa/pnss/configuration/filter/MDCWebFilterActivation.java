@@ -4,5 +4,5 @@ import it.pagopa.pn.commons.log.MDCWebFilter;
 import org.springframework.stereotype.Component;
 
 @Component
-public class MDCWebFilterImpl extends MDCWebFilter {
+public class MDCWebFilterActivation extends MDCWebFilter {
 }

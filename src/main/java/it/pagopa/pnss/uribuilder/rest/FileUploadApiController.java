@@ -61,8 +61,8 @@ public class FileUploadApiController implements FileUploadApi {
         																				xTraceIdValue);
         						  })
         						  .onErrorResume(ChecksumException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage())))
-								  .map(ResponseEntity::ok))
+								  .map(ResponseEntity::ok)
 				                  .doOnError(throwable -> log.logEndingProcess(CREATE_FILE, false, throwable.getMessage()))
-				                  .doOnSuccess(result->log.logEndingProcess(CREATE_FILE));
+				                  .doOnSuccess(result->log.logEndingProcess(CREATE_FILE)));
     }
 }

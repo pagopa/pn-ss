@@ -13,6 +13,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
@@ -36,34 +37,31 @@ public class JettyHttpClientConf {
             @Override
             public Request newRequest(URI uri) {
                 Request request = super.newRequest(uri);
-                return enhance(request);
+                return enhance(request, MDCUtils.retrieveMDCContextMap());
             }
         };
         myHC.setMaxConnectionsPerDestination(maxConnections);
         return myHC;
     }
 
-    private Request enhance(Request request) {
-
-        request.onRequestBegin(theRequest -> {
-            var mdcContextMap = MDCUtils.retrieveMDCContextMap();
-            if (mdcContextMap != null && mdcContextMap.containsKey(MDC_CORR_ID_KEY)) {
-                request.header(corrIdHeaderName, MDC.get(MDC_CORR_ID_KEY));
-            }
-            log.debug("Start {} request to {}", theRequest.getMethod(), theRequest.getURI());
-        });
-
-        request.onRequestContent((theRequest, content) -> {
-            log.debug("Request body --> {}", decodeContent(content));
-        });
-
-        request.onResponseContent((theResponse, content) -> {
-            if (CONTENT_TYPE_OF_RESPONSE_BODY_TO_LOG.contains(theResponse.getHeaders().get(CONTENT_TYPE))) {
-                log.debug("Response body --> {}", decodeContent(content));
-            }
-        });
-
-        return request;
+    private Request enhance(Request request, Map<String, String> mdcContextMap) {
+        return request.onRequestBegin(theRequest -> {
+                    MDCUtils.enrichWithMDC(request, mdcContextMap);
+                    if (mdcContextMap != null && mdcContextMap.containsKey(MDC_CORR_ID_KEY)) {
+                        request.header(corrIdHeaderName, MDC.get(MDC_CORR_ID_KEY));
+                    }
+                    log.debug("Start {} request to {}", theRequest.getMethod(), theRequest.getURI());
+                })
+                .onRequestContent((theRequest, content) -> {
+                    MDCUtils.enrichWithMDC(request, mdcContextMap);
+                    log.debug("Request body --> {}", decodeContent(content));
+                })
+                .onResponseContent((theResponse, content) -> {
+                    MDCUtils.enrichWithMDC(request, mdcContextMap);
+                    if (CONTENT_TYPE_OF_RESPONSE_BODY_TO_LOG.contains(theResponse.getHeaders().get(CONTENT_TYPE))) {
+                        log.debug("Response body --> {}", decodeContent(content));
+                    }
+                });
     }
 
     private String decodeContent(ByteBuffer content) {

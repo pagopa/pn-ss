@@ -8,12 +8,14 @@ import it.pagopa.pnss.availabledocument.dto.NotificationMessage;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
 import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.util.Date;
 import java.util.Map;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 
 @CustomLog
 public class ManageDynamoEvent {
@@ -44,9 +46,11 @@ public class ManageDynamoEvent {
     }
 
     public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge){
+        String key = docEntity.get(DOCUMENTKEY_KEY).getS();
+        MDC.put(MDC_CORR_ID_KEY, key);
         NotificationMessage message = new NotificationMessage();
 
-        message.setKey(docEntity.get(DOCUMENTKEY_KEY).getS());
+        message.setKey(key);
         message.setVersionId("01");
 
         message.setDocumentType(docEntity.get(DOCUMENTTYPE_KEY).getM()!=null && docEntity.get(DOCUMENTTYPE_KEY).getM().get(TIPODOCUMENTO_KEY)!=null ?

@@ -7,11 +7,11 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownInput;
+import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
-import it.pagopa.pnss.common.utils.LogUtils;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.MDC;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
@@ -45,9 +45,10 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     @Override
     public void processRecords(ProcessRecordsInput processRecordsInput) {
-        final String PROCESS_RECORDS = "StreamsRecordProcessor.processRecords()";
-        log.debug(INVOKING_METHOD, PROCESS_RECORDS, processRecordsInput);
-        findEventSendToBridge(processRecordsInput)
+        final String PROCESS_RECORDS = "processRecords()";
+        MDC.clear();
+        log.logStartingProcess(PROCESS_RECORDS);
+        MDCUtils.addMDCToContextAndExecute(findEventSendToBridge(processRecordsInput)
                 .buffer(10)
                 .map(putEventsRequestEntries -> {
 
@@ -59,8 +60,8 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     return eventBridgeClient.putEvents(eventsRequest);
                 })
                 .then()
-                .doOnError(e -> log.error("* FATAL * DBStream: Errore generico ", e))
-                .doOnSuccess(unused -> log.info(SUCCESSFUL_OPERATION_LABEL, PROCESS_RECORDS, processRecordsInput))
+                .doOnError(e -> log.fatal("DBStream: Errore generico ", e))
+                .doOnSuccess(unused -> log.logEndingProcess(PROCESS_RECORDS)))
                 .subscribe();
     }
 

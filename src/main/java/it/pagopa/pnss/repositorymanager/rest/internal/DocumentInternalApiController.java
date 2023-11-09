@@ -1,5 +1,6 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
+import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.DocumentInternalApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Error;
@@ -106,15 +107,15 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	@Override
 	public Mono<ResponseEntity<DocumentResponse>> getDocument(String documentKey, final ServerWebExchange exchange) {
 		final String GET_DOCUMENT = "getDocument";
-
 		log.logStartingProcess(GET_DOCUMENT);
-		return documentService.getDocument(documentKey)
+		log.debug("Request headers for '{}' : {}", GET_DOCUMENT, exchange.getRequest().getHeaders());
+		return MDCUtils.addMDCToContextAndExecute(documentService.getDocument(documentKey)
 				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
 				.doOnSuccess(result -> log.logEndingProcess(GET_DOCUMENT))
 				.onErrorResume(throwable -> {
 					log.logEndingProcess(GET_DOCUMENT, false, throwable.getMessage());
 					return getResponse(documentKey, throwable);
-				});
+				}));
 
 	}
 
@@ -141,11 +142,12 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 			final ServerWebExchange exchange) {
 		final String PATCH_DOCUMENT = "patchDoc";
 		log.logStartingProcess(PATCH_DOCUMENT);
+		log.debug("Request headers for '{}' : {}", PATCH_DOCUMENT, exchange.getRequest().getHeaders());
 
     	String xPagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(xPagopaSafestorageCxId);
     	String xApiKeyValue = exchange.getRequest().getHeaders().getFirst(xApiKey);
 
-        return documentChanges.flatMap(request -> documentService.patchDocument(documentKey,
+        return MDCUtils.addMDCToContextAndExecute(documentChanges.flatMap(request -> documentService.patchDocument(documentKey,
 					request,
 					xPagopaSafestorageCxIdValue,
 					xApiKeyValue))
@@ -154,7 +156,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
                        .onErrorResume(throwable -> {
 						   log.logEndingProcess(PATCH_DOCUMENT, false, throwable.getMessage());
 						   return getResponse(documentKey, throwable);
-					   });
+					   }));
 
 	}
 

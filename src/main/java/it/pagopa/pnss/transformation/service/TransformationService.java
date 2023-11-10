@@ -11,6 +11,8 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
+import it.pagopa.pnss.common.exception.IllegalTransformationException;
+import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;

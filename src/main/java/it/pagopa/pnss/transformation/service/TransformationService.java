@@ -94,7 +94,7 @@ public class TransformationService {
                     return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), true);
                 })
                 .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
-                .doOnError(throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()));
+                .doOnError(throwable -> !(throwable instanceof InvalidStatusTransformationException || throwable instanceof IllegalTransformationException), throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()));
     }
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
@@ -102,12 +102,15 @@ public class TransformationService {
         log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName, marcatura).toList());
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
+                .filter(document -> document.getDocumentState().equalsIgnoreCase(STAGED))
+                .doOnDiscard(Document.class, document -> log.warn("Current status '{}' is not valid for transformation for document '{}'", document.getDocumentState(), key))
+                .switchIfEmpty(Mono.error(new InvalidStatusTransformationException(key)))
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK) && document.getDocumentState().equalsIgnoreCase(STAGED);
+                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK);
                 })
-                .doOnDiscard(Document.class, document -> log.debug("Document with key '{}' has been discarded", document.getDocumentKey()))
+                .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .zipWhen(document -> s3Service.getObject(key, stagingBucketName))
                 .flatMap(objects -> {
                     var document = objects.getT1();

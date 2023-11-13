@@ -13,6 +13,7 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import lombok.CustomLog;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,8 +41,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 @TestConfiguration
+@CustomLog
 @Import({LocalStackClientConfig.class})
-@Slf4j
 public class LocalStackTestConfig {
 
     @Autowired

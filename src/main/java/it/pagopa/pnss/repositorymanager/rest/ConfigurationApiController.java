@@ -1,6 +1,7 @@
 package it.pagopa.pnss.repositorymanager.rest;
 
-import it.pagopa.pnss.common.constant.Constant;
+import it.pagopa.pnss.common.utils.LogUtils;
+import lombok.CustomLog;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -8,21 +9,20 @@ import org.springframework.web.server.ServerWebExchange;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import it.pagopa.pn.template.rest.v1.api.CfgApi;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
-import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.CfgApi;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypesConfigurations;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.DocumentsConfigsService;
 import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
-import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 
 @RestController
-@Slf4j
+@CustomLog
 public class ConfigurationApiController implements CfgApi {
 
     private final UserConfigurationService userConfigurationService;
@@ -62,18 +62,14 @@ public class ConfigurationApiController implements CfgApi {
     public Mono<ResponseEntity<DocumentTypesConfigurations>> getDocumentsConfigs(final ServerWebExchange exchange) {
         final String GET_DOCUMENTS_CONFIGS = "getDocumentsConfigs";
 
-        log.info(Constant.STARTING_PROCESS, GET_DOCUMENTS_CONFIGS);
-
-        log.debug(Constant.INVOKING_METHOD, GET_DOCUMENTS_CONFIGS, "");
+        log.logStartingProcess(GET_DOCUMENTS_CONFIGS);
         return documentsConfigsService.getDocumentsConfigs()
-                                      .map(documentTypesConfigurations -> {
-                                          log.info(Constant.ENDING_PROCESS, GET_DOCUMENTS_CONFIGS);
-                                          return ResponseEntity.ok(documentTypesConfigurations);
-                                      })
-                                      .onErrorResume(throwable -> {
-                                          log.info(Constant.ENDING_PROCESS_WITH_ERROR, GET_DOCUMENTS_CONFIGS, throwable, throwable.getMessage());
-                                          return this.getDocumentTypesConfigurationsErrorResponse(throwable);
-                                      });
+                .map(ResponseEntity::ok)
+                .doOnSuccess(result -> log.logEndingProcess(GET_DOCUMENTS_CONFIGS))
+                .onErrorResume(throwable -> {
+                    log.logEndingProcess(GET_DOCUMENTS_CONFIGS, false, throwable.getMessage());
+                    return this.getDocumentTypesConfigurationsErrorResponse(throwable);
+                });
     }
 
     /**
@@ -90,21 +86,17 @@ public class ConfigurationApiController implements CfgApi {
      */
     @Override
     public Mono<ResponseEntity<UserConfiguration>> getCurrentClientConfig(String clientId, final ServerWebExchange exchange) {
-        final String GET_CURRENT_CLIENT_CONFIGS = "getCurrentClientConfig";
+        final String GET_CURRENT_CLIENT_CONFIG = "getCurrentClientConfig";
 
-        log.info(Constant.STARTING_PROCESS_ON, GET_CURRENT_CLIENT_CONFIGS, clientId);
-
-        log.debug(Constant.INVOKING_METHOD, GET_CURRENT_CLIENT_CONFIGS, clientId);
+        log.logStartingProcess(GET_CURRENT_CLIENT_CONFIG);
         return userConfigurationService.getUserConfiguration(clientId)
-                                       .map(userConfigurationInternal -> {
-                                           log.info(Constant.ENDING_PROCESS_ON, GET_CURRENT_CLIENT_CONFIGS, clientId);
-                                           return ResponseEntity.ok(objectMapper.convertValue(
-                                                   userConfigurationInternal,
-                                                   UserConfiguration.class));
-                                       })
-                                       .onErrorResume(throwable -> {
-                                           log.info(Constant.ENDING_PROCESS_WITH_ERROR, GET_CURRENT_CLIENT_CONFIGS, throwable, throwable.getMessage());
-                                           return getUserConfigurationErrorResponse(throwable);
-                                       });
+                .map(userConfigurationInternal -> ResponseEntity.ok(objectMapper.convertValue(
+                        userConfigurationInternal,
+                        UserConfiguration.class)))
+                .doOnSuccess(result -> log.logEndingProcess(GET_CURRENT_CLIENT_CONFIG))
+                .onErrorResume(throwable -> {
+                    log.logEndingProcess(GET_CURRENT_CLIENT_CONFIG, false, throwable.getMessage());
+                    return getUserConfigurationErrorResponse(throwable);
+                });
     }
 }

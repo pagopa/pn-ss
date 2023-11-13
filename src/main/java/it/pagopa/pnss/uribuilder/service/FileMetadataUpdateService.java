@@ -1,20 +1,17 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pn.template.rest.v1.dto.OperationResultCodeResponse;
-import it.pagopa.pn.template.rest.v1.dto.UpdateFileMetadataRequest;
+
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
+import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,9 +20,12 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.text.SimpleDateFormat;
+import java.util.stream.Stream;
+
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @Service
-@Slf4j
+@CustomLog
 public class FileMetadataUpdateService {
 
     private final UserConfigurationClientCall userConfigClientCall;
@@ -41,27 +41,29 @@ public class FileMetadataUpdateService {
     }
 
     public Mono<OperationResultCodeResponse> updateMetadata(String fileKey, String xPagopaSafestorageCxId, UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {
+
+        log.debug(INVOKING_METHOD, UPDATE_METADATA, Stream.of(fileKey, xPagopaSafestorageCxId, request).toList());
+
         var retentionUntil = request.getRetentionUntil();
         var logicalState = request.getStatus();
 
         return docClientCall.getDocument(fileKey)
-                .flatMap( documentResponse -> Mono.zipDelayError(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
+                .flatMap(documentResponse -> Mono.zipDelayError(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
                 .handle(((objects, synchronousSink) -> {
 
                     var userConfiguration = objects.getT1().getUserConfiguration();
                     var document = objects.getT2().getDocument();
                     var tipoDocumento = document.getDocumentType().getTipoDocumento();
-                    final String USER_CONFIGURATION = "userConfiguration in FileMetadataUpdateService updateMetadata()";
 
-                    log.info(Constant.CHECKING_VALIDATION_PROCESS, USER_CONFIGURATION);
+                    log.logChecking(USER_CONFIGURATION);
                     if (userConfiguration == null || userConfiguration.getCanModifyStatus() == null || !userConfiguration.getCanModifyStatus().contains(tipoDocumento)) {
-                        String errore = String.format("Client '%s' not has privilege for change document " + "type '%s'",
+                        String errorMsg = String.format("Client '%s' not has privilege for change document type '%s'",
                                 xPagopaSafestorageCxId,
                                 tipoDocumento);
-                        log.warn(Constant.VALIDATION_PROCESS_FAILED, USER_CONFIGURATION, "Client " + xPagopaSafestorageCxId +" not has privilege for change document");
-                        synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, errore));
+                        log.logCheckingOutcome(USER_CONFIGURATION, false, errorMsg);
+                        synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, errorMsg));
                     } else {
-                        log.info(Constant.VALIDATION_PROCESS_PASSED, USER_CONFIGURATION);
+                        log.logCheckingOutcome(USER_CONFIGURATION, true);
                         synchronousSink.next(document);
                     }
                 }))
@@ -111,10 +113,8 @@ public class FileMetadataUpdateService {
                         documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
                     }
 
-                    log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, documentChanges, managerDynamoTableName.documentiName());
                     return docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                                         .flatMap(documentResponsePatch -> {
-                                            log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.documentiName());
                                             OperationResultCodeResponse resp = new OperationResultCodeResponse();
                                             resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
                                             resp.setResultDescription(ResultCodeWithDescription.OK.getDescription());
@@ -156,7 +156,7 @@ public class FileMetadataUpdateService {
                                 log.error("FileMetadataUpdateService.createUriForUploadFile() : errore generico = {}", e.getMessage(), e);
                                 return Mono.error(e);
                             })
-                            .doOnSuccess(operationResultCodeResponse -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, fileKey, "FileMetadataUpdateService.updateMetadata()", operationResultCodeResponse));
+                            .doOnSuccess(operationResultCodeResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, UPDATE_METADATA, operationResultCodeResponse));
     }
 
     private Mono<String> checkLookUp(String documentType, String logicalState) {

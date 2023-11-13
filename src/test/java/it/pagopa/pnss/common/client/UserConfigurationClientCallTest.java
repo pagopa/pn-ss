@@ -2,8 +2,8 @@ package it.pagopa.pnss.common.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
-import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.client.impl.UserConfigurationClientCallImpl;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;

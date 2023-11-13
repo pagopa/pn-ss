@@ -2,9 +2,9 @@ package it.pagopa.pnss.common.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentTypeResponse;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
-import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypeResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypesConfigurations;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;

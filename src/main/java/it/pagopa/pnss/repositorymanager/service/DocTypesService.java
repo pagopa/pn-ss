@@ -2,7 +2,7 @@ package it.pagopa.pnss.repositorymanager.service;
 
 import java.util.List;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import reactor.core.publisher.Mono;
 
 public interface DocTypesService {

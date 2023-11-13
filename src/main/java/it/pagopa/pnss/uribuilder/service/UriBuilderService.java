@@ -254,7 +254,7 @@ public class UriBuilderService {
 
     private Mono<PresignedPutObjectRequest> signBucket(String bucketName, String documentKey,
                                                        String documentState, String documentType, String contenType,
-                                                       Map<String, String> secret, it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType.ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
+                                                       Map<String, String> secret, DocumentType.ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
 
         log.debug(LogUtils.INVOKING_METHOD, SIGN_BUCKET, Stream.of(bucketName, documentKey, documentState, documentType, contenType, checksumType, checksumValue).toList());
 
@@ -292,8 +292,11 @@ public class UriBuilderService {
                                                                    .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
                                                                    .putObjectRequest(putObjectRequest)
                                                                    .build())
-                .flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest))
-                       .doOnNext(result -> log.debug(CLIENT_METHOD_RETURN, PRESIGN_PUT_OBJECT, result)));
+                .flatMap(putObjectPresignRequest -> {
+                    log.debug(CLIENT_METHOD_INVOCATION, PRESIGN_PUT_OBJECT, putObjectPresignRequest);
+                    return Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest))
+                            .doOnNext(result -> log.debug(CLIENT_METHOD_RETURN, PRESIGN_PUT_OBJECT, result));
+                });
     }
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, String xTraceIdValue, Boolean metadataOnly) {
@@ -336,7 +339,7 @@ public class UriBuilderService {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
                     Document document = tuple.getT2();
                     if (canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()) && (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil()))) {
-                        log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
+                        log.debug(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
                                 .onErrorResume(NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
                                 .flatMap(headObjectResponse -> {

@@ -8,6 +8,7 @@ import it.pagopa.pnss.transformation.wsdl.*;
 import jakarta.activation.DataHandler;
 import jakarta.mail.util.ByteArrayDataSource;
 import jakarta.xml.ws.Response;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -17,12 +18,14 @@ import reactor.core.publisher.MonoSink;
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 import static it.pagopa.pnss.transformation.wsdl.XmlSignatureType.XMLENVELOPED;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @Service
-@Slf4j
+@CustomLog
 public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
 
     private final ArubaSignService arubaSignService;
@@ -105,6 +108,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
 
     @Override
     public Mono<SignReturnV2> signPdfDocument(byte[] pdfFile, Boolean marcatura) {
+        log.debug(CLIENT_METHOD_INVOCATION, SIGN_PDF_DOCUMENT, marcatura);
         return Mono.fromCallable(() -> {
                        var signRequestV2 = createAuthenticatedSignRequestV2();
                        signRequestV2.setRequiredmark(marcatura);
@@ -124,11 +128,14 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                    .cast(PdfsignatureV2Response.class)
                    .map(PdfsignatureV2Response::getReturn)
                    .transform(CHECK_IF_RESPONSE_IS_OK)
-                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()));
+                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()))
+                   .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, SIGN_PDF_DOCUMENT, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()));
+
     }
 
     @Override
     public Mono<SignReturnV2> pkcs7signV2(byte[] buf, Boolean marcatura) {
+        log.debug(CLIENT_METHOD_INVOCATION, PKCS_7_SIGN_V2, marcatura);
         return Mono.fromCallable(() -> {
                        var signRequestV2 = createAuthenticatedSignRequestV2();
                        signRequestV2.setRequiredmark(marcatura);
@@ -148,11 +155,14 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                    .cast(Pkcs7SignV2Response.class)
                    .map(Pkcs7SignV2Response::getReturn)
                    .transform(CHECK_IF_RESPONSE_IS_OK)
-                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()));
+                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()))
+                   .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, PKCS_7_SIGN_V2, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()));
+
     }
 
     @Override
     public Mono<SignReturnV2> xmlSignature(byte[] xmlBytes, Boolean marcatura) {
+        log.debug(CLIENT_METHOD_INVOCATION, XML_SIGNATURE, marcatura);
         return Mono.fromCallable(() -> {
                        var signRequestV2 = createAuthenticatedSignRequestV2();
                        signRequestV2.setStream(new DataHandler(XMLMessage.createDataSource(APPLICATION_XML_VALUE,
@@ -175,6 +185,8 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                    .cast(XmlsignatureResponse.class)
                    .map(XmlsignatureResponse::getReturn)
                    .transform(CHECK_IF_RESPONSE_IS_OK)
-                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()));
+                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()))
+                   .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, XML_SIGNATURE, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()));
+
     }
 }

@@ -1,7 +1,11 @@
 package it.pagopa.pnss.configuration.security;
 
+import it.pagopa.pn.commons.log.MDCWebFilter;
+import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import lombok.CustomLog;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,10 +19,12 @@ import org.springframework.security.web.server.authentication.ServerAuthenticati
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
+import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHENTICATION;
 
 @Configuration
+@CustomLog
 @EnableWebFluxSecurity
 public class SecurityConfiguration {
 
@@ -29,6 +35,9 @@ public class SecurityConfiguration {
 
     @Value("${header.x-pagopa-safestorage-cx-id}")
     private String xPagopaSafestorageCxId;
+
+    @Value("${pn.log.cx-id-header}")
+    private String correlationIdHeaderValue;
 
     public SecurityConfiguration(UserConfigurationClientCall userConfigurationClientCall) {
         this.userConfigurationClientCall = userConfigurationClientCall;

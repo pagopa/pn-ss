@@ -257,7 +257,7 @@ Resources:
               - StorageClass: 'GLACIER'
                 TransitionInDays: 70
           - Id: 'PnSsAddresses'
-            ExpirationInDays: 120
+            ExpirationInDays: 30
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'

@@ -4,21 +4,23 @@ package it.pagopa.pnss.transformation.service;
 import io.awspring.cloud.messaging.listener.Acknowledgment;
 import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
-import it.pagopa.pn.template.internal.rest.v1.dto.Document;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
+import it.pagopa.pn.commons.utils.MDCUtils;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
-import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.exception.IllegalTransformationException;
 import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
+import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -27,15 +29,17 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.STAGED;
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 import static it.pagopa.pnss.common.utils.SqsUtils.logIncomingMessage;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 
 @Service
-@Slf4j
+@CustomLog
 public class TransformationService {
 
     private final ArubaSignServiceCall arubaSignServiceCall;
@@ -64,21 +68,26 @@ public class TransformationService {
 
     @SqsListener(value = "${s3.queue.sign-queue-name}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     void newStagingBucketObjectCreatedListener(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
-        newStagingBucketObjectCreatedEvent(newStagingBucketObject, acknowledgment).subscribe();
+        MDC.clear();
+        var fileKey = isKeyPresent(newStagingBucketObject) ? newStagingBucketObject.getCreationDetailObject().getObject().getKey() : "null";
+        MDC.put(MDC_CORR_ID_KEY, fileKey);
+        log.logStartingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER);
+        MDCUtils.addMDCToContextAndExecute(newStagingBucketObjectCreatedEvent(newStagingBucketObject, acknowledgment)
+                .doOnSuccess(result -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER))
+                .doOnError(throwable -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER, false, throwable.getMessage())))
+                .subscribe();
     }
 
     public Mono<Void> newStagingBucketObjectCreatedEvent(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
 
-        AtomicReference<String> fileKeyReference = new AtomicReference<>("");
+        log.debug(LogUtils.INVOKING_METHOD, NEW_STAGING_BUCKET_OBJECT_CREATED, newStagingBucketObject);
 
+        AtomicReference<String> fileKeyReference = new AtomicReference<>("");
         return Mono.fromCallable(() -> {
                     logIncomingMessage(signQueueName, newStagingBucketObject);
                     return newStagingBucketObject;
                 })
-                .filter(createdS3ObjectDto -> {
-                    var detailObject = createdS3ObjectDto.getCreationDetailObject();
-                    return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
-                })
+                .filter(this::isKeyPresent)
                 .doOnDiscard(CreatedS3ObjectDto.class, createdS3ObjectDto -> log.debug("The new staging bucket object with id '{}' was discarded", newStagingBucketObject.getId()))
                 .flatMap(createdS3ObjectDto -> {
                     var detailObject = createdS3ObjectDto.getCreationDetailObject();
@@ -91,10 +100,8 @@ public class TransformationService {
     }
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
-        final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
 
-        log.debug(Constant.INVOKING_METHOD + Constant.ARG + Constant.ARG, OBJECT_TRANSFORMATION, key, stagingBucketName, marcatura);
-        log.info(Constant.CLIENT_METHOD_INVOCATION, "DocumentClientCall.getDocument()", key);
+        log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName, marcatura).toList());
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
                 .filter(document -> document.getDocumentState().equalsIgnoreCase(STAGED))
@@ -125,17 +132,20 @@ public class TransformationService {
                                                        signReturnV2.getDescription(), key))
                    .flatMap(signReturnV2 -> changeFromStagingBucketToHotBucket(key, signReturnV2.getBinaryoutput(), stagingBucketName))
                    .transform(getRetryStrategy(key))
-                   .doOnError(IllegalTransformationException.class, throwable -> log.warn(throwable.getMessage()))
+                   .doOnSuccess(result -> log.info(SUCCESSFUL_OPERATION_LABEL, OBJECT_TRANSFORMATION, result))
                    .then();
     }
 
     private Mono<Void> changeFromStagingBucketToHotBucket(String key, byte[] objectBytes, String stagingBucketName) {
-        log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG + Constant.ARG, "S3Service.putObject()", key, objectBytes, bucketName.ssHotName());
+        log.debug(INVOKING_METHOD, CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET, Stream.of(key, stagingBucketName).toList());
         return s3Service.putObject(key, objectBytes, bucketName.ssHotName())
-                        .flatMap(putObjectResponse -> {
-                            log.info(Constant.CLIENT_METHOD_INVOCATION + Constant.ARG, "s3Service.deleteObject()", key, stagingBucketName);
-                            return s3Service.deleteObject(key, stagingBucketName);
-                        })
+                        .flatMap(putObjectResponse -> s3Service.deleteObject(key, stagingBucketName))
+                        .doOnSuccess(result->log.info(SUCCESSFUL_OPERATION_LABEL, CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET, result))
                         .then();
+    }
+
+    private boolean isKeyPresent(CreatedS3ObjectDto createdS3ObjectDto) {
+        var detailObject = createdS3ObjectDto.getCreationDetailObject();
+        return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
     }
 }

@@ -1077,6 +1077,7 @@ Resources:
               port: PORT,
               path: PATHGET + "/" + docKey,
               headers: {
+                "x-pagopa-pn-cx-id": docKey,
                 "Content-Type": "application/json",
               },
             };
@@ -1107,6 +1108,7 @@ Resources:
               port: PORT,
               path: PATHPATCH + "/" + data.documentKey,
               headers: {
+                "x-pagopa-pn-cx-id": data.documentKey,
                 "Content-Type": "application/json",
               },
             };

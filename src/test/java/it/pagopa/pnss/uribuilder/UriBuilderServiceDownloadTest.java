@@ -1,8 +1,7 @@
 package it.pagopa.pnss.uribuilder;
 
 import com.amazonaws.SdkClientException;
-import it.pagopa.pn.template.internal.rest.v1.dto.*;
-import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
@@ -14,6 +13,7 @@ import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +54,7 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-@Slf4j
+@CustomLog
 class UriBuilderServiceDownloadTest {
 
     @Value("${header.x-api-key:#{null}}")

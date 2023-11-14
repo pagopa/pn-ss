@@ -40,10 +40,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
-import java.time.*;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -191,7 +193,9 @@ class UriBuilderServiceDownloadTest {
 
         var now = Instant.now();
 
-        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().statuses(Map.of(SAVED, new CurrentStatus().technicalState(AVAILABLE))))));
+        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class)))
+                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
         when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(now).build()));
         when(documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, docId, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(now))))
                 .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
@@ -498,11 +502,9 @@ class UriBuilderServiceDownloadTest {
         DocumentType type = new DocumentType();
         type.setTipoDocumento(d.getDocumentType());
         type.setChecksum(DocumentType.ChecksumEnum.MD5);
-        type.setStatuses(Map.of(SAVED, new CurrentStatus().technicalState(AVAILABLE)));
         doc.setDocumentType(type);
         doc.setDocumentState(d.getDocumentState());
         doc.setDocumentLogicalState(d.getDocumentLogicalState());
-        doc.setRetentionUntil(OffsetDateTime.now().format(DATE_TIME_FORMATTER));
         documentResponse.setDocument(doc);
         Mono<DocumentResponse> docRespEntity = Mono.just(documentResponse);
         doReturn(docRespEntity).when(documentClientCall).getDocument(docId);

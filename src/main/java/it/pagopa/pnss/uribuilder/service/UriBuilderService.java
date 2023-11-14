@@ -338,20 +338,30 @@ public class UriBuilderService {
                 .flatMap(tuple -> {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
                     Document document = tuple.getT2();
-                    if (canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()) && (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil()))) {
+                    if (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil())) {
                         log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
                                 .onErrorResume(NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
-                                .flatMap(headObjectResponse -> {
+                                .map(headObjectResponse -> {
                                     DocumentChanges documentChanges;
                                     if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
                                         log.debug(">> after check presence in createUriForDownloadFile {}", headObjectResponse);// HeadObjectResponse
                                         documentChanges = fixBookedDocument(document, headObjectResponse);
-                                    } else
+                                        document.setContentLenght(documentChanges.getContentLenght());
+                                        document.setCheckSum(documentChanges.getCheckSum());
+                                        document.setRetentionUntil(documentChanges.getRetentionUntil());
+                                        document.setLastStatusChangeTimestamp(documentChanges.getLastStatusChangeTimestamp());
+                                        document.setDocumentState(documentChanges.getDocumentState());
+                                    } else {
                                         documentChanges = new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate()));
-                                    return documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
-                                            .map(DocumentResponse::getDocument);
-                                });
+                                        document.setRetentionUntil(documentChanges.getRetentionUntil());
+                                    }
+                                    return documentChanges;
+                                })
+                                .filter(documentChanges -> canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()))
+                                .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
+                                        .map(DocumentResponse::getDocument))
+                                .defaultIfEmpty(document);
                     }
                     else return Mono.just(document);
                 })

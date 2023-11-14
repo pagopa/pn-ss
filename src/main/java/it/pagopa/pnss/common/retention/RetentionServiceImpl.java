@@ -50,7 +50,7 @@ public class RetentionServiceImpl implements RetentionService {
     private final ConfigurationApiCall configurationApiCall;
     private final BucketName bucketName;
     private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
-    private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.systemDefault());
+    private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneOffset.UTC);
     public RetentionServiceImpl(ConfigurationApiCall configurationApiCall, BucketName bucketName) {
         this.configurationApiCall = configurationApiCall;
         this.bucketName = bucketName;
@@ -187,7 +187,7 @@ public class RetentionServiceImpl implements RetentionService {
                        if (documentChanges.getRetentionUntil() != null && !documentChanges.getRetentionUntil().isBlank() &&
                            !documentChanges.getRetentionUntil().equalsIgnoreCase("null")) {
 
-                           Instant parsedRetentionUntil = Instant.parse(documentChanges.getRetentionUntil());
+                           Instant parsedRetentionUntil = OffsetDateTime.parse(documentChanges.getRetentionUntil(), FORMATTER).toInstant();
 
                            if (headObjectResponse.objectLockRetainUntilDate().truncatedTo(ChronoUnit.SECONDS).equals(parsedRetentionUntil))
                                return Mono.just(documentEntity);

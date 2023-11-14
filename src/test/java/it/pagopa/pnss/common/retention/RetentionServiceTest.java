@@ -136,7 +136,8 @@ public class RetentionServiceTest {
         Assertions.assertNotNull(retentionService.getRetainUntilDate(dataCreazione, retentionPeriod));
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(strings = {"2023-09-07T17:34:15+02:00", "2023-09-07T17:34:15.000Z"})
     void setRetentionPeriodInBucketObjectMetadataOk(){
         String authPagopaSafestorageCxId = "CLIENT_ID_123";
         String authApiKey = "apiKey_value";
@@ -165,7 +166,7 @@ public class RetentionServiceTest {
         String oldState = "BOOKED";
 
         DocumentChanges documentChanges = new DocumentChanges();
-        documentChanges.setRetentionUntil("2032-04-12T12:32:04.000Z");
+        documentChanges.setRetentionUntil("2032-04-12 12:32:04.000Z");
 
         DocumentEntity documentEntity = new DocumentEntity();
         documentEntity.setDocumentKey("documentKeyEnt");

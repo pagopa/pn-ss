@@ -18,6 +18,7 @@ import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
+import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
 import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.MDC;
@@ -25,6 +26,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Response;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
@@ -56,14 +61,6 @@ public class TransformationService {
         this.s3Service = s3Service;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
-    }
-    private static Function<Mono<Void>, Mono<Void>> getRetryStrategy(String key) {
-        return documentMono -> documentMono.retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
-                .filter(ArubaSignException.class::isInstance)
-                .doBeforeRetry(retrySignal -> log.warn("Retry number {} for document with key '{}', caused by : {}", retrySignal.totalRetries(), key, retrySignal.failure().getMessage(), retrySignal.failure()))
-                .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
-                    throw new ArubaSignExceptionLimitCall(key);
-                }));
     }
 
     @SqsListener(value = "${s3.queue.sign-queue-name}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
@@ -100,8 +97,15 @@ public class TransformationService {
     }
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
-
         log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName, marcatura).toList());
+        return s3Service.headObject(key, bucketName.ssHotName())
+                .cast(S3Response.class)
+                .onErrorResume(NoSuchKeyException.class, throwable -> signDocument(key, stagingBucketName, marcatura))
+                .flatMap(s3Response -> removeObjectFromStagingBucket(key, stagingBucketName))
+                .then();
+    }
+
+    private Mono<S3Response> signDocument(String key, String stagingBucketName, boolean marcatura) {
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
                 .filter(document -> document.getDocumentState().equalsIgnoreCase(STAGED))
@@ -120,28 +124,21 @@ public class TransformationService {
 
                     log.debug("Content type of document with key '{}' : {}", document.getDocumentKey(), document.getContentType());
 
-                       return switch (document.getContentType()) {
-                           case APPLICATION_PDF_VALUE -> arubaSignServiceCall.signPdfDocument(s3ObjectBytes, marcatura);
-                           case APPLICATION_XML_VALUE -> arubaSignServiceCall.xmlSignature(s3ObjectBytes, marcatura);
-                           default -> arubaSignServiceCall.pkcs7signV2(s3ObjectBytes, marcatura);
-                       };
-                   })
-                   .doOnNext(signReturnV2 -> log.debug("Aruba sign service return status {}, return code {}, description {}, for document with key {}",
-                                                       signReturnV2.getStatus(),
-                                                       signReturnV2.getReturnCode(),
-                                                       signReturnV2.getDescription(), key))
-                   .flatMap(signReturnV2 -> changeFromStagingBucketToHotBucket(key, signReturnV2.getBinaryoutput(), stagingBucketName))
-                   .transform(getRetryStrategy(key))
-                   .doOnSuccess(result -> log.info(SUCCESSFUL_OPERATION_LABEL, OBJECT_TRANSFORMATION, result))
-                   .then();
+                    return switch (document.getContentType()) {
+                        case APPLICATION_PDF_VALUE -> arubaSignServiceCall.signPdfDocument(s3ObjectBytes, marcatura);
+                        case APPLICATION_XML_VALUE -> arubaSignServiceCall.xmlSignature(s3ObjectBytes, marcatura);
+                        default -> arubaSignServiceCall.pkcs7signV2(s3ObjectBytes, marcatura);
+                    };
+                })
+                .doOnNext(signReturnV2 -> log.debug("Aruba sign service return status {}, return code {}, description {}, for document with key {}",
+                        signReturnV2.getStatus(),
+                        signReturnV2.getReturnCode(),
+                        signReturnV2.getDescription(), key))
+                .flatMap(signReturnV2 -> s3Service.putObject(key, signReturnV2.getBinaryoutput(), bucketName.ssHotName()));
     }
 
-    private Mono<Void> changeFromStagingBucketToHotBucket(String key, byte[] objectBytes, String stagingBucketName) {
-        log.debug(INVOKING_METHOD, CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET, Stream.of(key, stagingBucketName).toList());
-        return s3Service.putObject(key, objectBytes, bucketName.ssHotName())
-                        .flatMap(putObjectResponse -> s3Service.deleteObject(key, stagingBucketName))
-                        .doOnSuccess(result->log.info(SUCCESSFUL_OPERATION_LABEL, CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET, result))
-                        .then();
+    private Mono<Void> removeObjectFromStagingBucket(String key, String stagingBucketName) {
+        return s3Service.deleteObject(key, stagingBucketName).onErrorResume(NoSuchKeyException.class, throwable -> Mono.empty()).then();
     }
 
     private boolean isKeyPresent(CreatedS3ObjectDto createdS3ObjectDto) {

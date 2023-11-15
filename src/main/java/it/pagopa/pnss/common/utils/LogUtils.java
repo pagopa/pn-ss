@@ -93,4 +93,8 @@ public class LogUtils {
     public static final String XML_SIGNATURE = "ArubaSignServiceCall.xmlSignature()";
     public static final String PKCS_7_SIGN_V2 = "ArubaSignServiceCall.pkcs7signV2()";
 
+    //RETRY
+    public static final String RETRY_ATTEMPT = "Retry attempt number '{}' caused by : {} - {}";
+
+
 }

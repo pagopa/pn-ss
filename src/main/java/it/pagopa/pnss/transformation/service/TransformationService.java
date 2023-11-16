@@ -6,11 +6,10 @@ import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.exception.ArubaSignException;
-import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
 import it.pagopa.pnss.common.exception.IllegalTransformationException;
 import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
 import it.pagopa.pnss.common.utils.LogUtils;
@@ -20,22 +19,19 @@ import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
 import lombok.CustomLog;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import reactor.util.retry.Retry;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.services.s3.model.S3Response;
-
-import java.time.Duration;
+import software.amazon.awssdk.services.s3.model.*;
+import java.math.BigDecimal;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static it.pagopa.pnss.common.constant.Constant.AVAILABLE;
 import static it.pagopa.pnss.common.constant.Constant.STAGED;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 import static it.pagopa.pnss.common.utils.SqsUtils.logIncomingMessage;
@@ -51,7 +47,11 @@ public class TransformationService {
     private final S3ServiceImpl s3Service;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
+    @Value("${default.internal.x-api-key.value:#{null}}")
+    private String defaultInternalApiKeyValue;
 
+    @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
+    private String defaultInternalClientIdValue;
     @Value("${s3.queue.sign-queue-name}")
     private String signQueueName;
 
@@ -98,29 +98,32 @@ public class TransformationService {
 
     public Mono<Void> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
         log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName, marcatura).toList());
-        return s3Service.headObject(key, bucketName.ssHotName())
-                .cast(S3Response.class)
-                .onErrorResume(NoSuchKeyException.class, throwable -> signDocument(key, stagingBucketName, marcatura))
-                .flatMap(s3Response -> removeObjectFromStagingBucket(key, stagingBucketName))
-                .then();
-    }
-
-    private Mono<S3Response> signDocument(String key, String stagingBucketName, boolean marcatura) {
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
-                .filter(document -> document.getDocumentState().equalsIgnoreCase(STAGED))
-                .doOnDiscard(Document.class, document -> log.warn("Current status '{}' is not valid for transformation for document '{}'", document.getDocumentState(), key))
-                .switchIfEmpty(Mono.error(new InvalidStatusTransformationException(key)))
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
                     return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK);
                 })
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
-                .zipWhen(document -> s3Service.getObject(key, stagingBucketName))
-                .flatMap(objects -> {
-                    var document = objects.getT1();
-                    var s3ObjectBytes = objects.getT2().asByteArray();
+                .filterWhen(document -> isSignatureNeeded(key, document))
+                .zipWhen(document -> signDocument(document, key, stagingBucketName, marcatura))
+                .flatMap(tuple -> putObjectInHotBucket(key, tuple.getT2().getBinaryoutput(), tuple.getT1()))
+                .then(removeObjectFromStagingBucket(key, stagingBucketName));
+    }
+
+    private Mono<Boolean> isSignatureNeeded(String key, Document document) {
+        if (document.getDocumentState().equals(STAGED))
+            return Mono.just(true);
+        else return s3Service.headObject(key, bucketName.ssHotName())
+                .thenReturn(false)
+                .onErrorResume(NoSuchKeyException.class, throwable -> Mono.just(true));
+    }
+
+    private Mono<SignReturnV2> signDocument(Document document, String key, String stagingBucketName, boolean marcatura) {
+        return s3Service.getObject(key, stagingBucketName)
+                .flatMap(getObjectResponse -> {
+                    var s3ObjectBytes = getObjectResponse.asByteArray();
 
                     log.debug("Content type of document with key '{}' : {}", document.getDocumentKey(), document.getContentType());
 
@@ -129,12 +132,24 @@ public class TransformationService {
                         case APPLICATION_XML_VALUE -> arubaSignServiceCall.xmlSignature(s3ObjectBytes, marcatura);
                         default -> arubaSignServiceCall.pkcs7signV2(s3ObjectBytes, marcatura);
                     };
+
                 })
                 .doOnNext(signReturnV2 -> log.debug("Aruba sign service return status {}, return code {}, description {}, for document with key {}",
                         signReturnV2.getStatus(),
                         signReturnV2.getReturnCode(),
-                        signReturnV2.getDescription(), key))
-                .flatMap(signReturnV2 -> s3Service.putObject(key, signReturnV2.getBinaryoutput(), bucketName.ssHotName()));
+                        signReturnV2.getDescription(), key));
+    }
+
+    private Mono<PutObjectResponse> putObjectInHotBucket(String key, byte[] fileBytes, Document document) {
+        return Mono.just(document.getDocumentType().getChecksum())
+                .map(checksumEnum -> {
+                    DocumentChanges documentChanges = new DocumentChanges().checkSum(new String(Base64.encodeBase64((DigestUtils.getDigest(checksumEnum.getValue()).digest()))));
+                    if (document.getDocumentState().equals(STAGED))
+                        documentChanges.contentLenght(BigDecimal.valueOf(fileBytes.length)).documentState(AVAILABLE);
+                    return documentChanges;
+                })
+                .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, key, documentChanges))
+                .then(s3Service.putObject(key, fileBytes, bucketName.ssHotName()));
     }
 
     private Mono<Void> removeObjectFromStagingBucket(String key, String stagingBucketName) {

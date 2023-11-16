@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.*;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -145,7 +146,10 @@ public class TransformationService {
                 .map(checksumEnum -> {
                     DocumentChanges documentChanges = new DocumentChanges().checkSum(new String(Base64.encodeBase64((DigestUtils.getDigest(checksumEnum.getValue()).digest()))));
                     if (document.getDocumentState().equals(STAGED))
-                        documentChanges.contentLenght(BigDecimal.valueOf(fileBytes.length)).documentState(AVAILABLE);
+                        documentChanges
+                                .contentLenght(BigDecimal.valueOf(fileBytes.length))
+                                .documentState(AVAILABLE)
+                                .lastStatusChangeTimestamp(OffsetDateTime.now());
                     return documentChanges;
                 })
                 .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, key, documentChanges))

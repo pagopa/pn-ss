@@ -110,7 +110,8 @@ public class TransformationService {
                 .filterWhen(document -> isSignatureNeeded(key, document))
                 .zipWhen(document -> signDocument(document, key, stagingBucketName, marcatura))
                 .flatMap(tuple -> putObjectInHotBucket(key, tuple.getT2().getBinaryoutput(), tuple.getT1()))
-                .then(removeObjectFromStagingBucket(key, stagingBucketName));
+                .then(removeObjectFromStagingBucket(key, stagingBucketName))
+                .then();
     }
 
     private Mono<Boolean> isSignatureNeeded(String key, Document document) {
@@ -156,8 +157,8 @@ public class TransformationService {
                 .then(s3Service.putObject(key, fileBytes, bucketName.ssHotName()));
     }
 
-    private Mono<Void> removeObjectFromStagingBucket(String key, String stagingBucketName) {
-        return s3Service.deleteObject(key, stagingBucketName).onErrorResume(NoSuchKeyException.class, throwable -> Mono.empty()).then();
+    private Mono<DeleteObjectResponse> removeObjectFromStagingBucket(String key, String stagingBucketName) {
+        return s3Service.deleteObject(key, stagingBucketName).onErrorResume(NoSuchKeyException.class, throwable -> Mono.empty());
     }
 
     private boolean isKeyPresent(CreatedS3ObjectDto createdS3ObjectDto) {

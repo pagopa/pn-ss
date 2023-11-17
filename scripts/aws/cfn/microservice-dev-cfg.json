@@ -25,7 +25,7 @@
     "MinTasksNumber": "3",
     "MaxTasksNumber": "13",
     "AutoscalingThreshold": "15000",
-    "PnSsUriBuilderGetFileWithPatchConfiguration": "CLIENT_SPECIFIC",
+    "PnSsUriBuilderGetFileWithPatchConfiguration": "NONE",
     "JavaToolOptions": "-XX:MaxDirectMemorySize=128M"
   }
 }

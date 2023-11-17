@@ -71,10 +71,10 @@ public class TransformationServiceTest {
         putObjectInBucket(FILE_KEY, bucketName.ssStageName(), new byte[10]);
     }
 
-//    @AfterEach
-//    void clean() {
-//        deleteObjectInBucket(FILE_KEY, bucketName.ssHotName());
-//    }
+    @AfterEach
+    void clean() {
+        deleteObjectInBucket(FILE_KEY, bucketName.ssHotName());
+    }
 
     @Test
     void newStagingBucketObjectCreatedEventBlankDetail() {
@@ -93,35 +93,35 @@ public class TransformationServiceTest {
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
     }
 
-//    @Test
-//    void newStagingBucketObjectCreatedInvalidStatus() {
-//
-//        S3Object s3Object = new S3Object();
-//        s3Object.setKey(FILE_KEY);
-//
-//        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-//        bucketOriginDetail.setName(bucketName.ssStageName());
-//
-//        CreationDetail creationDetail = new CreationDetail();
-//        creationDetail.setObject(s3Object);
-//        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-//
-//        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-//        createdS3ObjectDto.setCreationDetailObject(creationDetail);
-//
-//        Acknowledgment acknowledgment = new Acknowledgment() {
-//            @Override
-//            public Future<?> acknowledge() {
-//                return null;
-//            }
-//        };
-//
-//        mockGetDocument("application/pdf", BOOKED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-//        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
-//
-//        StepVerifier.create(testMono).expectError(InvalidStatusTransformationException.class).verify();
-//        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
-//    }
+    @Test
+    void newStagingBucketObjectCreatedInvalidStatus() {
+
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
+
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+
+        mockGetDocument("application/pdf", BOOKED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
+        StepVerifier.create(testMono).expectError(InvalidStatusTransformationException.class).verify();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
+    }
 
     @Test
     void newStagingBucketObjectCreatedInvalidTransformation() {
@@ -153,98 +153,98 @@ public class TransformationServiceTest {
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
     }
 
-//    @Test
-//    void newStagingBucketObjectCreatedEventArubaKo() {
-//
-//        S3Object s3Object = new S3Object();
-//        s3Object.setKey(FILE_KEY);
-//
-//        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-//        bucketOriginDetail.setName(bucketName.ssStageName());
-//
-//        CreationDetail creationDetail = new CreationDetail();
-//        creationDetail.setObject(s3Object);
-//        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-//
-//        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-//        createdS3ObjectDto.setCreationDetailObject(creationDetail);
-//
-//        Acknowledgment acknowledgment = new Acknowledgment() {
-//            @Override
-//            public Future<?> acknowledge() {
-//                return null;
-//            }
-//        };
-//
-//        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-//        when(arubaSignServiceCall.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.error(new ArubaSignException()));
-//        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
-//
-//        StepVerifier.create(testMono).expectError(ArubaSignException.class).verify();
-//    }
+    @Test
+    void newStagingBucketObjectCreatedEventArubaKo() {
 
-//    @ParameterizedTest
-//    @ValueSource(strings = {"application/pdf", "application/xml", "other"})
-//    void newStagingBucketObjectCreatedEventOk(String contentType) {
-//
-//        S3Object s3Object = new S3Object();
-//        s3Object.setKey(FILE_KEY);
-//
-//        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-//        bucketOriginDetail.setName(bucketName.ssStageName());
-//
-//        CreationDetail creationDetail = new CreationDetail();
-//        creationDetail.setObject(s3Object);
-//        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-//
-//        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-//        createdS3ObjectDto.setCreationDetailObject(creationDetail);
-//
-//        Acknowledgment acknowledgment = new Acknowledgment() {
-//            @Override
-//            public Future<?> acknowledge() {
-//                return null;
-//            }
-//        };
-//
-//        mockGetDocument(contentType, STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-//        mockArubaCalls();
-//        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
-//
-//        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-//        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
-//    }
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
 
-//    @Test
-//    void newStagingBucketObjectCreatedEventAvailableNotInHotBucketOk() {
-//
-//        S3Object s3Object = new S3Object();
-//        s3Object.setKey(FILE_KEY);
-//
-//        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-//        bucketOriginDetail.setName(bucketName.ssStageName());
-//
-//        CreationDetail creationDetail = new CreationDetail();
-//        creationDetail.setObject(s3Object);
-//        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-//
-//        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-//        createdS3ObjectDto.setCreationDetailObject(creationDetail);
-//
-//        Acknowledgment acknowledgment = new Acknowledgment() {
-//            @Override
-//            public Future<?> acknowledge() {
-//                return null;
-//            }
-//        };
-//        putObjectInBucket(FILE_KEY, bucketName.ssStageName(), new byte[10]);
-//        mockGetDocument("application/pdf", AVAILABLE, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-//        mockArubaCalls();
-//        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
-//
-//        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-//        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
-//    }
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+
+        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        when(arubaSignServiceCall.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.error(new ArubaSignException()));
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
+        StepVerifier.create(testMono).expectError(ArubaSignException.class).verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"application/pdf", "application/xml", "other"})
+    void newStagingBucketObjectCreatedEventOk(String contentType) {
+
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
+
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+
+        mockGetDocument(contentType, STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        mockArubaCalls();
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
+        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
+    }
+
+    @Test
+    void newStagingBucketObjectCreatedEventAvailableNotInHotBucketOk() {
+
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
+
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+        putObjectInBucket(FILE_KEY, bucketName.ssStageName(), new byte[10]);
+        mockGetDocument("application/pdf", AVAILABLE, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        mockArubaCalls();
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
+        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
+    }
 
     @Test
     void newStagingBucketObjectCreatedEventAvailableInHotBucketOk() {

@@ -31,6 +31,7 @@ import reactor.test.StepVerifier;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.*;
@@ -264,6 +265,9 @@ class UriBuilderServiceDownloadTest {
     void recoverDocumentFromBucketRestoreAlreadyInProgress() {
 
         AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("RestoreAlreadyInProgress").build();
+        SdkHttpResponse sdkHttpResponse= SdkHttpResponse.builder().putHeader("x-amz-restore-request-date", List.of("Fri, 03 Nov 2023 21:21:21 GMT")).build();
+        HeadObjectResponse headObjectResponse = (HeadObjectResponse) HeadObjectResponse.builder().sdkHttpResponse(sdkHttpResponse).build();
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(headObjectResponse));
         when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
 
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);

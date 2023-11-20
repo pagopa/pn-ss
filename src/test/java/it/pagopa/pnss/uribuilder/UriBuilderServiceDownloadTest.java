@@ -41,12 +41,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -263,6 +261,25 @@ class UriBuilderServiceDownloadTest {
 
     @Test
     void recoverDocumentFromBucketRestoreAlreadyInProgress() {
+        String restoreRequestDate = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.ENGLISH)
+                .withZone(ZoneId.of("GMT"))
+                .format(OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(10));
+
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("RestoreAlreadyInProgress").build();
+        SdkHttpResponse sdkHttpResponse= SdkHttpResponse.builder().putHeader("x-amz-restore-request-date", List.of(restoreRequestDate)).build();
+        HeadObjectResponse headObjectResponse = (HeadObjectResponse) HeadObjectResponse.builder().sdkHttpResponse(sdkHttpResponse).build();
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(headObjectResponse));
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono)
+                .expectNextMatches(fileDownloadInfo -> fileDownloadInfo.getRetryAfter().compareTo(BigDecimal.valueOf(17400)) == 0)
+                .verifyComplete();
+    }
+
+    @Test
+    void recoverDocumentFromBucketRestoreAlreadyInProgressWithNegativeElapsedTime() {
 
         AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("RestoreAlreadyInProgress").build();
         SdkHttpResponse sdkHttpResponse= SdkHttpResponse.builder().putHeader("x-amz-restore-request-date", List.of("Fri, 03 Nov 2023 21:21:21 GMT")).build();
@@ -271,8 +288,9 @@ class UriBuilderServiceDownloadTest {
         when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
 
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
-        StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
-    }
+        StepVerifier.create(testMono)
+                .expectNextMatches(fileDownloadInfo -> fileDownloadInfo.getRetryAfter().compareTo(BigDecimal.valueOf(3600)) == 0)
+                .verifyComplete();    }
 
     @Test
     void recoverDocumentFromBucketNoSuchKey() {

@@ -472,7 +472,7 @@ public class UriBuilderService {
                 .map(restoreRequestDate -> {
                     OffsetDateTime lastRestoreRequestDateTime = LocalDateTime.parse(restoreRequestDate, DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.ENGLISH)).atOffset(ZoneOffset.UTC);
                     BigDecimal elapsedTime = new BigDecimal(ChronoUnit.SECONDS.between(lastRestoreRequestDateTime, OffsetDateTime.now()));
-                    return new FileDownloadInfo().retryAfter(maxRestoreTimeCold.subtract(elapsedTime));
+                    return new FileDownloadInfo().retryAfter(maxRestoreTimeCold.subtract(elapsedTime).signum() == -1 ? BigDecimal.valueOf(3600) : maxRestoreTimeCold.subtract(elapsedTime));
                 });
     }
 

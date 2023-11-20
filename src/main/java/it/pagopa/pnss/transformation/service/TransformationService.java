@@ -12,6 +12,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.exception.IllegalTransformationException;
 import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
+import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
@@ -27,6 +28,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.*;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicReference;
@@ -48,6 +50,7 @@ public class TransformationService {
     private final S3ServiceImpl s3Service;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
+    private final SqsService sqsService;
     @Value("${default.internal.x-api-key.value:#{null}}")
     private String defaultInternalApiKeyValue;
 
@@ -57,11 +60,12 @@ public class TransformationService {
     private String signQueueName;
 
     public TransformationService(ArubaSignServiceCall arubaSignServiceCall, S3ServiceImpl s3Service,
-                                 DocumentClientCall documentClientCall, BucketName bucketName) {
+                                 DocumentClientCall documentClientCall, BucketName bucketName, SqsService sqsService) {
         this.arubaSignServiceCall = arubaSignServiceCall;
         this.s3Service = s3Service;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
+        this.sqsService = sqsService;
     }
 
     @SqsListener(value = "${s3.queue.sign-queue-name}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
@@ -71,8 +75,8 @@ public class TransformationService {
         MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER);
         MDCUtils.addMDCToContextAndExecute(newStagingBucketObjectCreatedEvent(newStagingBucketObject, acknowledgment)
-                .doOnSuccess(result -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER))
-                .doOnError(throwable -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER, false, throwable.getMessage())))
+                        .doOnSuccess(result -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER))
+                        .doOnError(throwable -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER, false, throwable.getMessage())))
                 .subscribe();
     }
 
@@ -91,36 +95,42 @@ public class TransformationService {
                     var detailObject = createdS3ObjectDto.getCreationDetailObject();
                     var fileKey = detailObject.getObject().getKey();
                     fileKeyReference.set(fileKey);
-                    return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), true);
+                    return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), newStagingBucketObject.getRetry(), true);
                 })
+                .then()
                 .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
                 .doOnError(throwable -> !(throwable instanceof InvalidStatusTransformationException || throwable instanceof IllegalTransformationException), throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()))
-                .then();
+                .onErrorResume(throwable -> newStagingBucketObject.getRetry() <= 3, throwable -> {
+                    newStagingBucketObject.setRetry(newStagingBucketObject.getRetry() + 1);
+                    acknowledgment.acknowledge();
+                    return sqsService.send(signQueueName, newStagingBucketObject).then();
+                });
     }
 
-    public Mono<DeleteObjectResponse> objectTransformation(String key, String stagingBucketName, Boolean marcatura) {
+    public Mono<DeleteObjectResponse> objectTransformation(String key, String stagingBucketName, int retry, Boolean marcatura) {
         log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName, marcatura).toList());
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
+                .filter(document -> document.getDocumentState().equalsIgnoreCase(STAGED) || document.getDocumentState().equalsIgnoreCase(AVAILABLE))
+                .doOnDiscard(Document.class, document -> log.warn("Current status '{}' is not valid for transformation for document '{}'", document.getDocumentState(), key))
+                .switchIfEmpty(Mono.error(new InvalidStatusTransformationException(key)))
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
                     return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK);
                 })
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
-                .filterWhen(document -> isSignatureNeeded(key, document))
-                .zipWhen(document -> signDocument(document, key, stagingBucketName, marcatura))
-                .flatMap(tuple -> putObjectInHotBucket(key, tuple.getT2().getBinaryoutput(), tuple.getT1()))
+                .filterWhen(document -> isSignatureNeeded(key, retry))
+                .flatMap(document -> signDocument(document, key, stagingBucketName, marcatura))
+                .flatMap(signReturnV2 -> s3Service.putObject(key, signReturnV2.getBinaryoutput(), bucketName.ssHotName()))
                 .then(removeObjectFromStagingBucket(key, stagingBucketName));
     }
 
-    private Mono<Boolean> isSignatureNeeded(String key, Document document) {
-        if (document.getDocumentState().equals(STAGED)) return Mono.just(true);
-        else if (document.getDocumentState().equals(AVAILABLE))
-            return s3Service.headObject(key, bucketName.ssHotName())
-                    .thenReturn(false)
-                    .onErrorResume(NoSuchKeyException.class, throwable -> Mono.just(true));
-        else return Mono.error(new InvalidStatusTransformationException(document.getDocumentState()));
+    private Mono<Boolean> isSignatureNeeded(String key, int retry) {
+        if (retry == 0) return Mono.just(true);
+        else return s3Service.headObject(key, bucketName.ssHotName())
+                .thenReturn(false)
+                .onErrorResume(NoSuchKeyException.class, throwable -> Mono.just(true));
     }
 
     private Mono<SignReturnV2> signDocument(Document document, String key, String stagingBucketName, boolean marcatura) {
@@ -143,23 +153,8 @@ public class TransformationService {
                         signReturnV2.getDescription(), key));
     }
 
-    private Mono<PutObjectResponse> putObjectInHotBucket(String key, byte[] fileBytes, Document document) {
-        return Mono.just(document.getDocumentType().getChecksum())
-                .map(checksumEnum -> {
-                    DocumentChanges documentChanges = new DocumentChanges().checkSum(new String(Base64.encodeBase64((DigestUtils.getDigest(checksumEnum.getValue()).digest()))));
-                    if (document.getDocumentState().equals(STAGED))
-                        documentChanges
-                                .contentLenght(BigDecimal.valueOf(fileBytes.length))
-                                .documentState(AVAILABLE)
-                                .lastStatusChangeTimestamp(OffsetDateTime.now());
-                    return documentChanges;
-                })
-                .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, key, documentChanges))
-                .then(s3Service.putObject(key, fileBytes, bucketName.ssHotName()));
-    }
-
     private Mono<DeleteObjectResponse> removeObjectFromStagingBucket(String key, String stagingBucketName) {
-        return Mono.defer(()->s3Service.deleteObject(key, stagingBucketName)).onErrorResume(NoSuchKeyException.class, throwable -> Mono.empty());
+        return Mono.defer(() -> s3Service.deleteObject(key, stagingBucketName)).onErrorResume(NoSuchKeyException.class, throwable -> Mono.empty());
     }
 
     private boolean isKeyPresent(CreatedS3ObjectDto createdS3ObjectDto) {

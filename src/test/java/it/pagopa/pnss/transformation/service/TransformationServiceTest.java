@@ -8,6 +8,7 @@ import it.pagopa.pnss.common.client.exception.ArubaSignException;
 import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
 import it.pagopa.pnss.common.exception.IllegalTransformationException;
 import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
+import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.model.dto.BucketOriginDetail;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.annotation.DirtiesContext;
@@ -63,6 +65,10 @@ public class TransformationServiceTest {
     private BucketName bucketName;
     @Autowired
     private S3Client s3TestClient;
+    @SpyBean
+    private SqsService sqsService;
+    @Value("${s3.queue.sign-queue-name}")
+    private String signQueueName;
 
     private final String FILE_KEY = "FILE_KEY";
 
@@ -119,8 +125,41 @@ public class TransformationServiceTest {
         mockGetDocument("application/pdf", BOOKED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
+        StepVerifier.create(testMono).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(sqsService, times(1)).send(eq(signQueueName), any(CreatedS3ObjectDto.class));
+    }
+
+    @Test
+    void newStagingBucketObjectMaxRetriesExceeded() {
+
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
+
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        createdS3ObjectDto.setRetry(4);
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+
+        mockGetDocument("application/pdf", BOOKED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
         StepVerifier.create(testMono).expectError(InvalidStatusTransformationException.class).verify();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(sqsService, times(0)).send(eq(signQueueName), any(CreatedS3ObjectDto.class));
     }
 
     @Test
@@ -149,8 +188,9 @@ public class TransformationServiceTest {
         mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.NONE));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
-        StepVerifier.create(testMono).expectError(IllegalTransformationException.class).verify();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
+        StepVerifier.create(testMono).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(sqsService, times(1)).send(eq(signQueueName), any(CreatedS3ObjectDto.class));
     }
 
     @Test
@@ -180,7 +220,8 @@ public class TransformationServiceTest {
         when(arubaSignServiceCall.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.error(new ArubaSignException()));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
-        StepVerifier.create(testMono).expectError(ArubaSignException.class).verify();
+        StepVerifier.create(testMono).verifyComplete();
+        verify(sqsService, times(1)).send(eq(signQueueName), any(CreatedS3ObjectDto.class));
     }
 
     @ParameterizedTest
@@ -212,11 +253,11 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
     }
 
     @Test
-    void newStagingBucketObjectCreatedEventAvailableNotInHotBucketOk() {
+    void newStagingBucketObjectCreatedEventRetryNotInHotBucketOk() {
 
         S3Object s3Object = new S3Object();
         s3Object.setKey(FILE_KEY);
@@ -230,6 +271,8 @@ public class TransformationServiceTest {
 
         CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
         createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        createdS3ObjectDto.setRetry(1);
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -243,11 +286,11 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
     }
 
     @Test
-    void newStagingBucketObjectCreatedEventAvailableInHotBucketOk() {
+    void newStagingBucketObjectCreatedEventRetryInHotBucketOk() {
 
         S3Object s3Object = new S3Object();
         s3Object.setKey(FILE_KEY);
@@ -261,6 +304,8 @@ public class TransformationServiceTest {
 
         CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
         createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        createdS3ObjectDto.setRetry(1);
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -275,7 +320,7 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
     }
 
     void mockGetDocument(String contentType, String documentState, List<DocumentType.TransformationsEnum> transformations) {

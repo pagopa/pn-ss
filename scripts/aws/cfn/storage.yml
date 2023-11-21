@@ -467,7 +467,34 @@ Resources:
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
-  
+
+  PnSsQueuePolicyNotificheDEVStack:
+    Type: AWS::SQS::QueuePolicy
+    Condition: IsDevEnv
+    Properties:
+      Queues:
+        - !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueURL
+      PolicyDocument:
+        Statement:
+          - Sid: 'AllowAccessSameAccount'
+            Action:
+              - 'sqs:*'
+            Effect: 'Allow'
+            Resource: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN
+            Principal:
+              AWS: !Ref AWS::AccountId
+          - Sid: 'AllowPutEventsFromEventRule'
+            Action:
+              - 'sqs:SendMessage'
+            Effect: 'Allow'
+            Resource: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN
+            Principal:
+              Service:
+              - 'events.amazonaws.com'
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt PnSsEventRuleNotificheDEV.Arn
+
   PnSsEventRuleNotificheDEV:
     Type: AWS::Events::Rule
     Condition: IsDevEnv

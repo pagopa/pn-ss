@@ -1,10 +1,6 @@
 package it.pagopa.pnss.common.retention;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfigurationStatuses;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
-import it.pagopa.pn.template.rest.v1.dto.StorageConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;

@@ -32,14 +32,16 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     private boolean test = false;
     private final String disponibilitaDocumentiEventBridge;
 
-    public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge) {
+    public StreamsRecordProcessor(String disponibilitaDocumentiEventBridge) {
         this.disponibilitaDocumentiEventBridge = disponibilitaDocumentiEventBridge;
 
     }
-    public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge, boolean test) {
+
+    public StreamsRecordProcessor(String disponibilitaDocumentiEventBridge, boolean test) {
         this.disponibilitaDocumentiEventBridge = disponibilitaDocumentiEventBridge;
         this.test = test;
     }
+
     @Override
     public void initialize(InitializationInput initializationInput) {
         checkpointCounter = 0;
@@ -47,7 +49,6 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     @Override
     public void processRecords(ProcessRecordsInput processRecordsInput) {
-        final String PROCESS_RECORDS = "processRecords()";
         MDC.clear();
         log.logStartingProcess(PROCESS_RECORDS);
         MDCUtils.addMDCToContextAndExecute(findEventSendToBridge(processRecordsInput)
@@ -69,8 +70,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     @NotNull
     public Flux<PutEventsRequestEntry> findEventSendToBridge(ProcessRecordsInput processRecordsInput) {
-        final String FIND_EVENT_SEND_TO_BRIDGE = "StreamRecordProcessor.findEventSendToBridge()";
-        log.debug(INVOKING_METHOD, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput.getRecords());
+        log.debug(INVOKING_METHOD, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInputToString(processRecordsInput));
         return Flux.fromIterable(processRecordsInput.getRecords())
                 .filter(RecordAdapter.class::isInstance)
                 .map(recordEvent -> ((RecordAdapter) recordEvent).getInternalObject())
@@ -83,14 +83,14 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .doOnError(e -> log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> {
                     setCheckpoint(processRecordsInput);
-                    log.info(SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput);
+                    log.info(SUCCESSFUL_OPERATION_NO_RESULT_LABEL, FIND_EVENT_SEND_TO_BRIDGE);
                 });
     }
 
     private void setCheckpoint(ProcessRecordsInput processRecordsInput) {
         try {
             if (!test) {
-                    processRecordsInput.getCheckpointer().checkpoint();
+                processRecordsInput.getCheckpointer().checkpoint();
             }
         } catch (ShutdownException e) {
             log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
@@ -111,5 +111,9 @@ public class StreamsRecordProcessor implements IRecordProcessor {
             }
         }
 
+    }
+
+    private String processRecordsInputToString(ProcessRecordsInput processRecordsInput) {
+        return "ProcessRecordsInput" + "[" + "cacheEntryTime=" + processRecordsInput.getCacheEntryTime() + ", " + "cacheExitTime=" + processRecordsInput.getCacheExitTime() + ", " + "timeSpentInCache=" + processRecordsInput.getTimeSpentInCache() + ", " + "millisBehindLatest=" + processRecordsInput.getMillisBehindLatest() + ", " + "checkpointer=" + processRecordsInput.getCheckpointer() + "]";
     }
 }

@@ -13,9 +13,10 @@ import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @CustomLog
 public class ManageDynamoEvent {
@@ -33,6 +34,8 @@ public class ManageDynamoEvent {
 
     public PutEventsRequestEntry manageItem(String disponibilitaDocumentiEventBridge, Map<String, AttributeValue> newImage,
                                             Map<String, AttributeValue> oldImage) {
+        log.debug(INVOKING_METHOD, MANAGE_ITEM, Stream.of(disponibilitaDocumentiEventBridge, newImage, oldImage).toList());
+
         String oldDocumentState = oldImage.get(DOCUMENTSTATE_KEY).getS();
         String newDocumentState = newImage.get(DOCUMENTSTATE_KEY).getS();
 
@@ -46,6 +49,8 @@ public class ManageDynamoEvent {
     }
 
     public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge){
+        log.debug(INVOKING_METHOD, CREATE_MESSAGE, Stream.of(docEntity, disponibilitaDocumentiEventBridge).toList());
+
         String key = docEntity.get(DOCUMENTKEY_KEY).getS();
         MDC.put(MDC_CORR_ID_KEY, key);
         NotificationMessage message = new NotificationMessage();
@@ -74,6 +79,7 @@ public class ManageDynamoEvent {
     }
 
     private PutEventsRequestEntry creatPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge) {
+        log.debug(INVOKING_METHOD, CREATE_PUT_EVENT_REQUEST_ENTRY, Stream.of(event, disponibilitaDocumentiEventBridge).toList());
         return  PutEventsRequestEntry.builder()
                 .time(new Date().toInstant())
                 .source(GESTORE_DISPONIBILITA_EVENT_NAME)

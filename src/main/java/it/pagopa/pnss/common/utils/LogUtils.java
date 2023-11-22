@@ -15,6 +15,7 @@ public class LogUtils {
     public static final String ENDING_PROCESS_WITH_ERROR = "Ending '{}' Process with error = '{}' - '{}'";
     public static final String INVOKING_METHOD = "Invoking operation '{}' with args: '{}'";
     public static final String SUCCESSFUL_OPERATION_LABEL = "Successful operation: '{}' = '{}'";
+    public static final String SUCCESSFUL_OPERATION_NO_RESULT_LABEL = "Successful operation: '{}'";
     public static final String INVOKING_INTERNAL_SERVICE = "Invoking internal service '{}' '{}'. Waiting Sync response.";
     public static final String CLIENT_METHOD_INVOCATION = "Client method '{}' - args: '{}'";
     public static final String CLIENT_METHOD_RETURN = "Return client method: {} = {}";
@@ -92,5 +93,13 @@ public class LogUtils {
     public static final String SIGN_PDF_DOCUMENT = "ArubaSignServiceCall.signPdfDocument()";
     public static final String XML_SIGNATURE = "ArubaSignServiceCall.xmlSignature()";
     public static final String PKCS_7_SIGN_V2 = "ArubaSignServiceCall.pkcs7signV2()";
+
+    //STREAM RECORD PROCESSOR
+    public static final String PROCESS_RECORDS = "processRecord()";
+    public static final String MANAGE_ITEM = "ManageDynamoEvent.manageItem()";
+    public static final String CREATE_MESSAGE = "ManageDynamoEvent.createMessage()";
+    public static final String CREATE_PUT_EVENT_REQUEST_ENTRY = "ManageDynamoEvent.createPutEventRequestEntry()";
+    public static final String FIND_EVENT_SEND_TO_BRIDGE = "StreamRecordProcessor.findEventSendToBridge()";
+
 
 }

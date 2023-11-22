@@ -125,6 +125,24 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.sun.xml.ws</groupId>
+            <artifactId>rt</artifactId>
+            <version>2.3.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.cxf</groupId>
+            <artifactId>cxf-rt-frontend-jaxws</artifactId>
+            <version>3.6.2</version>
+        </dependency>
+
         <!-- Start SOAP dependencies -->
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
@@ -178,7 +196,7 @@
         <dependency>
             <groupId>org.apache.cxf.systests</groupId>
             <artifactId>cxf-systests-transport-hc5</artifactId>
-            <version>4.0.0</version>
+            <version>3.6.2</version>
         </dependency>
         <!-- End SOAP dependencies -->
 
@@ -212,6 +230,11 @@
             <artifactId>tika-core</artifactId>
             <version>2.7.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <version>1.6.2</version>
+        </dependency>
 
     </dependencies>
 
@@ -226,7 +249,7 @@
             <plugin>
                 <groupId>org.apache.cxf</groupId>
                 <artifactId>cxf-codegen-plugin</artifactId>
-                <version>4.0.0</version>
+                <version>3.6.2</version>
                 <executions>
                     <execution>
                         <id>generate-sources</id>

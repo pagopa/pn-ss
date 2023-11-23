@@ -8,7 +8,6 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.S3BucketException;
-import it.pagopa.pnss.common.client.impl.DocumentClientCallImpl;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;

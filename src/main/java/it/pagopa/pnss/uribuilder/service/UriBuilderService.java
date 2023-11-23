@@ -8,11 +8,15 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.*;
 import it.pagopa.pnss.common.utils.LogUtils;
+import it.pagopa.pnss.common.constant.Constant;
+import it.pagopa.pnss.common.exception.InvalidConfigurationException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
+import it.pagopa.pnss.uribuilder.rest.constant.GetFilePatchConfiguration;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
@@ -72,9 +76,7 @@ public class UriBuilderService {
     @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
     private String defaultInternalClientIdValue;
 
-    @Value("${uri.builder.get-file.can-execute-patch}")
-    private boolean canExecutePatch;
-
+    private final GetFilePatchConfiguration getFileWithPatchConfiguration;
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
@@ -89,13 +91,14 @@ public class UriBuilderService {
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.docTypesClientCall = docTypesClientCall;
         this.s3Service = s3Service;
         this.s3Presigner = s3Presigner;
+        this.getFileWithPatchConfiguration= GetFilePatchConfiguration.valueOf(getFileWithPatchConfigValue);
     }
 
     private Mono<String> getBucketName(DocumentType docType) {
@@ -251,7 +254,7 @@ public class UriBuilderService {
 
     private Mono<PresignedPutObjectRequest> signBucket(String bucketName, String documentKey,
                                                        String documentState, String documentType, String contenType,
-                                                       Map<String, String> secret, it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType.ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
+                                                       Map<String, String> secret, DocumentType.ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
 
         log.debug(LogUtils.INVOKING_METHOD, SIGN_BUCKET, Stream.of(bucketName, documentKey, documentState, documentType, contenType, checksumType, checksumValue).toList());
 
@@ -289,8 +292,11 @@ public class UriBuilderService {
                                                                    .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
                                                                    .putObjectRequest(putObjectRequest)
                                                                    .build())
-                .flatMap(putObjectPresignRequest -> Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest))
-                       .doOnNext(result -> log.debug(CLIENT_METHOD_RETURN, PRESIGN_PUT_OBJECT, result)));
+                .flatMap(putObjectPresignRequest -> {
+                    log.debug(CLIENT_METHOD_INVOCATION, PRESIGN_PUT_OBJECT, putObjectPresignRequest);
+                    return Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest))
+                            .doOnNext(result -> log.debug(CLIENT_METHOD_RETURN, PRESIGN_PUT_OBJECT, result));
+                });
     }
 
     public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, String xTraceIdValue, Boolean metadataOnly) {
@@ -306,7 +312,7 @@ public class UriBuilderService {
 
         return Mono.fromCallable(this::validationFieldCreateUri)//
                 .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))//
-                .flatMap(userConfigurationResponse -> {
+                .zipWhen(userConfigurationResponse -> {
                     List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
                     return documentClientCall.getDocument(fileKey)
@@ -329,11 +335,13 @@ public class UriBuilderService {
 
                             });
                 })
-                .cast(Document.class)
-                .flatMap(document -> {
-                    if (canExecutePatch && (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil()))) {
+                .flatMap(tuple -> {
+                    UserConfigurationResponse userConfigurationResponse = tuple.getT1();
+                    Document document = tuple.getT2();
+                    if (canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()) && (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil()))) {
+                        log.debug(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
-                                .onErrorResume(software.amazon.awssdk.services.s3.model.NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
+                                .onErrorResume(NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
                                 .flatMap(headObjectResponse -> {
                                     DocumentChanges documentChanges;
                                     if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
@@ -349,6 +357,7 @@ public class UriBuilderService {
                 })
                 .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))//
                 .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
+                .onErrorResume(InvalidConfigurationException.class, throwable-> Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, throwable.getMessage())))
                 .doOnSuccess(fileDownloadResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_DOWNLOAD_FILE, fileDownloadResponse));
     }
 
@@ -483,6 +492,21 @@ public class UriBuilderService {
                     return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                             "Errore AMAZON SdkClientException - " + sce.getMessage()));
                 });
+    }
+
+    private boolean canExecutePatch(GetFilePatchConfiguration configValue, UserConfiguration userConfiguration) {
+        switch (configValue) {
+            case ALL -> {
+                return true;
+            }
+            case CLIENT_SPECIFIC -> {
+                return Boolean.TRUE.equals(userConfiguration.getCanExecutePatch());
+            }
+            case NONE -> {
+                return false;
+            }
+            default -> throw new InvalidConfigurationException(configValue.getValue());
+        }
     }
 
     private String generateSecret() {

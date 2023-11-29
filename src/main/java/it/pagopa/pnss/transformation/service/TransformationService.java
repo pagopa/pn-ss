@@ -52,7 +52,7 @@ public class TransformationService {
     private String defaultInternalClientIdValue;
     @Value("${s3.queue.sign-queue-name}")
     private String signQueueName;
-    //Numero massimo di retry (2 step + 1)
+    // Numero massimo di retry. Due step: 1) firma del documento e inserimento nel bucket 2) delete del file dal bucket di staging, piu' un retry aggiuntivo di sicurezza
     private static final int MAX_RETRIES = 3;
 
     public TransformationService(ArubaSignServiceCall arubaSignServiceCall, S3ServiceImpl s3Service,

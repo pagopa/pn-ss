@@ -6,7 +6,6 @@ import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
@@ -20,8 +19,6 @@ import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
 import lombok.CustomLog;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,8 +26,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.*;
 
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -53,11 +48,12 @@ public class TransformationService {
     private final SqsService sqsService;
     @Value("${default.internal.x-api-key.value:#{null}}")
     private String defaultInternalApiKeyValue;
-
     @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
     private String defaultInternalClientIdValue;
     @Value("${s3.queue.sign-queue-name}")
     private String signQueueName;
+    //Numero massimo di retry (2 step + 1)
+    private static final int MAX_RETRIES = 3;
 
     public TransformationService(ArubaSignServiceCall arubaSignServiceCall, S3ServiceImpl s3Service,
                                  DocumentClientCall documentClientCall, BucketName bucketName, SqsService sqsService) {
@@ -100,7 +96,7 @@ public class TransformationService {
                 .then()
                 .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
                 .doOnError(throwable -> !(throwable instanceof InvalidStatusTransformationException || throwable instanceof IllegalTransformationException), throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()))
-                .onErrorResume(throwable -> newStagingBucketObject.getRetry() <= 3, throwable -> {
+                .onErrorResume(throwable -> newStagingBucketObject.getRetry() <= MAX_RETRIES, throwable -> {
                     newStagingBucketObject.setRetry(newStagingBucketObject.getRetry() + 1);
                     acknowledgment.acknowledge();
                     return sqsService.send(signQueueName, newStagingBucketObject).then();

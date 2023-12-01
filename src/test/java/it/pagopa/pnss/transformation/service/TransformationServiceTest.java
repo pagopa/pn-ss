@@ -4,9 +4,7 @@ import io.awspring.cloud.messaging.listener.Acknowledgment;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.exception.ArubaSignException;
-import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
-import it.pagopa.pnss.common.exception.IllegalTransformationException;
+import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
 import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -15,13 +13,11 @@ import it.pagopa.pnss.transformation.model.dto.BucketOriginDetail;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.model.dto.CreationDetail;
 import it.pagopa.pnss.transformation.model.dto.S3Object;
-import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
-import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
+import it.pagopa.pn.library.sign.service.ArubaSignService;
 import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.After;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,18 +27,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
-import org.springframework.test.annotation.DirtiesContext;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.TemporalAmount;
-import java.time.temporal.TemporalUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -60,7 +52,7 @@ public class TransformationServiceTest {
     @MockBean
     private DocumentClientCall documentClientCall;
     @MockBean
-    private ArubaSignServiceCall arubaSignServiceCall;
+    private ArubaSignService arubaSignService;
     @Autowired
     private BucketName bucketName;
     @Autowired
@@ -217,7 +209,7 @@ public class TransformationServiceTest {
         };
 
         mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-        when(arubaSignServiceCall.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.error(new ArubaSignException()));
+        when(arubaSignService.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.error(new ArubaSignException()));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).verifyComplete();
@@ -343,11 +335,11 @@ public class TransformationServiceTest {
         signReturnV2.setReturnCode("ok");
         signReturnV2.setStatus("ok");
         signReturnV2.setBinaryoutput(new byte[10]);
-        when(arubaSignServiceCall.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
+        when(arubaSignService.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
 
-        when(arubaSignServiceCall.xmlSignature(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
+        when(arubaSignService.xmlSignature(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
 
-        when(arubaSignServiceCall.pkcs7signV2(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
+        when(arubaSignService.pkcs7signV2(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
     }
 
     private void putObjectInBucket(String key, String bucketName, byte[] fileBytes) {

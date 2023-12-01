@@ -1,16 +1,17 @@
 package it.pagopa.pnss.transformation.rest.call.aruba;
 
-import it.pagopa.pnss.common.client.exception.ArubaSignException;
+import it.pagopa.pn.library.sign.service.impl.ArubaSignServiceImpl;
+import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import reactor.test.StepVerifier;
 
 @SpringBootTestWebEnv
-public class ArubaSignServiceCallImplTest {
+public class ArubaSignServiceImplTest {
 
     @Autowired
-    ArubaSignServiceCallImpl arubaSignServiceCall;
+    ArubaSignServiceImpl arubaSignServiceCall;
 
     private static final byte[] byteFile = "Stringa di prova".getBytes();
     private static final boolean marcatura = true;

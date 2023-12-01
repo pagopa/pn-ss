@@ -1,4 +1,4 @@
-package it.pagopa.pnss.transformation.configuration;
+package it.pagopa.pn.library.sign.configuration;
 
 import it.pagopa.pnss.transformation.wsdl.ArubaSignService;
 import it.pagopa.pnss.transformation.wsdl.ArubaSignServiceService;

@@ -1,4 +1,4 @@
-package it.pagopa.pnss.common.client.exception;
+package it.pagopa.pn.library.sign.exception.aruba;
 
 public class ArubaSignExceptionLimitCall extends RuntimeException {
 

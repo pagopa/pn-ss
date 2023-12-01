@@ -210,21 +210,6 @@ public class AwsConfiguration {
 
         return builder.build();
     }
-
-    @Bean
-    public SecretsManagerClient secretsManagerClient() {
-        SecretsManagerClientBuilder secretsManagerClient = SecretsManagerClient.builder()
-                                                                               .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
-                                                                               .region(Region.of(awsConfigurationProperties.regionCode()));
-
-        if (secretsManagerLocalStackEndpoint != null) {
-            secretsManagerClient.endpointOverride(URI.create(secretsManagerLocalStackEndpoint));
-        }
-
-        return secretsManagerClient.build();
-    }
-
-
     @Bean
     public TaskExecutor taskExecutor() {
         return new SimpleAsyncTaskExecutor(); // Or use another one of your liking

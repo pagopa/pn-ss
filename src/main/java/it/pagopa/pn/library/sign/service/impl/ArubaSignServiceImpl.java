@@ -1,17 +1,15 @@
-package it.pagopa.pnss.transformation.rest.call.aruba;
+package it.pagopa.pn.library.sign.service.impl;
 
 import com.sun.xml.ws.encoding.xml.XMLMessage;
-import it.pagopa.pnss.common.client.exception.ArubaSignException;
-import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
-import it.pagopa.pnss.configurationproperties.retry.ArubaRetryStrategyProperties;
-import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
-import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimeMark;
+import it.pagopa.pn.library.sign.service.ArubaSignService;
+import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
+import it.pagopa.pn.library.sign.configurationproperties.ArubaRetryStrategyProperties;
+import it.pagopa.pn.library.sign.pojo.ArubaSecretValue;
+import it.pagopa.pn.library.sign.pojo.IdentitySecretTimeMark;
 import it.pagopa.pnss.transformation.wsdl.*;
 import jakarta.activation.DataHandler;
-import jakarta.mail.util.ByteArrayDataSource;
 import jakarta.xml.ws.Response;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -29,9 +27,9 @@ import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @Service
 @CustomLog
-public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
+public class ArubaSignServiceImpl implements ArubaSignService {
 
-    private final ArubaSignService arubaSignService;
+    private final it.pagopa.pnss.transformation.wsdl.ArubaSignService arubaSignService;
     private final IdentitySecretTimeMark identitySecretTimemark;
     private final ArubaSecretValue arubaSecretValue;
     private final Retry arubaRetryStrategy;
@@ -55,8 +53,8 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
         }
     });
 
-    public ArubaSignServiceCallImpl(ArubaSignService arubaSignService, IdentitySecretTimeMark identitySecretTimemark,
-                                    ArubaSecretValue arubaSecretValue, ArubaRetryStrategyProperties arubaRetryStrategyProperties, @Value("${aruba.sign.timeout}") String arubaSignTimeout) {
+    public ArubaSignServiceImpl(it.pagopa.pnss.transformation.wsdl.ArubaSignService arubaSignService, IdentitySecretTimeMark identitySecretTimemark,
+                                ArubaSecretValue arubaSecretValue, ArubaRetryStrategyProperties arubaRetryStrategyProperties, @Value("${aruba.sign.timeout}") String arubaSignTimeout) {
         this.arubaSignService = arubaSignService;
         this.identitySecretTimemark = identitySecretTimemark;
         this.arubaSecretValue = arubaSecretValue;

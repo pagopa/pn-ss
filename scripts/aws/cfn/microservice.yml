@@ -363,6 +363,11 @@ Parameters:
     Default: 'NONE'
     AllowedValues: [ ALL,CLIENT_SPECIFIC,NONE ]
 
+  PnSsTaskExecutionPoolMaxSize:
+    Type: String
+    Description: 'SpringBoot configuration Task Execution Max Pool Siza'
+    Default: '512'
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -435,6 +440,7 @@ Resources:
         ContainerEnvEntry39: !Sub 'PnSsUriBuilderGetFileWithPatchConfiguration=${PnSsUriBuilderGetFileWithPatchConfiguration}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry42: !Sub 'PnSsTaskExecutionPoolMaxSize=${PnSsTaskExecutionPoolMaxSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

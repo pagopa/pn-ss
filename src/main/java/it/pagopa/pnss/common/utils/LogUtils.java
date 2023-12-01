@@ -18,6 +18,7 @@ public class LogUtils {
     public static final String INVOKING_INTERNAL_SERVICE = "Invoking internal service '{}' '{}'. Waiting Sync response.";
     public static final String CLIENT_METHOD_INVOCATION = "Client method '{}' - args: '{}'";
     public static final String CLIENT_METHOD_RETURN = "Return client method: {} = {}";
+    public static final String CLIENT_METHOD_RETURN_WITH_ERROR = "Return client method '{}' with error: {} - {}";
     public static final String ARG = " - '{}'";
 
     //URI BUILDER
@@ -92,5 +93,13 @@ public class LogUtils {
     public static final String SIGN_PDF_DOCUMENT = "ArubaSignServiceCall.signPdfDocument()";
     public static final String XML_SIGNATURE = "ArubaSignServiceCall.xmlSignature()";
     public static final String PKCS_7_SIGN_V2 = "ArubaSignServiceCall.pkcs7signV2()";
+
+    //SQS
+    public static final String INSERTING_DATA_IN_SQS = "Inserting data {} in SQS '{}'";
+    public static final String INSERTED_DATA_IN_SQS = "Inserted data in SQS '{}'";
+
+    //RETRY
+    public static final String RETRY_ATTEMPT = "Retry attempt number '{}' caused by : {} - {}";
+
 
 }

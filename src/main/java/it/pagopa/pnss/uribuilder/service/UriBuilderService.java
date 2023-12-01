@@ -341,20 +341,29 @@ public class UriBuilderService {
                 .flatMap(tuple -> {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
                     Document document = tuple.getT2();
-                    if (canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()) && (document.getDocumentState().equalsIgnoreCase(BOOKED) || StringUtils.isBlank(document.getRetentionUntil()))) {
-                        log.debug(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
+                    boolean isBooked = document.getDocumentState().equalsIgnoreCase(BOOKED);
+                    boolean hasRetentionUntilNull = StringUtils.isBlank(document.getRetentionUntil());
+                    if (isBooked || hasRetentionUntilNull) {
+                        log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
+
                         return s3Service.headObject(fileKey, bucketName.ssHotName())
                                 .onErrorResume(NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
-                                .flatMap(headObjectResponse -> {
+                                .map(headObjectResponse -> {
                                     DocumentChanges documentChanges;
-                                    if (document.getDocumentState().equalsIgnoreCase(BOOKED)) {
+                                    if (isBooked) {
                                         log.debug(">> after check presence in createUriForDownloadFile {}", headObjectResponse);// HeadObjectResponse
                                         documentChanges = fixBookedDocument(document, headObjectResponse);
-                                    } else
-                                        documentChanges = new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate()));
-                                    return documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
-                                            .map(DocumentResponse::getDocument);
-                                });
+                                    } else {
+                                        String retentionUntil = DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate());
+                                        document.setRetentionUntil(retentionUntil);
+                                        documentChanges = new DocumentChanges().retentionUntil(retentionUntil);
+                                    }
+                                    return documentChanges;
+                                })
+                                .filter(documentChanges -> !isBooked || canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()))
+                                .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
+                                        .map(DocumentResponse::getDocument))
+                                .defaultIfEmpty(document);
                     }
                     else return Mono.just(document);
                 })
@@ -368,20 +377,32 @@ public class UriBuilderService {
 
         DocumentChanges documentChanges = new DocumentChanges();
 
-        if (document.getCheckSum() == null) {
-            if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {
-                documentChanges.setCheckSum(hor.sseCustomerKeyMD5());
-            } else if (ChecksumEnum.SHA256.equals(document.getDocumentType().getChecksum())) {
-                documentChanges.setCheckSum(hor.checksumSHA256());
-            }
-        }
-        if (document.getContentLenght() == null && hor.contentLength() != null) {
-            documentChanges.setContentLenght(new BigDecimal(hor.contentLength()));
+        String checkSum;
+        if (ChecksumEnum.MD5.equals(document.getDocumentType().getChecksum())) {
+            checkSum = hor.sseCustomerKeyMD5();
+            document.setCheckSum(checkSum);
+            documentChanges.setCheckSum(checkSum);
+        } else if (ChecksumEnum.SHA256.equals(document.getDocumentType().getChecksum())) {
+            checkSum = hor.checksumSHA256();
+            document.setCheckSum(checkSum);
+            documentChanges.setCheckSum(checkSum);
         }
 
-        documentChanges.setRetentionUntil(DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate()));
+        BigDecimal contentLenght = new BigDecimal(hor.contentLength());
+        document.setContentLenght(contentLenght);
+        documentChanges.setContentLenght(contentLenght);
+
+        String retentionUntil = DATE_TIME_FORMATTER.format(hor.objectLockRetainUntilDate());
+        document.setRetentionUntil(retentionUntil);
+        documentChanges.setRetentionUntil(retentionUntil);
+
+        OffsetDateTime lastStatusChangeTimestamp = OffsetDateTime.now();
+        document.setLastStatusChangeTimestamp(lastStatusChangeTimestamp);
+        documentChanges.setLastStatusChangeTimestamp(lastStatusChangeTimestamp);
+
+        document.setDocumentState(AVAILABLE);
         documentChanges.setDocumentState(AVAILABLE);
-        documentChanges.setLastStatusChangeTimestamp(OffsetDateTime.now());
+
         return documentChanges;
     }
 
@@ -395,16 +416,18 @@ public class UriBuilderService {
         return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly)
                 .map(fileDownloadInfo -> new FileDownloadResponse().download(fileDownloadInfo))
                 .switchIfEmpty(Mono.just(new FileDownloadResponse()))
-                .map(fileDownloadResponse ->
-                        fileDownloadResponse
-                                .checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
-                                .contentLength(doc.getContentLenght())
-                                .documentStatus(doc.getDocumentLogicalState() != null ? doc.getDocumentLogicalState() : "")
-                                .retentionUntil(doc.getRetentionUntil() != null ? Date.from(Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()))) : null)
-                                .contentType(doc.getContentType())
-                                .documentType(doc.getDocumentType().getTipoDocumento())
-                                .key(fileKey)
-                                .versionId(null))
+                .map(fileDownloadResponse -> {
+                    var logicalState = doc.getDocumentType().getStatuses().entrySet().stream().filter(entry -> entry.getValue().getTechnicalState().equals(doc.getDocumentState())).map(Map.Entry::getKey).findFirst();
+                    return fileDownloadResponse
+                            .checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
+                            .contentLength(doc.getContentLenght())
+                            .documentStatus(logicalState.orElse(""))
+                            .retentionUntil(doc.getRetentionUntil() != null ? Date.from(Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()))) : null)
+                            .contentType(doc.getContentType())
+                            .documentType(doc.getDocumentType().getTipoDocumento())
+                            .key(fileKey)
+                            .versionId(null);
+                })
                 .onErrorResume(DateTimeException.class, throwable ->
                 {
                     log.error("getFileDownloadResponse() : errore nel parsing o nella formattazione della data = {}", throwable.getMessage(), throwable);

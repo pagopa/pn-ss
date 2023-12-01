@@ -45,6 +45,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -524,9 +525,11 @@ class UriBuilderServiceDownloadTest {
         DocumentType type = new DocumentType();
         type.setTipoDocumento(d.getDocumentType());
         type.setChecksum(DocumentType.ChecksumEnum.MD5);
+        type.setStatuses(Map.of(SAVED, new CurrentStatus().technicalState(AVAILABLE)));
         doc.setDocumentType(type);
         doc.setDocumentState(d.getDocumentState());
         doc.setDocumentLogicalState(d.getDocumentLogicalState());
+        doc.setRetentionUntil(OffsetDateTime.now().format(DATE_TIME_FORMATTER));
         documentResponse.setDocument(doc);
         Mono<DocumentResponse> docRespEntity = Mono.just(documentResponse);
         doReturn(docRespEntity).when(documentClientCall).getDocument(docId);

@@ -187,9 +187,7 @@ public class RetentionServiceImpl implements RetentionService {
                        if (documentChanges.getRetentionUntil() != null && !documentChanges.getRetentionUntil().isBlank() &&
                            !documentChanges.getRetentionUntil().equalsIgnoreCase("null")) {
 
-                           LocalDateTime localDateTime = LocalDateTime.parse(documentChanges.getRetentionUntil(), FORMATTER);
-                           ZonedDateTime zonedDateTime = localDateTime.atZone(ZoneId.systemDefault());
-                           Instant parsedRetentionUntil = zonedDateTime.toInstant();
+                           Instant parsedRetentionUntil = Instant.parse(documentChanges.getRetentionUntil());
 
                            if (headObjectResponse.objectLockRetainUntilDate().truncatedTo(ChronoUnit.SECONDS).equals(parsedRetentionUntil))
                                return Mono.just(documentEntity);

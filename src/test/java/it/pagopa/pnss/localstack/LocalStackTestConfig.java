@@ -186,7 +186,7 @@ public class LocalStackTestConfig {
                 .rule(ObjectLockRule.builder().defaultRetention(DefaultRetention.builder().days(1).mode(ObjectLockRetentionMode.GOVERNANCE).build()).build())
                 .build();
 
-        LifecycleRule lifecycleRule = LifecycleRule.builder().transitions(builder -> builder.storageClass(StorageClass.GLACIER.name()).days(1)).build();
+        LifecycleRule lifecycleRule = LifecycleRule.builder().status(ExpirationStatus.ENABLED).expiration(builder -> builder.days(120)).transitions(builder -> builder.storageClass(StorageClass.GLACIER.name()).days(1)).build();
         BucketLifecycleConfiguration bucketLifecycleConfiguration = BucketLifecycleConfiguration.builder().rules(lifecycleRule).build();
 
         bucketNames.forEach(bucket -> {

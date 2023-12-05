@@ -1,6 +1,7 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static org.mockito.Mockito.doReturn;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.io.ByteArrayOutputStream;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
+import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
@@ -25,14 +27,18 @@ import it.pagopa.pnss.common.retention.RetentionService;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import lombok.CustomLog;
 import it.pagopa.pnss.transformation.service.S3Service;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -69,7 +75,7 @@ public class DocumentInternalApiControllerTest {
     @Autowired
     private BucketName bucketName;
 	@Autowired
-	private S3Service s3Service;
+	private S3Client s3TestClient;
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
@@ -86,21 +92,21 @@ public class DocumentInternalApiControllerTest {
 	@MockBean
 	private CallMacchinaStati callMacchinaStati;
 	@MockBean
-	private RetentionService retentionService;
+	private ConfigurationApiCall configurationApiCall;
 
 	private static void insertDocumentEntity(String documentKey) {
 		log.info("execute insertDocumentEntity()");
 
 		List<String> allowedStatusTransitions1 = new ArrayList<>();
-		allowedStatusTransitions1.add("AVAILABLE");
+		allowedStatusTransitions1.add(AVAILABLE);
 
 		CurrentStatusEntity currentStatus1 = new CurrentStatusEntity();
 		currentStatus1.setStorage(DOCTYPE_ID_LEGAL_FACTS);
 		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
-		currentStatus1.setTechnicalState("SAVED");
+		currentStatus1.setTechnicalState(AVAILABLE);
 
 		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
-		statuses1.put("SAVED", currentStatus1);
+		statuses1.put(SAVED, currentStatus1);
 
 		DocTypeEntity docTypeEntity = new DocTypeEntity();
 		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
@@ -112,8 +118,8 @@ public class DocumentInternalApiControllerTest {
 		documentEntity.setDocumentType(docTypeEntity);
 		documentEntity.setContentLenght(new BigDecimal(50));
 		documentEntity.setLastStatusChangeTimestamp(OffsetDateTime.now());
-		documentEntity.setDocumentState(SAVED);
-		documentEntity.setDocumentLogicalState(AVAILABLE);
+		documentEntity.setDocumentState(BOOKED);
+		documentEntity.setDocumentLogicalState(PRELOADED);
 		dynamoDbTable.putItem(builder -> builder.item(documentEntity));
 	}
 
@@ -162,7 +168,7 @@ public class DocumentInternalApiControllerTest {
 		log.info("execute createDocument() : documentInput : {}", documentInput);
 
 		documentChanges = new DocumentChanges();
-		documentChanges.setDocumentState(SAVED);
+		documentChanges.setDocumentState(AVAILABLE);
 		documentChanges.setContentLenght(new BigDecimal(50));
 	}
 
@@ -262,21 +268,20 @@ public class DocumentInternalApiControllerTest {
 
 		log.warn("DocumentInternalApiControllerTest.patchItem() : START");
 
-		EntityExchangeResult<DocumentResponse> documentInDb = webTestClient.get()
-				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentInput.getDocumentKey()))
-				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
-				.returnResult();
-		log.info("\n Test 6 (patchItem) : document before {}", documentInDb.getResponseBody().getDocument());
-
-		log.info("\n Test 6 (patchItem) : documentChanges {}", documentChanges);
-
 		addFileToBucket(PARTITION_ID_DEFAULT);
-
+		Map<String, DocumentTypeConfigurationStatuses> statuses = new HashMap<>();
+		statuses.put(SAVED, new DocumentTypeConfigurationStatuses().storage(STORAGE_TYPE));
+		DocumentTypeConfiguration documentTypesConfiguration = new DocumentTypeConfiguration()
+				.name(DOCTYPE_ID_LEGAL_FACTS)
+				.statuses(statuses);
+		StorageConfiguration storageConfiguration = new StorageConfiguration().name(STORAGE_TYPE);
+		DocumentTypesConfigurations documentTypesConfigurations = new DocumentTypesConfigurations()
+				.addDocumentsTypesItem(documentTypesConfiguration)
+						.addStorageConfigurationsItem(storageConfiguration);
 		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
-		var docEntity=new DocumentEntity();
+		var docEntity = new DocumentEntity();
 		docEntity.setDocumentKey(documentInput.getDocumentKey());
-		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(docEntity));
-
+     	when(configurationApiCall.getDocumentsConfigs(anyString(), anyString())).thenReturn(Mono.just(documentTypesConfigurations));
 		webTestClient.patch()
 				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
 				.accept(APPLICATION_JSON)
@@ -289,11 +294,7 @@ public class DocumentInternalApiControllerTest {
 				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
 				.returnResult();
 
-		log.info("\n Test 6 (patchItem) : documentUpdated : {} \n", documentUpdated.getResponseBody().getDocument());
-
-		Assertions.assertEquals(documentChanges.getContentLenght(),
-				documentUpdated.getResponseBody().getDocument().getContentLenght());
-		log.info("\n Test 6 (patchItem) passed \n");
+		Assertions.assertEquals(documentChanges.getContentLenght(), documentUpdated.getResponseBody().getDocument().getContentLenght());
 	}
 
 	@Test
@@ -381,7 +382,12 @@ public class DocumentInternalApiControllerTest {
     }
 
 	private void addFileToBucket(String fileName) {
-		s3Service.putObject(fileName, readPdfDocoument(), bucketName.ssStageName()).block();
+		byte[] fileBytes = readPdfDocoument();
+		PutObjectRequest request = PutObjectRequest.builder()
+				.bucket(bucketName.ssHotName())
+				.key(fileName)
+				.contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(fileBytes)))).build();
+		s3TestClient.putObject(request, RequestBody.fromBytes(fileBytes));
 	}
 
     private byte[] readPdfDocoument() {

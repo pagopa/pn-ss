@@ -1,7 +1,7 @@
 package it.pagopa.pnss.uribuilder;
 
 import com.amazonaws.SdkClientException;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentInput;
 import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
@@ -11,9 +11,9 @@ import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
+import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
-import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -33,19 +33,16 @@ import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.time.Duration;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.Map;
 
 import static it.pagopa.pnss.common.DocTypesConstant.PN_AAR;
+import static it.pagopa.pnss.common.UserConfigurationConstant.PN_DELIVERY;
+import static it.pagopa.pnss.common.UserConfigurationConstant.PN_TEST;
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -69,13 +66,13 @@ class UriBuilderServiceDownloadTest {
     BucketName bucketName;
     @Autowired
     S3Client s3TestClient;
+    @Autowired
+    DocumentService documentService;
     @MockBean
     CallMacchinaStati callMacchinaStati;
     @SpyBean
     S3Service s3Service;
-    private static final String CLIENT_ID = "CLIENT_ID";
-    private static final String UNAUTHORIZED_CLIENT_ID = "UNAUTHORIZED_CLIENT_ID";
-    private static final String X_API_KEY_VALUE = "apiKey_value";
+    private static final String X_API_KEY_VALUE = "pn-test_api_key";
     private static final String X_QUERY_PARAM_URL_VALUE = "queryParamPresignedUrlTraceId_value";
     private static final String DOCUMENT_KEY_AVAILABLE = "DOCUMENT_KEY_AVAILABLE";
     private static final String DOCUMENT_KEY_FREEZED = "DOCUMENT_KEY_FREEZED";
@@ -96,46 +93,27 @@ class UriBuilderServiceDownloadTest {
     }
 
     private WebTestClient.ResponseSpec fileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
-        return callRequestHeadersSpec(requestIdx, CLIENT_ID, X_API_KEY_VALUE, metadataOnly)
+        return callRequestHeadersSpec(requestIdx, PN_TEST, X_API_KEY_VALUE, metadataOnly)
                 .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
                 .exchange();
     }
 
     private WebTestClient.ResponseSpec noTraceIdFileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
-        return callRequestHeadersSpec(requestIdx, CLIENT_ID, X_API_KEY_VALUE, metadataOnly)
+        return callRequestHeadersSpec(requestIdx, PN_TEST, X_API_KEY_VALUE, metadataOnly)
                 .exchange();
     }
 
-    private static DynamoDbTable<UserConfigurationEntity> userConfigurationEntityDynamoDbTable;
     private static DynamoDbTable<DocumentEntity> documentEntityDynamoDbTable;
-    private static DynamoDbTable<DocTypeEntity> docTypeEntityDynamoDbTable;
 
     @BeforeAll
-    public static void init(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient, @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName, @Value("${default.internal.x-api-key.value}") String defaultInternalApiKeyValue, @Value("${default.internal.header.x-pagopa-safestorage-cx-id}") String defaultInternalClientIdValue) {
-        userConfigurationEntityDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.anagraficaClientName(), TableSchema.fromBean(UserConfigurationEntity.class));
+    public static void init(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient, @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
         documentEntityDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
-        docTypeEntityDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
-
-        insertUserConfiguration(CLIENT_ID, X_API_KEY_VALUE, PN_AAR);
-        insertUserConfiguration(UNAUTHORIZED_CLIENT_ID, X_API_KEY_VALUE);
-        insertUserConfiguration(defaultInternalClientIdValue, defaultInternalApiKeyValue, PN_AAR);
 
         insertDocument(DOCUMENT_KEY_AVAILABLE, AVAILABLE, RETENTION_UNTIL);
         insertDocument(DOCUMENT_KEY_FREEZED, FREEZED, RETENTION_UNTIL);
         insertDocument(DOCUMENT_KEY_DELETED, DELETED, RETENTION_UNTIL);
         insertDocument(DOCUMENT_KEY_STAGED, STAGED, RETENTION_UNTIL);
         insertDocument(DOCUMENT_KEY_RETENTION_NULL, AVAILABLE, null);
-    }
-
-    private static void insertUserConfiguration(String name, String apiKey, String... authorizedDocTypes) {
-        UserConfigurationEntity userConfigurationEntity = new UserConfigurationEntity();
-        userConfigurationEntity.setName(name);
-        userConfigurationEntity.setApiKey(apiKey);
-        userConfigurationEntity.setCanRead(Arrays.stream(authorizedDocTypes).toList());
-        userConfigurationEntity.setCanCreate(Arrays.stream(authorizedDocTypes).toList());
-        userConfigurationEntity.setCanModifyStatus(Arrays.stream(authorizedDocTypes).toList());
-        userConfigurationEntity.setCanExecutePatch(true);
-        userConfigurationEntityDynamoDbTable.putItem(userConfigurationEntity);
     }
 
     private static void insertDocument(String documentKey, String documentState, String retentionUntil) {
@@ -156,131 +134,139 @@ class UriBuilderServiceDownloadTest {
         documentEntityDynamoDbTable.putItem(documentEntity);
     }
 
-    private void changeDocumentState(String documentKey, String documentState) {
-        DocumentEntity documentEntity = new DocumentEntity();
-        documentEntity.setDocumentKey(documentKey);
-        documentEntity.setDocumentState(documentState);
-        documentEntityDynamoDbTable.updateItem(documentEntity);
+    @Nested
+    class StatusAvailable {
+        @Test
+        void testMissingTraceIdHeader() {
+            noTraceIdFileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, true).expectStatus().isBadRequest();
+        }
+
+        @Test
+        void testUrlGeneratoAvailableOk() {
+            s3Service.putObject(DOCUMENT_KEY_AVAILABLE, new byte[10], bucketName.ssHotName()).block();
+            fileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, false).expectStatus().isOk();
+            deleteObjectFromBucket(DOCUMENT_KEY_AVAILABLE);
+        }
+
+        @Test
+        void testUrlGeneratoAvailableNotInBucket() {
+            AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("NoSuchKey").build();
+            Mockito.doReturn(Mono.error(S3Exception.builder().awsErrorDetails(awsErrorDetails).build())).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
+            fileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, false).expectStatus().isNotFound();
+        }
+
+        @Test
+        void testUrlGeneratoGenericS3Exception() {
+            AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("Error").build();
+            Mockito.doReturn(Mono.error(S3Exception.builder().awsErrorDetails(awsErrorDetails).statusCode(403).build())).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
+            fileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, false).expectStatus().isForbidden();
+        }
+
+        @Test
+        void testUrlGeneratoAvailableSdkClientException() {
+            Mockito.doReturn(Mono.error(new SdkClientException("Error"))).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
+            fileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, false).expectStatus().is5xxServerError();
+        }
+
+        @Test
+        void testUrlGeneratoInvalidClientId() {
+            callRequestHeadersSpec(DOCUMENT_KEY_AVAILABLE, "INVALID_CLIENT_ID", X_API_KEY_VALUE, false)
+                    .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                    .exchange().expectStatus().isForbidden();
+        }
+
+        @Test
+        void testUrlGeneratoInvalidApiKey() {
+            callRequestHeadersSpec(DOCUMENT_KEY_AVAILABLE, PN_TEST, "INVALID_API_KEY", false)
+                    .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                    .exchange().expectStatus().isForbidden();
+        }
+
+        @Test
+        void testUrlGeneratoUnauthorizedClientId() {
+            callRequestHeadersSpec(DOCUMENT_KEY_AVAILABLE, PN_DELIVERY, X_API_KEY_VALUE, false)
+                    .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                    .exchange().expectStatus().isForbidden();
+        }
+
+        @Test
+        void testUrlGeneratoMetadataOnlyOk() {
+            fileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, true).expectStatus().isOk();
+        }
+
+        @Test
+        void testUrlGeneratoAvailableRetentionNull() {
+            s3Service.putObject(DOCUMENT_KEY_RETENTION_NULL, new byte[10], bucketName.ssHotName()).block();
+            fileDownloadTestCall(DOCUMENT_KEY_RETENTION_NULL, false).expectStatus().isOk();
+            deleteObjectFromBucket(DOCUMENT_KEY_RETENTION_NULL);
+        }
+
     }
 
-    @Test
-    void testMissingTraceIdHeader() {
-        noTraceIdFileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, true).expectStatus().isBadRequest();
+    @Nested
+    class StatusBooked {
+        @BeforeEach
+        void beforeEach() {
+            documentService.insertDocument(new DocumentInput().documentKey(DOCUMENT_KEY_BOOKED).documentState(BOOKED).documentType(PN_AAR).retentionUntil(RETENTION_UNTIL)).block();
+        }
+
+        @AfterEach
+        void afterEach() {
+            documentService.deleteDocument(DOCUMENT_KEY_BOOKED).block();
+        }
+
+        @Test
+        void testUrlGeneratoBookedOk() {
+            s3Service.putObject(DOCUMENT_KEY_BOOKED, new byte[10], bucketName.ssHotName()).block();
+            when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
+            fileDownloadTestCall(DOCUMENT_KEY_BOOKED, false).expectStatus().isOk();
+            s3Service.deleteObject(DOCUMENT_KEY_BOOKED, bucketName.ssHotName()).block();
+        }
+
+        @Test
+        void testUrlGeneratoBookedNotInBucket() {
+            when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
+            fileDownloadTestCall(DOCUMENT_KEY_BOOKED, false).expectStatus().isNotFound();
+        }
     }
 
-    @Test
-    void testUrlGeneratoAvailableOk() {
-        putObjectInBucket(DOCUMENT_KEY_AVAILABLE, StorageClass.STANDARD);
-        fileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, false).expectStatus().isOk();
-        deleteObjectFromBucket(DOCUMENT_KEY_AVAILABLE);
-    }
+    @Nested
+    class StatusFreezed {
+        @Test
+        void testUrlGeneratoFreezedOk() {
+            putObjectInBucket(DOCUMENT_KEY_FREEZED, StorageClass.GLACIER);
+            fileDownloadTestCall(DOCUMENT_KEY_FREEZED, false).expectStatus().isOk();
+            deleteObjectFromBucket(DOCUMENT_KEY_FREEZED);
+        }
 
-    @Test
-    void testUrlGeneratoAvailableRetentionNull() {
-        putObjectInBucket(DOCUMENT_KEY_RETENTION_NULL, StorageClass.STANDARD);
-        fileDownloadTestCall(DOCUMENT_KEY_RETENTION_NULL, false).expectStatus().isOk();
-        deleteObjectFromBucket(DOCUMENT_KEY_RETENTION_NULL);
-    }
+        //In localstack l'eccezione con il messaggio "RestoreAlreadyInProgress" non viene lanciata. La chiamata restoreObject deve quindi essere mockata.
+        @Test
+        void testUrlGeneratoFreezedRestoreAlreadyInProgress() {
+            AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("RestoreAlreadyInProgress").build();
+            when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
+            fileDownloadTestCall(DOCUMENT_KEY_FREEZED, false).expectStatus().isOk();
+        }
 
-    @Test
-    void testUrlGeneratoAvailableNotInBucket() {
-        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("NoSuchKey").build();
-        Mockito.doReturn(Mono.error(S3Exception.builder().awsErrorDetails(awsErrorDetails).build())).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
-        fileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, false).expectStatus().isNotFound();
-    }
+        //In localstack l'eccezione con il messaggio "NoSuchKey" non viene lanciata. La chiamata restoreObject deve quindi essere mockata.
+        @Test
+        void testUrlGeneratoFreezedNotInBucket() {
+            AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("NoSuchKey").build();
+            when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
+            fileDownloadTestCall(DOCUMENT_KEY_FREEZED, false).expectStatus().isNotFound();
+        }
 
-    @Test
-    void testUrlGeneratoGenericS3Exception() {
-        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("Error").build();
-        Mockito.doReturn(Mono.error(S3Exception.builder().awsErrorDetails(awsErrorDetails).statusCode(403).build())).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
-        fileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, false).expectStatus().isForbidden();
-    }
+        @Test
+        void testUrlGeneratoFreezedGenericAwsException() {
+            AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("Error").build();
+            when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).statusCode(403).build()));
+            fileDownloadTestCall(DOCUMENT_KEY_FREEZED, false).expectStatus().isForbidden();
+        }
 
-    @Test
-    void testUrlGeneratoAvailableSdkClientException() {
-        Mockito.doReturn(Mono.error(new SdkClientException("Error"))).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
-        fileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, false).expectStatus().is5xxServerError();
-    }
-
-    @Test
-    void testUrlGeneratoInvalidClientId() {
-        callRequestHeadersSpec(DOCUMENT_KEY_AVAILABLE, "INVALID_CLIENT_ID", X_API_KEY_VALUE, false)
-                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
-                .exchange().expectStatus().isForbidden();
-    }
-
-    @Test
-    void testUrlGeneratoInvalidApiKey() {
-        callRequestHeadersSpec(DOCUMENT_KEY_AVAILABLE, CLIENT_ID, "INVALID_API_KEY", false)
-                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
-                .exchange().expectStatus().isForbidden();
-    }
-
-    @Test
-    void testUrlGeneratoUnauthorizedClientId() {
-        callRequestHeadersSpec(DOCUMENT_KEY_AVAILABLE, UNAUTHORIZED_CLIENT_ID, X_API_KEY_VALUE, false)
-                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
-                .exchange().expectStatus().isForbidden();
-    }
-
-    @Test
-    void testUrlGeneratoMetadataOnlyOk() {
-        fileDownloadTestCall(DOCUMENT_KEY_AVAILABLE, true).expectStatus().isOk();
-    }
-
-
-    @Test
-    void testUrlGeneratoFreezedOk() {
-        putObjectInBucket(DOCUMENT_KEY_FREEZED, StorageClass.GLACIER);
-        fileDownloadTestCall(DOCUMENT_KEY_FREEZED, false).expectStatus().isOk();
-        deleteObjectFromBucket(DOCUMENT_KEY_FREEZED);
-    }
-
-    //In localstack l'eccezione con il messaggio "RestoreAlreadyInProgress" non viene lanciata.
-    @Test
-    void testUrlGeneratoFreezedRestoreAlreadyInProgress() {
-        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("RestoreAlreadyInProgress").build();
-        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
-        fileDownloadTestCall(DOCUMENT_KEY_FREEZED, false).expectStatus().isOk();
-    }
-
-    //In localstack l'eccezione con il messaggio "NoSuchKey" non viene lanciata.
-    @Test
-    void testUrlGeneratoFreezedNotInBucket() {
-        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("NoSuchKey").build();
-        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
-        fileDownloadTestCall(DOCUMENT_KEY_FREEZED, false).expectStatus().isNotFound();
-    }
-
-    @Test
-    void testUrlGeneratoFreezedGenericAwsException() {
-        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("Error").build();
-        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).statusCode(403).build()));
-        fileDownloadTestCall(DOCUMENT_KEY_FREEZED, false).expectStatus().isForbidden();
-    }
-
-    @Test
-    void testUrlGeneratoSdkClientException() {
-        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(new SdkClientException("Error")));
-        fileDownloadTestCall(DOCUMENT_KEY_FREEZED, false).expectStatus().is5xxServerError();
-    }
-
-    @Test
-    void testUrlGeneratoBookedOk() {
-        insertDocument(DOCUMENT_KEY_BOOKED, BOOKED, RETENTION_UNTIL);
-        putObjectInBucket(DOCUMENT_KEY_BOOKED, StorageClass.STANDARD);
-        when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
-        fileDownloadTestCall(DOCUMENT_KEY_BOOKED, false).expectStatus().isOk();
-        deleteObjectFromBucket(DOCUMENT_KEY_BOOKED);
-        documentEntityDynamoDbTable.deleteItem(Key.builder().partitionValue(DOCUMENT_KEY_BOOKED).build());
-    }
-
-    @Test
-    void testUrlGeneratoBookedNotInBucket() {
-        insertDocument(DOCUMENT_KEY_BOOKED, BOOKED, RETENTION_UNTIL);
-        when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
-        fileDownloadTestCall(DOCUMENT_KEY_BOOKED, false).expectStatus().isNotFound();
-        documentEntityDynamoDbTable.deleteItem(Key.builder().partitionValue(DOCUMENT_KEY_BOOKED).build());
+        @Test
+        void testUrlGeneratoSdkClientException() {
+            when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(new SdkClientException("Error")));
+            fileDownloadTestCall(DOCUMENT_KEY_FREEZED, false).expectStatus().is5xxServerError();
+        }
     }
 
     @Test

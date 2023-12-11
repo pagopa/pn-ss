@@ -1,5 +1,11 @@
 package it.pagopa.pnss.localstack;
 
+import static it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType.ChecksumEnum.*;
+import static it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType.InformationClassificationEnum.C;
+import static it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType.InformationClassificationEnum.HC;
+import static it.pagopa.pnss.common.DocTypesConstant.*;
+import static it.pagopa.pnss.common.UserConfigurationConstant.*;
+import static it.pagopa.pnss.common.constant.Constant.*;
 import static it.pagopa.pnss.common.constant.QueueNameConstant.ALL_QUEUE_NAME_LIST;
 import static it.pagopa.pnss.localstack.LocalStackUtils.DEFAULT_LOCAL_STACK_TAG;
 import static java.util.Map.entry;
@@ -8,11 +14,18 @@ import static org.testcontainers.containers.localstack.LocalStackContainer.Servi
 import static software.amazon.awssdk.services.dynamodb.model.TableStatus.ACTIVE;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.CurrentStatus;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
+import it.pagopa.pnss.repositorymanager.entity.*;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
+import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
 import lombok.CustomLog;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -23,8 +36,6 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
-import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.exception.DynamoDbInitTableCreationException;
 import software.amazon.awssdk.core.internal.waiters.ResponseOrException;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -60,6 +71,17 @@ public class LocalStackTestConfig {
     @Autowired
     private BucketName bucketName;
 
+    @Autowired
+    private DocTypesService docTypesService;
+
+    @Autowired
+    private UserConfigurationService userConfigurationService;
+
+    @Autowired
+    private RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName;
+
+    private static DynamoDbTable<UserConfigurationEntity> userConfigurationEntityDynamoDbTable;
+    private static DynamoDbTable<DocTypeEntity> docTypeEntityDynamoDbTable;
 
     static LocalStackContainer localStackContainer = new LocalStackContainer(DockerImageName.parse(DEFAULT_LOCAL_STACK_TAG)).withServices(
             SQS,
@@ -155,18 +177,22 @@ public class LocalStackTestConfig {
                 tableName).build()).matched();
         responseOrException.response().orElseThrow(() -> new DynamoDbInitTableCreationException(tableName));
 
+        if (tableName.equals(repositoryManagerDynamoTableName.anagraficaClientName()))
+            setupUserConfigurationTable();
+        else if (tableName.equals(repositoryManagerDynamoTableName.tipologieDocumentiName()))
+            setupDocTypesTable();
     }
 
     private void initDynamoDb() {
+        log.info("<-- START Dynamo db init-->");
+
         Map<String, Class<?>> tableNameWithEntityClass =
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),
                         entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), it.pagopa.pnss.repositorymanager.entity.DocTypeEntity.class),
                         entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class));
 
         tableNameWithEntityClass.forEach((tableName, entityClass) -> {
-            log.info("<-- START initLocalStack -->");
             try {
-                log.info("<-- START Dynamo db init-->");
                 DescribeTableResponse describeTableResponse = dynamoDbClient.describeTable(builder -> builder.tableName(tableName));
                 if (describeTableResponse.table().tableStatus() == ACTIVE) {
                     log.info("Table {} already created on local stack's dynamo db", tableName);
@@ -178,19 +204,54 @@ public class LocalStackTestConfig {
         });
     }
 
+    private void setupUserConfigurationTable() {
+        log.info("Setting up UserConfiguration table...");
+        userConfigurationEntityDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.anagraficaClientName(), TableSchema.fromBean(UserConfigurationEntity.class));
+        List<String> allDocTypes = List.of(PN_AAR, PN_LEGAL_FACTS, PN_EXTERNAL_LEGAL_FACTS, PN_DOWNTIME_LEGAL_FACTS, PN_NOTIFICATION_ATTACHMENTS, PN_LOG_EXTRACTOR_RESULT, PN_NONE_CHECKSUM);
+        userConfigurationService.insertUserConfiguration(new UserConfiguration().name(PN_DELIVERY).apiKey(PN_DELIVERY_API_KEY).canCreate(List.of(PN_NOTIFICATION_ATTACHMENTS)).canRead(List.of(PN_NOTIFICATION_ATTACHMENTS)).canModifyStatus(List.of(PN_NOTIFICATION_ATTACHMENTS))).block();
+        userConfigurationService.insertUserConfiguration(new UserConfiguration().name(INTERNAL).apiKey(INTERNAL_API_KEY).canRead(List.of(PN_AAR, PN_EXTERNAL_LEGAL_FACTS, PN_LEGAL_FACTS, PN_NOTIFICATION_ATTACHMENTS))).block();
+        userConfigurationService.insertUserConfiguration(new UserConfiguration().name(PN_TEST).apiKey(PN_TEST_API_KEY).canCreate(allDocTypes).canRead(allDocTypes).canModifyStatus(allDocTypes).canExecutePatch(true)).block();
+        log.info("Setup completed for UserConfiguration table!");
+    }
+
+    private void setupDocTypesTable() {
+        log.info("Setting up DocTypes table...");
+        docTypeEntityDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
+
+        CurrentStatus pnAarCurrStatus = new CurrentStatus();
+        pnAarCurrStatus.setTechnicalState(AVAILABLE);
+        pnAarCurrStatus.setStorage(PN_AAR);
+
+        CurrentStatus pnNotifiedDocumentsCurrStatus = new CurrentStatus();
+        pnNotifiedDocumentsCurrStatus.setStorage("PN_NOTIFIED_DOCUMENT");
+        pnNotifiedDocumentsCurrStatus.setTechnicalState(ATTACHED);
+
+        CurrentStatus pnTemporaryDocumentCurrStatus = new CurrentStatus();
+        pnTemporaryDocumentCurrStatus.setStorage("PN_TEMPORARY_DOCUMENT");
+        pnTemporaryDocumentCurrStatus.setTechnicalState(AVAILABLE);
+        pnTemporaryDocumentCurrStatus.setAllowedStatusTransitions(List.of(ATTACHED));
+
+        docTypesService.insertDocType(new DocumentType().tipoDocumento(PN_AAR).checksum(SHA256).informationClassification(C).statuses(Map.of(SAVED, pnAarCurrStatus)).transformations(new ArrayList<>())).block();
+        docTypesService.insertDocType(new DocumentType().tipoDocumento(PN_NOTIFICATION_ATTACHMENTS).checksum(SHA256).informationClassification(C).statuses(Map.of(ATTACHED, pnNotifiedDocumentsCurrStatus, PRELOADED, pnTemporaryDocumentCurrStatus)).transformations(new ArrayList<>())).block();
+        docTypesService.insertDocType(new DocumentType().tipoDocumento(PN_LOG_EXTRACTOR_RESULT).checksum(MD5).informationClassification(HC).statuses(Map.of(SAVED, pnTemporaryDocumentCurrStatus)).transformations(new ArrayList<>())).block();
+        docTypesService.insertDocType(new DocumentType().tipoDocumento(PN_NONE_CHECKSUM).checksum(NONE).informationClassification(HC).statuses(Map.of(ATTACHED, pnNotifiedDocumentsCurrStatus, PRELOADED, pnTemporaryDocumentCurrStatus)).transformations(new ArrayList<>())).block();
+
+        log.info("Setup completed for DocTypes table.");
+    }
+
     //TODO aggiungere lifecycleRule per bucket
     private void initS3() {
+        log.info("<-- START S3 init-->");
         List<String> bucketNames = List.of(bucketName.ssHotName(), bucketName.ssStageName());
-
         ObjectLockConfiguration objectLockConfiguration = ObjectLockConfiguration.builder().objectLockEnabled(ObjectLockEnabled.ENABLED)
                 .rule(ObjectLockRule.builder().defaultRetention(DefaultRetention.builder().days(1).mode(ObjectLockRetentionMode.GOVERNANCE).build()).build())
                 .build();
-
-        LifecycleRule lifecycleRule = LifecycleRule.builder().status(ExpirationStatus.ENABLED).expiration(builder -> builder.days(120)).transitions(builder -> builder.storageClass(StorageClass.GLACIER.name()).days(1)).build();
+        LifecycleRuleAndOperator lifecycleRuleAndOperator=LifecycleRuleAndOperator.builder().tags(Tag.builder().key("tagKey").value("tagValue").build()).build();
+        LifecycleRuleFilter lifecycleRuleFilter= LifecycleRuleFilter.builder().and(lifecycleRuleAndOperator).build();
+        LifecycleRule lifecycleRule = LifecycleRule.builder().filter(lifecycleRuleFilter).status(ExpirationStatus.ENABLED).expiration(builder -> builder.days(120)).transitions(builder -> builder.storageClass(StorageClass.GLACIER.name()).days(1)).build();
         BucketLifecycleConfiguration bucketLifecycleConfiguration = BucketLifecycleConfiguration.builder().rules(lifecycleRule).build();
 
         bucketNames.forEach(bucket -> {
-            log.info("<-- START S3 init-->");
             try {
                 s3Client.headBucket(builder -> builder.bucket(bucket));
                 log.info("Bucket {} already created on local stack S3", bucket);
@@ -205,7 +266,9 @@ public class LocalStackTestConfig {
 
     @PostConstruct
     public void initLocalStack() {
+        log.info("<-- START initLocalStack -->");
         initS3();
         initDynamoDb();
     }
+
 }

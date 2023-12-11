@@ -39,9 +39,9 @@ public class DocTypeInternalApiControllerTest {
 	private static final String BASE_PATH = "/safestorage/internal/v1/doctypes";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{typeId}", BASE_PATH);
 
-	private static final String PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS = "PN_NOTIFICATION_ATTACHMENTS";
-	private static final String PARTITION_ID_INSERT_LEGAL_FACTS = "PN_LEGAL_FACTS";
-	private static final String PARTITION_ID_NO_EXISTENT_AAR = "PN_AAR";
+	private static final String PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS = "PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS";
+	private static final String PARTITION_ID_INSERT_LEGAL_FACTS = "PARTITION_ID_INSERT_LEGAL_FACTS";
+	private static final String PARTITION_ID_NO_EXISTENT_AAR = "PARTITION_ID_NO_EXISTENT_AAR";
 
 	private static DocumentType docTypesInsertInput;
 	private static DocumentType docTypesUpdateDeleteInput;

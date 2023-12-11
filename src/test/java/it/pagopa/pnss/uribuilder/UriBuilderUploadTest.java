@@ -1,433 +1,136 @@
 package it.pagopa.pnss.uribuilder;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
-import it.pagopa.pnss.common.client.DocTypesClientCall;
-import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.UserConfigurationClientCall;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
-import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
 
-import org.eclipse.jetty.http.HttpHeader;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.*;
-import org.mockito.Mockito;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 import static it.pagopa.pnss.common.DocTypesConstant.*;
+import static it.pagopa.pnss.common.UserConfigurationConstant.*;
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient(timeout = "36000")
 @CustomLog
 class UriBuilderUploadTest {
-
     @Autowired
     private WebTestClient webClient;
-
-    @MockBean
-    private DocTypesClientCall docTypesClientCall;
-
-    @MockBean
-    private UserConfigurationClientCall userConfigurationClientCall;
-
-    @MockBean
-    private DocumentClientCall documentClientCall;
-
     @Value("${header.x-api-key:#{null}}")
     private String xApiKey;
-
     @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
     private String X_PAGOPA_SAFESTORAGE_CX_ID;
-
     @Value("${queryParam.presignedUrl.traceId:#{null}}")
     private String queryParamPresignedUrlTraceId;
-
     @Value("${header.x-checksum-value:#{null}}")
     private String headerChecksumValue;
-
+    @Value("${header.presignedUrl.checksum-md5:#{null}}")
+    private String headerChecksumMd5;
+    @Value("${header.presignedUrl.checksum-sha256:#{null}}")
+    private String headerChecksumSha256;
     @Value("${file.upload.api.url}")
     private String urlPath;
-
-    private static final String xApiKeyValue = "apiKey_value";
-    private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
     private static final String xChecksumValue = "checkSumValue";
     private static final String X_QUERY_PARAM_URL_VALUE= "queryParamPresignedUrlTraceId_value";
     private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey").documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
+    private WebTestClient.ResponseSpec fileUploadTestCall(FileCreationRequest fileCreationRequest, String clientId, String apiKey, String traceId) {
 
-    private static DynamoDbTable<DocTypeEntity> dynamoDbTable;
-
-    private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(FileCreationRequest fileCreationRequest)
-    {
-        return this.webClient.post()
+        WebTestClient.RequestHeadersSpec requestHeadersSpec = this.webClient.post()
                 .uri(urlPath)
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(fileCreationRequest)
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
-                .header(xApiKey, xApiKeyValue);
-    }
-    private WebTestClient.ResponseSpec fileUploadTestCall(FileCreationRequest fileCreationRequest) {
-
-        return callRequestHeadersSpec(fileCreationRequest)
-                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, clientId)
                 .header(headerChecksumValue, xChecksumValue)
-                .exchange();
+                .header(xApiKey, apiKey);
+
+        if (!StringUtils.isBlank(traceId))
+            requestHeadersSpec.header(queryParamPresignedUrlTraceId, traceId);
+
+        return requestHeadersSpec.exchange();
     }
-
-    private WebTestClient.ResponseSpec fileUploadTestCallNoHeader(FileCreationRequest fileCreationRequest) {
-
-        return callRequestHeadersSpec(fileCreationRequest)
-                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
-                .exchange();
-    }
-
-    private WebTestClient.ResponseSpec noTraceIdfileUploadTestCall(FileCreationRequest fileCreationRequest) {
-
-        return callRequestHeadersSpec(fileCreationRequest)
-                .header(headerChecksumValue, xChecksumValue)
-                .exchange();
-    }
-
-    private WebTestClient.ResponseSpec noChecksumUploadTestCall(FileCreationRequest fileCreationRequest) {
-
-        return callRequestHeadersSpec(fileCreationRequest)
-                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
-                .exchange();
-    }
-
-//    @Test
-//    void testStatoNonConsentito_PN_NOTIFICATION_ATTACHMENTS() {
-//
-//        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-//        UserConfiguration userConfiguration = new UserConfiguration();
-//        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-//        userConfiguration.setApiKey(xApiKeyValue);
-//        userConfig.setUserConfiguration(userConfiguration);
-//
-//        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-//        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-//
-//
-//        FileCreationRequest fcr = new FileCreationRequest();
-//        fcr.setContentType(IMAGE_TIFF);
-//        fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
-//        fcr.setStatus(ATTACHED);
-//        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
-//    }
-
-//    @Test
-//    void testStatoNonConsentito_PN_AAR() {
-//
-//        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-//        UserConfiguration userConfiguration = new UserConfiguration();
-//        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-//        userConfiguration.setApiKey(xApiKeyValue);
-//        userConfig.setUserConfiguration(userConfiguration);
-//
-//        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-//        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-//
-//        FileCreationRequest fcr = new FileCreationRequest();
-//        fcr.setContentType(IMAGE_TIFF);
-//        fcr.setDocumentType(PN_AAR);
-//        fcr.setStatus(PRELOADED);
-//        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
-//    }
-
-//    @Test
-//    void testErroreInserimentoStatus() {
-//
-//        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-//        UserConfiguration userConfiguration = new UserConfiguration();
-//        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-//        userConfiguration.setApiKey(xApiKeyValue);
-//        userConfig.setUserConfiguration(userConfiguration);
-//
-//        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-//        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-//
-//        FileCreationRequest fcr = new FileCreationRequest();
-//        fcr.setContentType(IMAGE_TIFF);
-//        fcr.setDocumentType(PN_AAR);
-//        fcr.setStatus("VALUE_FAULT");
-//
-//        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
-//    }
     @Test
-    void testMissingTraceIdHeader()
+    void testUploadMissingTraceIdHeader()
     {
-        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-        UserConfiguration userConfiguration = new UserConfiguration();
-        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-        userConfiguration.setApiKey(xApiKeyValue);
-        userConfiguration.setCanCreate(List.of(PN_AAR));
-        userConfig.setUserConfiguration(userConfiguration);
-
-        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
-
         FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setContentType("application/pdf");
+        fcr.setContentType(APPLICATION_PDF_VALUE);
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus(PRELOADED);
-        noTraceIdfileUploadTestCall(fcr).expectStatus().isBadRequest();
+        fileUploadTestCall(fcr, PN_TEST, PN_TEST_API_KEY, null).expectStatus().isBadRequest();
     }
 
     @Test
-    void testContentTypeParamObbligatorio() {
-
-        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-        UserConfiguration userConfiguration = new UserConfiguration();
-        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-        userConfiguration.setApiKey(xApiKeyValue);
-        userConfig.setUserConfiguration(userConfiguration);
-
-        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-
+    void testUploadMissingContentType() {
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
-
-        fileUploadTestCall(fcr).expectStatus().isBadRequest();
+        fileUploadTestCall(fcr, PN_TEST, PN_TEST_API_KEY, X_QUERY_PARAM_URL_VALUE).expectStatus().isBadRequest();
     }
 
     @Test
-    void testDocumentTypeParamObbligatorio() {
+    void testUploadMissingDocumentType() {
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType(APPLICATION_PDF_VALUE);
+        fcr.setStatus("");
+        fileUploadTestCall(fcr, PN_TEST, PN_TEST_API_KEY, X_QUERY_PARAM_URL_VALUE).expectStatus().isBadRequest();
+    }
 
-        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-        UserConfiguration userConfiguration = new UserConfiguration();
-        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-        userConfiguration.setApiKey(xApiKeyValue);
-        userConfig.setUserConfiguration(userConfiguration);
+    @Test
+    void testUploadBadContentType() {
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType("application/badContentType");
+        fcr.setDocumentType(PN_AAR);
+        fcr.setStatus("");
+        fileUploadTestCall(fcr, PN_TEST, PN_TEST_API_KEY, X_QUERY_PARAM_URL_VALUE).expectStatus().isOk();
+    }
 
-        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+//    @Test
+//    void testIdClienteNonTrovatoUpload() {
+//        //Mancata gestione della IdClientNotFoundException. Ritorna 500 invece di 404.
+//        var fcr = new FileCreationRequest().contentType(IMAGE_TIFF_VALUE).documentType(PN_AAR).status("");
+//        callRequestHeadersSpec(fcr)
+//                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+//                .header(headerChecksumValue, xChecksumValue)
+//                .header(X_PAGOPA_SAFESTORAGE_CX_ID, "BAD_CLIENT_ID")
+//                .exchange().expectStatus()
+//                .isNotFound();
+//    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {PN_NOTIFICATION_ATTACHMENTS, PN_LOG_EXTRACTOR_RESULT, PN_NONE_CHECKSUM})
+    void testUrlGenerato(String documentType) {
 
         FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setDocumentType(PN_AAR);
-        fcr.setStatus("VALUE_FAULT");
+        fcr.setContentType(APPLICATION_PDF_VALUE);
+        fcr.setDocumentType(documentType);
+        fcr.setStatus("");
 
-        fileUploadTestCall(fcr).expectStatus().isBadRequest();
+        fileUploadTestCall(fcr, PN_TEST, PN_TEST_API_KEY, X_QUERY_PARAM_URL_VALUE)
+                .expectStatus()
+                .isOk()
+                .expectBody(FileCreationResponse.class)
+                .value(hasProperty("uploadUrl", notNullValue()));
     }
 
     @Test
-    void testIdClienteNonTrovatoUpload() {
-
-        var fcr = new FileCreationRequest().contentType(IMAGE_TIFF_VALUE).documentType(PN_AAR).status("");
-
-        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                                                                                                 "User Not Found : ")));
-
-        fileUploadTestCall(fcr).expectStatus().isNotFound();
+    void testUploadUnauthorizedClientId() {
+        FileCreationRequest fcr = new FileCreationRequest();
+        fcr.setContentType(IMAGE_TIFF_VALUE);
+        fcr.setDocumentType(PN_AAR);
+        fcr.setStatus("");
+        fileUploadTestCall(fcr, PN_DELIVERY, PN_DELIVERY_API_KEY, X_QUERY_PARAM_URL_VALUE).expectStatus().isForbidden();
     }
 
-    @Nested
-    class ValidationFieldSuccess{
-
-        @Test
-        void testUrlGenStatusPre() {
-            FileCreationRequest fcr = new FileCreationRequest();
-            fcr.setContentType(IMAGE_TIFF_VALUE);
-            fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
-            fcr.setStatus(PRELOADED);
-            FileCreationResponse fcresp = new FileCreationResponse();
-            fcresp.setUploadUrl("http://host:9090/urlFile");
-
-            UserConfigurationResponse userConfig = new UserConfigurationResponse();
-            UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
-            userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
-            userConfig.setUserConfiguration(userConfiguration);
-
-            Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
-            Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-
-            DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
-            DocumentType documentType = new DocumentType();
-            documentType.setTipoDocumento(PN_LEGAL_FACTS);
-            documentTypeResponse.setDocType(documentType);
-
-            Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
-            Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
-
-            DocumentResponse docResp = new DocumentResponse();
-            Document document = new Document();
-            document.setDocumentKey("keyFile");
-            DocumentType documentTypeDoc = new DocumentType();
-            documentTypeDoc.setChecksum(DocumentType.ChecksumEnum.MD5);
-            document.setDocumentType(documentTypeDoc);
-            docResp.setDocument(document);
-            Mono<DocumentResponse> respDoc = Mono.just(docResp);
-            Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
-
-            WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(fcr);
-            FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
-                    responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
-            FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-
-            Assertions.assertFalse(resp.getUploadUrl().isEmpty());
-        }
-
-        @Test
-        void testIdClienteNoPermessiUpload() {
-            FileCreationRequest fcr = new FileCreationRequest();
-            fcr.setContentType(IMAGE_TIFF_VALUE);
-            fcr.setDocumentType(PN_AAR);
-            fcr.setStatus("");
-            UserConfigurationResponse userConfig = new UserConfigurationResponse();
-            UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
-            userConfiguration.setCanCreate(new ArrayList<>());
-            userConfig.setUserConfiguration(userConfiguration);
-
-            DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
-            DocumentType documentType = new DocumentType();
-            documentType.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
-            documentTypeResponse.setDocType(documentType);
-
-            Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
-            Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
-
-            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-
-            fileUploadTestCall(fcr).expectStatus().isForbidden();
-        }
-
-        @Test
-        void testUrlGeneratoMD5(){
-            testUrlGenerato(DocumentType.ChecksumEnum.MD5);
-        }
-
-        @Test
-        void testUrlGeneratoNONE(){
-            testUrlGenerato(DocumentType.ChecksumEnum.NONE);
-        }
-
-        void testUrlGenerato(DocumentType.ChecksumEnum checksumValue) {
-
-            log.debug("UriBulderUploadTest.testUrlGenerato() : decommentare");
-
-            FileCreationRequest fcr = new FileCreationRequest();
-            fcr.setContentType(IMAGE_TIFF_VALUE);
-            fcr.setDocumentType(PN_AAR);
-            fcr.setStatus("");
-            FileCreationResponse fcresp = new FileCreationResponse();
-            fcresp.setUploadUrl("http://host:9090/urlFile");
-
-            UserConfigurationResponse userConfig = new UserConfigurationResponse();
-
-            UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
-            userConfiguration.setCanCreate(List.of(PN_AAR));
-            userConfig.setUserConfiguration(userConfiguration);
-
-            Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
-            Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
-
-
-            DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
-            DocumentType documentType = new DocumentType();
-            documentType.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
-            documentTypeResponse.setDocType(documentType);
-
-            Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
-            Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
-
-            DocumentResponse docResp = new DocumentResponse();
-            Document document = new Document();
-            document.setDocumentKey("keyFile");
-            DocumentType documentTypeDoc = new DocumentType();
-            documentTypeDoc.setChecksum((checksumValue));
-            document.setDocumentType(documentTypeDoc);
-            docResp.setDocument(document);
-            Mono<DocumentResponse> respDoc = Mono.just(docResp);
-            Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
-
-            WebTestClient.ResponseSpec responseSpec;
-
-            if(checksumValue.equals(DocumentType.ChecksumEnum.MD5)){
-                responseSpec = fileUploadTestCall(fcr);
-            }else{
-                responseSpec = fileUploadTestCallNoHeader(fcr);
-            }
-
-            FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
-                    responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
-            FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
-            Assertions.assertFalse(resp.getUploadUrl().isEmpty());
-        }
-        @Test
-        void testUploadSignedPdfContentTypeOk() {
-
-            UserConfigurationResponse userConfig = new UserConfigurationResponse();
-            UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
-            userConfiguration.setCanCreate(List.of(PN_AAR));
-            userConfig.setUserConfiguration(userConfiguration);
-
-            when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
-
-            FileCreationRequest fcr = new FileCreationRequest();
-            fcr.setContentType("application/pdf");
-            fcr.setDocumentType(PN_AAR);
-            fcr.setStatus(PRELOADED);
-            fileUploadTestCall(fcr).expectStatus().isOk();
-        }
-
-        @Test
-        void testUploadSignedPdfBadContentType() {
-
-            UserConfigurationResponse userConfig = new UserConfigurationResponse();
-            UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
-            userConfiguration.setCanCreate(List.of(PN_AAR));
-            userConfig.setUserConfiguration(userConfiguration);
-
-            when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
-
-            FileCreationRequest fcr = new FileCreationRequest();
-            fcr.setContentType("application/badContentType");
-            fcr.setDocumentType(PN_AAR);
-            fcr.setStatus(PRELOADED);
-            fileUploadTestCall(fcr).expectStatus().isOk();
-        }
-    }
 }

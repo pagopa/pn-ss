@@ -954,7 +954,7 @@ Resources:
         - Key: "pn-eni-related"
           Value: "true"
         - Key: "pn-eni-related-groupName-regexp"
-          Value: "^pn-ss-gestore-bucket-sec-group.*$"
+          Value: !Base64 "^pn-ss-gestore-bucket-sec-group.*$"
       Code:
         ZipFile: |
           "use strict";

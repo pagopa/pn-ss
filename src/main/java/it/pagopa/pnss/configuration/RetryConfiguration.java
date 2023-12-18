@@ -14,7 +14,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.time.Duration;
 
-import static it.pagopa.pnss.common.constant.Constant.RETRY_ATTEMPT;
+import static it.pagopa.pnss.common.utils.LogUtils.RETRY_ATTEMPT;
 
 @Configuration
 @Slf4j

@@ -308,7 +308,7 @@ public class UriBuilderService {
         log.logCheckingOutcome(X_TRACE_ID_VALUE, true);
 
         return Mono.fromCallable(this::validationFieldCreateUri)//
-                .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
+                .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
                 .retryWhen(gestoreRepositoryRetryStrategy))
                 .zipWhen(userConfigurationResponse -> {
                     List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();

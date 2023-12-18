@@ -5,6 +5,11 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationDestination;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationResponse;
+import lombok.CustomLog;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,22 +20,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
-
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationChanges;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-@Slf4j
+@CustomLog
 public class UserConfigurationInternalApiControllerTest {
 
 	@Autowired

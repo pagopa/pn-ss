@@ -1,10 +1,6 @@
 package it.pagopa.pnss.uribuilder;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.*;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.ChecksumEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TransformationsEnum;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationRequest;
-import it.pagopa.pn.template.rest.v1.dto.FileCreationResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
@@ -12,6 +8,7 @@ import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 
 import org.eclipse.jetty.http.HttpHeader;
@@ -47,7 +44,7 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient(timeout = "36000")
-@Slf4j
+@CustomLog
 class UriBuilderUploadTest {
 
     @Autowired
@@ -81,7 +78,7 @@ class UriBuilderUploadTest {
     private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
     private static final String xChecksumValue = "checkSumValue";
     private static final String X_QUERY_PARAM_URL_VALUE= "queryParamPresignedUrlTraceId_value";
-    private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey").documentType(new DocumentType().checksum(ChecksumEnum.MD5)));
+    private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey").documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
 
     private static DynamoDbTable<DocTypeEntity> dynamoDbTable;
 
@@ -194,7 +191,7 @@ class UriBuilderUploadTest {
 
         when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType("application/pdf");
@@ -329,15 +326,15 @@ class UriBuilderUploadTest {
 
         @Test
         void testUrlGeneratoMD5(){
-            testUrlGenerato(ChecksumEnum.MD5);
+            testUrlGenerato(DocumentType.ChecksumEnum.MD5);
         }
 
         @Test
         void testUrlGeneratoNONE(){
-            testUrlGenerato(ChecksumEnum.NONE);
+            testUrlGenerato(DocumentType.ChecksumEnum.NONE);
         }
 
-        void testUrlGenerato(ChecksumEnum checksumValue) {
+        void testUrlGenerato(DocumentType.ChecksumEnum checksumValue) {
 
             log.debug("UriBulderUploadTest.testUrlGenerato() : decommentare");
 
@@ -380,7 +377,7 @@ class UriBuilderUploadTest {
 
             WebTestClient.ResponseSpec responseSpec;
 
-            if(checksumValue.equals(ChecksumEnum.MD5)){
+            if(checksumValue.equals(DocumentType.ChecksumEnum.MD5)){
                 responseSpec = fileUploadTestCall(fcr);
             }else{
                 responseSpec = fileUploadTestCallNoHeader(fcr);
@@ -403,7 +400,7 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
 
             FileCreationRequest fcr = new FileCreationRequest();
             fcr.setContentType("application/pdf");
@@ -424,7 +421,7 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
 
             FileCreationRequest fcr = new FileCreationRequest();
             fcr.setContentType("application/badContentType");

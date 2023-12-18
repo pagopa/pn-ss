@@ -2,9 +2,7 @@ package it.pagopa.pnss.repositorymanager.entity;
 
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConvertedEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TransformationsEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
@@ -25,9 +23,9 @@ public class DocTypeEntity {
 	private String initialStatus;
 	private Map<String, CurrentStatusEntity> statuses;
 	@Getter(onMethod=@__({@DynamoDBTypeConvertedEnum}))
-	private InformationClassificationEnum informationClassification;
+	private DocumentType.InformationClassificationEnum informationClassification;
 	@Getter(onMethod=@__({@DynamoDBTypeConvertedEnum}))
-	private List<TransformationsEnum> transformations;
+	private List<DocumentType.TransformationsEnum> transformations;
 	@Getter(onMethod=@__({@DynamoDBTypeConvertedEnum}))
-	private TimeStampedEnum timeStamped;
+	private DocumentType.TimeStampedEnum timeStamped;
 }

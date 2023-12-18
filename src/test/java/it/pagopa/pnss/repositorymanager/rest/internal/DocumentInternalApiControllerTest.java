@@ -16,11 +16,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
+import lombok.CustomLog;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,14 +37,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
-
-import it.pagopa.pn.template.internal.rest.v1.dto.CurrentStatus;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentInput;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentResponse;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.InformationClassificationEnum;
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentType.TimeStampedEnum;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
@@ -63,7 +59,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-@Slf4j
+@CustomLog
 public class DocumentInternalApiControllerTest {
 
     @Value("${test.aws.s3.endpoint:#{null}}")
@@ -73,6 +69,8 @@ public class DocumentInternalApiControllerTest {
     private WebTestClient webTestClient;
     @Autowired
     private BucketName bucketName;
+	@Autowired
+	private S3Client s3TestClient;
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
@@ -149,9 +147,9 @@ public class DocumentInternalApiControllerTest {
 		docTypes.setChecksum(DocumentType.ChecksumEnum.SHA256);
 		docTypes.setInitialStatus("SAVED");
 		docTypes.setStatuses(statuses1);
-		docTypes.setInformationClassification(InformationClassificationEnum.HC);
+		docTypes.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
 		docTypes.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-		docTypes.setTimeStamped(TimeStampedEnum.STANDARD);
+		docTypes.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
 		log.info("execute createDocument() : docType : {}", docTypes);
 
 		documentInput = new DocumentInput();
@@ -383,15 +381,14 @@ public class DocumentInternalApiControllerTest {
 
     }
 
-    private void addFileToBucket(String fileName) {
-        S3ClientBuilder s3ClientBuilder = S3Client.builder();
-        s3ClientBuilder.endpointOverride(URI.create(testAwsS3Endpoint));
-        S3Client s3Client = s3ClientBuilder.build();
-        PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(bucketName.ssStageName()).key(fileName).build();
-
-        s3Client.putObject(request, RequestBody.fromBytes(readPdfDocoument()));
-    }
+	private void addFileToBucket(String fileName) {
+		byte[] fileBytes = readPdfDocoument();
+		PutObjectRequest request = PutObjectRequest.builder()
+				.bucket(bucketName.ssStageName())
+				.key(fileName)
+				.contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(fileBytes)))).build();
+		s3TestClient.putObject(request, RequestBody.fromBytes(fileBytes));
+	}
 
     private byte[] readPdfDocoument() {
         byte[] byteArray=null;

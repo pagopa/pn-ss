@@ -357,10 +357,16 @@ Parameters:
     Description: 'Alarm threshold to trigger autoscaling of the microservice'
     Default: 20000
 
-  PnSsUriBuilderGetFileCanExecutePatch:
+  PnSsUriBuilderGetFileWithPatchConfiguration:
     Type: String
-    Description: 'Parametro canExecutePatch per UriBuilder'
-    Default: 'true'
+    Description: 'Parametro getFileWithPatchConfiguration per UriBuilder'
+    Default: 'NONE'
+    AllowedValues: [ ALL,CLIENT_SPECIFIC,NONE ]
+
+  PnSsTaskExecutionPoolMaxSize:
+    Type: String
+    Description: 'SpringBoot configuration Task Execution Max Pool Siza'
+    Default: '512'
 
 ### Altri parametri
   AlarmSNSTopicName:
@@ -431,9 +437,10 @@ Resources:
         ContainerEnvEntry36: !Sub 'PnSsIdentityTimemark=${PnSsIdentityTimemark}'
         ContainerEnvEntry37: !Sub 'PnSsIdentitySignature=${PnSsIdentitySignature}'
         ContainerEnvEntry38: !Sub 'PnSsTimemarkUrl=${PnSsTimemarkUrl}'
-        ContainerEnvEntry39: !Sub 'PnSsUriBuilderGetFileCanExecutePatch=${PnSsUriBuilderGetFileCanExecutePatch}'
+        ContainerEnvEntry39: !Sub 'PnSsUriBuilderGetFileWithPatchConfiguration=${PnSsUriBuilderGetFileWithPatchConfiguration}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry42: !Sub 'PnSsTaskExecutionPoolMaxSize=${PnSsTaskExecutionPoolMaxSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -1077,6 +1084,7 @@ Resources:
               port: PORT,
               path: PATHGET + "/" + docKey,
               headers: {
+                "x-pagopa-pn-cx-id": docKey,
                 "Content-Type": "application/json",
               },
             };
@@ -1107,6 +1115,7 @@ Resources:
               port: PORT,
               path: PATHPATCH + "/" + data.documentKey,
               headers: {
+                "x-pagopa-pn-cx-id": data.documentKey,
                 "Content-Type": "application/json",
               },
             };

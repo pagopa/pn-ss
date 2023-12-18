@@ -8,24 +8,24 @@ import static org.testcontainers.containers.localstack.LocalStackContainer.Servi
 import static software.amazon.awssdk.services.dynamodb.model.TableStatus.ACTIVE;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import lombok.CustomLog;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Import;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
-
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.exception.DynamoDbInitTableCreationException;
-import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.internal.waiters.ResponseOrException;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -34,12 +34,12 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
-import software.amazon.awssdk.services.s3.model.LifecycleRuleFilter;
-import software.amazon.awssdk.services.s3.model.Transition;
-import software.amazon.awssdk.services.s3.model.TransitionStorageClass;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.*;
 
 @TestConfiguration
-@Slf4j
+@CustomLog
+@Import({LocalStackClientConfig.class})
 public class LocalStackTestConfig {
 
     @Autowired
@@ -47,6 +47,9 @@ public class LocalStackTestConfig {
 
     @Autowired
     private DynamoDbEnhancedClient dynamoDbEnhancedClient;
+
+    @Autowired
+    private S3Client s3Client;
 
     @Autowired
     private DynamoDbWaiter dynamoDbWaiter;
@@ -89,14 +92,6 @@ public class LocalStackTestConfig {
         System.setProperty("test.aws.secretsmanager.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SECRETSMANAGER)));
         System.setProperty("test.aws.kinesis.endpoint", String.valueOf(localStackContainer.getEndpointOverride(KINESIS)));
         System.setProperty("test.aws.cloudwatch.endpoint", String.valueOf(localStackContainer.getEndpointOverride(CLOUDWATCH)));
-
-
-//        System.setProperty("PnSsStagingBucketName","PnSsStagingBucketName");
-
-        System.setProperty("PnSsStagingBucketArn", "PnSsStagingBucketArn");
-//        System.setProperty("PnSsBucketName","PnSsBucketName");
-        System.setProperty("PnSsBucketArn", "PnSsBucketArn");
-
 
         try {
             //Set Aruba secret credentials.
@@ -159,46 +154,13 @@ public class LocalStackTestConfig {
         ResponseOrException<DescribeTableResponse> responseOrException = dynamoDbWaiter.waitUntilTableExists(builder -> builder.tableName(
                 tableName).build()).matched();
         responseOrException.response().orElseThrow(() -> new DynamoDbInitTableCreationException(tableName));
+
     }
 
-    //TODO aggiungere lifecycleRule per bucket relativo a PnSsBucketName
-    private void addLifecycleConfigurationToHotBucket() {
-        //TODO metodo da completare
-        LifecycleRuleFilter ruleFilter_PN_TEMPORARY_DOCUMENT = LifecycleRuleFilter.builder()
-//                .prefix("glacierobjects/")
-                .build();
-
-        Transition transition = Transition.builder()
-                .storageClass(TransitionStorageClass.STANDARD_IA)
-                .days(0)
-                .build();
-    }
-
-    @PostConstruct
-    public void initLocalStack() {
-
-        //TODO aggiungere lifecycleRule per bucket relativo a PnSsBucketName
-//    	List<String> allBucketNameList = List.of(bucketName.ssHotName(),bucketName.ssStageName());
-//        log.info("initLocalStack() : allBucketNameList  {}", allBucketNameList);
-        try {
-            localStackContainer.execInContainer("awslocal", "s3", "mb", "s3://" + bucketName.ssStageName());
-            log.info("initLocalStack() : creato bucket  {}", bucketName.ssStageName());
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        try {
-            localStackContainer.execInContainer("awslocal", "s3api", "create-bucket", "--bucket", bucketName.ssHotName(), //"--object-lock-configuration",
-                    "--object-lock-enabled-for-bucket")
-            //"{\"ObjectLockEnabled\": \"Enabled\",\"Rule\": {\"DefaultRetention\": {\"Mode\": \"GOVERNANCE\",\"Days\": 1,\"Years\": 0}}}")
-            ;
-            log.info("initLocalStack() : creato bucket  {}", bucketName.ssHotName());
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
+    private void initDynamoDb() {
         Map<String, Class<?>> tableNameWithEntityClass =
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),
-                        entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), DocTypeEntity.class),
+                        entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), it.pagopa.pnss.repositorymanager.entity.DocTypeEntity.class),
                         entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class));
 
         tableNameWithEntityClass.forEach((tableName, entityClass) -> {
@@ -214,5 +176,36 @@ public class LocalStackTestConfig {
                 createTable(tableName, entityClass);
             }
         });
+    }
+
+    //TODO aggiungere lifecycleRule per bucket
+    private void initS3() {
+        List<String> bucketNames = List.of(bucketName.ssHotName(), bucketName.ssStageName());
+
+        ObjectLockConfiguration objectLockConfiguration = ObjectLockConfiguration.builder().objectLockEnabled(ObjectLockEnabled.ENABLED)
+                .rule(ObjectLockRule.builder().defaultRetention(DefaultRetention.builder().days(1).mode(ObjectLockRetentionMode.GOVERNANCE).build()).build())
+                .build();
+
+        LifecycleRule lifecycleRule = LifecycleRule.builder().transitions(builder -> builder.storageClass(StorageClass.GLACIER.name()).days(1)).build();
+        BucketLifecycleConfiguration bucketLifecycleConfiguration = BucketLifecycleConfiguration.builder().rules(lifecycleRule).build();
+
+        bucketNames.forEach(bucket -> {
+            log.info("<-- START S3 init-->");
+            try {
+                s3Client.headBucket(builder -> builder.bucket(bucket));
+                log.info("Bucket {} already created on local stack S3", bucket);
+            } catch (NoSuchBucketException noSuchBucketException) {
+                s3Client.createBucket(builder -> builder.bucket(bucket).objectLockEnabledForBucket(true));
+                s3Client.putObjectLockConfiguration(builder -> builder.bucket(bucket).objectLockConfiguration(objectLockConfiguration));
+                s3Client.putBucketLifecycleConfiguration(builder -> builder.bucket(bucket).lifecycleConfiguration(bucketLifecycleConfiguration));
+                log.info("New bucket {} created on local stack S3", bucket);
+            }
+        });
+    }
+
+    @PostConstruct
+    public void initLocalStack() {
+        initS3();
+        initDynamoDb();
     }
 }

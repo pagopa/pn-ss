@@ -1,20 +1,23 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
-import it.pagopa.pnss.common.constant.Constant;
+import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncClientDecorator;
+import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
+import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbEnhancedAsyncClientDecorator;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
+import it.pagopa.pnss.common.utils.LogUtils;
+import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationChanges;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
-import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import reactor.util.retry.RetryBackoffSpec;
@@ -23,25 +26,29 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
+import java.util.stream.Stream;
+
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
+import static it.pagopa.pnss.common.utils.LogUtils.INVOKING_METHOD;
 
 @Service
-@Slf4j
+@CustomLog
 public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     private final ObjectMapper objectMapper;
-    private final DynamoDbAsyncTable<UserConfigurationEntity> userConfigurationEntityDynamoDbAsyncTable;
+    private final DynamoDbAsyncTableDecorator<UserConfigurationEntity> userConfigurationEntityDynamoDbAsyncTable;
     private final RetryBackoffSpec dynamoRetryStrategy;
+
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                         RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy) {
         this.objectMapper = objectMapper;
-        this.dynamoRetryStrategy = dynamoRetryStrategy;
-        this.userConfigurationEntityDynamoDbAsyncTable =
+        this.userConfigurationEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(
                 dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.anagraficaClientName(),
-                                                  TableSchema.fromBean(UserConfigurationEntity.class));
+                        TableSchema.fromBean(UserConfigurationEntity.class)));
+        this.dynamoRetryStrategy = dynamoRetryStrategy;
     }
 
     private Mono<UserConfigurationEntity> getErrorIdClientNotFoundException(String name) {
@@ -50,28 +57,35 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     @Override
     public Mono<UserConfiguration> getUserConfiguration(String name) {
+        final String GET_USER_CONFIGURATION = "UserConfigurationService.getUserConfiguration()";
+        log.debug(INVOKING_METHOD, GET_USER_CONFIGURATION, name);
+
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity, UserConfiguration.class))
-                   .doOnSuccess(userConfiguration -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, name, "UserConfigurationServiceImpl.getUserConfiguration()", userConfiguration));
+                   .doOnSuccess(userConfiguration -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, GET_USER_CONFIGURATION, userConfiguration));
     }
 
     @Override
     public Mono<UserConfiguration> insertUserConfiguration(UserConfiguration userConfigurationInput) {
-        final String USER_CONFIGURATION_INPUT = "userConfigurationInput in UserConfigurationServiceImpl.insertUserConfiguration()";
+        final String INSERT_USER_CONFIGURATION = "UserConfigurationService.insertUserConfiguration()";
+        log.debug(INVOKING_METHOD, INSERT_USER_CONFIGURATION, userConfigurationInput);
 
-        log.info(Constant.CHECKING_VALIDATION_PROCESS, USER_CONFIGURATION_INPUT);
+        final String USER_CONFIGURATION_INPUT = "UserConfigurationInput";
+        log.logChecking(USER_CONFIGURATION_INPUT);
         if (userConfigurationInput == null) {
-            log.warn(Constant.VALIDATION_PROCESS_FAILED, USER_CONFIGURATION_INPUT, "UserConfiguration is null");
-            throw new RepositoryManagerException("UserConfiguration is null");
+            String errorMsg = "UserConfiguration is null";
+            log.logCheckingOutcome(USER_CONFIGURATION_INPUT, false, errorMsg);
+            throw new RepositoryManagerException(errorMsg);
         }
         if (userConfigurationInput.getName() == null || userConfigurationInput.getName().isBlank()) {
-            log.warn(Constant.VALIDATION_PROCESS_FAILED, USER_CONFIGURATION_INPUT, "UserConfiguration Name is null");
-            throw new RepositoryManagerException("UserConfiguration Name is null");
+            String errorMsg = "UserConfiguration Name is null";
+            log.logCheckingOutcome(USER_CONFIGURATION_INPUT, false, errorMsg);
+            throw new RepositoryManagerException(errorMsg);
         }
-        log.info(Constant.VALIDATION_PROCESS_PASSED, USER_CONFIGURATION_INPUT);
+        log.logCheckingOutcome(USER_CONFIGURATION_INPUT, true);
 
         UserConfigurationEntity userConfigurationEntity = objectMapper.convertValue(userConfigurationInput, UserConfigurationEntity.class);
 
@@ -81,20 +95,16 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                 .flatMap(foundedClientConfiguration -> Mono.error(new ItemAlreadyPresent(userConfigurationInput.getApiKey())))
                 .doOnError(ItemAlreadyPresent.class, throwable -> log.debug(throwable.getMessage()))
                 .switchIfEmpty(Mono.just(userConfigurationInput))
-                .flatMap(unused -> {
-                    log.debug(Constant.INSERTING_DATA_IN_DYNAMODB_TABLE, userConfigurationInput, userConfigurationEntity);
-                    return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
-                            userConfigurationEntity))).retryWhen(dynamoRetryStrategy);
-                })
-                .doOnSuccess(unused -> {
-                    log.info(Constant.INSERTED_DATA_IN_DYNAMODB_TABLE, userConfigurationEntity);
-                    log.info(Constant.SUCCESSFUL_OPERATION_LABEL, userConfigurationInput.getName(), "UserConfigurationServiceImpl.insertUserConfiguration()", userConfigurationInput);
-                })
+                .flatMap(unused -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
+                         userConfigurationEntity))).retryWhen(dynamoRetryStrategy))
+                .doOnSuccess(unused -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, INSERT_USER_CONFIGURATION, userConfigurationInput))
                 .thenReturn(userConfigurationInput);
     }
 
     @Override
     public Mono<UserConfiguration> patchUserConfiguration(String name, UserConfigurationChanges userConfigurationChanges) {
+        final String PATCH_USER_CONFIGURATION = "UserConfigurationService.patchUserConfiguration()";
+        log.debug(INVOKING_METHOD, PATCH_USER_CONFIGURATION, Stream.of(name, userConfigurationChanges).toList());
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .retryWhen(dynamoRetryStrategy)
@@ -118,34 +128,26 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                        }
                        return entityStored;
                    })
-                   .zipWhen(userConfigurationUpdated -> {
-                       log.debug(Constant.UPDATING_DATA_IN_DYNAMODB_TABLE, userConfigurationUpdated, managerDynamoTableName.anagraficaClientName());
-                       return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
-                               userConfigurationUpdated)).retryWhen(dynamoRetryStrategy);
-                   })
-                   .map(objects -> {
-                       log.debug(Constant.UPDATED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.anagraficaClientName());
-                       return objectMapper.convertValue(objects.getT2(), UserConfiguration.class);
-                   })
-                   .doOnSuccess(userConfiguration -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, name, "UserConfigurationServiceImpl.patchUserConfiguration()", userConfiguration));
+                   .zipWhen(userConfigurationUpdated -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
+                           userConfigurationUpdated))).retryWhen(dynamoRetryStrategy)
+                   .map(objects -> objectMapper.convertValue(objects.getT2(), UserConfiguration.class))
+                   .doOnSuccess(userConfiguration -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL,PATCH_USER_CONFIGURATION, userConfiguration));
     }
 
     @Override
     public Mono<UserConfiguration> deleteUserConfiguration(String name) {
+        final String DELETE_USER_CONFIGURATION = "UserConfigurationService.deleteUserConfiguration()";
+        log.debug(INVOKING_METHOD, DELETE_USER_CONFIGURATION, name);
+
         Key userConfigurationKey = Key.builder().partitionValue(name).build();
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(userConfigurationKey))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
-                   .zipWhen(userConfigurationToDelete -> {
-                       log.debug(Constant.DELETING_DATA_IN_DYNAMODB_TABLE, userConfigurationKey, managerDynamoTableName.anagraficaClientName());
-                       return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.deleteItem(
-                               userConfigurationKey)).retryWhen(dynamoRetryStrategy);
-                   })
-                   .map(userConfigurationEntity -> {
-                       log.debug(Constant.DELETED_DATA_IN_DYNAMODB_TABLE, managerDynamoTableName.anagraficaClientName());
-                       return objectMapper.convertValue(userConfigurationEntity.getT1(), UserConfiguration.class);
-                   })
-                   .doOnSuccess(userConfiguration -> log.info(Constant.SUCCESSFUL_OPERATION_LABEL, name, "UserConfigurationServiceImpl.deleteUserConfiguration()", userConfiguration));
+                   .zipWhen(userConfigurationToDelete -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.deleteItem(
+                            userConfigurationKey)))
+                   .retryWhen(dynamoRetryStrategy)
+                   .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity.getT1(), UserConfiguration.class))
+                   .doOnSuccess(userConfiguration -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, DELETE_USER_CONFIGURATION, userConfiguration));
     }
 }

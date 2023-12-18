@@ -1,10 +1,6 @@
 package it.pagopa.pnss.common.retention;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.DocumentChanges;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfiguration;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypeConfigurationStatuses;
-import it.pagopa.pn.template.rest.v1.dto.DocumentTypesConfigurations;
-import it.pagopa.pn.template.rest.v1.dto.StorageConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
@@ -136,14 +132,15 @@ public class RetentionServiceTest {
         Assertions.assertNotNull(retentionService.getRetainUntilDate(dataCreazione, retentionPeriod));
     }
 
-    @Test
-    void setRetentionPeriodInBucketObjectMetadataOk(){
+    @ParameterizedTest
+    @ValueSource(strings = {"2023-09-07T17:34:15+02:00", "2023-09-07T17:34:15.000Z"})
+    void setRetentionPeriodInBucketObjectMetadataOk(String retentionUntil){
         String authPagopaSafestorageCxId = "CLIENT_ID_123";
         String authApiKey = "apiKey_value";
         String oldState = "BOOKED";
 
         DocumentChanges documentChanges = new DocumentChanges();
-        documentChanges.setRetentionUntil("2023-09-07T17:34:15+02:00");
+        documentChanges.setRetentionUntil(retentionUntil);
 
         DocumentEntity documentEntity = new DocumentEntity();
         documentEntity.setDocumentKey("documentKeyEnt");
@@ -165,7 +162,7 @@ public class RetentionServiceTest {
         String oldState = "BOOKED";
 
         DocumentChanges documentChanges = new DocumentChanges();
-        documentChanges.setRetentionUntil("2032-04-12T12:32:04.000Z");
+        documentChanges.setRetentionUntil("2032-04-12 12:32:04.000Z");
 
         DocumentEntity documentEntity = new DocumentEntity();
         documentEntity.setDocumentKey("documentKeyEnt");

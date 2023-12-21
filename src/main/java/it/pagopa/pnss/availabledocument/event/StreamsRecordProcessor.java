@@ -111,7 +111,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
             } catch (ThrottlingException te) {
                 log.info("processRecords - Encountered throttling exception, skipping checkpoint: {} {}", te, te.getMessage());
             } catch (Exception e) {
-                log.fatal("* FATAL * DBStream: Error while trying to shutdown checkpoint: {} {} {}", e , shutdownInput.getShutdownReason(), e.getMessage());
+                log.fatal("* FATAL * DBStream: Error while trying to shutdown checkpoint: {} {} {}",  e , shutdownInput.getShutdownReason(), e.getMessage());
             }
         }
 

@@ -2,6 +2,7 @@ package it.pagopa.pnss.availabledocument.event;
 
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
+import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
@@ -90,7 +91,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
             if (!test) {
                     processRecordsInput.getCheckpointer().checkpoint();
             }
-        } catch (ShutdownException e) {
+        } catch (ShutdownException | ThrottlingException e) {
             log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
         } catch (Exception e) {
             log.error("* FATAL * processRecords: {} {}", e, e.getMessage());
@@ -103,8 +104,9 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         if (shutdownInput.getShutdownReason() == ShutdownReason.TERMINATE) {
             try {
                 shutdownInput.getCheckpointer().checkpoint();
-            }
-            catch (Exception e) {
+            }catch (ShutdownException | ThrottlingException e) {
+                log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
+            } catch (Exception e) {
                 log.error("* FATAL * DBStream: Errore durante il processo di shutDown", e);
             }
         }

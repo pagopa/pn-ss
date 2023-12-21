@@ -79,7 +79,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     return Mono.justOrEmpty(mde.manageItem(disponibilitaDocumentiEventBridge,
                             streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage()));
                 })
-                .doOnError(e -> log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
+                .doOnError(e -> log.fatal("DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> {
                     setCheckpoint(processRecordsInput);
                     log.info(SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput);
@@ -96,7 +96,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         } catch (ThrottlingException te) {
             log.info("processRecords - Encountered throttling exception, skipping checkpoint: {} {}", te, te.getMessage());
         } catch (Exception e) {
-            log.fatal("* FATAL * Error while tring to set checkpoint: {} {} {}", e, processRecordsInput, e.getMessage());
+            log.fatal("Error while tring to set checkpoint: {} {} {}", e, processRecordsInput, e.getMessage());
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
     }
@@ -107,11 +107,11 @@ public class StreamsRecordProcessor implements IRecordProcessor {
             try {
                 shutdownInput.getCheckpointer().checkpoint();
             } catch (ShutdownException se) {
-                log.info("processRecords - Encountered shutdown exception, skipping checkpoint: {} {}", se, se.getMessage());
+                log.info("shutdown - Encountered shutdown exception, skipping checkpoint: {} {}", se, se.getMessage());
             } catch (ThrottlingException te) {
-                log.info("processRecords - Encountered throttling exception, skipping checkpoint: {} {}", te, te.getMessage());
+                log.info("shutdown - Encountered throttling exception, skipping checkpoint: {} {}", te, te.getMessage());
             } catch (Exception e) {
-                log.fatal("* FATAL * DBStream: Error while trying to shutdown checkpoint: {} {} {}",  e , shutdownInput.getShutdownReason(), e.getMessage());
+                log.fatal("DBStream: Error while trying to shutdown checkpoint: {} {} {}",  e , shutdownInput.getShutdownReason(), e.getMessage());
             }
         }
 

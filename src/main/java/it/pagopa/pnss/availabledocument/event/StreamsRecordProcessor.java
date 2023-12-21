@@ -91,10 +91,12 @@ public class StreamsRecordProcessor implements IRecordProcessor {
             if (!test) {
                     processRecordsInput.getCheckpointer().checkpoint();
             }
-        } catch (ShutdownException | ThrottlingException e) {
-            log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
+        } catch (ShutdownException se) {
+            log.info("processRecords - Encountered shutdown exception, skipping checkpoint: {} {}", se, se.getMessage());
+        } catch (ThrottlingException te) {
+            log.info("processRecords - Encountered throttling exception, skipping checkpoint: {} {}", te, te.getMessage());
         } catch (Exception e) {
-            log.error("* FATAL * processRecords: {} {}", e, e.getMessage());
+            log.fatal("* FATAL * Error while tring to set checkpoint: {} {} {}", e, processRecordsInput, e.getMessage());
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
     }
@@ -104,10 +106,12 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         if (shutdownInput.getShutdownReason() == ShutdownReason.TERMINATE) {
             try {
                 shutdownInput.getCheckpointer().checkpoint();
-            }catch (ShutdownException | ThrottlingException e) {
-                log.info("processRecords - checkpointing: {} {}",  e, e.getMessage());
+            } catch (ShutdownException se) {
+                log.info("processRecords - Encountered shutdown exception, skipping checkpoint: {} {}", se, se.getMessage());
+            } catch (ThrottlingException te) {
+                log.info("processRecords - Encountered throttling exception, skipping checkpoint: {} {}", te, te.getMessage());
             } catch (Exception e) {
-                log.error("* FATAL * DBStream: Errore durante il processo di shutDown", e);
+                log.fatal("* FATAL * DBStream: Error while trying to shutdown checkpoint: {} {} {}", e , shutdownInput.getShutdownReason(), e.getMessage());
             }
         }
 

@@ -105,7 +105,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
             try {
                 shutdownInput.getCheckpointer().checkpoint();
             }catch (ShutdownException | ThrottlingException e) {
-                log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
+                log.info("processRecords - checkpointing: {} {}",  e, e.getMessage());
             } catch (Exception e) {
                 log.error("* FATAL * DBStream: Errore durante il processo di shutDown", e);
             }

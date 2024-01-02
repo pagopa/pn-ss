@@ -956,7 +956,11 @@ Resources:
           PnSsGestoreRepositoryPathGetDocument: !Ref PnSsGestoreRepositoryPathGetDocument
           PnSsGestoreRepositoryPathPatchDocument: !Ref PnSsGestoreRepositoryPathPatchDocument
           PnSsStagingBucketName: !Ref PnSsStagingBucketName
-
+      Tags:
+        - Key: "pn-eni-related"
+          Value: "true"
+        - Key: "pn-eni-related-groupName-regexp"
+          Value: !Base64 "^pn-ss-gestore-bucket-sec-group.*$"
       Code:
         ZipFile: |
           "use strict";

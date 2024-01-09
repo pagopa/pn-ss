@@ -1,19 +1,18 @@
 package it.pagopa.pnss.uribuilder;
 
 import com.amazonaws.SdkClientException;
-import it.pagopa.pn.template.internal.rest.v1.dto.*;
-import it.pagopa.pn.template.rest.v1.dto.FileDownloadResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.S3BucketException;
-import it.pagopa.pnss.common.client.impl.DocumentClientCallImpl;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +31,7 @@ import reactor.test.StepVerifier;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.*;
@@ -41,12 +41,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -54,7 +53,7 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-@Slf4j
+@CustomLog
 class UriBuilderServiceDownloadTest {
 
     @Value("${header.x-api-key:#{null}}")
@@ -177,33 +176,33 @@ class UriBuilderServiceDownloadTest {
 
         noTraceIdFileDownloadTestCall(docId, true).expectStatus().isBadRequest();
     }
-//    @Test
-//    void testUrlGenerato() {
-//
-//        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
-//
-//        String docId = "1111-aaaa";
-//        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
-//
-//        DocumentInput d = new DocumentInput();
-//        d.setDocumentType(DocTypesConstant.PN_AAR);
-//        d.setDocumentState(AVAILABLE);
-//        d.setCheckSum(CHECKSUM);
-//
-//        mockGetDocument(d, docId);
-//
-//        var now = Instant.now();
-//
-//        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class)))
-//                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
-//        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
-//        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(now).build()));
-//        when(documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, docId, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(now))))
-//                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
-//
-//
-//        fileDownloadTestCall(docId, false).expectStatus().isOk();
-//    }
+    @Test
+    void testUrlGenerato() {
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
+
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+
+        mockGetDocument(d, docId);
+
+        var now = Instant.now();
+
+        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class)))
+                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(now).build()));
+        when(documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, docId, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(now))))
+                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
+
+
+        fileDownloadTestCall(docId, false).expectStatus().isOk();
+    }
 
 //    @Test
 //    void testUrlGeneratoConMetaDataTrue() {
@@ -263,13 +262,36 @@ class UriBuilderServiceDownloadTest {
 
     @Test
     void recoverDocumentFromBucketRestoreAlreadyInProgress() {
+        String restoreRequestDate = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.ENGLISH)
+                .withZone(ZoneId.of("GMT"))
+                .format(OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(10));
+
 
         AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("RestoreAlreadyInProgress").build();
+        SdkHttpResponse sdkHttpResponse= SdkHttpResponse.builder().putHeader("x-amz-restore-request-date", List.of(restoreRequestDate)).build();
+        HeadObjectResponse headObjectResponse = (HeadObjectResponse) HeadObjectResponse.builder().sdkHttpResponse(sdkHttpResponse).build();
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(headObjectResponse));
         when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
 
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
-        StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
+        StepVerifier.create(testMono)
+                .expectNextMatches(fileDownloadInfo -> fileDownloadInfo.getRetryAfter().compareTo(BigDecimal.valueOf(17400)) == 0)
+                .verifyComplete();
     }
+
+    @Test
+    void recoverDocumentFromBucketRestoreAlreadyInProgressWithNegativeElapsedTime() {
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("RestoreAlreadyInProgress").build();
+        SdkHttpResponse sdkHttpResponse= SdkHttpResponse.builder().putHeader("x-amz-restore-request-date", List.of("Fri, 03 Nov 2023 21:21:21 GMT")).build();
+        HeadObjectResponse headObjectResponse = (HeadObjectResponse) HeadObjectResponse.builder().sdkHttpResponse(sdkHttpResponse).build();
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(headObjectResponse));
+        when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
+
+        var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
+        StepVerifier.create(testMono)
+                .expectNextMatches(fileDownloadInfo -> fileDownloadInfo.getRetryAfter().compareTo(BigDecimal.valueOf(3600)) == 0)
+                .verifyComplete();    }
 
     @Test
     void recoverDocumentFromBucketNoSuchKey() {
@@ -503,9 +525,11 @@ class UriBuilderServiceDownloadTest {
         DocumentType type = new DocumentType();
         type.setTipoDocumento(d.getDocumentType());
         type.setChecksum(DocumentType.ChecksumEnum.MD5);
+        type.setStatuses(Map.of(SAVED, new CurrentStatus().technicalState(AVAILABLE)));
         doc.setDocumentType(type);
         doc.setDocumentState(d.getDocumentState());
         doc.setDocumentLogicalState(d.getDocumentLogicalState());
+        doc.setRetentionUntil(OffsetDateTime.now().format(DATE_TIME_FORMATTER));
         documentResponse.setDocument(doc);
         Mono<DocumentResponse> docRespEntity = Mono.just(documentResponse);
         doReturn(docRespEntity).when(documentClientCall).getDocument(docId);

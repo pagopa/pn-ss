@@ -9,6 +9,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationDestination;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationResponse;
+import lombok.CustomLog;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,15 +25,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
-
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationDestination;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -40,7 +39,7 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-@Slf4j
+@CustomLog
 public class ConfigurationApiControllerTest {
 
 	@Autowired
@@ -100,7 +99,7 @@ public class ConfigurationApiControllerTest {
 		canRead.add("DD");
 		List<String> canModifyStatus = new ArrayList<>();
 		canModifyStatus.add("ModifyStatus");
-		UserConfigurationDestination destination = new UserConfigurationDestination(); 
+		UserConfigurationDestination destination = new UserConfigurationDestination();
 		destination.setSqsUrl("URL");
 		
 		userConfigurationInput = new UserConfiguration();
@@ -248,14 +247,14 @@ public class ConfigurationApiControllerTest {
 
         Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 		
-		EntityExchangeResult<it.pagopa.pn.template.rest.v1.dto.UserConfiguration> userConfigurationInserted = webTestClient.get()
+		EntityExchangeResult<UserConfiguration> userConfigurationInserted = webTestClient.get()
 			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_CONFIGURATIONS_USER_CONF_WITH_PARAM).build(PARTITION_ID_DEFAULT_USER_CONF))
 	        .accept(APPLICATION_JSON)
 	        .header(xApiKey,xApiKeyValue)
 	        .header(xPagopaSafestorageCxId,xPagopaSafestorageCxIdValue)
 	        .exchange()
 	        .expectStatus().isOk()
-	        .expectBody(it.pagopa.pn.template.rest.v1.dto.UserConfiguration.class).returnResult();
+	        .expectBody(UserConfiguration.class).returnResult();
 	    
 	    log.info("\n Test 2 (getCurrentClientConfig) get userConfiguration \n");
 	    

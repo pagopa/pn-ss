@@ -256,6 +256,21 @@ Resources:
             Transitions: 
               - StorageClass: 'GLACIER'
                 TransitionInDays: 70
+          - Id: 'PnSsAddresses'
+            ExpirationInDays: 30
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storageType'
+                Value: 'PN_ADDRESSES_STORAGE'
+          - Id: 'PnSsLogsArchiveAudit2Y'
+            ExpirationInDays: 731
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storageType'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT2Y'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
       NotificationConfiguration:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
@@ -337,6 +352,7 @@ Resources:
         SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
+        VisibilityTimeout: 300
         QueueHasAlarm: 'false'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 

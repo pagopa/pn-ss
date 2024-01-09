@@ -1,7 +1,8 @@
 package it.pagopa.pnss.repositorymanager.service;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfiguration;
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationChanges;
+
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
 import reactor.core.publisher.Mono;
 
 public interface UserConfigurationService {

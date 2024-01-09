@@ -2,33 +2,39 @@ package it.pagopa.pnss.transformation.rest.call.aruba;
 
 import com.sun.xml.ws.encoding.xml.XMLMessage;
 import it.pagopa.pnss.common.client.exception.ArubaSignException;
+import it.pagopa.pnss.common.client.exception.ArubaSignExceptionLimitCall;
+import it.pagopa.pnss.configurationproperties.retry.ArubaRetryStrategyProperties;
 import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
 import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimeMark;
 import it.pagopa.pnss.transformation.wsdl.*;
 import jakarta.activation.DataHandler;
 import jakarta.mail.util.ByteArrayDataSource;
 import jakarta.xml.ws.Response;
+import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.util.retry.Retry;
 
 import java.io.ByteArrayInputStream;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 import static it.pagopa.pnss.transformation.wsdl.XmlSignatureType.XMLENVELOPED;
-import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @Service
-@Slf4j
+@CustomLog
 public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
 
     private final ArubaSignService arubaSignService;
     private final IdentitySecretTimeMark identitySecretTimemark;
     private final ArubaSecretValue arubaSecretValue;
+    private final Retry arubaRetryStrategy;
 
     @Value("${aruba.cert_id}")
     public String certificationID;
@@ -50,16 +56,20 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
     });
 
     public ArubaSignServiceCallImpl(ArubaSignService arubaSignService, IdentitySecretTimeMark identitySecretTimemark,
-                                    ArubaSecretValue arubaSecretValue, @Value("${aruba.sign.timeout}") String arubaSignTimeout) {
+                                    ArubaSecretValue arubaSecretValue, ArubaRetryStrategyProperties arubaRetryStrategyProperties, @Value("${aruba.sign.timeout}") String arubaSignTimeout) {
         this.arubaSignService = arubaSignService;
         this.identitySecretTimemark = identitySecretTimemark;
         this.arubaSecretValue = arubaSecretValue;
         this.arubaSignTimeout = Long.valueOf(arubaSignTimeout);
+        arubaRetryStrategy = Retry.backoff(arubaRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(arubaRetryStrategyProperties.minBackoff()))
+                .filter(ArubaSignException.class::isInstance)
+                .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
+                .onRetryExhaustedThrow((retrySpec, retrySignal) -> retrySignal.failure());
     }
 
     private <T> void createMonoFromSoapRequest(MonoSink<Object> sink, Response<T> response) {
         try {
-            sink.success(response.get(arubaSignTimeout, TimeUnit.SECONDS));
+            sink.success(response.get());
         } catch (Exception throwable) {
             endSoapRequest(sink, throwable);
         }
@@ -106,6 +116,7 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
 
     @Override
     public Mono<SignReturnV2> signPdfDocument(byte[] pdfFile, Boolean marcatura) {
+        log.debug(CLIENT_METHOD_INVOCATION, SIGN_PDF_DOCUMENT, marcatura);
         return Mono.fromCallable(() -> {
                        var signRequestV2 = createAuthenticatedSignRequestV2();
                        signRequestV2.setRequiredmark(marcatura);
@@ -124,11 +135,16 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                                                                                                                                         res))))
                    .cast(PdfsignatureV2Response.class)
                    .map(PdfsignatureV2Response::getReturn)
-                   .transform(CHECK_IF_RESPONSE_IS_OK);
+                   .transform(CHECK_IF_RESPONSE_IS_OK)
+                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()))
+                   .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, SIGN_PDF_DOCUMENT, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
+                   .retryWhen(arubaRetryStrategy);
+
     }
 
     @Override
     public Mono<SignReturnV2> pkcs7signV2(byte[] buf, Boolean marcatura) {
+        log.debug(CLIENT_METHOD_INVOCATION, PKCS_7_SIGN_V2, marcatura);
         return Mono.fromCallable(() -> {
                        var signRequestV2 = createAuthenticatedSignRequestV2();
                        signRequestV2.setRequiredmark(marcatura);
@@ -147,11 +163,16 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                                                                                                                                   res))))
                    .cast(Pkcs7SignV2Response.class)
                    .map(Pkcs7SignV2Response::getReturn)
-                   .transform(CHECK_IF_RESPONSE_IS_OK);
+                   .transform(CHECK_IF_RESPONSE_IS_OK)
+                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()))
+                   .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, PKCS_7_SIGN_V2, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
+                   .retryWhen(arubaRetryStrategy);
+
     }
 
     @Override
     public Mono<SignReturnV2> xmlSignature(byte[] xmlBytes, Boolean marcatura) {
+        log.debug(CLIENT_METHOD_INVOCATION, XML_SIGNATURE, marcatura);
         return Mono.fromCallable(() -> {
                        var signRequestV2 = createAuthenticatedSignRequestV2();
                        signRequestV2.setStream(new DataHandler(XMLMessage.createDataSource(APPLICATION_XML_VALUE,
@@ -173,6 +194,10 @@ public class ArubaSignServiceCallImpl implements ArubaSignServiceCall {
                                                                                                                                     res))))
                    .cast(XmlsignatureResponse.class)
                    .map(XmlsignatureResponse::getReturn)
-                   .transform(CHECK_IF_RESPONSE_IS_OK);
+                   .transform(CHECK_IF_RESPONSE_IS_OK)
+                   .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()))
+                   .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, XML_SIGNATURE, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
+                   .retryWhen(arubaRetryStrategy);
+
     }
 }

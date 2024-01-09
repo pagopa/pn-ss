@@ -1,8 +1,7 @@
 package it.pagopa.pnss.common.client;
 
-import it.pagopa.pn.template.internal.rest.v1.dto.UserConfigurationResponse;
-import it.pagopa.pn.template.rest.v1.dto.UserConfiguration;
-
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationResponse;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 
 import org.springframework.http.ResponseEntity;

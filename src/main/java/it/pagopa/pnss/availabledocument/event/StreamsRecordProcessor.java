@@ -90,7 +90,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 })
                 .doOnError(e -> log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> {
-                    log.info(Constant.SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, "StreamsRecordProcessor.findEventSendToBridge()", processRecordsInput);
+                    log.info(SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput);
                 });
     }
 

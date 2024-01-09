@@ -17,8 +17,6 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
-import java.nio.charset.StandardCharsets;
-import it.pagopa.pn.commons.utils.MDCUtils;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 

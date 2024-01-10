@@ -61,7 +61,10 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 })
                 .then()
                 .doOnError(e -> log.fatal("DBStream: Errore generico ", e))
-                .doOnSuccess(unused -> log.logEndingProcess(PROCESS_RECORDS)))
+                .doOnSuccess(unused -> {
+                    log.logEndingProcess(PROCESS_RECORDS);
+                    setCheckpoint(processRecordsInput);
+                }))
                 .subscribe();
     }
 
@@ -75,12 +78,16 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))
                 .flatMap(streamRecord -> {
                     ManageDynamoEvent mde = new ManageDynamoEvent();
-                    return Mono.justOrEmpty(mde.manageItem(disponibilitaDocumentiEventBridge,
-                            streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage()));
+                    PutEventsRequestEntry putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
+                            streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage());
+                    if (putEventsRequestEntry != null) {
+                        log.info("Event send to bridge {}", putEventsRequestEntry);
+
+                    }
+                    return Mono.justOrEmpty(putEventsRequestEntry);
                 })
                 .doOnError(e -> log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> {
-                    setCheckpoint(processRecordsInput);
                     log.info(SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput);
                 });
     }
@@ -88,7 +95,11 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     private void setCheckpoint(ProcessRecordsInput processRecordsInput) {
         try {
             if (!test) {
+
+                    log.info("Setting checkpoint on id {}", processRecordsInput.getRecords().get(processRecordsInput.getRecords().size() - 1));
+
                     processRecordsInput.getCheckpointer().checkpoint();
+
             }
         } catch (ShutdownException e) {
             log.info("processRecords - checkpointing: {} {}", e, e.getMessage());

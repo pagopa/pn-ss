@@ -385,6 +385,11 @@ Parameters:
     Description: 'System properties and parameters for the JVM'
     Default: ''
 
+  GestoreBucketGetObjectChunkSize:
+    Type: String
+    Description: 'Max Chunk size used by Gestore Bucket when retrieving object from bucket'
+    Default: '1048576'
+
   # Log group parameters
   EcsLogGroup:
     Type: String
@@ -435,6 +440,7 @@ Resources:
         ContainerEnvEntry39: !Sub 'PnSsUriBuilderGetFileWithPatchConfiguration=${PnSsUriBuilderGetFileWithPatchConfiguration}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry42: !Sub 'GestoreBucketGetObjectChunkSize={$GestoreBucketGetObjectChunkSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

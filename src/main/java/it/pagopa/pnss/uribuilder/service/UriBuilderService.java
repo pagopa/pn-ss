@@ -7,8 +7,8 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.*;
+import it.pagopa.pnss.common.exception.RestoreRequestDateNotFound;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.exception.InvalidConfigurationException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
@@ -16,7 +16,6 @@ import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import it.pagopa.pnss.uribuilder.rest.constant.GetFilePatchConfiguration;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
@@ -39,6 +38,7 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -75,6 +75,9 @@ public class UriBuilderService {
 
     @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
     private String defaultInternalClientIdValue;
+
+    @Value("${amz.restore.request.date.header.name}")
+    private String restoreRequestDateHeaderName;
 
     private final GetFilePatchConfiguration getFileWithPatchConfiguration;
     private final UserConfigurationClientCall userConfigurationClientCall;
@@ -480,9 +483,21 @@ public class UriBuilderService {
                     return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                             "Errore AMAZON S3Exception - " + sce.getMessage()));
                 })
-                .thenReturn(new FileDownloadInfo().retryAfter(maxRestoreTimeCold));
+                .map(restoreObjectResponse -> new FileDownloadInfo().retryAfter(maxRestoreTimeCold))
+                .switchIfEmpty(timeElapsedBetweenRequests(keyName, bucketName));
     }
 
+    private Mono<FileDownloadInfo> timeElapsedBetweenRequests(String keyName, String bucketName) {
+        return s3Service.headObject(keyName, bucketName)
+                .map(headObjectResponse -> headObjectResponse.sdkHttpResponse().firstMatchingHeader(restoreRequestDateHeaderName).orElse(""))
+                .filter(restoreRequestDate -> !restoreRequestDate.isBlank())
+                .switchIfEmpty(Mono.error(new RestoreRequestDateNotFound(restoreRequestDateHeaderName)))
+                .map(restoreRequestDate -> {
+                    OffsetDateTime lastRestoreRequestDateTime = LocalDateTime.parse(restoreRequestDate, DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.ENGLISH)).atOffset(ZoneOffset.UTC);
+                    BigDecimal elapsedTime = new BigDecimal(ChronoUnit.SECONDS.between(lastRestoreRequestDateTime, OffsetDateTime.now()));
+                    return new FileDownloadInfo().retryAfter(maxRestoreTimeCold.subtract(elapsedTime).signum() == -1 ? BigDecimal.valueOf(3600) : maxRestoreTimeCold.subtract(elapsedTime));
+                });
+    }
 
     private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
 

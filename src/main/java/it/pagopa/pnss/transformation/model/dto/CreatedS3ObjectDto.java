@@ -27,4 +27,6 @@ public class CreatedS3ObjectDto {
 
     @JsonProperty("detail")
     CreationDetail creationDetailObject;
+
+    int retry;
 }

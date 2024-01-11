@@ -37,7 +37,7 @@ public class ManageDynamoEvent {
         String newDocumentState = newImage.get(DOCUMENTSTATE_KEY).getS();
 
         if (!oldDocumentState.equalsIgnoreCase(newDocumentState) && newDocumentState.equalsIgnoreCase(AVAILABLE)){
-            return  createMessage(newImage, disponibilitaDocumentiEventBridge);
+            return  createMessage(newImage, disponibilitaDocumentiEventBridge, oldDocumentState);
 
         }
 
@@ -45,7 +45,7 @@ public class ManageDynamoEvent {
         return null;
     }
 
-    public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge){
+    public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState){
         String key = docEntity.get(DOCUMENTKEY_KEY).getS();
         MDC.put(MDC_CORR_ID_KEY, key);
         NotificationMessage message = new NotificationMessage();
@@ -67,17 +67,17 @@ public class ManageDynamoEvent {
 
         try {
             String event = objMap.writeValueAsString(message);
-            return creatPutEventRequestEntry(event, disponibilitaDocumentiEventBridge );
+            return creatPutEventRequestEntry(event, disponibilitaDocumentiEventBridge,oldDocumentState);
         } catch (JsonProcessingException e) {
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
     }
 
-    private PutEventsRequestEntry creatPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge) {
+    private PutEventsRequestEntry creatPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge,String oldDocumentState){
         return  PutEventsRequestEntry.builder()
                 .time(new Date().toInstant())
                 .source(GESTORE_DISPONIBILITA_EVENT_NAME)
-                .detailType(EVENT_BUS_SOURCE_AVAILABLE_DOCUMENT)
+                .detailType(oldDocumentState.equalsIgnoreCase(FREEZED) ? EVENT_BUS_SOURCE_GLACIER_DOCUMENTS : EVENT_BUS_SOURCE_AVAILABLE_DOCUMENT)
                 .eventBusName(disponibilitaDocumentiEventBridge)
 
                 .detail(event).build();

@@ -374,10 +374,10 @@ Parameters:
 
   LogAlarmStrategy:
     Type: String
-    Default: 'FATAL'  
-    
+    Default: 'FATAL'
+
   PnSsPreloadedDocsRetentionDays:
-    Type: Number 
+    Type: Number
     Description: 'Numero di giorni di retention per i file di tipo PRELOADED'
 
   JavaToolOptions:
@@ -958,6 +958,7 @@ Resources:
           const http = require(process.env.PnSsGestoreRepositoryProtocol);
           const AWS = require("aws-sdk");
           const crypto = require("crypto");
+          const chunkSize = require(process.env.GestoreBucketGetObjectChunkSize)
 
           const HOSTNAME = process.env.PnSsHostname;
           const PORT = process.env.PnSsGestoreRepositoryPort;
@@ -1004,23 +1005,31 @@ Resources:
                       params.Bucket = bucketName;
                       params.Key = jsonDocument.documentKey;
                       try {
-                        const { Body } = await s3
-                          .getObject(params)
-                          .promise();
-                        const doc = await getDocumentFromDB(jsonDocument.documentKey);
-
-                        console.log(doc.document);
-                        console.log(doc.document.documentType.checksum);
-                        console.log(JSON.stringify(doc.document.documentType.checksum));
-
-                        if( doc.document.documentType.checksum != "NONE" ) {
-                           jsonDocument.checkSum = crypto
-                             .createHash(doc.document.documentType.checksum)
-                             .update(Body)
-                             .digest("base64");
-                        }
-          
-                        jsonDocument.lastStatusChangeTimestamp = bodyData.Records[0].eventTime;
+                            const doc = await getDocumentFromDB(jsonDocument.documentKey);
+                            console.log(doc.document);
+                            console.log(doc.document.documentType.checksum);
+                            console.log(JSON.stringify(doc.document.documentType.checksum));
+                        
+                            if( doc.document.documentType.checksum != "NONE" )
+                            {
+                            console.log("Starting file hashing...")
+                
+                            let hash = crypto.createHash(doc.document.documentType.checksum);
+                            let offset = 0;
+                        
+                            while(offset<contentLenght)
+                            {
+                              const end = Math.min(offset + chunkSize, contentLenght);
+                              params.Range=`bytes=${offset}-${end - 1}`
+                              const chunk = await s3.getObject(params).promise();
+                              hash.update(chunk.Body);
+                              offset += chunkSize;
+                            }
+                              jsonDocument.checkSum = hash.digest('base64');
+                              console.log("File hashing done!")
+                            }
+              
+                            jsonDocument.lastStatusChangeTimestamp = bodyData.Records[0].eventTime;
           
                       } catch (error) {
                         console.log(error);

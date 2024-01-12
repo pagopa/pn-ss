@@ -440,7 +440,6 @@ Resources:
         ContainerEnvEntry39: !Sub 'PnSsUriBuilderGetFileWithPatchConfiguration=${PnSsUriBuilderGetFileWithPatchConfiguration}'
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
-        ContainerEnvEntry42: !Sub 'GestoreBucketGetObjectChunkSize={$GestoreBucketGetObjectChunkSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -956,6 +955,7 @@ Resources:
           PnSsGestoreRepositoryPathGetDocument: !Ref PnSsGestoreRepositoryPathGetDocument
           PnSsGestoreRepositoryPathPatchDocument: !Ref PnSsGestoreRepositoryPathPatchDocument
           PnSsStagingBucketName: !Ref PnSsStagingBucketName
+          GestoreBucketGetObjectChunkSize: !Ref GestoreBucketGetObjectChunkSize
 
       Code:
         ZipFile: |

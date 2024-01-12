@@ -964,13 +964,13 @@ Resources:
           const http = require(process.env.PnSsGestoreRepositoryProtocol);
           const AWS = require("aws-sdk");
           const crypto = require("crypto");
-          const chunkSize = require(process.env.GestoreBucketGetObjectChunkSize)
 
           const HOSTNAME = process.env.PnSsHostname;
           const PORT = process.env.PnSsGestoreRepositoryPort;
           const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
           const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
           const STAGINGBUCKET = process.env.PnSsStagingBucketName;
+          const chunkSize = process.env.GestoreBucketGetObjectChunkSize;
 
           exports.handler = async (event) => {
             const s3 = new AWS.S3();
@@ -1023,9 +1023,9 @@ Resources:
                             let hash = crypto.createHash(doc.document.documentType.checksum);
                             let offset = 0;
                         
-                            while(offset<contentLenght)
+                            while(offset<jsonDocument.contentLenght)
                             {
-                              const end = Math.min(offset + chunkSize, contentLenght);
+                              const end = Math.min(offset + chunkSize, jsonDocument.contentLenght);
                               params.Range=`bytes=${offset}-${end - 1}`
                               const chunk = await s3.getObject(params).promise();
                               hash.update(chunk.Body);

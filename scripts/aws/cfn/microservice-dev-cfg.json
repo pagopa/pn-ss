@@ -27,6 +27,6 @@
     "AutoscalingThreshold": "15000",
     "PnSsUriBuilderGetFileWithPatchConfiguration": "CLIENT_SPECIFIC",
     "JavaToolOptions": "-XX:MaxDirectMemorySize=128M",
-    "S3GetObjectBlockSize": "1048576"
+    "GestoreBucketGetObjectChunkSize": "10485760"
   }
 }

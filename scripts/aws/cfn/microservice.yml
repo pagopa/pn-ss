@@ -970,7 +970,7 @@ Resources:
           const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
           const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
           const STAGINGBUCKET = process.env.PnSsStagingBucketName;
-          const chunkSize = process.env.GestoreBucketGetObjectChunkSize;
+          const chunkSize = Number(process.env.GestoreBucketGetObjectChunkSize);
 
           exports.handler = async (event) => {
             const s3 = new AWS.S3();

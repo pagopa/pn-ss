@@ -26,6 +26,7 @@
     "MaxTasksNumber": "13",
     "AutoscalingThreshold": "15000",
     "PnSsUriBuilderGetFileWithPatchConfiguration": "CLIENT_SPECIFIC",
-    "JavaToolOptions": "-XX:MaxDirectMemorySize=128M"
+    "JavaToolOptions": "-XX:MaxDirectMemorySize=128M",
+    "GestoreBucketGetObjectChunkSize": "10485760"
   }
 }

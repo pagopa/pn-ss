@@ -260,8 +260,8 @@
                         <configuration>
                             <wsdlOptions>
                                 <wsdlOption>
-                                    <wsdl>${project.basedir}/src/main/resources/wsdl/ArubaSignService.wsdl</wsdl>
-                                    <wsdlLocation>classpath:wsdl/ArubaSignService.wsdl</wsdlLocation>
+                                    <wsdl>${project.basedir}/src/main/resources/sign/aruba/wsdl/ArubaSignService.wsdl</wsdl>
+                                    <wsdlLocation>classpath:sign/aruba/wsdl/ArubaSignService.wsdl</wsdlLocation>
                                     <extraargs>
                                         <extraarg>-client</extraarg>
                                         <extraarg>-verbose</extraarg>

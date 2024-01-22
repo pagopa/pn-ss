@@ -94,7 +94,7 @@ public class LogUtils {
     public static final String XML_SIGNATURE = "ArubaSignServiceCall.xmlSignature()";
     public static final String PKCS_7_SIGN_V2 = "ArubaSignServiceCall.pkcs7signV2()";
     public static final String INITIALIZING_ARUBA_PROXY_CLIENT = "Initializing Aruba proxy client for '{}' : ArubaServerAddress : {}, EndpointName : {}, ServiceName : {}";
-
+    public static final String SETTING_PROXY_PROPERTIES = "Setting properties for Aruba proxy client : {}";
 
     //SQS
     public static final String INSERTING_DATA_IN_SQS = "Inserting data {} in SQS '{}'";

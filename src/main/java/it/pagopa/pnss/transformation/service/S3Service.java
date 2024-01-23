@@ -4,7 +4,6 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
-
 import java.time.Duration;
 
 public interface S3Service {
@@ -24,4 +23,9 @@ public interface S3Service {
     Mono<PutObjectRetentionResponse> putObjectRetention(String key, String bucket, ObjectLockRetention objectLockRetention);
 
     Mono<PutObjectTaggingResponse> putObjectTagging(String key, String bucket, Tagging tagging);
+
+    Mono<GetObjectTaggingResponse> getObjectTagging(String key, String bucketName);
+
+    Mono<DeleteObjectTaggingResponse> deleteObjectTagging(String key, String bucketName, Tagging tagging);
+
 }

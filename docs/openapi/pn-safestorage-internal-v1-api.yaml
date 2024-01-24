@@ -727,6 +727,13 @@ components:
                   $ref: '#/components/schemas/DocumentType'
         error:
           $ref: '#/components/schemas/Error'
+    DocumentTTLInput:
+        type: object
+        properties:
+          documentKey:
+            type: string
+          retentionUntil:
+            type: string
     DocumentChanges:
       type: object
       properties:

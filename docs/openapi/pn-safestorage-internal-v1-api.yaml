@@ -18,6 +18,8 @@ tags:
     description: Tipo Documento
   - name: documentInternal
     description: Documenti
+  - name: scadenzaDocumentiInternal
+    description: Scadenza documenti
   - name: userConfigurationInternal
     description: Anagrafica Client
 paths:
@@ -409,6 +411,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/DocumentResponse'
 
+  '/safestorage/internal/v1/scadenza-documenti':
+    post:
+      operationId: insertOrUpdateScadenzaDocumenti
+      summary: Inserisce una nuova scadenza documenti.
+      tags:
+        - scadenzaDocumentiInternal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScadenzaDocumentiInput'
+      responses:
+        '400':
+          description: >-
+            #### Bad request
+        '401':
+          description: >-
+            #### Unauthorized
+              - __x-api-key__ e/o __x-pagopa-safestorage-cx-id__ assenti
+        '403':
+          description: >-
+            #### Forbidden
+              - Invalid __x-api-key__
+          content:
+            application/json:
+              example:
+                timestamp: 2023-02-21T10:24:06.294+00:00
+                path: /safestorage/internal/v1/scadenza-documenti
+                status: 403
+                error: Forbidden
+                message: Invalid x-api-key
+                requestId: cdf95798-11
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScadenzaDocumentiResponse'
+
   '/safestorage/internal/v1/userConfigurations/{name}':
     get:
       operationId: getUserConfiguration
@@ -727,13 +768,28 @@ components:
                   $ref: '#/components/schemas/DocumentType'
         error:
           $ref: '#/components/schemas/Error'
-    DocumentTTLInput:
+    ScadenzaDocumenti:
+      type: object
+      properties:
+        documentKey:
+          type: string
+        retentionUntil:
+          type: string
+    ScadenzaDocumentiInput:
         type: object
         properties:
           documentKey:
             type: string
           retentionUntil:
             type: string
+    ScadenzaDocumentiResponse:
+      type: object
+      properties:
+        document:
+          allOf:
+            - $ref: '#/components/schemas/ScadenzaDocumenti'
+        error:
+          $ref: '#/components/schemas/Error'
     DocumentChanges:
       type: object
       properties:

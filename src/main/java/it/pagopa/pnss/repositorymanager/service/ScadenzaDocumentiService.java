@@ -5,7 +5,6 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocument
 import reactor.core.publisher.Mono;
 
 public interface ScadenzaDocumentiService {
-
     Mono<ScadenzaDocumenti> insertOrUpdateScadenzaDocumenti(ScadenzaDocumentiInput scadenzaDocumentiInput);
 
 }

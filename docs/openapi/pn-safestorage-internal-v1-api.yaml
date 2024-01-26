@@ -774,14 +774,16 @@ components:
         documentKey:
           type: string
         retentionUntil:
-          type: string
+          type: integer
+          format: int64
     ScadenzaDocumentiInput:
         type: object
         properties:
           documentKey:
             type: string
           retentionUntil:
-            type: string
+            type: integer
+            format: int64
     ScadenzaDocumentiResponse:
       type: object
       properties:

@@ -18,7 +18,6 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-
 import java.time.Instant;
 
 
@@ -46,9 +45,9 @@ public class ScadenzaDocumentiServiceImpl implements ScadenzaDocumentiService {
         final String INSERT_SCADENZA_DOCUMENTI = "insertScadenzaDocumenti()";
         log.debug(LogUtils.INVOKING_METHOD, INSERT_SCADENZA_DOCUMENTI, scadenzaDocumentiInput);
 
-        return  validateInput(scadenzaDocumentiInput)
-                .flatMap(entity -> Mono.fromCompletionStage(scadenzaDocumentiDynamoDbAsyncTable.putItemWithResponse(builder -> builder.item(entity))))
-                .map(response -> objectMapper.convertValue(response.attributes(), ScadenzaDocumenti.class))
+        return validateInput(scadenzaDocumentiInput)
+                .flatMap(entity -> Mono.fromCompletionStage(scadenzaDocumentiDynamoDbAsyncTable.putItem(builder -> builder.item(entity))).thenReturn(entity))
+                .map(entity -> objectMapper.convertValue(entity, ScadenzaDocumenti.class))
                 .onErrorResume(IdemPotentElementException.class, throwable -> {
                             ScadenzaDocumenti scadenzaDocumenti = new ScadenzaDocumenti();
                             scadenzaDocumenti.setRetentionUntil(scadenzaDocumentiInput.getRetentionUntil());
@@ -87,7 +86,7 @@ public class ScadenzaDocumentiServiceImpl implements ScadenzaDocumentiService {
                         sink.next(existingEntity);
                     }
                 })
-                .cast(ScadenzaDocumentiInput.class)
+                .cast(ScadenzaDocumentiEntity.class)
                 .handle((scadenzaDocumentiFound, sink) -> {
                     //verifico che la retention until inserita non sia minore di quella già presente
                     Instant retentionUntilInput =Instant.ofEpochSecond(scadenzaDocumentiInput.getRetentionUntil());

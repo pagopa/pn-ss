@@ -787,7 +787,7 @@ components:
     ScadenzaDocumentiResponse:
       type: object
       properties:
-        document:
+        scadenzaDocumenti:
           allOf:
             - $ref: '#/components/schemas/ScadenzaDocumenti'
         error:

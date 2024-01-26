@@ -28,7 +28,7 @@ public class ScadenzaDocumentiInternalApiController implements ScadenzaDocumenti
     public Mono<ResponseEntity<ScadenzaDocumentiResponse>> insertOrUpdateScadenzaDocumenti(Mono<ScadenzaDocumentiInput> scadenzaDocumentiInput, ServerWebExchange exchange) {
         log.logStartingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI);
         return scadenzaDocumentiInput.flatMap(scadenzaDocumenti -> scadenzaDocumentiService.insertOrUpdateScadenzaDocumenti(scadenzaDocumenti))
-                .map(scadenzaDocumenti -> new ScadenzaDocumentiResponse().document(scadenzaDocumenti))
+                .map(scadenzaDocumenti -> new ScadenzaDocumentiResponse().scadenzaDocumenti(scadenzaDocumenti))
                 .map(ResponseEntity::ok)
                 .doOnSuccess(result -> log.logEndingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI))
                 .doOnError(throwable -> log.logEndingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI, false, throwable.getMessage()))

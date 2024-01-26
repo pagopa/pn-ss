@@ -10,8 +10,8 @@ public class IdemPotentElementException extends RuntimeException implements Seri
         super("The insertion would have no effect: same values or already present.");
     }
 
-    public IdemPotentElementException(String msg) {
-        super(String.format("The insertion od the element '%s' would have no effect: same values or already present.",fileKey));
+    public IdemPotentElementException(String fileKey) {
+        super(String.format("The insertion od the element '%s' would have no effect: same values or already present.", fileKey));
     }
 
 

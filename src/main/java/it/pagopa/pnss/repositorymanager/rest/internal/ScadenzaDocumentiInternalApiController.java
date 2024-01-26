@@ -4,7 +4,6 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.ScadenzaDocument
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Error;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocumentiInput;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocumentiResponse;
-import it.pagopa.pnss.common.exception.IdemPotentElementException;
 import it.pagopa.pnss.common.utils.LogUtils;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;

@@ -1,6 +1,5 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
-import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocumenti;
@@ -14,7 +13,6 @@ import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.ScadenzaDocumentiService;
 import lombok.CustomLog;
 import org.apache.tika.utils.StringUtils;
-import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -22,7 +20,6 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 import java.time.Instant;
-import java.util.Date;
 
 
 @Service
@@ -57,6 +54,11 @@ public class ScadenzaDocumentiServiceImpl implements ScadenzaDocumentiService {
                             scadenzaDocumenti.setRetentionUntil(scadenzaDocumentiInput.getRetentionUntil());
                             scadenzaDocumenti.setDocumentKey(scadenzaDocumentiInput.getDocumentKey());
                             return Mono.just(scadenzaDocumenti);
+                        }
+                )
+                .onErrorResume(IllegalArgumentException.class, throwable -> {
+                            log.error("insertScadenzaDocumenti() : IllegalArgumentException : {}", throwable.getMessage());
+                            return Mono.error(new RepositoryManagerException(throwable.getMessage()));
                         }
                 )
                 .doOnSuccess(response -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, INSERT_SCADENZA_DOCUMENTI, response));
@@ -104,6 +106,7 @@ public class ScadenzaDocumentiServiceImpl implements ScadenzaDocumentiService {
                     entity.setDocumentKey(scadenzaDocumentiInput.getDocumentKey());
                     entity.setRetentionUntil(scadenzaDocumentiInput.getRetentionUntil());
                     return entity;
-                });
+                })
+                .doOnSuccess(entity -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, "validateInput()", entity));
     }
 }

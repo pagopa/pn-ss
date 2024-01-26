@@ -50,6 +50,7 @@ public class LogUtils {
     public static final String INSERT_DOC_TYPE = "insertDocType()";
     public static final String UPDATE_DOC_TYPE = "updateDocType()";
     public static final String DELETE_DOC_TYPE = "deleteDocType()";
+    public static final String INSERT_OR_UPDATE_SCADENZA_DOCUMENTI = "insertOrUpdateScadenzaDocumenti()";
 
     //EXTERNAL
     public static final String GET_DOC_TYPES = "getDocTypes()";

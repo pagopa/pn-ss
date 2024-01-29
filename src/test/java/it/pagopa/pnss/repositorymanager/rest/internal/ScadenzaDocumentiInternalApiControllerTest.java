@@ -9,6 +9,7 @@ import lombok.CustomLog;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -25,28 +26,26 @@ public class ScadenzaDocumentiInternalApiControllerTest {
 
     @Autowired
     private WebTestClient webTestClient;
-    @Autowired
-    private static DynamoDbTable<ScadenzaDocumentiEntity> dynamoTable;
-    private static final String BASE_PATH = "/safestorage/internal/v1/scadenza-documenti";
+    @Value("${gestore.repository.anagrafica.internal.scadenza.documenti.post}")
+    private String BASE_PATH;
+    private static final String DOCUMENT_KEY = "documentKey";
+    private static final long SECONDS_TO_ADD = 31536000;
 
     @BeforeAll
-    public static void setup(@Autowired DynamoDbEnhancedClient enhancedClient,
-                             @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+    public static void setup(@Autowired DynamoDbEnhancedClient enhancedClient, @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
         log.info("execute insertScadenzaDocumenti()");
-        dynamoTable = enhancedClient.table(
-                gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(ScadenzaDocumentiEntity.class));
+        DynamoDbTable<ScadenzaDocumentiEntity> dynamoTable = enhancedClient.table(gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(ScadenzaDocumentiEntity.class));
         ScadenzaDocumentiEntity scadenzaDocumenti = new ScadenzaDocumentiEntity();
-        scadenzaDocumenti.setRetentionUntil(Instant.EPOCH.plusSeconds(31536000).getEpochSecond());
-        scadenzaDocumenti.setDocumentKey("documentKey");
-
+        scadenzaDocumenti.setRetentionUntil(Instant.EPOCH.plusSeconds(SECONDS_TO_ADD).getEpochSecond());
+        scadenzaDocumenti.setDocumentKey(DOCUMENT_KEY);
         dynamoTable.putItem(builder -> builder.item(scadenzaDocumenti));
     }
 
     @Test
     void insertOrUpdateScadenzaDocumentiTestOk() {
-        EntityExchangeResult<ScadenzaDocumentiResponse> result = webTestClient.post()
+        webTestClient.post()
                 .uri(BASE_PATH)
-                .bodyValue(new ScadenzaDocumentiInput().documentKey("documentKey").retentionUntil(Instant.EPOCH.plusSeconds(31536000).getEpochSecond()))
+                .bodyValue(new ScadenzaDocumentiInput().documentKey(DOCUMENT_KEY).retentionUntil(Instant.EPOCH.plusSeconds(SECONDS_TO_ADD).getEpochSecond()))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(ScadenzaDocumentiResponse.class)
@@ -55,13 +54,13 @@ public class ScadenzaDocumentiInternalApiControllerTest {
 
     @Test
     void insertOrUpdateScadenzaDocumentiIfAlreadyExistsTestOk() {
-        EntityExchangeResult<ScadenzaDocumentiResponse> result = webTestClient.post()
+        webTestClient.post()
                 .uri(BASE_PATH)
-                .bodyValue(new ScadenzaDocumentiInput().documentKey("documentKey").retentionUntil(Instant.EPOCH.plusSeconds(31536000).getEpochSecond()))
+                .bodyValue(new ScadenzaDocumentiInput().documentKey(DOCUMENT_KEY).retentionUntil(Instant.EPOCH.plusSeconds(SECONDS_TO_ADD).getEpochSecond()))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(ScadenzaDocumentiResponse.class)
-                .value(response -> log.info("response: {}", response))
+                .value(response -> log.info("Response: {}", response))
                 .returnResult();
     }
 
@@ -69,11 +68,11 @@ public class ScadenzaDocumentiInternalApiControllerTest {
     void insertOrUpdateWithDateBeforeTestKo() {
         webTestClient.post()
                 .uri(BASE_PATH)
-                .bodyValue(new ScadenzaDocumentiInput().documentKey("documentKey").retentionUntil(Instant.EPOCH.minusSeconds(31536000).getEpochSecond()))
+                .bodyValue(new ScadenzaDocumentiInput().documentKey(DOCUMENT_KEY).retentionUntil(Instant.EPOCH.minusSeconds(SECONDS_TO_ADD).getEpochSecond()))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody(ScadenzaDocumentiResponse.class)
-                .value(response -> log.info("response: {}", response))
+                .value(response -> log.info("Response: {}", response))
                 .returnResult();
 
     }
@@ -86,7 +85,7 @@ public class ScadenzaDocumentiInternalApiControllerTest {
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody(ScadenzaDocumentiResponse.class)
-                .value(response -> log.info("response: {}", response))
+                .value(response -> log.info("Response: {}", response))
                 .returnResult();
 
     }

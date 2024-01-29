@@ -64,8 +64,7 @@ public class ScadenzaDocumentiServiceImpl implements ScadenzaDocumentiService {
     }
 
 
-
-    private Mono<ScadenzaDocumentiEntity> validateInput(ScadenzaDocumentiInput scadenzaDocumentiInput){
+    private Mono<ScadenzaDocumentiEntity> validateInput(ScadenzaDocumentiInput scadenzaDocumentiInput) {
         return Mono.justOrEmpty(scadenzaDocumentiInput)
                 .switchIfEmpty(Mono.error(new RepositoryManagerException("Input is null")))
                 .cast(ScadenzaDocumentiInput.class)
@@ -78,22 +77,16 @@ public class ScadenzaDocumentiServiceImpl implements ScadenzaDocumentiService {
                     }
                 })
                 .flatMap(input -> Mono.fromCompletionStage(() -> scadenzaDocumentiDynamoDbAsyncTable.getItem(Key.builder().partitionValue(input.getDocumentKey()).build())))
-                .handle((existingEntity, sink) -> {
-                    if (scadenzaDocumentiInput.getRetentionUntil().equals(existingEntity.getRetentionUntil())) {
-                        // se il documento è uguale a quello già presente non faccio nulla
-                        sink.error(new IdemPotentElementException(scadenzaDocumentiInput.getDocumentKey()));
-                    } else {
-                        sink.next(existingEntity);
-                    }
-                })
-                .cast(ScadenzaDocumentiEntity.class)
                 .handle((scadenzaDocumentiFound, sink) -> {
-                    //verifico che la retention until inserita non sia minore di quella già presente
-                    Instant retentionUntilInput =Instant.ofEpochSecond(scadenzaDocumentiInput.getRetentionUntil());
-                    Instant retentionUntilFounded = Instant.ofEpochSecond(scadenzaDocumentiFound.getRetentionUntil());
-                    if (retentionUntilInput.isBefore(retentionUntilFounded)) {
-                        log.debug("insertScadenzaDocumenti() : the inserted retentionUntil : {} is before the existing one : {}", retentionUntilInput, retentionUntilFounded);
-                        sink.error(new InvalidRetentionException("Retention until is invalid. The inserted retentionUntil  is before the existing one."));
+                    Instant retentionUntilInput = Instant.ofEpochSecond(scadenzaDocumentiInput.getRetentionUntil());
+                    Instant retentionUntilFound = Instant.ofEpochSecond(scadenzaDocumentiFound.getRetentionUntil());
+                    if (retentionUntilInput.equals(retentionUntilFound)) {
+                        // se il documento è uguale a quello già presente non faccio nulla
+                        log.debug("insertScadenzaDocumenti() : the inserted retentionUntil : {} is the same of the existing one : {}", retentionUntilInput, retentionUntilFound);
+                        sink.error(new IdemPotentElementException(scadenzaDocumentiInput.getDocumentKey()));
+                    } else if (retentionUntilInput.isBefore(retentionUntilFound)) {
+                        log.debug("insertScadenzaDocumenti() : the inserted retentionUntil : {} is before the existing one : {}", retentionUntilInput, retentionUntilFound);
+                        sink.error(new InvalidRetentionException("Retention until is invalid. The inserted retentionUntil is before the existing one."));
                     } else {
                         sink.next(scadenzaDocumentiInput);
                     }

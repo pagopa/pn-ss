@@ -7,6 +7,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.ScadenzaDocumentiClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.ScadenzaDocumentiCallException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.utils.LogUtils;
@@ -21,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.*;
 
@@ -124,10 +126,13 @@ public class FileMetadataUpdateService {
                     documentChanges.setDocumentState(technicalStatus);
 
                     if (retentionUntil != null) {
-                        String storage = documentType.getStatuses().get(document.getDocumentState()).getStorage();
                         documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
-                        return updateS3ObjectTags(fileKey, storage)
-                                .switchIfEmpty(Mono.error(new MissingTagException(fileKey)))
+                        return Flux.fromIterable(documentType.getStatuses().values())
+                                .filter(currentStatus -> currentStatus.getTechnicalState().equals(document.getDocumentState()))
+                                .map(CurrentStatus::getStorage)
+                                .next()
+                                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Technical status not found for document key : " + fileKey)))
+                                .flatMap(storage -> updateS3ObjectTags(fileKey, storage))
                                 .flatMap(putObjectTaggingResponse -> scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput()
                                         .documentKey(fileKey)
                                         .retentionUntil(retentionUntil.toInstant().getEpochSecond())))
@@ -152,6 +157,14 @@ public class FileMetadataUpdateService {
                                         e.getMessage(),
                                         e);
                                 return Mono.error(new ResponseStatusException(e.getStatusCode(), e.getMessage()));
+                            })
+                            .onErrorResume(ScadenzaDocumentiCallException.class, e -> {
+                                log.debug(
+                                        "FileMetadataUpdateService.createUriForUploadFile() : rilevata una ScadenzaDocumentiCallException : " +
+                                                "errore = {}",
+                                        e.getMessage(),
+                                        e);
+                                return Mono.error(new ResponseStatusException(HttpStatus.valueOf(e.getCode()), e.getMessage()));
                             })
                             .onErrorResume(NoSuchKeyException.class, e -> {
                                 log.debug(
@@ -213,19 +226,19 @@ public class FileMetadataUpdateService {
         return s3Service.getObjectTagging(fileKey, bucketName.ssHotName())
                 .flatMapIterable(GetObjectTaggingResponse::tagSet)
                 .reduce(new ArrayList<Tag>(), ((tagList, tag) -> {
-                    Tag.Builder expiryTagBuilder = Tag.builder().key(STORAGE_EXPIRY);
-                    Tag.Builder freezeTagBuilder = Tag.builder().key(STORAGE_FREEZE);
-                    if (tag.key().equals(STORAGE_TYPE) && !tag.value().equals(TAG_EMPTIED_VALUE)) {
-                        tagList.add(Tag.builder().key(STORAGE_TYPE).value(TAG_EMPTIED_VALUE).build());
-                        tagList.add(expiryTagBuilder.value(storage).build());
-                        tagList.add(freezeTagBuilder.value(storage).build());
-                    } else if (tag.key().equals(STORAGE_EXPIRY)) {
-                        tagList.add(expiryTagBuilder.value(TAG_EMPTIED_VALUE).build());
+                    switch (tag.key()) {
+                        case STORAGE_TYPE -> {
+                            tagList.add(Tag.builder().key(STORAGE_EXPIRY).value(storage).build());
+                            tagList.add(Tag.builder().key(STORAGE_FREEZE).value(storage).build());
+                        }
+                        case STORAGE_EXPIRY -> {/* ignore */}
+                        default -> tagList.add(tag);
                     }
                     return tagList;
                 }))
                 .filter(tags -> !tags.isEmpty())
                 .doOnDiscard(GetObjectTaggingRequest.class, discarded -> log.info("File with key '{}' has no tags.", fileKey))
+                .switchIfEmpty(Mono.error(new MissingTagException(fileKey)))
                 .flatMap(tagList -> s3Service.putObjectTagging(fileKey, bucketName.ssHotName(), Tagging.builder().tagSet(tagList).build()));
     }
 

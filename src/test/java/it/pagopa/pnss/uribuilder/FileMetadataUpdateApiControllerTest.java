@@ -231,7 +231,7 @@ class FileMetadataUpdateApiControllerTest {
 		String key = "v1TaggingObject";
 		Date retentionUntil = Date.from(now);
 		Tagging taggingV1 = Tagging.builder().tagSet(Tag.builder().key(STORAGE_TYPE).value(PN_NOTIFIED_DOCUMENTS).build()).build();
-		Set<Tag> expectedTagging = Set.of(Tag.builder().key(STORAGE_TYPE).value(EMPTIED_VALUE).build(), FREEZE_TAG, EXPIRY_TAG);
+		Set<Tag> expectedTagging = Set.of(FREEZE_TAG, EXPIRY_TAG);
 		putObjectInBucket(key, bucketName.ssHotName(), new byte[9], taggingV1);
 
 		//WHEN
@@ -245,7 +245,7 @@ class FileMetadataUpdateApiControllerTest {
 		verify(s3Service, times(1)).getObjectTagging(key, bucketName.ssHotName());
 		verify(s3Service, times(1)).putObjectTagging(eq(key), eq(bucketName.ssHotName()), argument.capture());
 		verify(scadenzaDocumentiClientCall,times(1)).insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput().documentKey(key).retentionUntil(now.getEpochSecond()));
-		Assertions.assertThat(argument.getValue().tagSet()).hasSize(3).containsAll(expectedTagging);
+		Assertions.assertThat(argument.getValue().tagSet()).hasSize(2).containsAll(expectedTagging);
 	}
 	@Test
 	void testFileMetadataUpdateRetentionWithV2TaggingOk() {
@@ -253,7 +253,7 @@ class FileMetadataUpdateApiControllerTest {
 		Instant now = Instant.now();
 		String key = "v2TaggingObject";
 		Tagging tagging = Tagging.builder().tagSet(Set.of(FREEZE_TAG, EXPIRY_TAG)).build();
-		Set<Tag> expectedTagging = Set.of(Tag.builder().key("storage_expiry").value(EMPTIED_VALUE).build());
+		Set<Tag> expectedTagging = Set.of(FREEZE_TAG);
 		putObjectInBucket(key,bucketName.ssHotName(),new byte[9],tagging);
 
 		//WHEN
@@ -269,27 +269,6 @@ class FileMetadataUpdateApiControllerTest {
 		verify(scadenzaDocumentiClientCall,times(1)).insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput().documentKey(key).retentionUntil((now.getEpochSecond())));
 		Assertions.assertThat(argument.getValue().tagSet()).hasSize(1).containsAll(expectedTagging);
 	}
-
-
-//	@Test
-//	void testFileMetadataUpdateDynamoError() {
-//		//GIVEN
-//		Instant now = Instant.now();
-//		String key = "fileKeyDynamoError";
-//		Tagging tagging = Tagging.builder().tagSet(Set.of(FREEZE_TAG,EXPIRY_TAG)).build();
-//		Tagging expectedTagging = Tagging.builder().tagSet(Set.of(Tag.builder().key(STORAGE_EXPIRY).value(EMPTIED_VALUE).build())).build();
-//		putObjectInBucket(key,bucketName.ssHotName(),new byte[9],tagging);
-//
-//		//WHEN
-//		repositoryManagerMocks(key);
-//		when(scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class))).thenReturn(Mono.error(new DynamoDbException()));
-//
-//		//THEN
-//		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(Date.from(now)), key).expectStatus().is5xxServerError();
-//		verify(s3Service, times(1)).getObjectTagging(key, bucketName.ssHotName());
-//		verify(s3Service, times(1)).putObjectTagging(key, bucketName.ssHotName(), expectedTagging);
-//		verify(scadenzaDocumentiClientCall,times(1)).insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput().documentKey(key).retentionUntil(now.getEpochSecond()));
-//	}
 
 	@Test
 	void testFileMetadataUpdateWithNoTagging() {
@@ -323,6 +302,24 @@ class FileMetadataUpdateApiControllerTest {
 	}
 
 	@Test
+	void testFileMetadataUpdateTechnicalStatusNotFound(){
+		Instant now = Instant.now();
+		String key = "fileKey3";
+		repositoryManagerMocks(key);
+
+		var documentType = new DocumentType().statuses(Map.ofEntries(Map.entry(ATTACHED, new CurrentStatus() {{
+			setTechnicalState(ATTACHED);
+			setStorage(PN_NOTIFIED_DOCUMENTS);
+		}}))).tipoDocumento(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS);
+		var document = new Document().documentType(documentType).documentState(BOOKED).documentKey(key);
+		var documentResponse = new DocumentResponse().document(document);
+		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
+
+		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(Date.from(now)), key).expectStatus().isBadRequest();
+		verify(s3Service, never()).getObjectTagging(key, bucketName.ssHotName());
+	}
+
+	@Test
 	void testFileMetadataUpdateRetentionFailedConnectionKo() {
 		//GIVEN
 		Instant now = Instant.now();
@@ -331,7 +328,7 @@ class FileMetadataUpdateApiControllerTest {
 		String bucketName = this.bucketName.ssHotName();
 		byte[] fileBytes = new byte[9];
 		Tagging tagging = Tagging.builder().tagSet(Tag.builder().key(STORAGE_TYPE).value(PN_NOTIFIED_DOCUMENTS).build()).build();
-		Set<Tag> expectedTagging = Set.of(Tag.builder().key(STORAGE_TYPE).value(EMPTIED_VALUE).build(), FREEZE_TAG, EXPIRY_TAG);
+		Set<Tag> expectedTagging = Set.of(FREEZE_TAG, EXPIRY_TAG);
 		putObjectInBucket(key, bucketName, fileBytes, tagging);
 
 		//WHEN
@@ -346,7 +343,7 @@ class FileMetadataUpdateApiControllerTest {
 		verify(s3Service, times(1)).getObjectTagging(key, bucketName);
 		verify(s3Service, times(1)).putObjectTagging(eq(key), eq(bucketName), argument.capture());
 		verify(scadenzaDocumentiClientCall,times(1)).insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput().documentKey(key).retentionUntil(now.getEpochSecond()));
-		Assertions.assertThat(argument.getValue().tagSet()).hasSize(3).containsAll(expectedTagging);
+		Assertions.assertThat(argument.getValue().tagSet()).hasSize(2).containsAll(expectedTagging);
 	}
 
 	private void putObjectInBucket(String key, String bucketName, byte[] fileBytes, Tagging tagging) {

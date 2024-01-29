@@ -145,6 +145,28 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
+  PnSsTableScadenzaDocumenti:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: 'pn-SsScadenzaDocumenti'
+      TimeToLiveSpecification:
+          AttributeName: 'retentionUntil'
+          Enabled: true
+      AttributeDefinitions:
+        - AttributeName: 'documentKey'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'documentKey'
+          KeyType: 'HASH'
+      StreamSpecification:
+        StreamViewType: 'NEW_AND_OLD_IMAGES'
+      BillingMode: 'PAY_PER_REQUEST'
+      TableClass: 'STANDARD'
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
   PnSsKmsBucket:
     Type: 'AWS::KMS::Key'
     Properties:
@@ -595,6 +617,18 @@ Outputs:
   PnSsTableDocumentiStreamArn:
     Description: 'Nome tabella SS Documenti'
     Value: !GetAtt PnSsTableDocumenti.StreamArn
+
+  PnSsTableNameScadenzaDocumenti:
+    Description: 'Nome tabella SS Scadenza Documenti'
+    Value: !Ref PnSsTableScadenzaDocumenti
+
+  PnSsTableArnScadenzaDocumenti:
+    Description: 'ARN della tabella SS Documenti'
+    Value: !GetAtt PnSsTableScadenzaDocumenti.Arn
+
+  PnSsTableScadenzaDocumentiStreamArn:
+    Description: 'Nome tabella SS Scadenza Documenti'
+    Value: !GetAtt PnSsTableScadenzaDocumenti.StreamArn
 
   PnSsBucketName:
     Description: 'Nome Bucket SS'

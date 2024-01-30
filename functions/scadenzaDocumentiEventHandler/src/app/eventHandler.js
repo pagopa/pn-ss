@@ -1,26 +1,46 @@
+"use strict";
+
 const s3 = require("@aws-sdk/client-s3");
 
-const BUCKET_NAME = process.env.PnSsBucketName;
-
 exports.handler = async (event) => {
-    // Verifica che la lista dei Record sia popolata.
-    if (event.Records && event.Records.length > 0) {
-        const record = event.Records[0];
+    const BUCKET_NAME = process.env.PnSsBucketName;
+    const DELETION_MODE = process.env.PnSsDocumentDeletionMode
 
-        // Estrai l'identificativo del file da DynamoDB
-        const fileKey = record.dynamodb.Keys.documentKey.S;
+    const batchItemFailures = [];
+    await Promise.allSettled(event.Records.map(async (record) => {
 
         try {
-            // Elimina il file da S3
-            await s3.deleteObject({ Bucket: BUCKET_NAME, Key: fileKey }).promise();
-            console.log(`File ${fileKey} eliminato con successo da S3.`);
-            return { statusCode: 200, body: 'File eliminato con successo.' };
-        } catch (error) {
-            console.error("Errore durante l'eliminazione del file ${fileKey} da S3:", error);
-            return { statusCode: 500, body: 'Errore durante l\'eliminazione del file.' };
+            const fileKey = record.dynamodb.Keys.documentKey.S;
+            switch (DELETION_MODE) {
+                case "MARKER":
+                    await s3.deleteObject({ Bucket: BUCKET_NAME, Key: fileKey }).promise();
+                    console.log(`File ${fileKey} eliminato con successo da S3.`);
+                    break;
+                case "DELETE":
+                    console.log(`Ottenendo tutte le versioni del file ${fileKey} da S3...`);
+                    const versions = await s3.listObjectVersions({ Bucket: BUCKET_NAME, Prefix: fileKey }).promise();
+                    const deletePromises = versions.Versions.map(async version => {
+                        await s3.deleteObject({
+                            Bucket: BUCKET_NAME,
+                            Key: version.Key,
+                            VersionId: version.VersionId
+                        }).promise();
+                        console.log(`Versione ${version.VersionId} eliminata.`);
+                    });
+                    await Promise.all(deletePromises).catch(error => {
+                        console.error(`Errore durante l'eliminazione delle versioni: `, error);
+                        throw error;
+                    });
+                    console.log(`Eliminate tutte le versioni del file ${fileKey} da S3.`);
+                    break;
+            }
         }
-    } else {
-        console.warn('Evento non valido per la cancellazione del file.');
-        return { statusCode: 400, body: 'Evento non gestito.' };
-    }
+        catch (s3Exception) {
+            console.error(`Errore durante l'eliminazione del file ${fileKey} in S3:`, s3Exception);
+            batchItemFailures.push({ itemIdentifier: record.messageId });
+            return;
+        }
+    }));
+    console.log("FINE LAVORAZIONE EVENTO");
+    return { batchItemFailures };
 };

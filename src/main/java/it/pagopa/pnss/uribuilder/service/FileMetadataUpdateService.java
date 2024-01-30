@@ -25,8 +25,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.*;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
@@ -124,18 +122,16 @@ public class FileMetadataUpdateService {
                     }
                     documentChanges.setDocumentState(technicalStatus);
 
-                    return Mono.zip(Mono.just(document), Mono.just(documentChanges));
-                })
-                .flatMap(tuple ->
-                {
-                    Document document = tuple.getT1();
-                    DocumentType documentType = document.getDocumentType();
-                    DocumentChanges documentChanges = tuple.getT2();
+                    if (retentionUntil != null) {
+                        documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
+                        return updateS3ObjectTags(fileKey, document.getDocumentState(), documentType)
+                                .flatMap(putObjectTaggingResponse -> scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput()
+                                        .documentKey(fileKey)
+                                        .retentionUntil(retentionUntil.toInstant().getEpochSecond())))
+                                .thenReturn(documentChanges);
+                    }
 
-                    String technicalStateToCheck = logicalState != null ? documentChanges.getDocumentState() : document.getDocumentState();
-                    return updateS3ObjectTags(fileKey, technicalStateToCheck, documentType, documentChanges, retentionUntil)
-                            .thenReturn(documentChanges);
-
+                    return Mono.just(documentChanges);
                 })
                 .flatMap(documentChanges ->  docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                 .flatMap(documentResponsePatch -> {
@@ -208,31 +204,17 @@ public class FileMetadataUpdateService {
                                  });
     }
 
-    private Mono<PutObjectTaggingResponse> updateS3ObjectTags(String fileKey, String technicalStateToCheck, DocumentType documentType, DocumentChanges documentChanges, Date retentionUntil) {
+    private Mono<PutObjectTaggingResponse> updateS3ObjectTags(String fileKey, String documentState, DocumentType documentType) {
         return Flux.fromIterable(documentType.getStatuses().values())
-                .filter(currentStatus -> currentStatus.getTechnicalState().equals(technicalStateToCheck))
+                .filter(currentStatus -> currentStatus.getTechnicalState().equals(documentState))
                 .map(CurrentStatus::getStorage)
                 .next()
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Technical status not found for document key : " + fileKey)))
-                .flatMap(storage ->
-                {
-                    ArrayList<Tag> tagList = new ArrayList<>();
-                    tagList.add(Tag.builder().key(STORAGE_FREEZE).value(storage).build());
-
-                    if (documentChanges.getDocumentState() != null && (documentChanges.getDocumentState().equalsIgnoreCase(AVAILABLE) || documentChanges.getDocumentState().equalsIgnoreCase(ATTACHED))) {
-                        //Add "storage_expiry" tag to the new tag list
-                        tagList.add(Tag.builder().key(STORAGE_EXPIRY).value(storage).build());
-                    } else if (retentionUntil != null) {
-                        documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
-                        //Doesn't add any additional tags. Other tags ("storageType" or "storage_expiry") will be removed.
-                        return scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput()
-                                        .documentKey(fileKey)
-                                        .retentionUntil(retentionUntil.toInstant().getEpochSecond()))
-                                .thenReturn(tagList);
-                    }
-                    return Mono.just(tagList);
+                .map(storage -> {
+                    Tag freezeTag = Tag.builder().key(STORAGE_FREEZE).value(storage).build();
+                    return Tagging.builder().tagSet(freezeTag).build();
                 })
-                .flatMap(tags -> s3Service.putObjectTagging(fileKey, bucketName.ssHotName(), Tagging.builder().tagSet(tags).build()));
+                .flatMap(tagging -> s3Service.putObjectTagging(fileKey, bucketName.ssHotName(), tagging));
     }
 
 }

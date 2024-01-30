@@ -13,7 +13,6 @@ import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import it.pagopa.pnss.repositorymanager.exception.MissingTagException;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.CustomLog;
@@ -25,9 +24,9 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.*;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
@@ -43,7 +42,7 @@ public class FileMetadataUpdateService {
     private final S3Service s3Service;
     private final BucketName bucketName;
     private final ScadenzaDocumentiClientCall scadenzaDocumentiClientCall;
-    private static final String TAG_EMPTIED_VALUE = "null";
+
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
@@ -125,21 +124,17 @@ public class FileMetadataUpdateService {
                     }
                     documentChanges.setDocumentState(technicalStatus);
 
-                    if (retentionUntil != null) {
-                        documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
-                        return Flux.fromIterable(documentType.getStatuses().values())
-                                .filter(currentStatus -> currentStatus.getTechnicalState().equals(document.getDocumentState()))
-                                .map(CurrentStatus::getStorage)
-                                .next()
-                                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Technical status not found for document key : " + fileKey)))
-                                .flatMap(storage -> updateS3ObjectTags(fileKey, storage))
-                                .flatMap(putObjectTaggingResponse -> scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput()
-                                        .documentKey(fileKey)
-                                        .retentionUntil(retentionUntil.toInstant().getEpochSecond())))
-                                .thenReturn(documentChanges);
-                    }
+                    return Mono.zip(Mono.just(document), Mono.just(documentChanges));
+                })
+                .flatMap(tuple ->
+                {
+                    Document document = tuple.getT1();
+                    DocumentType documentType = document.getDocumentType();
+                    DocumentChanges documentChanges = tuple.getT2();
 
-                    return Mono.just(documentChanges);
+                    String technicalStateToCheck = logicalState != null ? documentChanges.getDocumentState() : document.getDocumentState();
+                    return updateS3ObjectTags(fileKey, technicalStateToCheck, documentType, documentChanges, retentionUntil)
+                            .thenReturn(documentChanges);
 
                 })
                 .flatMap(documentChanges ->  docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
@@ -174,15 +169,6 @@ public class FileMetadataUpdateService {
                                         e.getMessage(),
                                         e);
                                 return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
-                            })
-                            .onErrorResume(MissingTagException.class, e -> {
-                                log.debug(
-                                        "FileMetadataUpdateService.createUriForUploadFile() : rilevata una MissingTagException" +
-                                                " : errore" +
-                                                " = " + "{}",
-                                        e.getMessage(),
-                                        e);
-                                return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
                             })
                             .onErrorResume(DocumentKeyNotPresentException.class, e -> {
                                 log.debug(
@@ -222,24 +208,31 @@ public class FileMetadataUpdateService {
                                  });
     }
 
-    private Mono<PutObjectTaggingResponse> updateS3ObjectTags(String fileKey, String storage) {
-        return s3Service.getObjectTagging(fileKey, bucketName.ssHotName())
-                .flatMapIterable(GetObjectTaggingResponse::tagSet)
-                .reduce(new ArrayList<Tag>(), ((tagList, tag) -> {
-                    switch (tag.key()) {
-                        case STORAGE_TYPE -> {
-                            tagList.add(Tag.builder().key(STORAGE_EXPIRY).value(storage).build());
-                            tagList.add(Tag.builder().key(STORAGE_FREEZE).value(storage).build());
-                        }
-                        case STORAGE_EXPIRY -> {/* ignore */}
-                        default -> tagList.add(tag);
+    private Mono<PutObjectTaggingResponse> updateS3ObjectTags(String fileKey, String technicalStateToCheck, DocumentType documentType, DocumentChanges documentChanges, Date retentionUntil) {
+        return Flux.fromIterable(documentType.getStatuses().values())
+                .filter(currentStatus -> currentStatus.getTechnicalState().equals(technicalStateToCheck))
+                .map(CurrentStatus::getStorage)
+                .next()
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Technical status not found for document key : " + fileKey)))
+                .flatMap(storage ->
+                {
+                    ArrayList<Tag> tagList = new ArrayList<>();
+                    tagList.add(Tag.builder().key(STORAGE_FREEZE).value(storage).build());
+
+                    if (documentChanges.getDocumentState() != null && (documentChanges.getDocumentState().equalsIgnoreCase(AVAILABLE) || documentChanges.getDocumentState().equalsIgnoreCase(ATTACHED))) {
+                        //Add "storage_expiry" tag to the new tag list
+                        tagList.add(Tag.builder().key(STORAGE_EXPIRY).value(storage).build());
+                    } else if (retentionUntil != null) {
+                        documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
+                        //Doesn't add any additional tags. Other tags ("storageType" or "storage_expiry") will be removed.
+                        return scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput()
+                                        .documentKey(fileKey)
+                                        .retentionUntil(retentionUntil.toInstant().getEpochSecond()))
+                                .thenReturn(tagList);
                     }
-                    return tagList;
-                }))
-                .filter(tags -> !tags.isEmpty())
-                .doOnDiscard(GetObjectTaggingRequest.class, discarded -> log.info("File with key '{}' has no tags.", fileKey))
-                .switchIfEmpty(Mono.error(new MissingTagException(fileKey)))
-                .flatMap(tagList -> s3Service.putObjectTagging(fileKey, bucketName.ssHotName(), Tagging.builder().tagSet(tagList).build()));
+                    return Mono.just(tagList);
+                })
+                .flatMap(tags -> s3Service.putObjectTagging(fileKey, bucketName.ssHotName(), Tagging.builder().tagSet(tags).build()));
     }
 
 }

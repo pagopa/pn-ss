@@ -224,32 +224,6 @@ public class DocumentServiceImpl implements DocumentService {
                 log.debug("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}",
                         documentEntityStored);
 
-
-                if ( documentChanges.getDocumentState() != null && (
-                        documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
-                                documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))) {
-
-                    String storageType;
-                    if (documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
-                        if (documentEntityStored.getDocumentType()
-                                .getStatuses()
-                                .containsKey(documentEntityStored.getDocumentLogicalState())) {
-                            log.debug("patchDocument() : START Tagging");
-                            storageType = documentEntityStored.getDocumentType()
-                                    .getStatuses()
-                                    .get(documentEntityStored.getDocumentLogicalState())
-                                    .getStorage();
-                            Tagging tagging = Tagging.builder().tagSet(setTag -> {
-                                setTag.key(STORAGE_TYPE);
-                                setTag.value(storageType);
-                            }).build();
-                            return s3Service.putObjectTagging(documentKey, bucketName.ssHotName(), tagging)
-                                    .thenReturn(documentEntityStored);
-                        } else {
-                            log.debug("patchDocument() : Tagging : storageTypeEmpty");
-                        }
-                    }
-                }
                 return Mono.just(documentEntityStored);
             })
             .flatMap(documentEntityStored -> {

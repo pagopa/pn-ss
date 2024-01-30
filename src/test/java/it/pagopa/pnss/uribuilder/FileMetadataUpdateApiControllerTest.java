@@ -169,7 +169,7 @@ class FileMetadataUpdateApiControllerTest {
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED,
-						new CurrentStatus().technicalState(Constant.TECHNICAL_STATUS_AVAILABLE))))
+						new CurrentStatus().technicalState(Constant.AVAILABLE))))
 				.tipoDocumento(DocTypesConstant.PN_AAR);
 		var documentTypeResponse = new DocumentTypeResponse().docType(documentType2);
 		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));
@@ -208,16 +208,14 @@ class FileMetadataUpdateApiControllerTest {
 
 	@Test
 	void testFileMetadataUpdateOk() {
-		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus()))).tipoDocumento(DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1);
+		var documentType = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus().storage(PN_NOTIFIED_DOCUMENTS).technicalState(AVAILABLE)))).tipoDocumento(DocTypesConstant.PN_AAR);
+		var document = new Document().documentType(documentType);
 		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
+		putObjectInBucket(X_PAGOPA_SAFESTORAGE_CX_ID, bucketName.ssHotName(), new byte[9], null);
 
-		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED,
-						new CurrentStatus().technicalState(Constant.TECHNICAL_STATUS_AVAILABLE))))
-				.tipoDocumento(DocTypesConstant.PN_AAR);
-		var documentTypeResponse = new DocumentTypeResponse().docType(documentType2);
+	    var documentTypeResponse = new DocumentTypeResponse().docType(documentType);
 		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));
 
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(SAVED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isOk();
@@ -242,10 +240,10 @@ class FileMetadataUpdateApiControllerTest {
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(retentionUntil),key).expectStatus().isOk();
 
 		ArgumentCaptor<Tagging> argument = ArgumentCaptor.forClass(Tagging.class);
-		verify(s3Service, times(1)).getObjectTagging(key, bucketName.ssHotName());
+		//verify(s3Service, times(1)).getObjectTagging(key, bucketName.ssHotName());
 		verify(s3Service, times(1)).putObjectTagging(eq(key), eq(bucketName.ssHotName()), argument.capture());
 		verify(scadenzaDocumentiClientCall,times(1)).insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput().documentKey(key).retentionUntil(now.getEpochSecond()));
-		Assertions.assertThat(argument.getValue().tagSet()).hasSize(2).containsAll(expectedTagging);
+		Assertions.assertThat(argument.getValue().tagSet()).hasSize(1).containsAll(expectedTagging);
 	}
 	@Test
 	void testFileMetadataUpdateRetentionWithV2TaggingOk() {
@@ -264,7 +262,7 @@ class FileMetadataUpdateApiControllerTest {
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(Date.from(now)), key).expectStatus().isOk();
 
 		ArgumentCaptor<Tagging> argument = ArgumentCaptor.forClass(Tagging.class);
-		verify(s3Service, times(1)).getObjectTagging(key, bucketName.ssHotName());
+		//verify(s3Service, times(1)).getObjectTagging(key, bucketName.ssHotName());
 		verify(s3Service, times(1)).putObjectTagging(eq(key), eq(bucketName.ssHotName()), argument.capture());
 		verify(scadenzaDocumentiClientCall,times(1)).insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput().documentKey(key).retentionUntil((now.getEpochSecond())));
 		Assertions.assertThat(argument.getValue().tagSet()).hasSize(1).containsAll(expectedTagging);
@@ -277,6 +275,7 @@ class FileMetadataUpdateApiControllerTest {
 		String key = "noTaggingObject";
 		String bucketName = this.bucketName.ssHotName();
 		byte[] fileBytes = new byte[9];
+		Set<Tag> expectedTagging = Set.of(FREEZE_TAG);
 		putObjectInBucket(key, bucketName, fileBytes, null);
 
 		//WHEN
@@ -284,21 +283,23 @@ class FileMetadataUpdateApiControllerTest {
 		insertScadenzaDocumentiMock(key, now.getEpochSecond());
 
 		//THEN
-		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(Date.from(now)), key).expectStatus().is5xxServerError();
+		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(Date.from(now)), key).expectStatus().isOk();
 
-		verify(s3Service, times(1)).getObjectTagging(key, bucketName);
-		verify(s3Service, never()).putObjectTagging(anyString(), anyString(), any(Tagging.class));
-		verify(scadenzaDocumentiClientCall, never()).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
+		ArgumentCaptor<Tagging> argument = ArgumentCaptor.forClass(Tagging.class);
+		verify(s3Service, times(1)).putObjectTagging(eq(key), eq(bucketName), argument.capture());
+		verify(scadenzaDocumentiClientCall, times(1)).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
+		Assertions.assertThat(argument.getValue().tagSet()).hasSize(1).containsAll(expectedTagging);
 	}
 
 	@Test
-	void testFileMetadataUpdateWithNonExistentFile(){
+	void testFileMetadataUpdateWithNonExistentFile() {
 		Instant now = Instant.now();
 		String key = "fileKey2";
 		repositoryManagerMocks(key);
+		insertScadenzaDocumentiMock(key, now.getEpochSecond());
 
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(Date.from(now)), key).expectStatus().isNotFound();
-		verify(s3Service, times(1)).getObjectTagging(key, bucketName.ssHotName());
+		//verify(s3Service, times(1)).getObjectTagging(key, bucketName.ssHotName());
 	}
 
 	@Test
@@ -316,7 +317,7 @@ class FileMetadataUpdateApiControllerTest {
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(Date.from(now)), key).expectStatus().isBadRequest();
-		verify(s3Service, never()).getObjectTagging(key, bucketName.ssHotName());
+		//verify(s3Service, never()).getObjectTagging(key, bucketName.ssHotName());
 	}
 
 	@Test
@@ -340,10 +341,10 @@ class FileMetadataUpdateApiControllerTest {
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(Date.from(now)), key).expectStatus().is5xxServerError();
 
 		ArgumentCaptor<Tagging> argument = ArgumentCaptor.forClass(Tagging.class);
-		verify(s3Service, times(1)).getObjectTagging(key, bucketName);
+		//verify(s3Service, times(1)).getObjectTagging(key, bucketName);
 		verify(s3Service, times(1)).putObjectTagging(eq(key), eq(bucketName), argument.capture());
 		verify(scadenzaDocumentiClientCall,times(1)).insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput().documentKey(key).retentionUntil(now.getEpochSecond()));
-		Assertions.assertThat(argument.getValue().tagSet()).hasSize(2).containsAll(expectedTagging);
+		Assertions.assertThat(argument.getValue().tagSet()).hasSize(1).containsAll(expectedTagging);
 	}
 
 	private void putObjectInBucket(String key, String bucketName, byte[] fileBytes, Tagging tagging) {

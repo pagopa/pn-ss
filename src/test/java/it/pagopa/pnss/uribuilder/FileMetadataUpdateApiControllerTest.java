@@ -11,7 +11,6 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.repositorymanager.exception.DynamoDbException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
@@ -222,6 +221,7 @@ class FileMetadataUpdateApiControllerTest {
 		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));
 
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(SAVED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isOk();
+		verify(s3Service, times(1)).putObjectTagging(eq(X_PAGOPA_SAFESTORAGE_CX_ID), eq(bucketName.ssHotName()), any(Tagging.class));
 	}
 
 	@Test
@@ -231,7 +231,7 @@ class FileMetadataUpdateApiControllerTest {
 		String key = "v1TaggingObject";
 		Date retentionUntil = Date.from(now);
 		Tagging taggingV1 = Tagging.builder().tagSet(Tag.builder().key(STORAGE_TYPE).value(PN_NOTIFIED_DOCUMENTS).build()).build();
-		Set<Tag> expectedTagging = Set.of(FREEZE_TAG, EXPIRY_TAG);
+		Set<Tag> expectedTagging = Set.of(FREEZE_TAG);
 		putObjectInBucket(key, bucketName.ssHotName(), new byte[9], taggingV1);
 
 		//WHEN
@@ -328,7 +328,7 @@ class FileMetadataUpdateApiControllerTest {
 		String bucketName = this.bucketName.ssHotName();
 		byte[] fileBytes = new byte[9];
 		Tagging tagging = Tagging.builder().tagSet(Tag.builder().key(STORAGE_TYPE).value(PN_NOTIFIED_DOCUMENTS).build()).build();
-		Set<Tag> expectedTagging = Set.of(FREEZE_TAG, EXPIRY_TAG);
+		Set<Tag> expectedTagging = Set.of(FREEZE_TAG);
 		putObjectInBucket(key, bucketName, fileBytes, tagging);
 
 		//WHEN

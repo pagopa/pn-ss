@@ -69,9 +69,16 @@ Parameters:
   LogRetention:
     Type: Number
     Default: 14
+  
+  PnSsDocumentDeletionMode:
+    Type: String
+    Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
+    Default: 'MARKER'
+    AllowedValues: [MARKER, COMPLETE]
 
 Conditions:
-  IsDevEnv: !Equals [ !Ref EnvType, 'dev'] 
+  IsDevEnv: !Equals [ !Ref EnvType, 'dev']
+  DocumentsCompleteDeletion: !Equals [ !Ref PnSsDocumentDeletionMode, 'COMPLETE']
 
 
 Resources:
@@ -191,7 +198,7 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
-  
+
   PnSsBucket:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
@@ -222,13 +229,32 @@ Resources:
             Id: 'CORSRuleSafeStorage'
       LifecycleConfiguration:
         Rules:
+          - !If 
+            - DocumentsCompleteDeletion
+            - 
+              Id: 'PnSsExpiredObjectDeleteMarker'
+              Status: 'Enabled'
+              ExpiredObjectDeleteMarker: true
+            - !Ref "AWS::NoValue"
+          - !If 
+            - DocumentsCompleteDeletion
+            - 
+              Id: 'PnSsNoncurrentVersionExpiration'
+              Status: 'Enabled'
+              NoncurrentVersionExpiration:
+                NoncurrentDays: 1
+            - !Ref "AWS::NoValue"
           - Id: 'PnSsAbortIncompleteMultipartUpload'
+            Status: 'Enabled'
             AbortIncompleteMultipartUpload: 
                 DaysAfterInitiation: 1
+          - Id: 'PnSsNoncurrentVersionExpiration'
             Status: 'Enabled'
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 1
           - Id: 'PnSsNotificationAttachmentTemporary'
-            ExpirationInDays: !Ref PnSsPreloadedDocsRetentionDays
             Status: 'Enabled'
+            ExpirationInDays: !Ref PnSsPreloadedDocsRetentionDays
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_TEMPORARY_DOCUMENT'
@@ -298,6 +324,108 @@ Resources:
             Transitions: 
               - StorageClass: 'GLACIER'
                 TransitionInDays: 1
+          - Id: 'PnSsNotificationAttachmentTemporary_expiry'
+            ExpirationInDays: !Ref PnSsPreloadedDocsRetentionDays
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storage_expiry'
+                Value: 'PN_TEMPORARY_DOCUMENT'
+          - Id: 'PnSsNotificationAttachment_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 120
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_NOTIFIED_DOCUMENTS'
+          - Id: 'PnSsAar_freeze'
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storage_freeze'
+                Value: 'PN_AAR'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 120
+          - Id: 'PnSsAar_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 3655
+            TagFilters: 
+              - Key: 'storage_expiry'
+                Value: 'PN_AAR'
+          - Id: 'PnSsLegalFacts_freeze'
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storage_freeze'
+                Value: 'PN_LEGAL_FACTS'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 120
+          - Id: 'PnSsLegalFacts_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 3655
+            TagFilters: 
+              - Key: 'storage_expiry'
+                Value: 'PN_LEGAL_FACTS'
+          - Id: 'PnSsInvoicingActivityReport_freeze'
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storage_freeze'
+                Value: 'PN_INVOICING_ACTIVITY_REPORT'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 70
+          - Id: 'PnSsInvoicingActivityReport_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 366
+            TagFilters: 
+              - Key: 'storage_expiry'
+                Value: 'PN_INVOICING_ACTIVITY_REPORT'
+          - Id: 'PnSsAddresses_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 30
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_ADDRESSES_STORAGE'
+          - Id: 'PnSsLogsArchiveAudit2Y_freeze'
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storage_freeze'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT2Y'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
+          - Id: 'PnSsLogsArchiveAudit2Y_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 731
+            TagFilters: 
+              - Key: 'storage_expiry'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT2Y'
+          - Id: 'PnSsLogsArchiveAudit5Y_freeze'
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storage_freeze'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT5Y'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
+          - Id: 'PnSsLogsArchiveAudit5Y_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 1830
+            TagFilters: 
+              - Key: 'storage_expiry'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT5Y'
+          - Id: 'PnSsLogsArchiveAudit10Y_freeze'
+            Status: 'Enabled'
+            TagFilters: 
+              - Key: 'storage_freeze'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
+            Transitions: 
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
+          - Id: 'PnSsLogsArchiveAudit10Y_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 3655
+            TagFilters: 
+              - Key: 'storage_expiry'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
       NotificationConfiguration:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
@@ -645,6 +773,10 @@ Outputs:
   PnSsTableScadenzaDocumentiStreamArn:
     Description: 'Nome tabella SS Scadenza Documenti'
     Value: !GetAtt PnSsTableScadenzaDocumenti.StreamArn
+  
+  PnSsDocumentDeletionMode:
+    Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
+    Value: !Ref PnSsDocumentDeletionMode
 
   PnSsBucketName:
     Description: 'Nome Bucket SS'

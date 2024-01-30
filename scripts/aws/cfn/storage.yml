@@ -37,7 +37,12 @@ Parameters:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
     Default: 'pn-safe-storage-gestore-bucket-lambda'
-  
+
+  PnSsScadenzaDocumentiLambdaName:
+    Type: String
+    Description: 'Nome della Lambda function che implementa la gestione delle scadenze dei documenti'
+    Default: 'pn-safe-storage-scadenza-documenti-event-manager'
+     
   PnSsEventBusExternalNotificationName:
     Type: String 
     Description: 'Nome del Event Bus che raccoglie gli eventi del microservizio Gestore Disponibilita'
@@ -588,6 +593,17 @@ Resources:
         LogsKinesisSourceStreamArn: !Ref LogsKinesisSourceStreamArn
         LogGroupRetention: !Ref LogRetention
 
+  PnSsScadenzaDocumentiEventManagerLambdaLogGroup:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain    
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
+      Parameters:
+        LogGroupName: !Sub "${ProjectName}-${PnSsScadenzaDocumentiLambdaName}"
+        LogGroupRetention: !Ref LogRetention
+        LogGroupPrefix: '/aws/lambda'
+
 
 Outputs:
   PnSsTableNameAnagraficaClient:
@@ -722,6 +738,10 @@ Outputs:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
     Value: !Ref PnSsGestoreBucketLambdaName
 
+  PnSsScadenzaDocumentiLambdaName:
+    Description: 'Nome della Lambda function che implementa la gestione delle scadenze dei documenti'
+    Value: !Ref PnSsScadenzaDocumentiLambdaName
+
   PnSsEventBusNameExternalNotification:
     Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'
     Value: !Ref  PnSsEventBusExternalNotification
@@ -754,6 +774,9 @@ Outputs:
   EcsLogGroup:
     Value: !GetAtt EcsLogGroup.Outputs.LogGroupName
     
+  PnSsScadenzaDocumentiEventManagerLambdaLogGroup:
+    Value: !GetAtt PnSsScadenzaDocumentiEventManagerLambdaLogGroup.Outputs.LogGroupName
+
   PnSsKmsArnBucket:
     Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
     Value: !GetAtt PnSsKmsBucket.Arn

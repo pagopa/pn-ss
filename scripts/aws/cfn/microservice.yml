@@ -411,6 +411,10 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
+  
+  PnSsScadenzaDocumentiEventManagerLambdaLogGroup:
+    Type: String
+    Description: 'Lambda Scadenza Documenti log group name'
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
@@ -924,9 +928,9 @@ Resources:
               - Sid: 'DynamoDbStreamPolicy'
                 Effect: 'Allow'
                 Action:
-                  - "dynamodb:DescribeStream",
-                  - "dynamodb:GetRecords",
-                  - "dynamodb:GetShardIterator",
+                  - "dynamodb:DescribeStream"
+                  - "dynamodb:GetRecords"
+                  - "dynamodb:GetShardIterator"
                   - "dynamodb:ListStreams"
                 Resource:
                   - !Ref PnSsTableScadenzaDocumentiStreamArn

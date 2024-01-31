@@ -231,15 +231,13 @@ Resources:
         Rules:
           - !If 
             - DocumentsCompleteDeletion
-            - 
-              Id: 'PnSsExpiredObjectDeleteMarker'
+            - Id: 'PnSsExpiredObjectDeleteMarker'
               Status: 'Enabled'
               ExpiredObjectDeleteMarker: true
             - !Ref "AWS::NoValue"
           - !If 
             - DocumentsCompleteDeletion
-            - 
-              Id: 'PnSsNoncurrentVersionExpiration'
+            - Id: 'PnSsNoncurrentVersionExpiration'
               Status: 'Enabled'
               NoncurrentVersionExpiration:
                 NoncurrentDays: 1
@@ -248,10 +246,6 @@ Resources:
             Status: 'Enabled'
             AbortIncompleteMultipartUpload: 
                 DaysAfterInitiation: 1
-          - Id: 'PnSsNoncurrentVersionExpiration'
-            Status: 'Enabled'
-            NoncurrentVersionExpiration:
-              NoncurrentDays: 1
           - Id: 'PnSsNotificationAttachmentTemporary'
             Status: 'Enabled'
             ExpirationInDays: !Ref PnSsPreloadedDocsRetentionDays

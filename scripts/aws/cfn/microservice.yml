@@ -1408,6 +1408,7 @@ Resources:
       BatchSize: 10 # 10 is default
       Enabled: True
       EventSourceArn: !Ref PnSsTableScadenzaDocumentiStreamArn
+      StartingPosition: 'LATEST'
       FilterCriteria:
         Filters:
           - Pattern: '{"userIdentity": {"type": ["Service"], "principalId": ["dynamodb.amazonaws.com"]}}'

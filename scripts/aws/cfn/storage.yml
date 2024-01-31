@@ -41,7 +41,7 @@ Parameters:
   PnSsScadenzaDocumentiLambdaName:
     Type: String
     Description: 'Nome della Lambda function che implementa la gestione delle scadenze dei documenti'
-    Default: 'pn-safe-storage-scadenza-documenti-event-manager'
+    Default: 'scadenzaDocumentiEventHandler'
      
   PnSsEventBusExternalNotificationName:
     Type: String 

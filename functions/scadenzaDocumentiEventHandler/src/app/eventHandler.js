@@ -2,7 +2,7 @@
 
 const { S3Client, DeleteObjectCommand, ListObjectVersionsCommand  } = require("@aws-sdk/client-s3");
 
-exports.handler = async (event) => {
+exports.handleEvent = async (event) => {
     const BUCKET_NAME = process.env.PnSsBucketName;
     const DELETION_MODE = process.env.PnSsDocumentDeletionMode;
 

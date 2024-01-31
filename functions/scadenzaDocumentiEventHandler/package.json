@@ -4,14 +4,22 @@
   "description": "Event handler per la cancellazione di documenti in scadenza",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test-build": "npm run-script test && npm run-script coverage && npm run-script sonar && npm run-script build",
+    "build": "npm prune --production && rm -f ./function.zip && zip -r ./function.zip . -x './src/test/*' -x '*.md' -x '*.env'  -x './coverage/*' -x './.nyc_output/*' -x './.scannerwork/*'",
+    "test": "nyc --reporter=html --reporter=text mocha './src/test/**/*.test.js' --recursive --timeout=3000 --exit -r dotenv/config",
+    "coverage": "nyc report --reporter=lcov",
+    "sonar": "node sonarqube-scanner.js -Dsonar.login=${SONAR_TOKEN}"
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.501.0"
-  },
   "devDependencies": {
-    "sonarqube-scanner": "^3.0.0"
+    "@aws-sdk/client-s3": "^3.501.0",
+    "aws-sdk-client-mock": "^2.0.1",
+    "nyc": "^15.1.0",
+    "sonarqube-scanner": "^3.0.0",
+    "mocha": "^9.2.2",
+    "chai": "^4.3.6",
+    "lambda-tester": "^4.0.1",
+    "proxyquire": "^2.1.3"
   }
 }

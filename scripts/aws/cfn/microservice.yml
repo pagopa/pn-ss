@@ -380,6 +380,10 @@ Parameters:
     Description: 'SpringBoot configuration Task Execution Max Pool Siza'
     Default: '512'
 
+  PnSsDocumentDeletionMode:
+    Type: String
+    Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -898,45 +902,6 @@ Resources:
                 Resource:
                   - !Ref PnSsKmsArnBucket
 
-  PnSsScadenzaDocumentiLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Join [ '', [ !Sub '${PnSsScadenzaDocumentiLambdaName}', '-role' ] ]
-      Description: 'Ruolo della Lambda che implementa la funzionalità della Scadenza Documenti'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Policies:
-        - PolicyName: 'PnSsScadenzaDocumentiInlinePolicy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Sid: 'DeleteBucketPolicy'
-                Effect: 'Allow'
-                Action:
-                  - 's3:Delete*'
-                Resource:
-                  - !Ref PnSsBucketArn
-                  - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*' ] ]
-              - Sid: 'DynamoDbStreamPolicy'
-                Effect: 'Allow'
-                Action:
-                  - "dynamodb:DescribeStream"
-                  - "dynamodb:GetRecords"
-                  - "dynamodb:GetShardIterator"
-                  - "dynamodb:ListStreams"
-                Resource:
-                  - !Ref PnSsTableScadenzaDocumentiStreamArn
-
-
-
   PnSsSecurityGroupSafeStorage:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -989,20 +954,6 @@ Resources:
       MaximumBatchingWindowInSeconds: 0 #default value
       ScalingConfig:
         MaximumConcurrency: !Ref PnSsGestoreBucketMinReservedConcurrentExecutions
-
-  PnSsScadenzaDocumentiEventSourceMapping:
-    Type: AWS::Lambda::EventSourceMapping
-    Properties:
-      BatchSize: 10 # 10 is default
-      Enabled: True
-      EventSourceArn: !Ref PnSsTableScadenzaDocumentiStreamArn
-      FilterCriteria:
-        Filters:
-          - Pattern: '{"userIdentity": {"type": ["Service"], "principalId": ["dynamodb.amazonaws.com"]}}'
-      FunctionName: !Ref PnSsScadenzaDocumentiEventManagerLambda
-      FunctionResponseTypes:
-        - ReportBatchItemFailures
-      MaximumBatchingWindowInSeconds: 0 #default value
 
   PnSsGestoreBucket:
     Type: AWS::Lambda::Function
@@ -1237,22 +1188,6 @@ Resources:
             });
           }  
 
-  PnSsScadenzaDocumentiEventManagerLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
-      Runtime: nodejs18.x
-      Handler: "index.handler"
-#      Code:
-#        S3Bucket: !Ref MicroserviceBucketName
-#        S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventManager.zip"
-      Role: !GetAtt PnSsScadenzaDocumentiLambdaRole.Arn
-      Environment:
-        Variables:
-          PnSsBucketName: !Ref PnSsBucketName
-#      Timeout: 10
-
-
 ##### Gestore Bucket Concurrency Handler  #####
 
   PnSsGestoreBucketConcurrencyHandlerRole:
@@ -1416,3 +1351,91 @@ Resources:
       Principal: 'events.amazonaws.com'
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn
+
+
+  ######## Scadenza Documenti Lambda Handler  #########
+  PnSsScadenzaDocumentiLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ !Sub '${PnSsScadenzaDocumentiLambdaName}', '-role' ] ]
+      Description: 'Ruolo della Lambda che implementa la funzionalità di cancellazione dei Documenti'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'PnSsScadenzaDocumentiInlinePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: 'DeleteBucketPolicy'
+                Effect: 'Allow'
+                Action:
+                  - 's3:List*'
+                  - 's3:GetBucket*'
+                  - 's3:Describe*'
+                  - 's3:*ObjectVersion*'
+                  - 's3:DeleteObject*'
+                Resource:
+                  - !Ref PnSsBucketArn
+                  - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*' ] ]
+              - Sid: 'DynamoDbStreamPolicy'
+                Effect: 'Allow'
+                Action:
+                  - "dynamodb:DescribeStream"
+                  - "dynamodb:GetRecords"
+                  - "dynamodb:GetShardIterator"
+                  - "dynamodb:ListStreams"
+                Resource:
+                  - !Ref PnSsTableScadenzaDocumentiStreamArn
+              - Sid: 'KmsSsBucketRead'
+                Effect: Allow
+                Action:
+                  - 'kms:Decrypt'
+                  - 'kms:GenerateDataKey'
+                Resource:
+                  - !Ref PnSsKmsArnBucket
+
+  PnSsScadenzaDocumentiEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 10 # 10 is default
+      Enabled: True
+      EventSourceArn: !Ref PnSsTableScadenzaDocumentiStreamArn
+      StartingPosition: 'LATEST'
+      FilterCriteria:
+        Filters:
+          - Pattern: '{"userIdentity": {"type": ["Service"], "principalId": ["dynamodb.amazonaws.com"]}}'
+      FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+      MaximumBatchingWindowInSeconds: 0
+
+  PnSsScadenzaDocumentiEventManagerLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
+      Runtime: nodejs18.x
+      Handler: "index.handler"
+      Role: !GetAtt PnSsScadenzaDocumentiLambdaRole.Arn
+      Timeout: 240
+      VpcConfig:
+        SubnetIds:
+          - !Select [ 0, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
+        SecurityGroupIds:
+          - !GetAtt PnSsSecurityGroupSafeStorage.GroupId
+      Environment:
+        Variables:
+          PnSsBucketName: !Ref PnSsBucketName
+          PnSsDocumentDeletionMode: !Ref PnSsDocumentDeletionMode
+      Code:
+        S3Bucket: !Ref MicroserviceBucketName
+        S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventManager.zip"

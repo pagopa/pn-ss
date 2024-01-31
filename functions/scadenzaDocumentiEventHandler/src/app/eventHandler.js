@@ -1,45 +1,60 @@
 "use strict";
 
-const s3 = require("@aws-sdk/client-s3");
+const { S3Client, DeleteObjectCommand, ListObjectVersionsCommand  } = require("@aws-sdk/client-s3");
 
 exports.handler = async (event) => {
     const BUCKET_NAME = process.env.PnSsBucketName;
-    const DELETION_MODE = process.env.PnSsDocumentDeletionMode
+    const DELETION_MODE = process.env.PnSsDocumentDeletionMode;
 
+
+    console.log(JSON.stringify(event));
     const batchItemFailures = [];
     await Promise.allSettled(event.Records.map(async (record) => {
 
-        try {
-            const fileKey = record.dynamodb.Keys.documentKey.S;
+    const fileKey = record.dynamodb.Keys.documentKey.S;
+    const client = new S3Client({});
+
+    try{
             switch (DELETION_MODE) {
                 case "MARKER":
-                    await s3.deleteObject({ Bucket: BUCKET_NAME, Key: fileKey }).promise();
+                    console.log(`Applicazione del DeleteMarker sul file ${fileKey} in S3...`);
+
+                    await client.send(new DeleteObjectCommand({
+                      Bucket: BUCKET_NAME,
+                      Key: fileKey
+                    }));
+
                     console.log(`File ${fileKey} eliminato con successo da S3.`);
                     break;
-                case "DELETE":
+                case "COMPLETE":
                     console.log(`Ottenendo tutte le versioni del file ${fileKey} da S3...`);
-                    const versions = await s3.listObjectVersions({ Bucket: BUCKET_NAME, Prefix: fileKey }).promise();
-                    const deletePromises = versions.Versions.map(async version => {
-                        await s3.deleteObject({
-                            Bucket: BUCKET_NAME,
-                            Key: version.Key,
-                            VersionId: version.VersionId
-                        }).promise();
-                        console.log(`Versione ${version.VersionId} eliminata.`);
+                    const command=new ListObjectVersionsCommand({
+                      Bucket: BUCKET_NAME,
+                      Prefix: fileKey
                     });
-                    await Promise.all(deletePromises).catch(error => {
-                        console.error(`Errore durante l'eliminazione delle versioni: `, error);
-                        throw error;
-                    });
-                    console.log(`Eliminate tutte le versioni del file ${fileKey} da S3.`);
+                    const versions=await client.send(command);
+                    await Promise.all(versions.Versions.map(
+                        async version => {
+                                console.log(`Cancellazione della versione "${version.VersionId}"...`);
+                                await client.send(new DeleteObjectCommand({
+                                   Bucket: BUCKET_NAME,
+                                   Key: version.Key,
+                                   VersionId: version.VersionId,
+                                   BypassGovernanceRetention: true
+                                }));
+                        }
+                        ));
                     break;
+                default:
+                    return;
             }
-        }
-        catch (s3Exception) {
-            console.error(`Errore durante l'eliminazione del file ${fileKey} in S3:`, s3Exception);
-            batchItemFailures.push({ itemIdentifier: record.messageId });
-            return;
-        }
+    }
+    catch(error)
+    {
+        console.error("Errore durante l'eliminazione del file : " + error);
+        batchItemFailures.push({itemIdentifier: fileKey});
+    }
+
     }));
     console.log("FINE LAVORAZIONE EVENTO");
     return { batchItemFailures };

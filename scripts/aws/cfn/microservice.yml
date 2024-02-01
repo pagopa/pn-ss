@@ -129,6 +129,10 @@ Parameters:
     Type: String
     Description: 'ARN della tabella SS Scadenza Documenti'
 
+  PnSsTableNameScadenzaDocumenti:
+    Type: String
+    Description: 'Nome della tabella SS Scadenza Documenti'
+
   PnSsTableScadenzaDocumentiStreamArn:
     Type: String
     Description: 'ARN dello stream relativo alla tabella SS Scadenza Documenti'
@@ -411,6 +415,14 @@ Parameters:
     Description: 'Max Chunk size used by Gestore Bucket when retrieving object from bucket'
     Default: '1048576'
 
+  MicroserviceBucketName:
+    Type: String
+    Description: 'Bucket name to upload lambda compiled package'
+
+  MicroserviceBucketBaseKey:
+    Type: String
+    Description: 'S3 prefix to upload lambda compiled package'
+
   # Log group parameters
   EcsLogGroup:
     Type: String
@@ -514,6 +526,7 @@ Resources:
               - !Ref PnSsTableArnTipologieDocumenti
               - !Ref PnSsTableArnDocumenti
               - !Ref PnSsTableDocumentiStreamArn
+              - !Ref PnSsTableArnScadenzaDocumenti
           - Sid: 'FullAccesStreamMetadataTable'
             Effect: Allow
             Action:
@@ -727,6 +740,7 @@ Resources:
           - - !Ref PnSsTableNameAnagraficaClient
             - !Ref PnSsTableNameTipologieDocumenti
             - !Ref PnSsTableNameDocumenti
+            - !Ref PnSsTableNameScadenzaDocumenti
         # RestApiStageArns:
         # RestApiNames:
         QueueArns:

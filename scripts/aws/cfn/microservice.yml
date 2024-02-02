@@ -427,10 +427,6 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
-  
-  PnSsScadenzaDocumentiEventHandlerLambdaLogGroup:
-    Type: String
-    Description: 'Lambda Scadenza Documenti log group name'
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]

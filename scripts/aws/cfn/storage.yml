@@ -715,7 +715,7 @@ Resources:
         LogsKinesisSourceStreamArn: !Ref LogsKinesisSourceStreamArn
         LogGroupRetention: !Ref LogRetention
 
-  PnSsScadenzaDocumentiEventManagerLambdaLogGroup:
+  PnSsScadenzaDocumentiEventHandlerLambdaLogGroup:
     Type: AWS::CloudFormation::Stack
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain    
@@ -899,9 +899,6 @@ Outputs:
   # Log group exports
   EcsLogGroup:
     Value: !GetAtt EcsLogGroup.Outputs.LogGroupName
-    
-  PnSsScadenzaDocumentiEventManagerLambdaLogGroup:
-    Value: !GetAtt PnSsScadenzaDocumentiEventManagerLambdaLogGroup.Outputs.LogGroupName
 
   PnSsKmsArnBucket:
     Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'

@@ -1419,7 +1419,7 @@ Resources:
   PnSsScadenzaDocumentiEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
-      BatchSize: 10 # 10 is default
+      BatchSize: 100
       Enabled: True
       EventSourceArn: !Ref PnSsTableScadenzaDocumentiStreamArn
       StartingPosition: 'LATEST'
@@ -1429,7 +1429,9 @@ Resources:
       FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
       FunctionResponseTypes:
         - ReportBatchItemFailures
-      MaximumBatchingWindowInSeconds: 0
+      MaximumBatchingWindowInSeconds: 60
+      ScalingConfig:
+        MaximumConcurrency: 10 #TODO controllare volumi reali in prod ed eventualmente aggiustare
 
   PnSsScadenzaDocumentiEventManagerLambda:
     Type: AWS::Lambda::Function

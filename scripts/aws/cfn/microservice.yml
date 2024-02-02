@@ -1435,7 +1435,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
       Handler: "index.handler"
       Role: !GetAtt PnSsScadenzaDocumentiLambdaRole.Arn
       Timeout: 240
@@ -1453,3 +1453,5 @@ Resources:
       Code:
         S3Bucket: !Ref MicroserviceBucketName
         S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventManager.zip"
+      Layers:
+        - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"

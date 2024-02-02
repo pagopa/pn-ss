@@ -1426,7 +1426,7 @@ Resources:
       FilterCriteria:
         Filters:
           - Pattern: '{"userIdentity": {"type": ["Service"], "principalId": ["dynamodb.amazonaws.com"]}}'
-      FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
+      FunctionName: !Ref PnSsScadenzaDocumentiEventManagerLambda
       FunctionResponseTypes:
         - ReportBatchItemFailures
       MaximumBatchingWindowInSeconds: 60

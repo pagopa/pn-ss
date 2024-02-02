@@ -428,7 +428,7 @@ Parameters:
     Type: String
     Description: 'Ecs log group name'
   
-  PnSsScadenzaDocumentiEventManagerLambdaLogGroup:
+  PnSsScadenzaDocumentiEventHandlerLambdaLogGroup:
     Type: String
     Description: 'Lambda Scadenza Documenti log group name'
 
@@ -1426,12 +1426,12 @@ Resources:
       FilterCriteria:
         Filters:
           - Pattern: '{"userIdentity": {"type": ["Service"], "principalId": ["dynamodb.amazonaws.com"]}}'
-      FunctionName: !Ref PnSsScadenzaDocumentiEventManagerLambda
+      FunctionName: !Ref PnSsScadenzaDocumentiEventHandlerLambda
       FunctionResponseTypes:
         - ReportBatchItemFailures
       MaximumBatchingWindowInSeconds: 60
 
-  PnSsScadenzaDocumentiEventManagerLambda:
+  PnSsScadenzaDocumentiEventHandlerLambda:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
@@ -1452,6 +1452,6 @@ Resources:
           PnSsDocumentDeletionMode: !Ref PnSsDocumentDeletionMode
       Code:
         S3Bucket: !Ref MicroserviceBucketName
-        S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventManager.zip"
+        S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventHandler.zip"
       Layers:
         - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"

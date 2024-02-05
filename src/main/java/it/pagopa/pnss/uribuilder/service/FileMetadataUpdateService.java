@@ -4,12 +4,16 @@ package it.pagopa.pnss.uribuilder.service;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.client.ScadenzaDocumentiClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.ScadenzaDocumentiCallException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.utils.LogUtils;
+import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
@@ -17,11 +21,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
+import software.amazon.awssdk.services.s3.model.*;
 import java.text.SimpleDateFormat;
 import java.util.stream.Stream;
 
+import static it.pagopa.pnss.common.constant.Constant.*;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @Service
@@ -31,13 +37,20 @@ public class FileMetadataUpdateService {
     private final UserConfigurationClientCall userConfigClientCall;
     private final DocumentClientCall docClientCall;
     private final DocTypesClientCall docTypesClientCall;
+    private final S3Service s3Service;
+    private final BucketName bucketName;
+    private final ScadenzaDocumentiClientCall scadenzaDocumentiClientCall;
+
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
-    public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall) {
+    public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall, S3Service s3Service, BucketName bucketName, ScadenzaDocumentiClientCall scadenzaDocumentiClientCall) {
         this.userConfigClientCall = userConfigurationClientCall;
         this.docClientCall = documentClientCall;
         this.docTypesClientCall = docTypesClientCall;
+        this.s3Service = s3Service;
+        this.bucketName = bucketName;
+        this.scadenzaDocumentiClientCall = scadenzaDocumentiClientCall;
     }
 
     public Mono<OperationResultCodeResponse> updateMetadata(String fileKey, String xPagopaSafestorageCxId, UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {
@@ -111,17 +124,22 @@ public class FileMetadataUpdateService {
 
                     if (retentionUntil != null) {
                         documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
+                        return updateS3ObjectTags(fileKey, document.getDocumentState(), documentType)
+                                .flatMap(putObjectTaggingResponse -> scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput()
+                                        .documentKey(fileKey)
+                                        .retentionUntil(retentionUntil.toInstant().getEpochSecond())))
+                                .thenReturn(documentChanges);
                     }
 
-                    return docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
-                                        .flatMap(documentResponsePatch -> {
-                                            OperationResultCodeResponse resp = new OperationResultCodeResponse();
-                                            resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
-                                            resp.setResultDescription(ResultCodeWithDescription.OK.getDescription());
-                                            return Mono.just(resp);
-                                        });
-
+                    return Mono.just(documentChanges);
                 })
+                .flatMap(documentChanges ->  docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
+                .flatMap(documentResponsePatch -> {
+                    OperationResultCodeResponse resp = new OperationResultCodeResponse();
+                    resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
+                    resp.setResultDescription(ResultCodeWithDescription.OK.getDescription());
+                    return Mono.just(resp);
+                }))
 
                             .onErrorResume(PatchDocumentException.class, e -> {
                                 log.debug(
@@ -131,7 +149,23 @@ public class FileMetadataUpdateService {
                                         e);
                                 return Mono.error(new ResponseStatusException(e.getStatusCode(), e.getMessage()));
                             })
-
+                            .onErrorResume(ScadenzaDocumentiCallException.class, e -> {
+                                log.debug(
+                                        "FileMetadataUpdateService.createUriForUploadFile() : rilevata una ScadenzaDocumentiCallException : " +
+                                                "errore = {}",
+                                        e.getMessage(),
+                                        e);
+                                return Mono.error(new ResponseStatusException(HttpStatus.valueOf(e.getCode()), e.getMessage()));
+                            })
+                            .onErrorResume(NoSuchKeyException.class, e -> {
+                                log.debug(
+                                        "FileMetadataUpdateService.createUriForUploadFile() : rilevata una NoSuchKeyException" +
+                                                " : errore" +
+                                                " = " + "{}",
+                                        e.getMessage(),
+                                        e);
+                                return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
+                            })
                             .onErrorResume(DocumentKeyNotPresentException.class, e -> {
                                 log.debug(
                                         "FileMetadataUpdateService.createUriForUploadFile() : rilevata una DocumentKeyNotPresentException" +
@@ -169,4 +203,18 @@ public class FileMetadataUpdateService {
                                      return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg));
                                  });
     }
+
+    private Mono<PutObjectTaggingResponse> updateS3ObjectTags(String fileKey, String documentState, DocumentType documentType) {
+        return Flux.fromIterable(documentType.getStatuses().values())
+                .filter(currentStatus -> currentStatus.getTechnicalState().equals(documentState))
+                .map(CurrentStatus::getStorage)
+                .next()
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Technical status not found for document key : " + fileKey)))
+                .map(storage -> {
+                    Tag freezeTag = Tag.builder().key(STORAGE_FREEZE).value(storage).build();
+                    return Tagging.builder().tagSet(freezeTag).build();
+                })
+                .flatMap(tagging -> s3Service.putObjectTagging(fileKey, bucketName.ssHotName(), tagging));
+    }
+
 }

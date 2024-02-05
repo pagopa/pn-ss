@@ -1,0 +1,98 @@
+{
+  "NextShardIterator": "string",
+  "Records": [
+    {
+      "awsRegion": "string",
+      "dynamodb": {
+        "ApproximateCreationDateTime": "",
+        "Keys": {
+          "documentKey": {
+            "B": "blob",
+            "BOOL": "",
+            "BS": [
+              "blob"
+            ],
+            "L": [
+              "AttributeValue"
+            ],
+            "M": {
+              "string": "AttributeValue"
+            },
+            "N": "string",
+            "NS": [
+              "string"
+            ],
+            "NULL": "boolean",
+            "S": "fileKey",
+            "SS": [
+              "string"
+            ]
+          }
+        },
+        "NewImage": {
+          "string": {
+            "B": "blob",
+            "BOOL": "boolean",
+            "BS": [
+              "blob"
+            ],
+            "L": [
+              "AttributeValue"
+            ],
+            "M": {
+              "string": "AttributeValue"
+            },
+            "N": "string",
+            "NS": [
+              "string"
+            ],
+            "NULL": "boolean",
+            "S": "string",
+            "SS": [
+              "string"
+            ]
+          }
+        },
+        "OldImage": {
+          "string": {
+            "B": "blob",
+            "BOOL": "boolean",
+            "BS": [
+              "blob"
+            ],
+            "L": [
+              "AttributeValue"
+            ],
+            "M": {
+              "string": "AttributeValue"
+            },
+            "N": "string",
+            "NS": [
+              "string"
+            ],
+            "NULL": "boolean",
+            "S": "string",
+            "SS": [
+              "string"
+            ]
+          }
+        },
+        "SequenceNumber": "string",
+        "SizeBytes": "number",
+        "StreamViewType": "string"
+      },
+      "eventID": "string",
+      "eventName": "string",
+      "eventSource": "string",
+      "eventVersion": "string",
+      "userIdentity": {
+        "type": [
+          "Service"
+        ],
+        "principalId": [
+          "dynamodb.amazonaws.com"
+        ]
+      }
+    }
+  ]
+}

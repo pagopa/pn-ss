@@ -126,4 +126,20 @@ public class S3ServiceImpl implements S3Service {
                 .retryWhen(s3RetryStrategy);
     }
 
+    @Override
+    public Mono<GetObjectTaggingResponse> getObjectTagging(String key, String bucketName) {
+        log.debug(CLIENT_METHOD_INVOCATION, GET_OBJECT_TAGGING, Stream.of(key, bucketName).toList());
+        return Mono.fromCompletionStage(s3AsyncClient.getObjectTagging(builder -> builder.key(key).bucket(bucketName)))
+                .doOnNext(getObjectTaggingResponse ->  log.info(CLIENT_METHOD_RETURN, GET_OBJECT_TAGGING, getObjectTaggingResponse))
+                .retryWhen(s3RetryStrategy);
+    }
+
+    @Override
+    public Mono<DeleteObjectTaggingResponse> deleteObjectTagging(String key, String bucketName, Tagging tagging) {
+        log.debug(CLIENT_METHOD_INVOCATION, DELETE_OBJECT_TAGGING, Stream.of(key, bucketName, tagging).toList());
+        return Mono.fromCompletionStage(s3AsyncClient.deleteObjectTagging(builder -> builder.key(key).bucket(bucketName)))
+                .doOnNext(deleteObjectTaggingResponse ->  log.info(CLIENT_METHOD_RETURN, DELETE_OBJECT_TAGGING, deleteObjectTaggingResponse))
+                .retryWhen(s3RetryStrategy);
+    }
+
 }

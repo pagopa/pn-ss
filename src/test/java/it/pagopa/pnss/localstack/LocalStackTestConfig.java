@@ -13,6 +13,7 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import it.pagopa.pnss.repositorymanager.entity.ScadenzaDocumentiEntity;
 import lombok.CustomLog;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -161,7 +162,8 @@ public class LocalStackTestConfig {
         Map<String, Class<?>> tableNameWithEntityClass =
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),
                         entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), it.pagopa.pnss.repositorymanager.entity.DocTypeEntity.class),
-                        entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class));
+                        entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class),
+                        entry(repositoryManagerDynamoTableName.scadenzaDocumentiName(), ScadenzaDocumentiEntity.class));
 
         tableNameWithEntityClass.forEach((tableName, entityClass) -> {
             log.info("<-- START initLocalStack -->");
@@ -185,8 +187,9 @@ public class LocalStackTestConfig {
         ObjectLockConfiguration objectLockConfiguration = ObjectLockConfiguration.builder().objectLockEnabled(ObjectLockEnabled.ENABLED)
                 .rule(ObjectLockRule.builder().defaultRetention(DefaultRetention.builder().days(1).mode(ObjectLockRetentionMode.GOVERNANCE).build()).build())
                 .build();
-
-        LifecycleRule lifecycleRule = LifecycleRule.builder().transitions(builder -> builder.storageClass(StorageClass.GLACIER.name()).days(1)).build();
+        LifecycleRuleAndOperator lifecycleRuleAndOperator=LifecycleRuleAndOperator.builder().tags(Tag.builder().key("tagKey").value("tagValue").build()).build();
+        LifecycleRuleFilter lifecycleRuleFilter= LifecycleRuleFilter.builder().and(lifecycleRuleAndOperator).build();
+        LifecycleRule lifecycleRule = LifecycleRule.builder().filter(lifecycleRuleFilter).status(ExpirationStatus.ENABLED).expiration(builder -> builder.days(120)).transitions(builder -> builder.storageClass(StorageClass.GLACIER.name()).days(1)).build();
         BucketLifecycleConfiguration bucketLifecycleConfiguration = BucketLifecycleConfiguration.builder().rules(lifecycleRule).build();
 
         bucketNames.forEach(bucket -> {

@@ -1,6 +1,10 @@
 package it.pagopa.pnss.transformation.service;
 
 import io.awspring.cloud.messaging.listener.Acknowledgment;
+import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
+import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
+import it.pagopa.pn.library.sign.service.impl.AlternativeSignProviderService;
+import it.pagopa.pn.library.sign.service.impl.ArubaSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
@@ -13,7 +17,6 @@ import it.pagopa.pnss.transformation.model.dto.BucketOriginDetail;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.model.dto.CreationDetail;
 import it.pagopa.pnss.transformation.model.dto.S3Object;
-import it.pagopa.pn.library.sign.service.ArubaSignService;
 import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
@@ -27,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -52,17 +56,29 @@ public class TransformationServiceTest {
     @MockBean
     private DocumentClientCall documentClientCall;
     @MockBean
-    private ArubaSignService arubaSignService;
+    private ArubaSignProviderService arubaSignProviderService;
+    @MockBean
+    private AlternativeSignProviderService alternativeSignProviderService;
     @Autowired
     private BucketName bucketName;
     @Autowired
     private S3Client s3TestClient;
+    @Autowired
+    private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
     @SpyBean
     private SqsService sqsService;
     @Value("${s3.queue.sign-queue-name}")
     private String signQueueName;
 
     private final String FILE_KEY = "FILE_KEY";
+    private static final String PROVIDER_SWITCH = "providerSwitch";
+    private static final String ARUBA_PROVIDER = "aruba";
+    private static final String ALTERNATIVE_PROVIDER = "alternative";
+
+    @AfterEach
+    void afterEach() {
+        ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ARUBA_PROVIDER);
+    }
 
     @BeforeEach
     void initialize() {
@@ -209,7 +225,7 @@ public class TransformationServiceTest {
         };
 
         mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-        when(arubaSignService.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.error(new ArubaSignException()));
+        when(arubaSignProviderService.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.error(new ArubaSignException()));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).verifyComplete();
@@ -218,7 +234,7 @@ public class TransformationServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"application/pdf", "application/xml", "other"})
-    void newStagingBucketObjectCreatedEventOk(String contentType) {
+    void newStagingBucketObjectCreatedEvent_ArubaProvider_Ok(String contentType) {
 
         S3Object s3Object = new S3Object();
         s3Object.setKey(FILE_KEY);
@@ -241,11 +257,46 @@ public class TransformationServiceTest {
         };
 
         mockGetDocument(contentType, STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-        mockArubaCalls();
+        mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verifyArubaProviderSignCalls(contentType);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"application/pdf", "application/xml", "other"})
+    void newStagingBucketObjectCreatedEvent_AlternativeProvider_Ok(String contentType) {
+
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
+
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+
+        ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
+        mockGetDocument(contentType, STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        mockSignCalls();
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
+        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verifyAlternativeProviderSignCalls(contentType);
     }
 
     @Test
@@ -274,7 +325,7 @@ public class TransformationServiceTest {
         };
         putObjectInBucket(FILE_KEY, bucketName.ssStageName(), new byte[10]);
         mockGetDocument("application/pdf", AVAILABLE, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-        mockArubaCalls();
+        mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
@@ -308,7 +359,7 @@ public class TransformationServiceTest {
 
         putObjectInBucket(FILE_KEY, bucketName.ssHotName(), new byte[10]);
         mockGetDocument("application/pdf", AVAILABLE, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-        mockArubaCalls();
+        mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
@@ -329,17 +380,35 @@ public class TransformationServiceTest {
         when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class))).thenReturn(Mono.just(documentResponse));
     }
 
-    void mockArubaCalls() {
+    void mockSignCalls() {
         SignReturnV2 signReturnV2 = new SignReturnV2();
-        signReturnV2.setDescription("test");
-        signReturnV2.setReturnCode("ok");
-        signReturnV2.setStatus("ok");
-        signReturnV2.setBinaryoutput(new byte[10]);
-        when(arubaSignService.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
+        PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
+        pnSignDocumentResponse.setSignedDocument(new byte[10]);
 
-        when(arubaSignService.xmlSignature(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
+        when(arubaSignProviderService.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.just(pnSignDocumentResponse));
+        when(alternativeSignProviderService.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.just(pnSignDocumentResponse));
 
-        when(arubaSignService.pkcs7signV2(any(), anyBoolean())).thenReturn(Mono.just(signReturnV2));
+        when(arubaSignProviderService.signXmlDocument(any(), anyBoolean())).thenReturn(Mono.just(pnSignDocumentResponse));
+        when(alternativeSignProviderService.signXmlDocument(any(), anyBoolean())).thenReturn(Mono.just(pnSignDocumentResponse));
+
+        when(arubaSignProviderService.pkcs7Signature(any(), anyBoolean())).thenReturn(Mono.just(pnSignDocumentResponse));
+        when(alternativeSignProviderService.pkcs7Signature(any(), anyBoolean())).thenReturn(Mono.just(pnSignDocumentResponse));
+    }
+
+    void verifyArubaProviderSignCalls(String contentType) {
+        switch (contentType) {
+            case "application/pdf" -> verify(arubaSignProviderService, times(1)).signPdfDocument(any(), anyBoolean());
+            case "application/xml" -> verify(arubaSignProviderService, times(1)).signXmlDocument(any(), anyBoolean());
+            case "other" -> verify(arubaSignProviderService, times(1)).pkcs7Signature(any(), anyBoolean());
+        }
+    }
+
+    void verifyAlternativeProviderSignCalls(String contentType) {
+        switch (contentType) {
+            case "application/pdf" -> verify(alternativeSignProviderService, times(1)).signPdfDocument(any(), anyBoolean());
+            case "application/xml" -> verify(alternativeSignProviderService, times(1)).signXmlDocument(any(), anyBoolean());
+            case "other" -> verify(alternativeSignProviderService, times(1)).pkcs7Signature(any(), anyBoolean());
+        }
     }
 
     private void putObjectInBucket(String key, String bucketName, byte[] fileBytes) {

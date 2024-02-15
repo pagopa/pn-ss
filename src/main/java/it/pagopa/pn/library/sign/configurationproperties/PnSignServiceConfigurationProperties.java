@@ -20,7 +20,7 @@ public class PnSignServiceConfigurationProperties {
 
     private String actualProvider;
 
-    public String getPnSignProviderSwitch() {
+    public String getProviderSwitch() {
         return returnPropertyValue(providerSwitch);
     }
 

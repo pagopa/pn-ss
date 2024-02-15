@@ -30,6 +30,8 @@ class PnSignServiceTest {
     private static final String PROVIDER_SWITCH = "providerSwitch";
     private static final String ARUBA_PROVIDER = "aruba";
     private static final String ALTERNATIVE_PROVIDER = "alternative";
+    private static final String CONDITIONAL_DATE_PROVIDER_PAST = "aruba;1999-02-01T10:00:00Z;alternative";
+    private static final String CONDITIONAL_DATE_PROVIDER_FUTURE = "aruba;2304-02-15T10:00:00Z;alternative";
 
     @Test
     void arubaProvider_signPdf_ok() {
@@ -114,5 +116,35 @@ class PnSignServiceTest {
         verify(alternativeSignProviderService, times(1)).pkcs7Signature(fileBytes, true);
         verify(arubaSignProviderService, never()).pkcs7Signature(any(), anyBoolean());
     }
+
+    @Test
+    void conditionalDatePastProvider_signPdf_ok() {
+        ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_PAST);
+        byte[] fileBytes = "file".getBytes();
+
+        when(alternativeSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
+
+        Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
+        StepVerifier.create(response).expectNextCount(1).verifyComplete();
+
+        verify(alternativeSignProviderService, times(1)).signPdfDocument(fileBytes, true);
+        verify(arubaSignProviderService, never()).signPdfDocument(any(), anyBoolean());
+    }
+
+    @Test
+    void conditionalDateFutureProvider_signPdf_ok() {
+        ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_FUTURE);
+        byte[] fileBytes = "file".getBytes();
+
+        when(arubaSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
+
+        Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
+        StepVerifier.create(response).expectNextCount(1).verifyComplete();
+
+        verify(arubaSignProviderService, times(1)).signPdfDocument(fileBytes, true);
+        verify(alternativeSignProviderService, never()).signPdfDocument(any(), anyBoolean());
+    }
+
+
 
 }

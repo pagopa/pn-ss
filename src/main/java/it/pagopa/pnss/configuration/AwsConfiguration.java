@@ -14,6 +14,9 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcess
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
+import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
@@ -22,6 +25,9 @@ import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessorFactory;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -32,6 +38,8 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.handler.annotation.support.PayloadMethodArgumentResolver;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -53,15 +61,21 @@ import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.util.List;
 
 @Configuration
+@Slf4j
 public class AwsConfiguration {
 
     private final DynamoEventStreamName dynamoEventStreamName;
     private final AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
     private final AwsConfigurationProperties awsConfigurationProperties;
+    private final WebClient genericWebClient = WebClient.builder().build();
 
     /*
      * Set in LocalStackTestConfig
@@ -96,6 +110,7 @@ public class AwsConfiguration {
         this.awsConfigurationProperties = awsConfigurationProperties;
         this.dynamoEventStreamName = dynamoEventStreamName;
         this.availabelDocumentEventBridgeName = availabelDocumentEventBridgeName;
+
     }
 
     //  <-- spring-cloud-starter-aws-messaging -->
@@ -217,6 +232,7 @@ public class AwsConfiguration {
 
     // TODO: Rifare completamente questa parte riguardante la disponibilità documenti
     @Bean
+
     public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor) {
         return args -> {
             AWSCredentialsProvider awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
@@ -227,11 +243,18 @@ public class AwsConfiguration {
             AmazonDynamoDBStreams dynamoDBStreamsClient =
                     AmazonDynamoDBStreamsClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
             AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
+            //Get task identifier
 
+
+
+            String taskId = getTaskId();
+            log.debug("Task ID: {}", taskId);
             KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(dynamoEventStreamName.tableMetadata(),
                                                                                            dynamoEventStreamName.documentName(),
                                                                                            awsCredentialsProvider,
-                                                                                           "streams-demo-worker")
+                                                                                           taskId
+                                                                                                    )
+
 //            		.withMaxLeaseRenewalThreads(20)
 //            		.withMaxLeasesForWorker(5000)
 
@@ -249,7 +272,7 @@ public class AwsConfiguration {
 //                   EventBridge accetta massimo
 //                   10 elementi, il numero
 //                   di eventi Kinesis è
-//                   impostato anch'esso a 10                                                                                             
+//                   impostato anch'esso a 10
             		.withMaxRecords(1000)
             		.withIdleTimeBetweenReadsInMillis(1000)
             		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
@@ -266,4 +289,43 @@ public class AwsConfiguration {
             }
         };
     }
+
+    private String getTaskId() {
+
+        String ecsMetadataUri = System.getenv("ECS_CONTAINER_METADATA_URI_V4");
+
+        if (ecsMetadataUri == null) {
+            log.error("ECS_CONTAINER_METADATA_URI_V4 environment variable not found.");
+            return "streams-worker";
+        }
+
+
+        return genericWebClient.get()
+                .retrieve()
+                .bodyToMono(String.class)
+                .flatMap(response -> {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    try {
+                        JsonNode jsonNode = objectMapper.readTree(response);
+                        String taskArn = jsonNode.get("TaskARN").asText();
+                        String[] parts = taskArn.split("/");
+                        if (parts.length > 0) {
+                            return Mono.just(parts[parts.length - 1]);
+                        } else {
+                            log.error("Invalid TaskARN format");
+                            return Mono.just("streams-worker");
+                        }
+                   } catch (JsonProcessingException e) {
+                        log.error("Error while parsing JSON response", e);
+                        return Mono.just("streams-worker");
+                    }
+                })
+                .onErrorResume(throwable -> {
+                    log.error("Error while fetching container metadata", throwable);
+                    return Mono.just("streams-worker");
+                }).block();
+    }
 }
+
+
+

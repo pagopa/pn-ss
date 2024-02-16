@@ -27,6 +27,7 @@
     "AutoscalingThreshold": "15000",
     "PnSsUriBuilderGetFileWithPatchConfiguration": "CLIENT_SPECIFIC",
     "JavaToolOptions": "-XX:MaxDirectMemorySize=128M",
+    "GestoreBucketGetObjectChunkSize": "10485760",
     "PnSignProviderSwitch": "aruba"
   }
 }

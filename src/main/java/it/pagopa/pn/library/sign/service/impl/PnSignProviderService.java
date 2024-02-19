@@ -9,12 +9,17 @@ import reactor.core.publisher.Mono;
 
 @Service("pnSignService")
 public class PnSignProviderService implements IPnSignService {
+
+    private final ArubaSignProviderService arubaSignProviderService;
+    private final AlternativeSignProviderService alternativeSignProviderService;
+    private final PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
+
     @Autowired
-    private ArubaSignProviderService arubaSignProviderService;
-    @Autowired
-    private AlternativeSignProviderService alternativeSignProviderService;
-    @Autowired
-    private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
+    public PnSignProviderService(ArubaSignProviderService arubaSignProviderService, AlternativeSignProviderService alternativeSignProviderService, PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties) {
+        this.arubaSignProviderService = arubaSignProviderService;
+        this.alternativeSignProviderService = alternativeSignProviderService;
+        this.pnSignServiceConfigurationProperties = pnSignServiceConfigurationProperties;
+    }
 
     @Override
     public Mono<PnSignDocumentResponse> signPdfDocument(byte[] fileBytes, Boolean timestamping) {

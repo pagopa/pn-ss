@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import reactor.test.StepVerifier;
 
 @SpringBootTestWebEnv
-public class ArubaSignProviderServiceImplTest {
+class ArubaSignProviderServiceImplTest {
 
     @Autowired
     ArubaSignProviderService arubaSignProviderServiceCall;

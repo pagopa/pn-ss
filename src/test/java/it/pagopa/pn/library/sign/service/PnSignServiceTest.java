@@ -6,19 +6,21 @@ import it.pagopa.pn.library.sign.service.impl.AlternativeSignProviderService;
 import it.pagopa.pn.library.sign.service.impl.ArubaSignProviderService;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.transformation.wsdl.ArubaSignService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-
+import static it.pagopa.pnss.utils.MockArubaUtils.*;
 import static org.mockito.Mockito.*;
 
 @SpringBootTestWebEnv
 class PnSignServiceTest {
 
-    @MockBean
+    @SpyBean
     private ArubaSignProviderService arubaSignProviderService;
     @MockBean
     private AlternativeSignProviderService alternativeSignProviderService;
@@ -26,6 +28,8 @@ class PnSignServiceTest {
     private PnSignProviderService pnSignProviderService;
     @Autowired
     private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
+    @MockBean
+    private ArubaSignService arubaSignServiceClient;
 
     private static final String PROVIDER_SWITCH = "providerSwitch";
     private static final String ARUBA_PROVIDER = "aruba";
@@ -38,7 +42,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ARUBA_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
-        when(arubaSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
+        mockArubaPdfSignatureV2Async(arubaSignServiceClient, "ok", fileBytes);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
         StepVerifier.create(response).expectNextCount(1).verifyComplete();
@@ -52,7 +56,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ARUBA_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
-        when(arubaSignProviderService.signXmlDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
+        mockArubaXmlSignatureAsync(arubaSignServiceClient, "ok", fileBytes);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signXmlDocument(fileBytes, true);
         StepVerifier.create(response).expectNextCount(1).verifyComplete();
@@ -66,7 +70,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ARUBA_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
-        when(arubaSignProviderService.pkcs7Signature(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
+        mockArubaPkcs7SignV2Async(arubaSignServiceClient, "ok", fileBytes);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.pkcs7Signature(fileBytes, true);
         StepVerifier.create(response).expectNextCount(1).verifyComplete();
@@ -136,7 +140,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_FUTURE);
         byte[] fileBytes = "file".getBytes();
 
-        when(arubaSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
+        mockArubaPdfSignatureV2Async(arubaSignServiceClient, "ok", fileBytes);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
         StepVerifier.create(response).expectNextCount(1).verifyComplete();
@@ -144,7 +148,5 @@ class PnSignServiceTest {
         verify(arubaSignProviderService, times(1)).signPdfDocument(fileBytes, true);
         verify(alternativeSignProviderService, never()).signPdfDocument(any(), anyBoolean());
     }
-
-
 
 }

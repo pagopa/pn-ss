@@ -22,7 +22,7 @@ class PnSignServiceTest {
 
     @SpyBean
     private ArubaSignProviderService arubaSignProviderService;
-    @MockBean
+    @SpyBean
     private AlternativeSignProviderService alternativeSignProviderService;
     @Autowired
     private PnSignProviderService pnSignProviderService;
@@ -84,7 +84,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
-        when(alternativeSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
+        //when(alternativeSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
         StepVerifier.create(response).expectNextCount(1).verifyComplete();
@@ -98,7 +98,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
-        when(alternativeSignProviderService.signXmlDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
+        //when(alternativeSignProviderService.signXmlDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signXmlDocument(fileBytes, true);
         StepVerifier.create(response).expectNextCount(1).verifyComplete();
@@ -112,7 +112,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
-        when(alternativeSignProviderService.pkcs7Signature(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
+        //when(alternativeSignProviderService.pkcs7Signature(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.pkcs7Signature(fileBytes, true);
         StepVerifier.create(response).expectNextCount(1).verifyComplete();
@@ -126,7 +126,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_PAST);
         byte[] fileBytes = "file".getBytes();
 
-        when(alternativeSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
+        //when(alternativeSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
         StepVerifier.create(response).expectNextCount(1).verifyComplete();

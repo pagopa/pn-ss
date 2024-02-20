@@ -20,20 +20,18 @@ import static it.pagopa.pnss.common.utils.LogUtils.SETTING_PROXY_PROPERTIES;
 @Configuration
 @CustomLog
 public class ArubaSignServiceConf {
-    @Autowired
-    private ArubaSignServiceProxyProperties arubaSignServiceProxyProperties;
     @Value("${aruba.server.address}")
     private String arubaServerAddress;
 
     @Bean
-    public ArubaSignService arubaSignService() {
+    public ArubaSignService arubaSignService(ArubaSignServiceProxyProperties arubaSignServiceProxyProperties) {
         var endpointName = ArubaSignServiceService.ArubaSignServicePort;
         var serviceName = ArubaSignServiceService.SERVICE;
         log.debug(INITIALIZING_ARUBA_PROXY_CLIENT, "pn-ss", arubaServerAddress, endpointName, serviceName);
-        return initializeFactory(endpointName, serviceName).create(ArubaSignService.class);
+        return initializeFactory(endpointName, serviceName, arubaSignServiceProxyProperties).create(ArubaSignService.class);
     }
 
-    private JaxWsProxyFactoryBean initializeFactory(QName endpointName, QName serviceName) {
+    private JaxWsProxyFactoryBean initializeFactory(QName endpointName, QName serviceName, ArubaSignServiceProxyProperties arubaSignServiceProxyProperties) {
         JaxWsProxyFactoryBean factory = new JaxWsProxyFactoryBean();
         Map<String, Object> props = arubaSignServiceProxyProperties.getProperties();
         log.debug(SETTING_PROXY_PROPERTIES, props);

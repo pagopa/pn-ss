@@ -1,16 +1,18 @@
 package it.pagopa.pnss.transformation.configuration;
 
+import com.sun.xml.bind.marshaller.CharacterEscapeHandler;
 import it.pagopa.pnss.configurationproperties.ArubaSignServiceProxyProperties;
 import it.pagopa.pnss.transformation.wsdl.ArubaSignService;
 import it.pagopa.pnss.transformation.wsdl.ArubaSignServiceService;
 import lombok.CustomLog;
+import org.apache.cxf.jaxb.JAXBDataBinding;
 import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.xml.namespace.QName;
+import java.util.HashMap;
 import java.util.Map;
 
 import static it.pagopa.pnss.common.utils.LogUtils.INITIALIZING_ARUBA_PROXY_CLIENT;
@@ -40,6 +42,15 @@ public class ArubaSignServiceConf {
         factory.setAddress(arubaServerAddress);
         factory.setEndpointName(endpointName);
         factory.setServiceName(serviceName);
+
+        //Custom character escape handler to avoid characters escaping inside CDataTag
+        CharacterEscapeHandler characterEscapeHandler = (ch, start, length, isAttVal, out) -> out.write(ch);
+        JAXBDataBinding jaxbDataBinding = new JAXBDataBinding();
+        Map<String, Object> marshallerProperties = new HashMap<>();
+        marshallerProperties.put("com.sun.xml.bind.characterEscapeHandler", characterEscapeHandler);
+        jaxbDataBinding.setMarshallerProperties(marshallerProperties);
+        factory.setDataBinding(jaxbDataBinding);
+
         return factory;
     }
 

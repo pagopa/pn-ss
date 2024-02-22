@@ -42,15 +42,6 @@ public class ArubaSignServiceConf {
         factory.setAddress(arubaServerAddress);
         factory.setEndpointName(endpointName);
         factory.setServiceName(serviceName);
-
-        //Custom character escape handler to avoid characters escaping inside CDataTag
-        CharacterEscapeHandler characterEscapeHandler = (ch, start, length, isAttVal, out) -> out.write(ch);
-        JAXBDataBinding jaxbDataBinding = new JAXBDataBinding();
-        Map<String, Object> marshallerProperties = new HashMap<>();
-        marshallerProperties.put("com.sun.xml.bind.characterEscapeHandler", characterEscapeHandler);
-        jaxbDataBinding.setMarshallerProperties(marshallerProperties);
-        factory.setDataBinding(jaxbDataBinding);
-
         return factory;
     }
 

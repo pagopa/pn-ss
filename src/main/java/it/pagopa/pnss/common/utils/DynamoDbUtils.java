@@ -11,7 +11,7 @@ import static it.pagopa.pnss.common.utils.LogUtils.RETRY_ATTEMPT;
 @CustomLog
 public class DynamoDbUtils {
 
-    public static final Retry DYNAMO_OPTIMISTIC_LOCKING_RETRY = Retry.backoff(10, Duration.ofSeconds(3))
+    public static final Retry DYNAMO_OPTIMISTIC_LOCKING_RETRY = Retry.fixedDelay(2, Duration.ofSeconds(4))
             .filter(ConditionalCheckFailedException.class::isInstance)
             .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
             .onRetryExhaustedThrow((retrySpec, retrySignal) -> retrySignal.failure());

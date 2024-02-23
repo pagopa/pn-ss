@@ -152,8 +152,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
         return MDCUtils.addMDCToContextAndExecute(documentChanges.flatMap(request -> documentService.patchDocument(documentKey,
 					request,
 					xPagopaSafestorageCxIdValue,
-					xApiKeyValue))
-				       .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
+					xApiKeyValue).retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY))
                        .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
 				       .doOnSuccess(result->log.logEndingProcess(PATCH_DOCUMENT))
                        .onErrorResume(throwable -> {

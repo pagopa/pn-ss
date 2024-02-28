@@ -151,7 +151,7 @@ public class DocumentServiceImpl implements DocumentService {
 
         AtomicReference<String> oldState = new AtomicReference<>();
 
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
+        return Mono.defer(()-> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build())))
                 .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                 .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                 .flatMap(documentEntity -> {
@@ -269,7 +269,6 @@ public class DocumentServiceImpl implements DocumentService {
                        }
                    })
                    .flatMap(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
-                   .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
                    .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentChanges));
     }
 

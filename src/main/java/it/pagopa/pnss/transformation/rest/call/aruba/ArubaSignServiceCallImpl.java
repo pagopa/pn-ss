@@ -7,21 +7,19 @@ import it.pagopa.pnss.configurationproperties.retry.ArubaRetryStrategyProperties
 import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
 import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimeMark;
 import it.pagopa.pnss.transformation.wsdl.*;
-import jakarta.activation.DataHandler;
-import jakarta.mail.util.ByteArrayDataSource;
-import jakarta.xml.ws.Response;
+import javax.xml.ws.Response;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.util.retry.Retry;
-
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
+import javax.activation.DataHandler;
+
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 import static it.pagopa.pnss.transformation.wsdl.XmlSignatureType.XMLENVELOPED;

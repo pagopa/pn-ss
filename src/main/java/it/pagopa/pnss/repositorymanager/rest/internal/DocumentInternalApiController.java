@@ -24,6 +24,8 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import java.time.DateTimeException;
 
+import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
+
 @RestController
 @CustomLog
 public class DocumentInternalApiController implements DocumentInternalApi {
@@ -150,7 +152,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
         return MDCUtils.addMDCToContextAndExecute(documentChanges.flatMap(request -> documentService.patchDocument(documentKey,
 					request,
 					xPagopaSafestorageCxIdValue,
-					xApiKeyValue))
+					xApiKeyValue).retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY))
                        .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
 				       .doOnSuccess(result->log.logEndingProcess(PATCH_DOCUMENT))
                        .onErrorResume(throwable -> {

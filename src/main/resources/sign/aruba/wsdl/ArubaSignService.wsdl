@@ -12,7 +12,7 @@
     <types>
         <xsd:schema elementFormDefault="qualified">
             <xsd:import namespace="http://arubasignservice.arubapec.it/"
-                        schemaLocation="./ArubaSignService.xsd"/>
+                        schemaLocation="ArubaSignService.xsd"/>
         </xsd:schema>
     </types>
     <message name="tsd">

@@ -1,8 +1,8 @@
 package it.pagopa.pnss.utils;
 
 import it.pagopa.pnss.transformation.wsdl.*;
-import jakarta.xml.ws.AsyncHandler;
-import jakarta.xml.ws.Response;
+import javax.xml.ws.AsyncHandler;
+import javax.xml.ws.Response;
 
 import java.util.concurrent.CompletableFuture;
 

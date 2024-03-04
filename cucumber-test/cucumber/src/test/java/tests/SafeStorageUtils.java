@@ -2,8 +2,11 @@ package tests;
 
 import static io.restassured.RestAssured.given;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UpdateFileMetadataRequest;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -119,6 +122,30 @@ public class SafeStorageUtils {
 			.param("metadataOnly", true);
 		
 		Response oResp = CommonUtils.myGet(oReq, "/safe-storage/v1/files/{fileKey}"); 
+		return oResp;
+	}
+
+	public static Response updateObjectMetadata (String sCxId, String sAPIKey, String sFileKey, UpdateFileMetadataRequest requestBody) {
+
+		ObjectMapper objMapper = new ObjectMapper();
+		String body = "";
+
+		try {
+			body = objMapper.writeValueAsString(requestBody);
+		} catch (JsonProcessingException jpe) {
+			// help
+		}
+
+		RequestSpecification oReq = stdReq()
+				.header("x-pagopa-safestorage-cx-id", sCxId)
+				.header("x-api-key", sAPIKey)
+				.pathParam("fileKey", sFileKey)
+				.body(body);
+
+		Response oResp = CommonUtils.myPost(oReq, "/safe-storage/v1/files/{fileKey}");
+
+		System.out.println("status: "+oResp.getStatusCode());
+
 		return oResp;
 	}
 

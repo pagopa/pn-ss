@@ -15,13 +15,27 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.Date;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UpdateFileMetadataRequest;
+import it.pagopa.pnss.uribuilder.rest.FileMetadataUpdateApiController;
+import it.pagopa.pnss.uribuilder.rest.FileUploadApiController;
+import it.pagopa.pnss.uribuilder.service.FileMetadataUpdateService;
 import lombok.CustomLog;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
+import org.junit.platform.commons.util.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.autoconfigure.metrics.MetricsProperties;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,6 +52,14 @@ public class StepDefinitions {
 	private String sMimeType = null;
 	private int iRC = 0;
 	File oFile = null;
+	private String sPNClientUp = null;
+	private String sPNClient_AKUp = null;
+	private String status = null;
+	private String retentionUntil = "";
+
+	private Date retentionDate;
+	UpdateFileMetadataRequest requestBody = new UpdateFileMetadataRequest();
+
 	
 	@Given("{string} authenticated by {string} try to upload a document of type {string} with content type {string} using {string}")
 	public void a_file_to_upload(String sPNClient, String sPNClient_AK, String sDocumentType, String sMimeType, String sFileName) throws NoSuchAlgorithmException, FileNotFoundException, IOException {
@@ -63,6 +85,59 @@ public class StepDefinitions {
 	    md.update(baFile);
 	    digest = md.digest();
 	    sMD5=Base64.getEncoder().encodeToString(digest);
+	}
+
+	@Given("{string} authenticated by {string} try to update the document using {string} and {string} but has invalid or null {string}")
+	public void no_file_to_update (String sPNClientUp, String sPNClient_AKUp, String status, String retentionUntil, String fileKey) {
+
+		this.status = status;
+		this.retentionUntil = retentionUntil;
+		this.sPNClientUp = sPNClientUp;
+		this.sPNClient_AKUp = sPNClient_AKUp;
+		if (fileKey != null && !fileKey.isEmpty()) {
+			this.sKey = fileKey;
+		} else {
+			this.sKey = "";
+		}
+
+		System.out.println("Client: "+sPNClientUp);
+
+		Response oResp;
+
+		if (retentionUntil != null && !retentionUntil.isEmpty()) {
+			requestBody.setRetentionUntil(Date.from(Instant.parse(retentionUntil)));
+		}
+		requestBody.setStatus(status);
+
+		CommonUtils.checkDump(oResp=SafeStorageUtils.updateObjectMetadata(sPNClientUp, sPNClient_AKUp, fileKey, requestBody), true);
+		iRC = oResp.getStatusCode();
+		System.out.println("FILE KEY: " + fileKey);
+		System.out.println("NEW STATUS: "+status);
+		System.out.println("NEW RETENTION UNTIL: "+retentionUntil);
+	}
+
+	@When ("{string} authenticated by {string} try to update the document just uploaded using {string} and {string}")
+	public void a_file_to_update (String sPNClientUp, String sPNClient_AKUp, String status, String retentionUntil) {
+
+		this.status = status;
+		this.retentionUntil = retentionUntil;
+		this.sPNClientUp = sPNClientUp;
+		this.sPNClient_AKUp = sPNClient_AKUp;
+
+		System.out.println("Client: "+sPNClientUp);
+
+		Response oResp;
+
+		if (retentionUntil != null && !retentionUntil.isEmpty()) {
+			requestBody.setRetentionUntil(Date.from(Instant.parse(retentionUntil)));
+		}
+		requestBody.setStatus(status);
+
+		CommonUtils.checkDump(oResp= SafeStorageUtils.updateObjectMetadata(sPNClientUp, sPNClient_AKUp, sKey, requestBody), true);
+		iRC = oResp.getStatusCode();
+		System.out.println("NEW STATUS: "+status);
+		System.out.println("NEW RETENTION UNTIL: "+retentionUntil);
+
 	}
 	
 	@When("request a presigned url to upload the file")
@@ -141,6 +216,39 @@ public class StepDefinitions {
 	public void i_get_an_error(String sRC) {
 		Assertions.assertEquals( Integer.parseInt(sRC), iRC);
 		
+	}
+
+	@Then("i check that the document got updated")
+	public void metadata_changed() throws JsonMappingException, JsonProcessingException, InterruptedException {
+
+		Response oResp;
+		iRC = 0;
+		while ( iRC != 200 ) {
+			oResp = SafeStorageUtils.getObjectMetadata(sPNClientUp, sPNClient_AKUp, sKey);
+			iRC = oResp.getStatusCode();
+			if( iRC == 200 ) {
+				ObjectMapper objectMapper = new ObjectMapper();
+				System.out.println(oResp.getBody().asString());
+				FileDownloadResponse oFDR = objectMapper.readValue(oResp.getBody().asString(), FileDownloadResponse.class);
+				System.out.println(oFDR);
+				if (retentionUntil != null && !retentionUntil.isEmpty()) {
+					retentionDate= Date.from(Instant.parse(retentionUntil));
+				}
+
+				System.out.println("RetentionDate: "+retentionDate);
+				System.out.println("Status: "+status);
+				boolean condition = false;
+
+				if (oFDR.getDocumentStatus().equalsIgnoreCase(status)) {
+					condition = true;
+				} else if (oFDR.getRetentionUntil().toInstant().truncatedTo(ChronoUnit.SECONDS).equals(retentionDate.toInstant().truncatedTo(ChronoUnit.SECONDS))) {
+					condition = true;
+				}
+				assertTrue(condition);
+
+				}
+			Thread.sleep(3000);
+		}
 	}
 
 	@Then("i get an error with client {string}")

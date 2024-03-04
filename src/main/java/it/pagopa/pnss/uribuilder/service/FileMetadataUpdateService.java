@@ -40,21 +40,28 @@ public class FileMetadataUpdateService {
         this.docTypesClientCall = docTypesClientCall;
     }
 
+    // metodo per l'update dei metadata, API accessibile esternamente, richiede identificativo del file, id del contesto (client id chiamante esterno), richiesta di update, id del contesto di auth (api key per chiamata interna) e auth
     public Mono<OperationResultCodeResponse> updateMetadata(String fileKey, String xPagopaSafestorageCxId, UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {
 
         log.debug(INVOKING_METHOD, UPDATE_METADATA, Stream.of(fileKey, xPagopaSafestorageCxId, request).toList());
 
+        // Data fino a quando il documento dev'essere conservato
         var retentionUntil = request.getRetentionUntil();
+        // String con stato logico (futuro stato che voglio impostare) del documento
         var logicalState = request.getStatus();
 
+        // attraverso API interna, recupero la response del documento che varia a seconda del risultato di alcuni controlli
         return docClientCall.getDocument(fileKey)
                 .flatMap(documentResponse -> Mono.zipDelayError(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
                 .handle(((objects, synchronousSink) -> {
 
+                    // variabili che rappresentano le configurazioni utente, il documento ed il tipo di documento
                     var userConfiguration = objects.getT1().getUserConfiguration();
                     var document = objects.getT2().getDocument();
                     var tipoDocumento = document.getDocumentType().getTipoDocumento();
 
+                    // controllo i permessi dell'utente: se l'oggetto è nullo oppure il canModifyStatus non è valorizzato o non contiene il tipo di documento, restituisco errore
+                    // (403) altrimenti proseguo
                     log.logChecking(USER_CONFIGURATION);
                     if (userConfiguration == null || userConfiguration.getCanModifyStatus() == null || !userConfiguration.getCanModifyStatus().contains(tipoDocumento)) {
                         String errorMsg = String.format("Client '%s' not has privilege for change document type '%s'",
@@ -71,8 +78,10 @@ public class FileMetadataUpdateService {
                                 Document document = (Document) object;
                                 String documentType = document.getDocumentType().getTipoDocumento();
 
+                                // controllo che nella richiesta lo stato logico del documento sia valorizzato, se non lo è, inserisco String vuota
                                 Mono<String> checkedStatus;
                                 if (logicalState != null && !logicalState.isBlank()) {
+                                    // reperisce stato tecnico corrispondente allo stato logico
                                     checkedStatus = checkLookUp(documentType, logicalState);
                                 } else {
                                     checkedStatus = Mono.just("");
@@ -80,6 +89,7 @@ public class FileMetadataUpdateService {
                                 return Mono.zipDelayError(Mono.just(document),  checkedStatus);
                             }).flatMap(objects -> {
 
+                    // recupero il tipo di documento e stato tecnico (gestito internamente)
                     Document document = objects.getT1();
                     DocumentType documentType = document.getDocumentType();
                     String technicalStatus = objects.getT2();
@@ -87,10 +97,13 @@ public class FileMetadataUpdateService {
 
                     boolean isStatusPresent = false;
 
+                    // controllo che lo stato logico della richiesta sia diverso da null e non sia vuoto.
                     if (request.getStatus() != null && !StringUtils.isBlank(request.getStatus())) {
                         if (documentType.getStatuses() != null) {
+                            // se le condizioni sono rispettate, valorizzo la booleana in base a quella del documento
                             isStatusPresent = documentType.getStatuses().containsKey(logicalState);
                         }
+                        // se è false, restituisco errore (400)
                         if (!isStatusPresent) {
                             log.debug("FileMetadataUpdateService.createUriForUploadFile() : Status '{}' not found for document" + " key {}",
                                       request.getStatus(),
@@ -99,6 +112,7 @@ public class FileMetadataUpdateService {
                                                                           "Status not found for document key : " + fileKey));
                         }
 
+                        // verifico se il technical status è valorizzato, se non lo è, restituisco errore (400)
                         if (StringUtils.isEmpty(technicalStatus)) {
                             log.debug("FileMetadataUpdateService.createUriForUploadFile() : Technical status not found " +
                                       "for document key {}", fileKey);
@@ -107,12 +121,15 @@ public class FileMetadataUpdateService {
                         }
 
                     }
+                    // se tutti i controlli vanno a buon fine, nell'oggetto per l'update, setto lo stato del documento con il technical status
                     documentChanges.setDocumentState(technicalStatus);
 
+                    // verifico se la retention until passata nella request è diversa da null, se lo è, la setto nella variabile per l'update
                     if (retentionUntil != null) {
                         documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
                     }
 
+                    // eseguo la patch del documento
                     return docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                                         .flatMap(documentResponsePatch -> {
                                             OperationResultCodeResponse resp = new OperationResultCodeResponse();

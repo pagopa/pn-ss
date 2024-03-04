@@ -149,25 +149,36 @@ public class DocumentServiceImpl implements DocumentService {
         final String PATCH_DOCUMENT = "DocumentService.patchDocument()";
         log.debug(LogUtils.INVOKING_METHOD, PATCH_DOCUMENT, Stream.of(documentKey, documentChanges, authPagopaSafestorageCxId).toList());
 
+        // creo una variabile vuota per il vecchio stato in maniera thread-safe
         AtomicReference<String> oldState = new AtomicReference<>();
 
+        // recupero il documento da Dynamo tramite la key, nel caso in cui non ci fosse, restituisco errore
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                 .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                 .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                 .flatMap(documentEntity -> {
+                    // confronto il documento con i cambiamenti, se sono uguali, restituisco il documento e avviso che la modifica è già stata apportata
                     if (hasBeenPatched(documentEntity, documentChanges)) {
                         log.debug("Same changes have been already applied to document '{}'", documentKey);
                         return Mono.just(documentEntity);
                     }
+                    // altrimenti controllo che l'ultimo timestamp di cambiamento sia valorizzato
                     else if (documentChanges.getLastStatusChangeTimestamp() != null) {
+                        // recupero l'ultimo timestamp valorizzato sul documento del db
                         var storedLastStatusChangeTimestamp = documentEntity.getLastStatusChangeTimestamp();
+                        // e quello dall'oggetto che sto passando per il cambiamento
                         var lastStatusChangeTimestamp = documentChanges.getLastStatusChangeTimestamp();
+                        // se il documento ha già una valorizzazione di cambio e questo è successivo a quello che gli sto passando
                         if (storedLastStatusChangeTimestamp!=null && lastStatusChangeTimestamp.isBefore(storedLastStatusChangeTimestamp))
                             return Mono.just(documentEntity);
+                        // restituisco il documento originale e setto l'ultimo cambio stato a quello che gli sto passando
                         documentEntity.setLastStatusChangeTimestamp(lastStatusChangeTimestamp);
+                    // se gli stati invece sono uguali
                     } else if (documentChanges.getDocumentState() != null && !documentChanges.getDocumentState().equals(documentEntity.getDocumentState())) {
+                        // cambio il timestamp dell'ultimo cambiamento ad ora
                         documentEntity.setLastStatusChangeTimestamp(OffsetDateTime.now());
                     }
+                    // eseguo la modifica
                     return executePatch(documentEntity, documentChanges, oldState, documentKey, authPagopaSafestorageCxId, authApiKey);
                 })
                 .map(documentEntity -> objectMapper.convertValue(documentEntity, Document.class));
@@ -178,63 +189,82 @@ public class DocumentServiceImpl implements DocumentService {
 
         return Mono.just(docEntity).flatMap(documentEntity ->
                 {
+                    // verifico che lo stato che passo per la modifica sia valorizzato
                     if (!StringUtils.isBlank(documentChanges.getDocumentState())) {
+                        // creo un oggetto documentStatus Change e gli setto le possibili modifiche da dare in pasto alla macchina stati per la validazione
                         var documentStatusChange = new DocumentStatusChange();
                         documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
                         documentStatusChange.setProcessId("SS");
                         documentStatusChange.setCurrentStatus(documentEntity.getDocumentState().toLowerCase());
                         documentStatusChange.setNextStatus(documentChanges.getDocumentState().toLowerCase());
+                        // mi faccio validare il cmbio di stato dalla macchina stati facendomi ritornare una document Entity con le modifiche?
                         return callMacchinaStati.statusValidation(documentStatusChange).thenReturn(documentEntity);
                     } else {
                         return Mono.just(documentEntity);
                     }
                 })
                 .flatMap(documentEntityStored -> {
+                    // mappo il documento ritornato, controllo se lo stato che gli passo è valorizzato
                     if (!StringUtils.isBlank(documentChanges.getDocumentState())) {
                         // il vecchio stato viene considerato nella gestione della retentionUntil
+                        // se non è vuoto, setto la variabile old state in base allo stato del documento nel DB e la boolean statusFound a false
                         oldState.set(documentEntityStored.getDocumentState());
                         boolean statusFound = false;
+                        // setto lo stato dell'oggetto con quello che viene passato dal client
                         documentEntityStored.setDocumentState(documentChanges.getDocumentState());
 
+                    // controllo se lo stato del documento è valorizzato
                     if(documentEntityStored.getDocumentType().getStatuses() != null){
                         for (Map.Entry<String, CurrentStatusEntity> entry : documentEntityStored.getDocumentType().getStatuses().entrySet()) {
+                            // se lo è, controllo per ciascuno degli stati se sono uguali a quello passato dal client
                             if (entry.getValue().getTechnicalState().equals(documentChanges.getDocumentState())) {
+                                // se lo sono, setto lo stato logico attraverso la key della map e setto statusFound a true
                                 documentEntityStored.setDocumentLogicalState(entry.getKey());
                                 statusFound=true;
                                 break;
                             }
                         }
+                        // se status found è valorizzata a false, restituisco errore
                         if(!statusFound){
                             log.debug("New status inserted is invalid for the documentType, DocumentLogicalState was not updated");
                         }
                     } else {
+                        // se lo stato che gli passo non è valorizzato, restituisco errore
                         String sMsg = "Cannot read statuses of Document cause statuses is null, therefore new status inserted is invalid";
                         throw new IllegalDocumentStateException(sMsg);
                     }
                 }
+                    // eseguo controlli su retention until passata dal client
                 if (documentChanges.getRetentionUntil() != null && !documentChanges.getRetentionUntil().isBlank()) {
+                    // se non è null né vuota, la setto al documento
                     documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
                 }
+                //eseguo controlli su checksum
                 if (documentChanges.getCheckSum() != null) {
                     documentEntityStored.setCheckSum(documentChanges.getCheckSum());
                 }
+                // eseguo controlli su content lenght
                 if (documentChanges.getContentLenght() != null) {
                     documentEntityStored.setContentLenght(documentChanges.getContentLenght());
                 }
                 log.debug("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}",
                         documentEntityStored);
 
-
+                // se lo stato della modifica che sto passando è valorizzato come AVAILABLE o ATTACHED
                 if ( documentChanges.getDocumentState() != null && (
                         documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
                                 documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))) {
 
+                    // istanzio variabile storaeType
                     String storageType;
+                    // controllo se il tipo di documento nel db è diverso da null e ha stati valorizzati
                     if (documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
+                        // se il documento nel db ha uno stato che corrisponde al suo stesso stato logico
                         if (documentEntityStored.getDocumentType()
                                 .getStatuses()
                                 .containsKey(documentEntityStored.getDocumentLogicalState())) {
                             log.debug("patchDocument() : START Tagging");
+                            // assegno alla variabile storagetype il valore dello storage di quello stato logico.
                             storageType = documentEntityStored.getDocumentType()
                                     .getStatuses()
                                     .get(documentEntityStored.getDocumentLogicalState())
@@ -254,10 +284,12 @@ public class DocumentServiceImpl implements DocumentService {
             })
             .flatMap(documentEntityStored -> {
 
+                // verifico se nell richiesta di modifica la retention until è valorizzata o se lo stato è valorizzato come AVAILABLE o ATTACHED
                 if (!StringUtils.isBlank(documentChanges.getRetentionUntil()) || (documentChanges.getDocumentState() != null && (
                         documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
                                 documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED)))) {
 
+                    // setto i cambiamenti all'oggetto nel bucket
 		                   return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
 		                           authApiKey,
 		                           documentChanges,

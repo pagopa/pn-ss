@@ -93,6 +93,7 @@ Feature: Upload SafeStorage
   | pn-delivery | pn-delivery_api_key |PN_NOTIFICATION_ATTACHMENTS | src/test/resources/test.pdf | application/pdf | pn-test     | pn-test_api_key     | NONEXIST | 2024-07-11T13:02:25.206Z | 400 |
   | pn-delivery | pn-delivery_api_key |PN_NOTIFICATION_ATTACHMENTS | src/test/resources/test.pdf | application/pdf | pn-test     | pn-test_api_key     | ATTACHED | 2022-07-11T13:02:25.206Z | 400 |
 
+  @upload_trasformazione
   Scenario Outline: Upload di un file da sottoporre a trasformazione
     Given "<clientId>" authenticated by "<APIKey>" try to upload a document of type "<documentType>" with content type "<MIMEType>" using "<fileName>"
     When request a presigned url to upload the file
@@ -103,3 +104,5 @@ Feature: Upload SafeStorage
   | clientId | APIKey          | documentType      | fileName                    | MIMEType        |
   | pn-test  | pn-test_api_key | PN_LEGAL_FACTS_ST | src/test/resources/test.zip | application/zip |
   | pn-test  | pn-test_api_key | PN_LEGAL_FACTS_ST | src/test/resources/test.pdf | application/pdf |
+  | pn-test  | pn-test_api_key | PN_LEGAL_FACTS_ST | src/test/resources/test.xml | application/xml |
+  

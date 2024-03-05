@@ -39,6 +39,7 @@ import reactor.core.publisher.Mono;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@CustomLog
 public class StepDefinitions {
 	private String sPNClient = null;
 	private String sPNClient_AK = null;
@@ -65,7 +66,8 @@ public class StepDefinitions {
 	public void a_file_to_upload(String sPNClient, String sPNClient_AK, String sDocumentType, String sMimeType, String sFileName) throws NoSuchAlgorithmException, FileNotFoundException, IOException {
 
 		Path pathFile = Paths.get(sFileName).toAbsolutePath();
-		System.out.println("filePath: " + pathFile);
+
+		log.debug("filePath: " + pathFile);
 
 		this.sPNClient = sPNClient;
 		this.sPNClient_AK = sPNClient_AK;
@@ -100,7 +102,7 @@ public class StepDefinitions {
 			this.sKey = "";
 		}
 
-		System.out.println("Client: "+sPNClientUp);
+		log.debug("Client utilizzato: " + sPNClientUp);
 
 		Response oResp;
 
@@ -111,9 +113,9 @@ public class StepDefinitions {
 
 		CommonUtils.checkDump(oResp=SafeStorageUtils.updateObjectMetadata(sPNClientUp, sPNClient_AKUp, fileKey, requestBody), true);
 		iRC = oResp.getStatusCode();
-		System.out.println("FILE KEY: " + fileKey);
-		System.out.println("NEW STATUS: "+status);
-		System.out.println("NEW RETENTION UNTIL: "+retentionUntil);
+		log.debug("FILE KEY: " + fileKey);
+		log.debug("NEW STATUS: " + status);
+		log.debug("NEW RETENTION UNTIL: " + retentionUntil);
 	}
 
 	@When ("{string} authenticated by {string} try to update the document just uploaded using {string} and {string}")
@@ -124,7 +126,7 @@ public class StepDefinitions {
 		this.sPNClientUp = sPNClientUp;
 		this.sPNClient_AKUp = sPNClient_AKUp;
 
-		System.out.println("Client: "+sPNClientUp);
+		log.debug("Client utilizzato: "+sPNClientUp);
 
 		Response oResp;
 
@@ -135,8 +137,8 @@ public class StepDefinitions {
 
 		CommonUtils.checkDump(oResp= SafeStorageUtils.updateObjectMetadata(sPNClientUp, sPNClient_AKUp, sKey, requestBody), true);
 		iRC = oResp.getStatusCode();
-		System.out.println("NEW STATUS: "+status);
-		System.out.println("NEW RETENTION UNTIL: "+retentionUntil);
+		log.debug("NEW STATUS: " + status);
+		log.debug("NEW RETENTION UNTIL: " + retentionUntil);
 
 	}
 	
@@ -148,11 +150,11 @@ public class StepDefinitions {
 		System.out.println("CLIENT: " + sPNClient);
 
 		iRC = oResp.getStatusCode();
-		System.out.println("oResp body: " + oResp.getBody().asString());
-		System.out.println("oResp uploadUrl: " + oResp.then().extract().path("uploadUrl"));
-		System.out.println("oResp key: " + oResp.then().extract().path("key"));
-		System.out.println("oResp secret: " + oResp.then().extract().path("secret"));
-		System.out.println("iRC: " + iRC);
+		log.debug("oResp body: " + oResp.getBody().asString());
+		log.debug("oResp uploadUrl: " + oResp.then().extract().path("uploadUrl"));
+		log.debug("oResp key: " + oResp.then().extract().path("key"));
+		log.debug("oResp secret: " + oResp.then().extract().path("secret"));
+		log.debug("iRC: " + iRC);
 		if(iRC == 200) {
 			sURL = oResp.then().extract().path("uploadUrl");
 			sKey = oResp.then().extract().path("key");
@@ -165,14 +167,14 @@ public class StepDefinitions {
 		Response oResp;
 
 		CommonUtils.checkDump(oResp=SafeStorageUtils.getPresignedURLUploadKo(sPNClient, sPNClient_AK, sMimeType, sDocumentType, sSHA256, sMD5, "SAVED", boHeader, Checksum.SHA256), true);
-		System.out.println("CLIENT: " + sPNClient);
+		log.debug("CLIENT: " + sPNClient);
 
 		iRC = oResp.getStatusCode();
-		System.out.println("oResp body: " + oResp.getBody().asString());
-		System.out.println("oResp uploadUrl: " + oResp.then().extract().path("uploadUrl"));
-		System.out.println("oResp key: " + oResp.then().extract().path("key"));
-		System.out.println("oResp secret: " + oResp.then().extract().path("secret"));
-		System.out.println("iRC: " + iRC);
+		log.debug("oResp body: " + oResp.getBody().asString());
+		log.debug("oResp uploadUrl: " + oResp.then().extract().path("uploadUrl"));
+		log.debug("oResp key: " + oResp.then().extract().path("key"));
+		log.debug("oResp secret: " + oResp.then().extract().path("secret"));
+		log.debug("iRC: " + iRC);
 		if(iRC == 200) {
 			sURL = oResp.then().extract().path("uploadUrl");
 			sKey = oResp.then().extract().path("key");
@@ -183,7 +185,7 @@ public class StepDefinitions {
 
 	@When("upload that file")
 	public void uploadFile() throws MalformedURLException, UnsupportedEncodingException {
-		System.out.println("sURL: " + sURL);
+		log.debug("sURL: " + sURL);
 		Assertions.assertNotNull( sURL );
 		iRC =  CommonUtils.uploadFile(sURL, oFile, sSHA256, sMD5, sMimeType, sSecret, Checksum.SHA256).getStatusCode();
 	}
@@ -230,13 +232,13 @@ public class StepDefinitions {
 				ObjectMapper objectMapper = new ObjectMapper();
 				System.out.println(oResp.getBody().asString());
 				FileDownloadResponse oFDR = objectMapper.readValue(oResp.getBody().asString(), FileDownloadResponse.class);
-				System.out.println(oFDR);
+				log.debug("FILE DOWNLOAD RESPONSE: " + oFDR);
 				if (retentionUntil != null && !retentionUntil.isEmpty()) {
 					retentionDate= Date.from(Instant.parse(retentionUntil));
 				}
 
-				System.out.println("RetentionDate: "+retentionDate);
-				System.out.println("Status: "+status);
+				log.debug("RetentionDate: "+retentionDate);
+				log.debug("Status: "+status);
 				boolean condition = false;
 
 				if (oFDR.getDocumentStatus().equalsIgnoreCase(status)) {

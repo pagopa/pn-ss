@@ -110,7 +110,7 @@ public class ArubaSignProviderService implements IPnSignService {
 
     @Override
     public Mono<PnSignDocumentResponse> signPdfDocument(byte[] fileBytes, Boolean timestamping) {
-        log.debug(CLIENT_METHOD_INVOCATION, SIGN_PDF_DOCUMENT, timestamping);
+        log.debug(CLIENT_METHOD_INVOCATION, ARUBA_SIGN_PDF_DOCUMENT, timestamping);
         return Mono.fromCallable(() -> {
                     var signRequestV2 = createAuthenticatedSignRequestV2();
                     signRequestV2.setRequiredmark(timestamping);
@@ -131,7 +131,7 @@ public class ArubaSignProviderService implements IPnSignService {
                 .map(PdfsignatureV2Response::getReturn)
                 .transform(CHECK_IF_RESPONSE_IS_OK)
                 .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException("Request timeout.")))
-                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, SIGN_PDF_DOCUMENT, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
+                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, ARUBA_SIGN_PDF_DOCUMENT, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
                 .retryWhen(arubaRetryStrategy)
                 .map(signReturnV2 -> {
                     PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
@@ -142,7 +142,7 @@ public class ArubaSignProviderService implements IPnSignService {
 
     @Override
     public Mono<PnSignDocumentResponse> signXmlDocument(byte[] fileBytes, Boolean timestamping) {
-        log.debug(CLIENT_METHOD_INVOCATION, XML_SIGNATURE, timestamping);
+        log.debug(CLIENT_METHOD_INVOCATION, ARUBA_SIGN_XML_DOCUMENT, timestamping);
         return Mono.fromCallable(() -> {
                     var signRequestV2 = createAuthenticatedSignRequestV2();
                     signRequestV2.setStream(new DataHandler(XMLMessage.createDataSource(APPLICATION_XML_VALUE,
@@ -166,7 +166,7 @@ public class ArubaSignProviderService implements IPnSignService {
                 .map(XmlsignatureResponse::getReturn)
                 .transform(CHECK_IF_RESPONSE_IS_OK)
                 .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException("Request timeout.")))
-                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, XML_SIGNATURE, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
+                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, ARUBA_SIGN_XML_DOCUMENT, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
                 .retryWhen(arubaRetryStrategy)
                 .map(signReturnV2 -> {
                     PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
@@ -177,7 +177,7 @@ public class ArubaSignProviderService implements IPnSignService {
 
     @Override
     public Mono<PnSignDocumentResponse> pkcs7Signature(byte[] fileBytes, Boolean timestamping) {
-        log.debug(CLIENT_METHOD_INVOCATION, PKCS_7_SIGN_V2, timestamping);
+        log.debug(CLIENT_METHOD_INVOCATION, ARUBA_PKCS_7_SIGNATURE, timestamping);
         return Mono.fromCallable(() -> {
                     var signRequestV2 = createAuthenticatedSignRequestV2();
                     signRequestV2.setRequiredmark(timestamping);
@@ -198,7 +198,7 @@ public class ArubaSignProviderService implements IPnSignService {
                 .map(Pkcs7SignV2Response::getReturn)
                 .transform(CHECK_IF_RESPONSE_IS_OK)
                 .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException("Request timeout.")))
-                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, PKCS_7_SIGN_V2, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
+                .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, ARUBA_PKCS_7_SIGNATURE, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
                 .retryWhen(arubaRetryStrategy)
                 .map(signReturnV2 -> {
                     PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();

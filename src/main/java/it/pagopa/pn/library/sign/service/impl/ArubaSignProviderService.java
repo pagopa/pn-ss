@@ -76,7 +76,7 @@ public class ArubaSignProviderService implements IPnSignService {
 
     private void endSoapRequest(MonoSink<Object> sink, Throwable throwable) {
         log.error(throwable.getMessage());
-        sink.error(new ArubaSignException());
+        sink.error(new ArubaSignException(throwable.getMessage()));
         Thread.currentThread().interrupt();
     }
 
@@ -130,7 +130,7 @@ public class ArubaSignProviderService implements IPnSignService {
                 .cast(PdfsignatureV2Response.class)
                 .map(PdfsignatureV2Response::getReturn)
                 .transform(CHECK_IF_RESPONSE_IS_OK)
-                .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()))
+                .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException("Request timeout.")))
                 .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, SIGN_PDF_DOCUMENT, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
                 .retryWhen(arubaRetryStrategy)
                 .map(signReturnV2 -> {
@@ -165,7 +165,7 @@ public class ArubaSignProviderService implements IPnSignService {
                 .cast(XmlsignatureResponse.class)
                 .map(XmlsignatureResponse::getReturn)
                 .transform(CHECK_IF_RESPONSE_IS_OK)
-                .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()))
+                .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException("Request timeout.")))
                 .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, XML_SIGNATURE, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
                 .retryWhen(arubaRetryStrategy)
                 .map(signReturnV2 -> {
@@ -197,7 +197,7 @@ public class ArubaSignProviderService implements IPnSignService {
                 .cast(Pkcs7SignV2Response.class)
                 .map(Pkcs7SignV2Response::getReturn)
                 .transform(CHECK_IF_RESPONSE_IS_OK)
-                .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException()))
+                .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException("Request timeout.")))
                 .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, PKCS_7_SIGN_V2, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
                 .retryWhen(arubaRetryStrategy)
                 .map(signReturnV2 -> {

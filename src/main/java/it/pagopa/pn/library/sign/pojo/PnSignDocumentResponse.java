@@ -1,9 +1,6 @@
 package it.pagopa.pn.library.sign.pojo;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 @Data
@@ -12,6 +9,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 public class PnSignDocumentResponse {
 
+    @ToString.Exclude
     byte[] signedDocument;
 
 }

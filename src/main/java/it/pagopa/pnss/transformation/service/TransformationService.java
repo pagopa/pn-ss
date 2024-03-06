@@ -5,6 +5,9 @@ import io.awspring.cloud.messaging.listener.Acknowledgment;
 import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import it.pagopa.pn.commons.utils.MDCUtils;
+import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
+import it.pagopa.pn.library.sign.service.IPnSignService;
+import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
@@ -15,9 +18,7 @@ import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
-import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
-import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
 import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.MDC;
@@ -41,8 +42,8 @@ import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 @CustomLog
 public class TransformationService {
 
-    private final ArubaSignServiceCall arubaSignServiceCall;
     private final S3ServiceImpl s3Service;
+    private final PnSignProviderService pnSignService;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
     private final SqsService sqsService;
@@ -55,10 +56,10 @@ public class TransformationService {
     // Numero massimo di retry. Due step: 1) firma del documento e inserimento nel bucket 2) delete del file dal bucket di staging, piu' un retry aggiuntivo di sicurezza
     private static final int MAX_RETRIES = 3;
 
-    public TransformationService(ArubaSignServiceCall arubaSignServiceCall, S3ServiceImpl s3Service,
-                                 DocumentClientCall documentClientCall, BucketName bucketName, SqsService sqsService) {
-        this.arubaSignServiceCall = arubaSignServiceCall;
+    public TransformationService(S3ServiceImpl s3Service,
+                                 PnSignProviderService pnSignService, DocumentClientCall documentClientCall, BucketName bucketName, SqsService sqsService) {
         this.s3Service = s3Service;
+        this.pnSignService = pnSignService;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.sqsService = sqsService;
@@ -118,7 +119,7 @@ public class TransformationService {
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
                 .flatMap(document -> signDocument(document, key, stagingBucketName, marcatura))
-                .flatMap(signReturnV2 -> s3Service.putObject(key, signReturnV2.getBinaryoutput(), bucketName.ssHotName()))
+                .flatMap(pnSignDocumentResponse -> s3Service.putObject(key, pnSignDocumentResponse.getSignedDocument(), bucketName.ssHotName()))
                 .then(removeObjectFromStagingBucket(key, stagingBucketName));
     }
 
@@ -129,7 +130,7 @@ public class TransformationService {
                 .onErrorResume(NoSuchKeyException.class, throwable -> Mono.just(true));
     }
 
-    private Mono<SignReturnV2> signDocument(Document document, String key, String stagingBucketName, boolean marcatura) {
+    private Mono<PnSignDocumentResponse> signDocument(Document document, String key, String stagingBucketName, boolean marcatura) {
         return s3Service.getObject(key, stagingBucketName)
                 .flatMap(getObjectResponse -> {
                     var s3ObjectBytes = getObjectResponse.asByteArray();
@@ -137,16 +138,12 @@ public class TransformationService {
                     log.debug("Content type of document with key '{}' : {}", document.getDocumentKey(), document.getContentType());
 
                     return switch (document.getContentType()) {
-                        case APPLICATION_PDF_VALUE -> arubaSignServiceCall.signPdfDocument(s3ObjectBytes, marcatura);
-                        case APPLICATION_XML_VALUE -> arubaSignServiceCall.xmlSignature(s3ObjectBytes, marcatura);
-                        default -> arubaSignServiceCall.pkcs7signV2(s3ObjectBytes, marcatura);
+                        case APPLICATION_PDF_VALUE -> pnSignService.signPdfDocument(s3ObjectBytes, marcatura);
+                        case APPLICATION_XML_VALUE -> pnSignService.signXmlDocument(s3ObjectBytes, marcatura);
+                        default -> pnSignService.pkcs7Signature(s3ObjectBytes, marcatura);
                     };
 
-                })
-                .doOnNext(signReturnV2 -> log.debug("Aruba sign service return status {}, return code {}, description {}, for document with key {}",
-                        signReturnV2.getStatus(),
-                        signReturnV2.getReturnCode(),
-                        signReturnV2.getDescription(), key));
+                });
     }
 
     private Mono<DeleteObjectResponse> removeObjectFromStagingBucket(String key, String stagingBucketName) {

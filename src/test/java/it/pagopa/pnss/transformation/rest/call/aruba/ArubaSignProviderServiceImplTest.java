@@ -1,16 +1,17 @@
 package it.pagopa.pnss.transformation.rest.call.aruba;
 
-import it.pagopa.pnss.common.client.exception.ArubaSignException;
+import it.pagopa.pn.library.sign.service.impl.ArubaSignProviderService;
+import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import reactor.test.StepVerifier;
 
 @SpringBootTestWebEnv
-public class ArubaSignServiceCallImplTest {
+class ArubaSignProviderServiceImplTest {
 
     @Autowired
-    ArubaSignServiceCallImpl arubaSignServiceCall;
+    ArubaSignProviderService arubaSignProviderServiceCall;
 
     private static final byte[] byteFile = "Stringa di prova".getBytes();
     private static final boolean marcatura = true;
@@ -19,7 +20,7 @@ public class ArubaSignServiceCallImplTest {
     @Test
     void signPdfDocumentKo(){
 
-        var testMono = arubaSignServiceCall.signPdfDocument(byteFile, marcatura);
+        var testMono = arubaSignProviderServiceCall.signPdfDocument(byteFile, marcatura);
 
         StepVerifier.create(testMono).expectError(ArubaSignException.class).verify();
     }
@@ -29,7 +30,7 @@ public class ArubaSignServiceCallImplTest {
         byte[] pdfFile = "Stringa di prova".getBytes();
         boolean marcatura = true;
 
-        var testMono = arubaSignServiceCall.pkcs7signV2(byteFile, marcatura);
+        var testMono = arubaSignProviderServiceCall.pkcs7Signature(byteFile, marcatura);
 
         StepVerifier.create(testMono).expectError(ArubaSignException.class).verify();
     }
@@ -39,7 +40,7 @@ public class ArubaSignServiceCallImplTest {
         byte[] pdfFile = "Stringa di prova".getBytes();
         boolean marcatura = true;
 
-        var testMono = arubaSignServiceCall.xmlSignature(byteFile, marcatura);
+        var testMono = arubaSignProviderServiceCall.signXmlDocument(byteFile, marcatura);
 
         StepVerifier.create(testMono).expectError(ArubaSignException.class).verify();
     }

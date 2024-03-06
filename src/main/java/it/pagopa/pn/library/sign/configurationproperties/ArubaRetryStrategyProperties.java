@@ -1,4 +1,4 @@
-package it.pagopa.pnss.configurationproperties.retry;
+package it.pagopa.pn.library.sign.configurationproperties;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

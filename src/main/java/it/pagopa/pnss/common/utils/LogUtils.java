@@ -89,12 +89,22 @@ public class LogUtils {
     public static final String GET_RETENTION_UNTIL = "RetentionService.getRetentionUntil()";
     public static final String SET_RETENTION_PERIOD_IN_BUCKET_OBJECT_METADATA = "RetentionService.setRetentionPeriodInBucketObjectMetadata()";
 
+    //PN SIGN SERVICE
+
+    public static final String PN_SIGN_PDF_DOCUMENT = "PnSignProviderService.signPdfDocument()";
+    public static final String PN_SIGN_XML_DOCUMENT = "PnSignProviderService.signXmlDocument()";
+    public static final String PN_PKCS_7_SIGNATURE = "PnSignProviderService.pkcs7Signature()";
     //ARUBA
-    public static final String SIGN_PDF_DOCUMENT = "ArubaSignServiceCall.signPdfDocument()";
-    public static final String XML_SIGNATURE = "ArubaSignServiceCall.xmlSignature()";
-    public static final String PKCS_7_SIGN_V2 = "ArubaSignServiceCall.pkcs7signV2()";
+    public static final String ARUBA_SIGN_PDF_DOCUMENT = "ArubaSignProviderService.signPdfDocument()";
+    public static final String ARUBA_SIGN_XML_DOCUMENT = "ArubaSignProviderService.signXmlDocument()";
+    public static final String ARUBA_PKCS_7_SIGNATURE = "ArubaSignProviderService.pkcs7Signature()";
     public static final String INITIALIZING_ARUBA_PROXY_CLIENT = "Initializing Aruba proxy client for '{}' : ArubaServerAddress : {}, EndpointName : {}, ServiceName : {}";
     public static final String SETTING_PROXY_PROPERTIES = "Setting properties for Aruba proxy client : {}";
+
+    // ALTERNATIVE PROVIDER
+    public static final String ALT_SIGN_PDF_DOCUMENT = "AlternativeSignProviderService.signPdfDocument()";
+    public static final String ALT_XML_SIGNATURE = "AlternativeSignProviderService.signXmlDocument()";
+    public static final String ALT_PKCS_7_SIGN_V2 = "AlternativeSignProviderService.pkcs7Signature()";
 
     //SQS
     public static final String INSERTING_DATA_IN_SQS = "Inserting data {} in SQS '{}'";

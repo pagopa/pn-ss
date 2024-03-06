@@ -43,7 +43,7 @@ public class CommonUtils {
 	}
 
 	public static Response uploadFile(String sURL, File oFile, String sSHA256, String sMD5, String sContentType, String sSecret, Checksum eCS) throws MalformedURLException, UnsupportedEncodingException {
-		System.out.println("In upload file");
+		log.info("In upload file");
 
 		log.debug("uploadFile(\"{}\", \"{}\", \"{}\", \"{}\", \"{}\", "+eCS.name()+")", sURL, sSHA256, sMD5, sContentType, sSecret);
 		EncoderConfig encoderConfig = new EncoderConfig();
@@ -53,37 +53,37 @@ public class CommonUtils {
 			.header("content-type", sContentType);
 		switch (eCS) {
 			case MD5:
-				System.out.println("In upload file CASE 1");
+				log.info("In upload file CASE 1");
 
 				oReq.header("Content-MD5", sMD5);
 				break;
 			case SHA256:
-				System.out.println("In upload file CASE 2");
+				log.info("In upload file CASE 2");
 
 				oReq.header("x-amz-checksum-sha256", sSHA256);
 				break;
 			default:
-				System.out.println("In upload file DEFAULT");
+				log.info("In upload file DEFAULT");
 
 				break;
 		}
 		if( sSecret != null ) {
-			System.out.println("In upload file IF");
+			log.info("In upload file IF");
 
 			oReq.header("x-amz-meta-secret", sSecret);
 		}
 		oReq.body(oFile);
-		System.out.println("In upload file");
+		log.info("In upload file");
 
 		if (log.isDebugEnabled() ) {
-			System.out.println("In upload file IF 2");
+			log.info("In upload file IF 2");
 
 			oReq.log().all();
 		}
 		String sMyURL = URLDecoder.decode(sURL, "utf-8");
 		Response oResp = oReq
 			.put(sMyURL);
-		System.out.println("In upload file oResp --> " + oResp.getBody().asString());
+		log.debug("In upload file oResp --> " + oResp.getBody().asString());
 
 		return oResp;
 	}

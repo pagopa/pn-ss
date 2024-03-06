@@ -144,7 +144,7 @@ public class SafeStorageUtils {
 
 		Response oResp = CommonUtils.myPost(oReq, "/safe-storage/v1/files/{fileKey}");
 
-		System.out.println("status: "+oResp.getStatusCode());
+		log.debug("status: "+oResp.getStatusCode());
 
 		return oResp;
 	}

@@ -1,10 +1,13 @@
 package tests;
 
+import lombok.CustomLog;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 import java.util.Properties;
 
+@CustomLog
 public class Config {
 
     private static Config instance = null;
@@ -20,7 +23,7 @@ public class Config {
 	            Properties prop = new Properties();
 	            InputStream fileStream = this.getClass().getClassLoader().getResourceAsStream("application-test.properties");
 	            if(fileStream == null){
-	                System.out.println("File properties non trovato");
+	                log.error("File properties non trovato");
 	                System.exit(1);
 	            }
 	            prop.load(fileStream);
@@ -28,7 +31,7 @@ public class Config {
         	}
             
         } catch (IOException ex) {
-            System.out.println("Errore nel caricamento delle properties -> " + ex.getMessage());
+            log.error("Errore nel caricamento delle properties -> " + ex.getMessage());
             System.exit(1);
         }
     }

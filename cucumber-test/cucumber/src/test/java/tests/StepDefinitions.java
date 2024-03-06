@@ -137,7 +137,7 @@ public class StepDefinitions {
 		Response oResp;
 
 		CommonUtils.checkDump(oResp=SafeStorageUtils.getPresignedURLUpload(sPNClient, sPNClient_AK, sMimeType, sDocumentType, sSHA256, sMD5, "SAVED", boHeader, Checksum.SHA256), true);
-		System.out.println("CLIENT: " + sPNClient);
+		log.debug("CLIENT: " + sPNClient);
 
 		iRC = oResp.getStatusCode();
 		log.debug("oResp body: " + oResp.getBody().asString());
@@ -189,7 +189,7 @@ public class StepDefinitions {
 			iRC = oResp.getStatusCode();
 			if( iRC == 200 ) {
 				ObjectMapper objectMapper = new ObjectMapper();
-				System.out.println(oResp.getBody().asString());
+				log.debug(oResp.getBody().asString());
 				FileDownloadResponse oFDR = objectMapper.readValue(oResp.getBody().asString(), FileDownloadResponse.class);
 				if( oFDR.getDocumentStatus().equalsIgnoreCase("SAVED") || oFDR.getDocumentStatus().equalsIgnoreCase("PRELOADED")) {
 					break;

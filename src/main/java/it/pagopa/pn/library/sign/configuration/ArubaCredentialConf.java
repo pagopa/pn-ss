@@ -1,12 +1,11 @@
-package it.pagopa.pnss.transformation.configuration;
+package it.pagopa.pn.library.sign.configuration;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.common.exception.JsonSecretFindingException;
-import it.pagopa.pnss.transformation.model.pojo.ArubaSecretValue;
-import it.pagopa.pnss.transformation.model.pojo.IdentitySecretTimeMark;
+import it.pagopa.pn.library.sign.pojo.ArubaSecretValue;
+import it.pagopa.pn.library.sign.pojo.IdentitySecretTimeMark;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +15,7 @@ import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 @CustomLog
 public class ArubaCredentialConf {
 
-    private final SecretsManagerClient secretsManagerClient;
+    private final SecretsManagerClient smClient;
     private final ObjectMapper objectMapper;
 
     @Value("${ArubaDelegatedDomain:#{null}}")
@@ -43,8 +42,8 @@ public class ArubaCredentialConf {
     @Value("${TimemarkPassword:#{null}}")
     public String passwordTimeMark;
 
-    public ArubaCredentialConf(SecretsManagerClient secretsManagerClient, ObjectMapper objectMapper) {
-        this.secretsManagerClient = secretsManagerClient;
+    public ArubaCredentialConf(SecretsManagerClient smClient, ObjectMapper objectMapper) {
+        this.smClient = smClient;
         this.objectMapper = objectMapper;
     }
 
@@ -57,7 +56,7 @@ public class ArubaCredentialConf {
                 return new ArubaSecretValue(delegatedDomain, delegatedUser, delegatedPassword, otpPwd, typeOtpAuth, user);
             } else {
                 String secretStringJson =
-                        secretsManagerClient.getSecretValue(builder -> builder.secretId("pn/identity/signature")).secretString();
+                        smClient.getSecretValue(builder -> builder.secretId("pn/identity/signature")).secretString();
                 return objectMapper.readValue(secretStringJson, ArubaSecretValue.class);
             }
         } catch (JsonProcessingException e) {
@@ -73,7 +72,7 @@ public class ArubaCredentialConf {
                 return new IdentitySecretTimeMark(userTimeMark, passwordTimeMark);
             } else {
                 String secretStringJson =
-                        secretsManagerClient.getSecretValue(builder -> builder.secretId("pn/identity/timemark")).secretString();
+                        smClient.getSecretValue(builder -> builder.secretId("pn/identity/timemark")).secretString();
                 return objectMapper.readValue(secretStringJson, IdentitySecretTimeMark.class);
             }
         } catch (JsonProcessingException e) {

@@ -1,4 +1,4 @@
-package it.pagopa.pnss.transformation.configuration;
+package it.pagopa.pn.library.sign.configuration;
 
 import com.sun.xml.bind.marshaller.CharacterEscapeHandler;
 import it.pagopa.pnss.configurationproperties.ArubaSignServiceProxyProperties;

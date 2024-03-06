@@ -368,6 +368,10 @@ Parameters:
     Description: 'SpringBoot configuration Task Execution Max Pool Siza'
     Default: '512'
 
+  PnSignProviderSwitch:
+    Type: String
+    Description: 'Parameter used to switch provider for digital signature'
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -446,6 +450,7 @@ Resources:
         ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
         ContainerEnvEntry42: !Sub 'PnSsTaskExecutionPoolMaxSize=${PnSsTaskExecutionPoolMaxSize}'
+        ContainerEnvEntry43: !Sub 'PnSignProviderSwitch=${PnSignProviderSwitch}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

@@ -1,43 +1,32 @@
 package tests;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cucumber.java.After;
-import io.cucumber.java.en.*;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
 import io.restassured.response.Response;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.FileDownloadResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UpdateFileMetadataRequest;
+import lombok.CustomLog;
+import org.junit.jupiter.api.Assertions;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UpdateFileMetadataRequest;
-import it.pagopa.pnss.uribuilder.rest.FileMetadataUpdateApiController;
-import it.pagopa.pnss.uribuilder.rest.FileUploadApiController;
-import it.pagopa.pnss.uribuilder.service.FileMetadataUpdateService;
-import lombok.CustomLog;
-import org.hamcrest.MatcherAssert;
-import org.junit.jupiter.api.Assertions;
-import org.junit.platform.commons.util.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.actuate.autoconfigure.metrics.MetricsProperties;
-import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @CustomLog
 public class StepDefinitions {
@@ -57,8 +46,7 @@ public class StepDefinitions {
 	private String sPNClient_AKUp = null;
 	private String status = null;
 	private String retentionUntil = "";
-
-	private Date retentionDate;
+	private Date retentionDate = null;
 	UpdateFileMetadataRequest requestBody = new UpdateFileMetadataRequest();
 
 	
@@ -67,6 +55,7 @@ public class StepDefinitions {
 
 		Path pathFile = Paths.get(sFileName).toAbsolutePath();
 
+		log.info("Timestamp: " + OffsetDateTime.now().withOffsetSameInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS));
 		log.debug("filePath: " + pathFile);
 
 		this.sPNClient = sPNClient;
@@ -92,6 +81,7 @@ public class StepDefinitions {
 	@Given("{string} authenticated by {string} try to update the document using {string} and {string} but has invalid or null {string}")
 	public void no_file_to_update (String sPNClientUp, String sPNClient_AKUp, String status, String retentionUntil, String fileKey) {
 
+		log.info("Timestamp: " + OffsetDateTime.now().withOffsetSameInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS));
 		this.status = status;
 		this.retentionUntil = retentionUntil;
 		this.sPNClientUp = sPNClientUp;
@@ -152,7 +142,7 @@ public class StepDefinitions {
 		iRC = oResp.getStatusCode();
 		log.debug("oResp body: " + oResp.getBody().asString());
 		log.debug("oResp uploadUrl: " + oResp.then().extract().path("uploadUrl"));
-		log.debug("oResp key: " + oResp.then().extract().path("key"));
+		log.info("file key: " + oResp.then().extract().path("key"));
 		log.debug("oResp secret: " + oResp.then().extract().path("secret"));
 		log.debug("iRC: " + iRC);
 		if(iRC == 200) {
@@ -172,7 +162,7 @@ public class StepDefinitions {
 		iRC = oResp.getStatusCode();
 		log.debug("oResp body: " + oResp.getBody().asString());
 		log.debug("oResp uploadUrl: " + oResp.then().extract().path("uploadUrl"));
-		log.debug("oResp key: " + oResp.then().extract().path("key"));
+		log.info("file key: " + oResp.then().extract().path("key"));
 		log.debug("oResp secret: " + oResp.then().extract().path("secret"));
 		log.debug("iRC: " + iRC);
 		if(iRC == 200) {
@@ -230,20 +220,23 @@ public class StepDefinitions {
 			iRC = oResp.getStatusCode();
 			if( iRC == 200 ) {
 				ObjectMapper objectMapper = new ObjectMapper();
-				System.out.println(oResp.getBody().asString());
+				log.debug("RESPONSE BODY: " + oResp.getBody().asString());
 				FileDownloadResponse oFDR = objectMapper.readValue(oResp.getBody().asString(), FileDownloadResponse.class);
 				log.debug("FILE DOWNLOAD RESPONSE: " + oFDR);
+
+				boolean condition = false;
+
 				if (retentionUntil != null && !retentionUntil.isEmpty()) {
 					retentionDate= Date.from(Instant.parse(retentionUntil));
+					if (oFDR.getRetentionUntil().toInstant().truncatedTo(ChronoUnit.SECONDS).equals(retentionDate.toInstant().truncatedTo(ChronoUnit.SECONDS))) {
+						condition = true;
+					}
 				}
 
 				log.debug("RetentionDate: "+retentionDate);
 				log.debug("Status: "+status);
-				boolean condition = false;
 
 				if (oFDR.getDocumentStatus().equalsIgnoreCase(status)) {
-					condition = true;
-				} else if (oFDR.getRetentionUntil().toInstant().truncatedTo(ChronoUnit.SECONDS).equals(retentionDate.toInstant().truncatedTo(ChronoUnit.SECONDS))) {
 					condition = true;
 				}
 				assertTrue(condition);

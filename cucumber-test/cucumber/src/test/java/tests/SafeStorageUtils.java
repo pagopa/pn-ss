@@ -133,7 +133,7 @@ public class SafeStorageUtils {
 		try {
 			body = objMapper.writeValueAsString(requestBody);
 		} catch (JsonProcessingException jpe) {
-			// help
+			// decidere come gestire eccezione
 		}
 
 		RequestSpecification oReq = stdReq()

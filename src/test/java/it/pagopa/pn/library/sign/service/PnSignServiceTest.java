@@ -41,7 +41,7 @@ class PnSignServiceTest {
     private static final String CONDITIONAL_DATE_PROVIDER_FUTURE = "aruba;2304-02-15T10:00:00Z;alternative";
 
     @Test
-    void arubaProvider_signPdf_ok() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void arubaProvider_signPdf_ok() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ARUBA_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -55,7 +55,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void arubaProvider_signPdf_Temporary() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void arubaProvider_signPdf_Temporary() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ARUBA_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -64,13 +64,12 @@ class PnSignServiceTest {
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
         StepVerifier.create(response).expectError(PnSpapiTemporaryErrorException.class).verify();
 
-        verify(pnSignProviderService, times(1)).signPdfDocument(any(), any());
         verify(arubaSignProviderService, times(1)).signPdfDocument(fileBytes, true);
         verify(alternativeSignProviderService, never()).signPdfDocument(any(), anyBoolean());
     }
 
     @Test
-    void arubaProvider_signXml_ok() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void arubaProvider_signXml_ok() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ARUBA_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -84,7 +83,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void arubaProvider_signXml_Temporary() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void arubaProvider_signXml_Temporary() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ARUBA_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -98,7 +97,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void arubaProvider_pkcs7Signature_ok() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void arubaProvider_pkcs7Signature_ok() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ARUBA_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -112,7 +111,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void arubaProvider_pkcs7Signature_Temporary() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void arubaProvider_pkcs7Signature_Temporary() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ARUBA_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -126,7 +125,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void alternativeProvider_signPdf_ok() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void alternativeProvider_signPdf_ok() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -140,7 +139,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void alternativeProvider_signPdf_Temp() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void alternativeProvider_signPdf_Temp() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -154,7 +153,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void alternativeProvider_signPdf_Perm() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void alternativeProvider_signPdf_Perm() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -168,7 +167,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void alternativeProvider_signXml_ok() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void alternativeProvider_signXml_ok() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -180,7 +179,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void alternativeProvider_signXml_Temp() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void alternativeProvider_signXml_Temp() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -194,7 +193,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void alternativeProvider_signXml_Perm() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void alternativeProvider_signXml_Perm() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -208,11 +207,9 @@ class PnSignServiceTest {
     }
 
     @Test
-    void alternativeProvider_pkcs7Signature_ok() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void alternativeProvider_pkcs7Signature_ok() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
-
-        //when(alternativeSignProviderService.pkcs7Signature(any(), any())).thenReturn(Mono.just(new PnSignDocumentResponse()));
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.pkcs7Signature(fileBytes, true);
         StepVerifier.create(response).expectNextCount(1).verifyComplete();
@@ -222,7 +219,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void alternativeProvider_pkcs7Signature_Temp() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void alternativeProvider_pkcs7Signature_Temp() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -236,7 +233,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void alternativeProvider_pkcs7Signature_Perm() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void alternativeProvider_pkcs7Signature_Perm() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, ALTERNATIVE_PROVIDER);
         byte[] fileBytes = "file".getBytes();
 
@@ -250,7 +247,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void conditionalDatePastProvider_signPdf_ok() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void conditionalDatePastProvider_signPdf_ok() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_PAST);
         byte[] fileBytes = "file".getBytes();
 
@@ -262,7 +259,7 @@ class PnSignServiceTest {
     }
 
     @Test
-    void conditionalDateFutureProvider_signPdf_ok() throws PnSpapiPermanentErrorException, PnSpapiTemporaryErrorException {
+    void conditionalDateFutureProvider_signPdf_ok() {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_FUTURE);
         byte[] fileBytes = "file".getBytes();
 

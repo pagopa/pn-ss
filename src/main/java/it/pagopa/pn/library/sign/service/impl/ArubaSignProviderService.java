@@ -1,11 +1,9 @@
 package it.pagopa.pn.library.sign.service.impl;
 
 import com.sun.xml.ws.encoding.xml.XMLMessage;
-import it.pagopa.pn.library.sign.exception.PnSpapiPermanentErrorException;
 import it.pagopa.pn.library.sign.exception.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
-import it.pagopa.pn.library.sign.configurationproperties.ArubaRetryStrategyProperties;
 import it.pagopa.pn.library.sign.pojo.ArubaSecretValue;
 import it.pagopa.pn.library.sign.pojo.IdentitySecretTimeMark;
 import it.pagopa.pn.library.sign.service.PnSignService;
@@ -17,7 +15,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
-import reactor.util.retry.Retry;
 
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
@@ -35,7 +32,6 @@ public class ArubaSignProviderService implements PnSignService {
     private final ArubaSignService arubaSignService;
     private final IdentitySecretTimeMark identitySecretTimemark;
     private final ArubaSecretValue arubaSecretValue;
-    private final Retry arubaRetryStrategy;
 
     @Value("${aruba.cert_id}")
     public String certificationID;
@@ -57,16 +53,12 @@ public class ArubaSignProviderService implements PnSignService {
     });
 
     public ArubaSignProviderService(it.pagopa.pnss.transformation.wsdl.ArubaSignService arubaSignService, IdentitySecretTimeMark identitySecretTimemark,
-                                    ArubaSecretValue arubaSecretValue, ArubaRetryStrategyProperties arubaRetryStrategyProperties, @Value("${aruba.sign.timeout}") String arubaSignTimeout) {
+                                    ArubaSecretValue arubaSecretValue, @Value("${aruba.sign.timeout}") String arubaSignTimeout) {
         this.arubaSignService = arubaSignService;
         this.identitySecretTimemark = identitySecretTimemark;
         this.arubaSecretValue = arubaSecretValue;
         this.arubaSignTimeout = Long.valueOf(arubaSignTimeout);
-        arubaRetryStrategy = Retry.backoff(arubaRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(arubaRetryStrategyProperties.minBackoff()))
-                .filter(ArubaSignException.class::isInstance)
-                .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
-                .onRetryExhaustedThrow((retrySpec, retrySignal) -> retrySignal.failure());
-    }
+        }
 
     private <T> void createMonoFromSoapRequest(MonoSink<Object> sink, Response<T> response) {
         try {

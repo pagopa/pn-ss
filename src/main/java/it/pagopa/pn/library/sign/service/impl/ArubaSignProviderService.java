@@ -1,12 +1,14 @@
 package it.pagopa.pn.library.sign.service.impl;
 
 import com.sun.xml.ws.encoding.xml.XMLMessage;
+import it.pagopa.pn.library.sign.exception.PnSpapiPermanentErrorException;
+import it.pagopa.pn.library.sign.exception.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
 import it.pagopa.pn.library.sign.configurationproperties.ArubaRetryStrategyProperties;
 import it.pagopa.pn.library.sign.pojo.ArubaSecretValue;
 import it.pagopa.pn.library.sign.pojo.IdentitySecretTimeMark;
-import it.pagopa.pn.library.sign.service.IPnSignService;
+import it.pagopa.pn.library.sign.service.PnSignService;
 import it.pagopa.pnss.transformation.wsdl.*;
 import javax.activation.DataHandler;
 import javax.xml.ws.Response;
@@ -28,7 +30,7 @@ import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @Service("arubaProviderService")
 @CustomLog
-public class ArubaSignProviderService implements IPnSignService {
+public class ArubaSignProviderService implements PnSignService {
 
     private final ArubaSignService arubaSignService;
     private final IdentitySecretTimeMark identitySecretTimemark;
@@ -132,12 +134,12 @@ public class ArubaSignProviderService implements IPnSignService {
                 .transform(CHECK_IF_RESPONSE_IS_OK)
                 .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException("Request timeout.")))
                 .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, ARUBA_SIGN_PDF_DOCUMENT, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
-                .retryWhen(arubaRetryStrategy)
                 .map(signReturnV2 -> {
                     PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
                     pnSignDocumentResponse.setSignedDocument(signReturnV2.getBinaryoutput());
                     return pnSignDocumentResponse;
-                });
+                })
+                .onErrorResume(throwable -> Mono.error(new PnSpapiTemporaryErrorException(throwable.getMessage(), throwable)));
     }
 
     @Override
@@ -167,12 +169,12 @@ public class ArubaSignProviderService implements IPnSignService {
                 .transform(CHECK_IF_RESPONSE_IS_OK)
                 .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException("Request timeout.")))
                 .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, ARUBA_SIGN_XML_DOCUMENT, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
-                .retryWhen(arubaRetryStrategy)
                 .map(signReturnV2 -> {
                     PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
                     pnSignDocumentResponse.setSignedDocument(signReturnV2.getBinaryoutput());
                     return pnSignDocumentResponse;
-                });
+                })
+                .onErrorResume(throwable -> Mono.error(new PnSpapiTemporaryErrorException(throwable.getMessage(), throwable)));
     }
 
     @Override
@@ -199,12 +201,12 @@ public class ArubaSignProviderService implements IPnSignService {
                 .transform(CHECK_IF_RESPONSE_IS_OK)
                 .timeout(Duration.ofSeconds(arubaSignTimeout), Mono.error(new ArubaSignException("Request timeout.")))
                 .doOnNext(result -> log.info(CLIENT_METHOD_RETURN, ARUBA_PKCS_7_SIGNATURE, Stream.of(result.getStatus(), result.getReturnCode(), result.getDescription()).toList()))
-                .retryWhen(arubaRetryStrategy)
                 .map(signReturnV2 -> {
                     PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
                     pnSignDocumentResponse.setSignedDocument(signReturnV2.getBinaryoutput());
                     return pnSignDocumentResponse;
-                });
+                })
+                .onErrorResume(throwable -> Mono.error(new PnSpapiTemporaryErrorException(throwable.getMessage(), throwable)));
     }
 
 }

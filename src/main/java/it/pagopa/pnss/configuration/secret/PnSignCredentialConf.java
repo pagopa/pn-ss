@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
@@ -21,8 +20,8 @@ public class PnSignCredentialConf {
 
     @Value("${aws.region-code}")
     private String regionCode;
-    @Value("${sign.secret.id}")
-    private String signSecretId;
+    @Value("${pn.ss.identity.signature}")
+    private String pnSsIdentitySignature;
     @Value("${test.secret.properties:#{null}}")
     private String testSecretProperties;
     @Value("${test.aws.secretsmanager.endpoint:#{null}}")
@@ -39,7 +38,7 @@ public class PnSignCredentialConf {
         if (testSecretProperties == null) {
             SecretsManagerClient smClient = initializeSmClient();
             log.debug("Getting secrets from Secret Manager...");
-            String secretStringJson = smClient.getSecretValue(builder -> builder.secretId(signSecretId)).secretString();
+            String secretStringJson = smClient.getSecretValue(builder -> builder.secretId(pnSsIdentitySignature)).secretString();
             Map<String, String> secretMap = objectMapper.readValue(secretStringJson, Map.class);
             secretMap.forEach(System::setProperty);
             log.debug("All secret properties has been set.");

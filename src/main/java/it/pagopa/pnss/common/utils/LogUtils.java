@@ -111,7 +111,7 @@ public class LogUtils {
     public static final String INSERTED_DATA_IN_SQS = "Inserted data in SQS '{}'";
 
     //RETRY
-    public static final String RETRY_ATTEMPT = "Retry attempt number '{}' caused by : {} - {}";
+    public static final String RETRY_ATTEMPT = "Retry attempt number '{}' caused by : {}";
 
 
 }

@@ -33,7 +33,7 @@ public class PnSignProviderService implements PnSignService {
         this.pnSignServiceConfigurationProperties = pnSignServiceConfigurationProperties;
         this.pnSignRetryStrategy = Retry.backoff(pnSignRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(pnSignRetryStrategyProperties.minBackoff()))
                 .filter(PnSpapiTemporaryErrorException.class::isInstance)
-                .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
+                .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage()))
                 .onRetryExhaustedThrow((retrySpec, retrySignal) -> new MaxRetryExceededException("Maximum retries exceeded"));
     }
 

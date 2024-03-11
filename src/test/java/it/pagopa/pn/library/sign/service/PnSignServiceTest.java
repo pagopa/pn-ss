@@ -1,6 +1,7 @@
 package it.pagopa.pn.library.sign.service;
 
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
+import it.pagopa.pn.library.sign.exception.MaxRetryExceededException;
 import it.pagopa.pn.library.sign.exception.PnSpapiPermanentErrorException;
 import it.pagopa.pn.library.sign.exception.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
@@ -62,7 +63,7 @@ class PnSignServiceTest {
         mockArubaPdfSignatureV2Async(arubaSignServiceClient, "ko", fileBytes, RESP_TEMP);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
-        StepVerifier.create(response).expectError(PnSpapiTemporaryErrorException.class).verify();
+        StepVerifier.create(response).expectError(MaxRetryExceededException.class).verify();
 
         verify(arubaSignProviderService, times(1)).signPdfDocument(fileBytes, true);
         verify(alternativeSignProviderService, never()).signPdfDocument(any(), anyBoolean());
@@ -90,7 +91,7 @@ class PnSignServiceTest {
         mockArubaXmlSignatureAsync(arubaSignServiceClient, "ko", fileBytes, RESP_TEMP);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signXmlDocument(fileBytes, true);
-        StepVerifier.create(response).expectError(PnSpapiTemporaryErrorException.class).verify();
+        StepVerifier.create(response).expectError(MaxRetryExceededException.class).verify();
 
         verify(arubaSignProviderService, times(1)).signXmlDocument(fileBytes, true);
         verify(alternativeSignProviderService, never()).signXmlDocument(any(), anyBoolean());
@@ -118,7 +119,7 @@ class PnSignServiceTest {
         mockArubaPkcs7SignV2Async(arubaSignServiceClient, "ko", fileBytes, RESP_TEMP);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.pkcs7Signature(fileBytes, true);
-        StepVerifier.create(response).expectError(PnSpapiTemporaryErrorException.class).verify();
+        StepVerifier.create(response).expectError(MaxRetryExceededException.class).verify();
 
         verify(arubaSignProviderService, times(1)).pkcs7Signature(fileBytes, true);
         verify(alternativeSignProviderService, never()).pkcs7Signature(any(), anyBoolean());
@@ -146,7 +147,7 @@ class PnSignServiceTest {
         mockAltProvPdfSignatureV2Async(alternativeSignProviderService, "Ko", fileBytes, RESP_TEMP);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
-        StepVerifier.create(response).expectError(PnSpapiTemporaryErrorException.class).verify();
+        StepVerifier.create(response).expectError(MaxRetryExceededException.class).verify();
 
         verify(alternativeSignProviderService, times(1)).signPdfDocument(fileBytes, true);
         verify(arubaSignProviderService, never()).signPdfDocument(any(), anyBoolean());
@@ -186,7 +187,7 @@ class PnSignServiceTest {
         mockAltProvXmlSignatureAsync(alternativeSignProviderService, "Ko", fileBytes, RESP_TEMP);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signXmlDocument(fileBytes, true);
-        StepVerifier.create(response).expectError(PnSpapiTemporaryErrorException.class).verify();
+        StepVerifier.create(response).expectError(MaxRetryExceededException.class).verify();
 
         verify(alternativeSignProviderService, times(1)).signXmlDocument(fileBytes, true);
         verify(arubaSignProviderService, never()).signXmlDocument(any(), anyBoolean());
@@ -226,7 +227,7 @@ class PnSignServiceTest {
         mockAltProvPkcs7SignV2Async(alternativeSignProviderService, "Ko", fileBytes, RESP_TEMP);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.pkcs7Signature(fileBytes, true);
-        StepVerifier.create(response).expectError(PnSpapiTemporaryErrorException.class).verify();
+        StepVerifier.create(response).expectError(MaxRetryExceededException.class).verify();
 
         verify(alternativeSignProviderService, times(1)).pkcs7Signature(fileBytes, true);
         verify(arubaSignProviderService, never()).pkcs7Signature(any(), anyBoolean());

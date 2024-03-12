@@ -476,6 +476,7 @@ Resources:
         HasDLQ: False
         QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
+        VisibilityTimeout: 1
 
   PnSsQueuePolicyNotificheDEVStack:
     Type: AWS::SQS::QueuePolicy

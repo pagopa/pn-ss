@@ -37,6 +37,9 @@ import org.springframework.context.annotation.PropertySource;
 // PN SIGN
 @PropertySource(("classpath:sign/pn-sign.properties"))
 
+// NAMIRIAL
+@PropertySource("classpath:sign/namirial.properties")
+
 public class TemplateApplication {
 
     public static void main(String[] args) {

@@ -4,14 +4,14 @@ import com.sun.xml.ws.encoding.xml.XMLMessage;
 import it.pagopa.pn.library.sign.exception.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
-import it.pagopa.pn.library.sign.pojo.ArubaSecretValue;
-import it.pagopa.pn.library.sign.pojo.IdentitySecretTimeMark;
 import it.pagopa.pn.library.sign.service.PnSignService;
 import it.pagopa.pnss.transformation.wsdl.*;
 import javax.activation.DataHandler;
 import javax.xml.ws.Response;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -26,12 +26,11 @@ import static it.pagopa.pnss.transformation.wsdl.XmlSignatureType.XMLENVELOPED;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @Service("arubaProviderService")
+@DependsOn("pnSignCredentialConf")
 @CustomLog
 public class ArubaSignProviderService implements PnSignService {
 
     private final ArubaSignService arubaSignService;
-    private final IdentitySecretTimeMark identitySecretTimemark;
-    private final ArubaSecretValue arubaSecretValue;
 
     @Value("${aruba.cert_id}")
     public String certificationID;
@@ -41,6 +40,30 @@ public class ArubaSignProviderService implements PnSignService {
 
     @Value("${PnSsTsaIdentity:#{true}}")
     public boolean tsaIdentity;
+
+    @Value("${aruba.sign.delegated.domain}")
+    private String delegatedDomain;
+
+    @Value("${aruba.sign.delegated.user}")
+    private String delegatedPassword;
+
+    @Value("${aruba.sign.delegated.password}")
+    private String delegatedUser;
+
+    @Value("${aruba.sign.otp.pwd}")
+    private String otpPwd;
+
+    @Value("${aruba.sign.type.otp.auth}")
+    private String typeOtpAuth;
+
+    @Value("${aruba.sign.user}")
+    private String user;
+
+    @Value("${aruba.timemark.user}")
+    private String timemarkUser;
+
+    @Value("${aruba.timemark.password}")
+    private String timemarkPassword;
 
     private final Long arubaSignTimeout;
 
@@ -52,11 +75,8 @@ public class ArubaSignProviderService implements PnSignService {
         }
     });
 
-    public ArubaSignProviderService(it.pagopa.pnss.transformation.wsdl.ArubaSignService arubaSignService, IdentitySecretTimeMark identitySecretTimemark,
-                                    ArubaSecretValue arubaSecretValue, @Value("${aruba.sign.timeout}") String arubaSignTimeout) {
+    public ArubaSignProviderService(ArubaSignService arubaSignService, @Value("${aruba.sign.timeout}") String arubaSignTimeout) {
         this.arubaSignService = arubaSignService;
-        this.identitySecretTimemark = identitySecretTimemark;
-        this.arubaSecretValue = arubaSecretValue;
         this.arubaSignTimeout = Long.valueOf(arubaSignTimeout);
         }
 
@@ -76,12 +96,12 @@ public class ArubaSignProviderService implements PnSignService {
 
     private Auth createIdentity() {
         var auth = new Auth();
-        auth.setDelegatedDomain(arubaSecretValue.getDelegatedDomain());
-        auth.setDelegatedPassword(arubaSecretValue.getDelegatedPassword());
-        auth.setDelegatedUser(arubaSecretValue.getDelegatedUser());
-        auth.setOtpPwd(arubaSecretValue.getOtpPwd());
-        auth.setTypeOtpAuth(arubaSecretValue.getTypeOtpAuth());
-        auth.setUser(arubaSecretValue.getUser());
+        auth.setDelegatedDomain(delegatedDomain);
+        auth.setDelegatedPassword(delegatedPassword);
+        auth.setDelegatedUser(delegatedUser);
+        auth.setOtpPwd(otpPwd);
+        auth.setTypeOtpAuth(typeOtpAuth);
+        auth.setUser(user);
         return auth;
     }
 
@@ -95,8 +115,8 @@ public class ArubaSignProviderService implements PnSignService {
     private void setSignRequestV2WithTsaAuth(Boolean marcatura, SignRequestV2 signRequestV2) {
         if (Boolean.TRUE.equals(marcatura) && tsaIdentity) {
             var tsaAuth = new TsaAuth();
-            tsaAuth.setUser(identitySecretTimemark.getUserTimeMark());
-            tsaAuth.setPassword(identitySecretTimemark.getPasswordTimeMark());
+            tsaAuth.setUser(timemarkUser);
+            tsaAuth.setPassword(timemarkPassword);
             tsaAuth.setTsaurl(timeMarkUrl != null ? timeMarkUrl : null);
             signRequestV2.setTsaIdentity(tsaAuth);
         }

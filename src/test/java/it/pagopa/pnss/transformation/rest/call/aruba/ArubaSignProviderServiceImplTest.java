@@ -1,5 +1,6 @@
 package it.pagopa.pnss.transformation.rest.call.aruba;
 
+import it.pagopa.pn.library.sign.exception.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.service.impl.ArubaSignProviderService;
 import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -22,7 +23,7 @@ class ArubaSignProviderServiceImplTest {
 
         var testMono = arubaSignProviderServiceCall.signPdfDocument(byteFile, marcatura);
 
-        StepVerifier.create(testMono).expectError(ArubaSignException.class).verify();
+        StepVerifier.create(testMono).expectError(PnSpapiTemporaryErrorException.class).verify();
     }
 
     @Test
@@ -32,7 +33,7 @@ class ArubaSignProviderServiceImplTest {
 
         var testMono = arubaSignProviderServiceCall.pkcs7Signature(byteFile, marcatura);
 
-        StepVerifier.create(testMono).expectError(ArubaSignException.class).verify();
+        StepVerifier.create(testMono).expectError(PnSpapiTemporaryErrorException.class).verify();
     }
 
     @Test
@@ -42,6 +43,6 @@ class ArubaSignProviderServiceImplTest {
 
         var testMono = arubaSignProviderServiceCall.signXmlDocument(byteFile, marcatura);
 
-        StepVerifier.create(testMono).expectError(ArubaSignException.class).verify();
+        StepVerifier.create(testMono).expectError(PnSpapiTemporaryErrorException.class).verify();
     }
 }

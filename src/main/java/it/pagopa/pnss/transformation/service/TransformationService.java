@@ -6,7 +6,6 @@ import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
-import it.pagopa.pn.library.sign.service.IPnSignService;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
@@ -25,7 +24,8 @@ import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;

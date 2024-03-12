@@ -14,7 +14,7 @@
     "PnSsArubaSignService" : "ArubaSignServiceService",
     "PnSsArubaServerAddress" : "https://asbr-pagopa.arubapec.it/ArubaSignService/ArubaSignService",
     "PnSsTsaIdentity": "true",
-    "PnSsIdentitySignature": "pn/identity/signature",
+    "PnSsIdentitySignature": "Pn-SS-SignAndTimemark",
     "PnSsTimemarkUrl": "https://servizi.arubapec.it/tsa/ngrequest.php",
     "PnSsGestoreBucketLambdaName" : "pn-safe-storage-gestore-bucket-lambda",
     "PnSsGestoreBucketConcurrencyHandlerLambdaName" : "pn-ss-gestore-bucket-concurrency-handler-lambda",

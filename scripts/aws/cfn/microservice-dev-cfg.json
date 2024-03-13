@@ -30,6 +30,7 @@
     "GestoreBucketGetObjectChunkSize": "10485760",
     "PnSignProviderSwitch": "aruba",
     "PnSsSignRetryStrategyMaxAttempts": "3",
-    "PnSsSignRetryStrategyMinBackoff": "2"
+    "PnSsSignRetryStrategyMinBackoff": "2",
+    "PnSsNamirialServerAddress": ""
   }
 }

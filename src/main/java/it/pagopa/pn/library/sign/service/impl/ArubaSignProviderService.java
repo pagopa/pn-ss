@@ -44,10 +44,10 @@ public class ArubaSignProviderService implements PnSignService {
     @Value("${aruba.sign.delegated.domain}")
     private String delegatedDomain;
 
-    @Value("${aruba.sign.delegated.user}")
+    @Value("${aruba.sign.delegated.password}")
     private String delegatedPassword;
 
-    @Value("${aruba.sign.delegated.password}")
+    @Value("${aruba.sign.delegated.user}")
     private String delegatedUser;
 
     @Value("${aruba.sign.otp.pwd}")

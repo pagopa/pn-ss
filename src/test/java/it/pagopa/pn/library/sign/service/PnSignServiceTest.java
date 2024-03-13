@@ -1,9 +1,8 @@
 package it.pagopa.pn.library.sign.service;
 
+import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
 import it.pagopa.pn.library.sign.exception.MaxRetryExceededException;
-import it.pagopa.pn.library.sign.exception.PnSpapiPermanentErrorException;
-import it.pagopa.pn.library.sign.exception.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.AlternativeSignProviderService;
 import it.pagopa.pn.library.sign.service.impl.ArubaSignProviderService;
@@ -15,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import static it.pagopa.pnss.utils.MockPecUtils.*;

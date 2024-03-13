@@ -105,14 +105,6 @@ public class LocalStackTestConfig {
 
             );
 
-            localStackContainer.execInContainer("awslocal",
-                    "secretsmanager",
-                    "create-secret",
-                    "--name",
-                    "pn/identity/timemark",
-                    "--secret-string",
-                    getIdentityTimemarkCredentials());
-
             //Create SQS queue
             for (String queueName : ALL_QUEUE_NAME_LIST) {
                 localStackContainer.execInContainer("awslocal", "sqs", "create-queue", "--queue-name", queueName);
@@ -125,12 +117,14 @@ public class LocalStackTestConfig {
 
     private static String getArubaCredentials() {
         try {
-            return new JSONObject().put("delegated_domain", "demoprod")
-                    .put("delegated_password", "password11")
-                    .put("delegated_user", "delegato")
-                    .put("otpPwd", "dsign")
-                    .put("typeOtpAuth", "demoprod")
-                    .put("user", "titolare_aut").toString();
+            return new JSONObject().put("aruba.sign.delegated.domain", "demoprod")
+                    .put("aruba.sign.delegated.password", "password11")
+                    .put("aruba.sign.delegated.user", "delegato")
+                    .put("aruba.sign.otp.pwd", "dsign")
+                    .put("aruba.sign.type.otp.auth", "demoprod")
+                    .put("aruba.sign.user", "titolare_aut")
+                    .put("aruba.timemark.user", "user1")
+                    .put("aruba.timemark.password", "password1").toString();
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }

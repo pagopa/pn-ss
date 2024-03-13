@@ -14,8 +14,7 @@
     "PnSsArubaSignService" : "ArubaSignServiceService",
     "PnSsArubaServerAddress" : "https://asbr-pagopa.arubapec.it/ArubaSignService/ArubaSignService",
     "PnSsTsaIdentity": "true",
-    "PnSsIdentityTimemark": "pn/identity/timemark",
-    "PnSsIdentitySignature": "pn/identity/signature",
+    "PnSsIdentitySignature": "Pn-SS-SignAndTimemark",
     "PnSsTimemarkUrl": "https://servizi.arubapec.it/tsa/ngrequest.php",
     "PnSsGestoreBucketLambdaName" : "pn-safe-storage-gestore-bucket-lambda",
     "PnSsGestoreBucketConcurrencyHandlerLambdaName" : "pn-ss-gestore-bucket-concurrency-handler-lambda",
@@ -29,6 +28,9 @@
     "PnSsUriBuilderGetFileWithPatchConfiguration": "CLIENT_SPECIFIC",
     "JavaToolOptions": "-XX:MaxDirectMemorySize=128M",
     "GestoreBucketGetObjectChunkSize": "10485760",
-    "PnSignProviderSwitch": "aruba"
+    "PnSignProviderSwitch": "aruba",
+    "PnSsSignRetryStrategyMaxAttempts": "3",
+    "PnSsSignRetryStrategyMinBackoff": "2",
+    "PnSsNamirialServerAddress": ""
   }
 }

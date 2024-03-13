@@ -304,10 +304,6 @@ Parameters:
     Type: String
     Description: 'TsaIdentity'
 
-  PnSsIdentityTimemark:
-    Type: String
-    Description: 'Secret ID for Identity Timemark'
-
   PnSsIdentitySignature:
     Type: String
     Description: 'Secret ID for Identity Signature'
@@ -372,6 +368,14 @@ Parameters:
     Type: String
     Description: 'Parameter used to switch provider for digital signature'
 
+  PnSsSignRetryStrategyMaxAttempts:
+    Type: String
+    Description: 'Parameter used to define max number of retries'
+
+  PnSsSignRetryStrategyMinBackoff:
+    Type: String
+    Description: 'Parameter used to define minimum backoff between attempts'
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -398,6 +402,11 @@ Parameters:
     Type: String
     Description: 'Max Chunk size used by Gestore Bucket when retrieving object from bucket'
     Default: '1048576'
+
+  # Namirial provider properties
+  PnSsNamirialServerAddress:
+    Type: String
+    Description: 'Server address for Namirial'
 
   # Log group parameters
   EcsLogGroup:
@@ -443,14 +452,16 @@ Resources:
         ContainerEnvEntry33: !Sub 'PnSsArubaQname=${PnSsArubaQname}'
         ContainerEnvEntry34: !Sub 'PnSsArubaSignService=${PnSsArubaSignService}'
         ContainerEnvEntry35: !Sub 'PnSsTsaIdentity=${PnSsTsaIdentity}'
-        ContainerEnvEntry36: !Sub 'PnSsIdentityTimemark=${PnSsIdentityTimemark}'
-        ContainerEnvEntry37: !Sub 'PnSsIdentitySignature=${PnSsIdentitySignature}'
-        ContainerEnvEntry38: !Sub 'PnSsTimemarkUrl=${PnSsTimemarkUrl}'
-        ContainerEnvEntry39: !Sub 'PnSsUriBuilderGetFileWithPatchConfiguration=${PnSsUriBuilderGetFileWithPatchConfiguration}'
-        ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
-        ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
-        ContainerEnvEntry42: !Sub 'PnSsTaskExecutionPoolMaxSize=${PnSsTaskExecutionPoolMaxSize}'
-        ContainerEnvEntry43: !Sub 'PnSignProviderSwitch=${PnSignProviderSwitch}'
+        ContainerEnvEntry36: !Sub 'PnSsIdentitySignature=${PnSsIdentitySignature}'
+        ContainerEnvEntry37: !Sub 'PnSsTimemarkUrl=${PnSsTimemarkUrl}'
+        ContainerEnvEntry38: !Sub 'PnSsUriBuilderGetFileWithPatchConfiguration=${PnSsUriBuilderGetFileWithPatchConfiguration}'
+        ContainerEnvEntry39: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry40: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry41: !Sub 'PnSsTaskExecutionPoolMaxSize=${PnSsTaskExecutionPoolMaxSize}'
+        ContainerEnvEntry42: !Sub 'PnSignProviderSwitch=${PnSignProviderSwitch}'
+        ContainerEnvEntry43: !Sub 'PnSsSignRetryStrategyMaxAttempts=${PnSsSignRetryStrategyMaxAttempts}'
+        ContainerEnvEntry44: !Sub 'PnSsSignRetryStrategyMinBackoff=${PnSsSignRetryStrategyMinBackoff}'
+        ContainerEnvEntry45: !Sub 'PnSsNamirialServerAddress=${PnSsNamirialServerAddress}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -548,7 +559,6 @@ Resources:
               - 'secretsmanager:DescribeSecret'
               - 'secretsmanager:GetSecretValue'
             Resource:
-              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentityTimemark , '*']]
               - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentitySignature , '*']]
           - Effect: Allow
             Action:

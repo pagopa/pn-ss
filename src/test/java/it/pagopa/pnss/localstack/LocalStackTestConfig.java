@@ -99,7 +99,7 @@ public class LocalStackTestConfig {
                     "secretsmanager",
                     "create-secret",
                     "--name",
-                    "pn/identity/signature",
+                    "Pn-SS-SignAndTimemark",
                     "--secret-string",
                     getArubaCredentials()
 

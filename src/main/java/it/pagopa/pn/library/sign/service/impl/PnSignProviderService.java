@@ -1,13 +1,12 @@
 package it.pagopa.pn.library.sign.service.impl;
 
+import it.pagopa.pn.library.exceptions.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignRetryStrategyProperties;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
 import it.pagopa.pn.library.sign.exception.MaxRetryExceededException;
-import it.pagopa.pn.library.sign.exception.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.PnSignService;
 import lombok.CustomLog;
-import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;

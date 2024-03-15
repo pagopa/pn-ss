@@ -1,7 +1,7 @@
 package it.pagopa.pnss.utils;
 
-import it.pagopa.pn.library.sign.exception.PnSpapiPermanentErrorException;
-import it.pagopa.pn.library.sign.exception.PnSpapiTemporaryErrorException;
+import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
+import it.pagopa.pn.library.exceptions.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.service.impl.AlternativeSignProviderService;
 import it.pagopa.pnss.transformation.wsdl.*;
 import reactor.core.publisher.Mono;

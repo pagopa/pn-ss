@@ -1,9 +1,9 @@
 package it.pagopa.pn.library.sign.service.impl;
 
 import com.sun.xml.ws.encoding.xml.XMLMessage;
-import it.pagopa.pn.library.sign.exception.PnSpapiTemporaryErrorException;
-import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
+import it.pagopa.pn.library.exceptions.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
+import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.PnSignService;
 import it.pagopa.pnss.transformation.wsdl.*;
 import javax.activation.DataHandler;
@@ -11,7 +11,6 @@ import javax.xml.ws.Response;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.DependsOn;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;

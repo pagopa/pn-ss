@@ -6,6 +6,7 @@ import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurat
 import it.pagopa.pn.library.sign.exception.MaxRetryExceededException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.PnSignService;
+import it.pagopa.pn.library.sign.PnSignServiceManager;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,20 +21,18 @@ import static it.pagopa.pnss.common.utils.LogUtils.*;
 @CustomLog
 public class PnSignProviderService implements PnSignService {
 
-    private final ArubaSignProviderService arubaSignProviderService;
-    private final AlternativeSignProviderService alternativeSignProviderService;
+    private PnSignServiceManager pnSignServiceManager;
     private final PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
     private final Retry pnSignRetryStrategy;
 
     @Autowired
-    public PnSignProviderService(ArubaSignProviderService arubaSignProviderService, AlternativeSignProviderService alternativeSignProviderService, PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties, PnSignRetryStrategyProperties pnSignRetryStrategyProperties) {
-        this.arubaSignProviderService = arubaSignProviderService;
-        this.alternativeSignProviderService = alternativeSignProviderService;
+    public PnSignProviderService(PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties, PnSignRetryStrategyProperties pnSignRetryStrategyProperties, PnSignServiceManager pnSignServiceManager) {
         this.pnSignServiceConfigurationProperties = pnSignServiceConfigurationProperties;
         this.pnSignRetryStrategy = Retry.backoff(pnSignRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(pnSignRetryStrategyProperties.minBackoff()))
                 .filter(PnSpapiTemporaryErrorException.class::isInstance)
                 .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage()))
                 .onRetryExhaustedThrow((retrySpec, retrySignal) -> new MaxRetryExceededException("Maximum retries exceeded"));
+        this.pnSignServiceManager = pnSignServiceManager;
     }
 
     @Override
@@ -62,8 +61,9 @@ public class PnSignProviderService implements PnSignService {
 
     private PnSignService getProvider(String providerName) {
         if (providerName.equals("aruba"))
-            return arubaSignProviderService;
-        else return alternativeSignProviderService;
+            return pnSignServiceManager.getArubaSignProviderService();
+        else return pnSignServiceManager.getAternativeProviderService();
+
     }
 
 }

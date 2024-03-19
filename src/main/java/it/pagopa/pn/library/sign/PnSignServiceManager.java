@@ -14,20 +14,20 @@ import org.springframework.stereotype.Component;
 @DependsOn("pnSignCredentialConf")
 public class PnSignServiceManager {
    ArubaSignProviderService arubaSignProviderService;
-   AlternativeSignProviderService aternativeProviderService;
+   AlternativeSignProviderService alternativeProviderService;
 
     @Autowired
-    public PnSignServiceManager(ArubaSignProviderService arubaSignProviderService, AlternativeSignProviderService aternativeProviderService) {
+    public PnSignServiceManager(ArubaSignProviderService arubaSignProviderService, AlternativeSignProviderService alternativeProviderService) {
         this.arubaSignProviderService = arubaSignProviderService;
-        this.aternativeProviderService = aternativeProviderService;
+        this.alternativeProviderService = alternativeProviderService;
     }
 
     public PnSignService getArubaSignProviderService() {
         return arubaSignProviderService;
     }
 
-    public PnSignService getAternativeProviderService() {
-        return aternativeProviderService;
+    public PnSignService getAlternativeProviderService() {
+        return alternativeProviderService;
     }
 
 }

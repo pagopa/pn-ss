@@ -62,7 +62,7 @@ public class PnSignProviderService implements PnSignService {
     private PnSignService getProvider(String providerName) {
         if (providerName.equals("aruba"))
             return pnSignServiceManager.getArubaSignProviderService();
-        else return pnSignServiceManager.getAternativeProviderService();
+        else return pnSignServiceManager.getAlternativeProviderService();
 
     }
 

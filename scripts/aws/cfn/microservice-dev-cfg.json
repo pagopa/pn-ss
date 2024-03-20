@@ -28,7 +28,7 @@
     "PnSsUriBuilderGetFileWithPatchConfiguration": "CLIENT_SPECIFIC",
     "JavaToolOptions": "-XX:MaxDirectMemorySize=128M",
     "GestoreBucketGetObjectChunkSize": "10485760",
-    "PnSignProviderSwitch": "aruba",
+    "PnSignProviderSwitch": "1999-02-01T10:00:00Z;aruba",
     "PnSsSignRetryStrategyMaxAttempts": "3",
     "PnSsSignRetryStrategyMinBackoff": "2",
     "PnSsNamirialServerAddress": ""

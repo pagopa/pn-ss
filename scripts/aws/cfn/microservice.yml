@@ -956,7 +956,7 @@ Resources:
       Handler: index.handler
       MemorySize: 1024
       ReservedConcurrentExecutions: !Ref PnSsGestoreBucketMinReservedConcurrentExecutions
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240
       DeadLetterConfig:
@@ -1228,7 +1228,7 @@ Resources:
       Description: 'SafeStorage Concurrency Handler for Gestore Bucket'
       Handler: index.handler
       MemorySize: 256
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
       Role: !GetAtt PnSsGestoreBucketConcurrencyHandlerRole.Arn
       Timeout: 240
       VpcConfig:

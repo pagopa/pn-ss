@@ -33,6 +33,6 @@
     "PnSsSignRetryStrategyMinBackoff": "2",
     "PnSsNamirialServerAddress": "",
     "CpuValue": "1024",
-    "MemoryAmount": "2GB"
+    "MemoryAmount": "4GB"
   }
 }

@@ -376,6 +376,17 @@ Parameters:
     Type: String
     Description: 'Parameter used to define minimum backoff between attempts'
 
+  CpuValue:
+    Type: Number
+    Default: 1024
+    Description: Fargate virtual CPU quantity 1024 equals one vCPU
+
+  MemoryAmount:
+    Type: String
+    Default: '2GB'
+    Description: Memory amount reserved to the task pod.
+    AllowedValues: [ 2GB, 4GB, 6GB, 8GB ]
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -426,8 +437,8 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/ecs-service.yaml'
       Parameters:
         MicroServiceUniqueName: !Sub '${ProjectName}-safe-storage'
-        CpuValue: 4096
-        MemoryAmount: 8GB
+        CpuValue: !Ref CpuValue
+        MemoryAmount: !Ref MemoryAmount
         AlarmSNSTopicArn: !Ref AlarmSNSTopicArn
         ContainerImageURI: !Sub '${ContainerImageUri}'
         ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'

@@ -1,10 +1,13 @@
-const { AWS } = require("aws-sdk-mock");
+const AWS = require("aws-sdk-mock");
 const proxyquire = require("proxyquire").noPreserveCache();
 const { expect } = require("chai");
 const fs = require("fs");
+const crypto = require("crypto");
 const HttpRequestMock = require('http-request-mock');
 const mocker = HttpRequestMock.setup();
 var originalEnv = process.env;
+
+const OBJECT_CREATED_PUT = "ObjectCreated:Put";
 
 describe("gestoreBucketEventHandler tests", function () {
 
@@ -23,15 +26,14 @@ describe("gestoreBucketEventHandler tests", function () {
 
     const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
     const STAGINGBUCKET = process.env.PnSsStagingBucketName;
+    const NOW = new Date(Date.now()).toISOString();
 
     const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
 
-    const eventJSON = fs.readFileSync("./src/test/json/event.json");
-    const event = JSON.parse(eventJSON);
-    const docKey = event.Records[0].s3.object.key;
+    const docKey = "fileKey";
+    var event = createEvent(OBJECT_CREATED_PUT, docKey, "", STAGINGBUCKET, NOW);
 
-    event.Records[0].s3.bucket.name = STAGINGBUCKET;
-    let jsonDocument = {
+    var expectedRequest = {
       documentKey: docKey,
       documentState: "staged",
     };
@@ -45,14 +47,9 @@ describe("gestoreBucketEventHandler tests", function () {
       }
     });
 
-    const res = await lambda.handleEvent({
-      Records: [{
-        body: JSON.stringify(event),
-        messageId: "messageId"
-      }]
-    });
+    const res = await lambda.handleEvent(event);
 
-    expect(JSON.parse(originalRequest.body)).to.deep.equal(jsonDocument);
+    expect(JSON.parse(originalRequest.body)).to.deep.equal(expectedRequest);
     expect(res).deep.equals({
       batchItemFailures: [],
     });
@@ -63,15 +60,14 @@ describe("gestoreBucketEventHandler tests", function () {
 
     const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
     const STAGINGBUCKET = process.env.PnSsStagingBucketName;
+    const NOW = new Date(Date.now()).toISOString();
 
     const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
 
-    const eventJSON = fs.readFileSync("./src/test/json/event.json");
-    const event = JSON.parse(eventJSON);
-    const docKey = event.Records[0].s3.object.key;
+    const docKey = "fileKey";
+    var event = createEvent(OBJECT_CREATED_PUT, docKey, "", STAGINGBUCKET, NOW);
 
-    event.Records[0].s3.bucket.name = STAGINGBUCKET;
-    let jsonDocument = {
+    var expectedRequest = {
       documentKey: docKey,
       documentState: "staged",
     };
@@ -86,22 +82,112 @@ describe("gestoreBucketEventHandler tests", function () {
       }
     });
 
-    const res = await lambda.handleEvent({
-      Records: [{
-        body: JSON.stringify(event),
-        messageId: "messageId"
-      }]
-    });
+    const res = await lambda.handleEvent(event);
 
-    expect(JSON.parse(originalRequest.body)).to.deep.equal(jsonDocument);
+    expect(JSON.parse(originalRequest.body)).to.deep.equal(expectedRequest);
     expect(res).deep.equals({
       batchItemFailures: [{ itemIdentifier: "messageId" }],
     });
 
   });
 
+
+  const checksumTypes = ["SHA256", "MD5", "NONE"];
+
+  checksumTypes.forEach(checksumType => {
+    it("test hot bucket ok", async () => {
+
+      const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
+      const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
+      const NOW = new Date(Date.now()).toISOString();
+
+      const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
+
+      var expectedHash = "";
+      const s3Object = Buffer.from(fs.readFileSync("./src/test/pdf/test.pdf"));
+      if (checksumType != "NONE") {
+        expectedHash = crypto.createHash(checksumType).update(s3Object).digest("base64");
+      }
+      const docKey = "fileKey";
+      var event = createEvent(OBJECT_CREATED_PUT, docKey, s3Object.length, "pn-ss-bucket", NOW);
+      var documentResponse = createDocument(docKey, checksumType);
+
+      var expectedRequest = {
+        checkSum: expectedHash,
+        contentLenght: s3Object.length,
+        documentKey: docKey,
+        documentState: "available",
+        lastStatusChangeTimestamp: NOW
+      };
+
+      mocker.get(PATHGET, documentResponse);
+
+      var originalRequest;
+      mocker.mock({
+        url: PATHPATCH,
+        response: function (requestInfo) {
+          originalRequest = requestInfo;
+          return {};
+        }
+      });
+
+      AWS.mock('S3', 'getObject', function (params, callback) {
+        callback(null, { Body: s3Object });
+      });
+
+      const res = await lambda.handleEvent(event);
+
+      expect(JSON.parse(originalRequest.body)).to.deep.equal(expectedRequest);
+      expect(res).deep.equals({
+        batchItemFailures: [],
+      });
+
+    });
+  })
+
   this.afterEach(() => {
     process.env = originalEnv;
+    AWS.restore();
   });
 
 });
+
+function createEvent(eventName, fileKey, fileSize, bucketName, eventTime) {
+  var eventBody = {
+    "Records": [
+      {
+        "eventTime": eventTime,
+        "eventName": eventName,
+        "s3": {
+          "bucket": {
+            "name": bucketName
+          },
+          "object": {
+            "key": fileKey,
+            "size": fileSize
+          }
+        }
+      }
+    ]
+  }
+
+  var event = {
+    Records: [{
+      body: JSON.stringify(eventBody),
+      messageId: "messageId"
+    }]
+  }
+  return event;
+}
+
+function createDocument(fileKey, checksumType) {
+  var documentResponse = {
+    "document": {
+      "documentKey": fileKey,
+      "documentType": {
+        "checksum": checksumType
+      }
+    }
+  }
+  return documentResponse;
+}

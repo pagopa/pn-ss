@@ -378,12 +378,12 @@ Parameters:
 
   CpuValue:
     Type: Number
-    Default: 4096
+    Default: 1024
     Description: Fargate virtual CPU quantity 1024 equals one vCPU
 
   MemoryAmount:
     Type: String
-    Default: '8GB'
+    Default: '2GB'
     Description: Memory amount reserved to the task pod.
     AllowedValues: [ 2GB, 4GB, 6GB, 8GB ]
 

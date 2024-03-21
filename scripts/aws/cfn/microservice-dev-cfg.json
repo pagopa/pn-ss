@@ -32,7 +32,7 @@
     "PnSsSignRetryStrategyMaxAttempts": "3",
     "PnSsSignRetryStrategyMinBackoff": "2",
     "PnSsNamirialServerAddress": "",
-    "CpuValue": "4096",
-    "MemoryAmount": "8GB"
+    "CpuValue": "1024",
+    "MemoryAmount": "2GB"
   }
 }

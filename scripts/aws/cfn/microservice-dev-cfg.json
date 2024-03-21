@@ -31,6 +31,8 @@
     "PnSignProviderSwitch": "1999-02-01T10:00:00Z;aruba",
     "PnSsSignRetryStrategyMaxAttempts": "3",
     "PnSsSignRetryStrategyMinBackoff": "2",
-    "PnSsNamirialServerAddress": ""
+    "PnSsNamirialServerAddress": "",
+    "CpuValue": "4096",
+    "MemoryAmount": "8GB"
   }
 }

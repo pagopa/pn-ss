@@ -14,9 +14,10 @@
   "license": "ISC",
   "devDependencies": {
     "aws-sdk": "^2.1581.0",
-    "crypto": "^1.0.1",
-    "aws-sdk-client-mock": "^2.0.1",
+    "aws-sdk-mock": "^5.9.0",
+    "http-request-mock": "^1.8.18",
     "chai": "^4.3.6",
+    "crypto": "^1.0.1",
     "lambda-tester": "^4.0.1",
     "mocha": "^9.2.2",
     "nyc": "^15.1.0",

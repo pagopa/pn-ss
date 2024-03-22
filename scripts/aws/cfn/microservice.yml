@@ -403,6 +403,14 @@ Parameters:
     Description: 'Max Chunk size used by Gestore Bucket when retrieving object from bucket'
     Default: '1048576'
 
+  MicroserviceBucketName:
+    Type: String
+    Description: 'Bucket name to upload lambda compiled package'
+
+  MicroserviceBucketBaseKey:
+    Type: String
+    Description: 'S3 prefix to upload lambda compiled package'
+
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -982,204 +990,11 @@ Resources:
           Value: "true"
         - Key: "pn-eni-related-groupName-regexp"
           Value: !Base64 "^pn-ss-gestore-bucket-sec-group.*$"
-
       Code:
-        ZipFile: |
-          "use strict";
-
-          const http = require(process.env.PnSsGestoreRepositoryProtocol);
-          const AWS = require("aws-sdk");
-          const crypto = require("crypto");
-
-          const HOSTNAME = process.env.PnSsHostname;
-          const PORT = process.env.PnSsGestoreRepositoryPort;
-          const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
-          const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
-          const STAGINGBUCKET = process.env.PnSsStagingBucketName;
-          const chunkSize = Number(process.env.GestoreBucketGetObjectChunkSize);
-
-          exports.handler = async (event) => {
-            const s3 = new AWS.S3();
-            const batchItemFailures =[];
-            console.log(JSON.stringify(event));
-
-            await Promise.allSettled(
-              event.Records.map(async (record) => {
-                const bodyData = JSON.parse(record.body);
-
-                console.log("Processing " + record.messageId);
-
-                let jsonDocument = {
-                  documentKey: "",
-                  documentState: "",
-                };
-
-                let bucketName;
-                console.log("Buket Name: " + bodyData.Records[0].s3.bucket.name);
-                console.log("Object Key: " + bodyData.Records[0].s3.object.key);
-                console.log("Object Size: " + bodyData.Records[0].s3.object.size);
-                let params = {
-                  Bucket: "",
-                  Key: "",
-                };
-                bucketName = bodyData.Records[0].s3.bucket.name;
-                jsonDocument.documentKey = bodyData.Records[0].s3.object.key;
-                switch (bodyData.Records[0].eventName) {
-                  case "ObjectCreated:*":
-                    break;
-                  case "ObjectCreated:Put":
-                    if (bucketName === STAGINGBUCKET) {
-                      jsonDocument.documentState = "staged";
-                    } else {
-                      jsonDocument.contentLenght = bodyData.Records[0].s3.object.size;
-                      jsonDocument.documentState = "available";
-                      jsonDocument.checkSum = "";
-                      params.Bucket = bucketName;
-                      params.Key = jsonDocument.documentKey;
-                      try {
-                            const doc = await getDocumentFromDB(jsonDocument.documentKey);
-                            console.log(doc.document);
-                            console.log(doc.document.documentType.checksum);
-                            console.log(JSON.stringify(doc.document.documentType.checksum));
-                        
-                            if( doc.document.documentType.checksum != "NONE" )
-                            {
-                            console.log("Starting file hashing...")
-                
-                            let hash = crypto.createHash(doc.document.documentType.checksum);
-                            let offset = 0;
-                        
-                            while(offset<jsonDocument.contentLenght)
-                            {
-                              const end = Math.min(offset + chunkSize, jsonDocument.contentLenght);
-                              params.Range=`bytes=${offset}-${end - 1}`
-                              const chunk = await s3.getObject(params).promise();
-                              hash.update(chunk.Body);
-                              offset += chunkSize;
-                            }
-                              jsonDocument.checkSum = hash.digest('base64');
-                              console.log("File hashing done!")
-                            }
-              
-                            jsonDocument.lastStatusChangeTimestamp = bodyData.Records[0].eventTime;
-          
-                      } catch (error) {
-                        console.log(error);
-                        const messageError = `* FATAL * Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}. Verificare che l'oggetto esiste nel bucket o sul database Dynamo.`;
-                        console.log(messageError);
-                        batchItemFailures.push({itemIdentifier: record.messageId});
-                        return;
-                        //throw new Error(messageError);
-                      }
-                    }
-                    console.log(jsonDocument);
-                    break;
-                  case "ObjectCreated:Copy":
-                    jsonDocument.documentState = "available";
-                    break;
-                  case "ObjectRestore:Completed":
-                    jsonDocument.documentState = "available";
-                    break;
-                  case "LifecycleTransition":
-                    jsonDocument.documentState = "freezed";
-                    break;
-                  case "ObjectRestore:Delete":
-                    jsonDocument.documentState = "freezed";
-                    break;
-                  case "LifecycleExpiration:DeleteMarkerCreated":
-                    jsonDocument.documentState = "deleted";
-                    break;
-                  case "ObjectRemoved:DeleteMarkerCreated":
-                    jsonDocument.documentState = "deleted";
-                    break;
-                  default:
-                    return;
-                }
-                await updateDynamo(jsonDocument).then(
-                  function(data) {
-                    console.log("############## EXIT  ####################");
-                    return;
-                  },
-                  function(error) {
-                    const retMessgeError = "* FATAL * Errore nella patch su DynamoDB - " + error;
-                    console.log(retMessgeError);
-                    batchItemFailures.push({itemIdentifier: record.messageId});
-                    return;
-                  }
-                );
-              })
-            );
-            console.log("FINE LAVORAZIONE EVENTO");
-            return { batchItemFailures };
-          };
-          function getDocumentFromDB(docKey) {
-            const options = {
-              method: "GET",
-              hostname: HOSTNAME,
-              port: PORT,
-              path: PATHGET + "/" + docKey,
-              headers: {
-                "x-pagopa-pn-cx-id": docKey,
-                "Content-Type": "application/json",
-              },
-            };
-            return new Promise((resolve, reject) => {
-              const req = http.request(options, (res) => {
-                let responseBody = "";
-
-                res.on("data", (chunk) => {
-                  responseBody += chunk;
-                });
-
-                res.on("end", () => {
-                  resolve(JSON.parse(responseBody));
-                });
-              });
-
-              req.on("error", (err) => {
-                console.error(err);
-                reject(err);
-              });
-              req.end();
-            });
-          }
-          function updateDynamo(data) {
-            const options = {
-              method: "PATCH",
-              hostname: HOSTNAME,
-              port: PORT,
-              path: PATHPATCH + "/" + data.documentKey,
-              headers: {
-                "x-pagopa-pn-cx-id": data.documentKey,
-                "Content-Type": "application/json",
-              },
-            };
-            return new Promise((resolve, reject) => {
-              const req = http.request(options, (res) => {
-                let responseBody = "";
-                res.on("data", (chunk) => {
-                  responseBody += chunk;
-                });
-                res.on("end", () => {
-                  console.log(res.statusCode + " - " + responseBody);
-                  switch (res.statusCode) {
-                    case 200:
-                      resolve(JSON.parse(responseBody));
-                      break;
-                    default:
-                      reject(res.statusCode + " - " + data.documentKey);
-                      break;
-                  }
-                });
-              });
-              req.on("error", (err) => {
-                console.error(err);
-                reject(err);
-              });
-              req.write(JSON.stringify(data));
-              req.end();
-            });
-          }
+        S3Bucket: !Ref MicroserviceBucketName
+        S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/gestoreBucketEventHandler.zip"
+      Layers:
+        - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
 
 ##### Gestore Bucket Concurrency Handler  #####
 
@@ -1243,71 +1058,11 @@ Resources:
           PnSsGestoreBucketTriggerId: !Ref PnSsGestoreBucketInputQueue
           PnSsGestoreBucketLambdaArn: !GetAtt PnSsGestoreBucket.Arn
           PnSsGestoreBucketInstancesPerTaskInstance: !Ref PnSsGestoreBucketInstancesPerTaskInstance
-
       Code:
-        ZipFile: |
-          "use strict";
-          const AWS = require('aws-sdk');
-          const uuid = process.env.PnSsGestoreBucketTriggerId;
-          const lambdaArn = process.env.PnSsGestoreBucketLambdaArn;
-          const lambdaArr = lambdaArn.split('function/')
-          var lambdaName = lambdaArr[1]
-          console.log('Lambda function named "', lambdaName, '" with arn "', lambdaArn ,'" and triggerID = "', uuid, '" will be updated')
-          const lambda = new AWS.Lambda();
-
-          exports.handler = async function (event) {
-            console.log(JSON.stringify(event));
-
-            const newCapacity = event.detail.responseElements.service.desiredCount;
-            const oldCapacity = event.detail.responseElements.service.runningCount;
-            console.log("Safe Storage ECS Task capacity changed from ", oldCapacity, " to ", newCapacity);
-
-            const instancesNumberPerTask = process.env.PnSsGestoreBucketInstancesPerTaskInstance;
-            const concurrency = newCapacity * instancesNumberPerTask;
-            console.log("New concurrency: ", concurrency);
-
-            // Setting lambda concurrency params
-            const lambda_params = {
-                FunctionName: lambdaArn,
-                ReservedConcurrentExecutions: concurrency
-              };
-
-            // Setting lambda params
-            const event_source_mapping_params = {
-              FunctionName: lambdaArn,
-              UUID: uuid,
-              ScalingConfig: {
-                  MaximumConcurrency: concurrency
-              }
-            };
-
-            // Modifica la concurrency della funzione Lambda
-            await new Promise(function (resolve, reject){
-              lambda.putFunctionConcurrency(lambda_params, (res) => {
-                console.log("Changed lambda concurrency to ", concurrency);
-                resolve();
-              }).on("error", (e) => {
-                console.log("* FATAL * An error occurred while calling putFunctionConcurrency of function ", lambdaName);
-                reject(Error(e));
-              });
-            });
-
-            // Modifica l'EventSourceMapping della funzione Lambda
-            await new Promise(function (resolve, reject){
-              lambda.updateEventSourceMapping(event_source_mapping_params, (res) => {
-                console.log("Updated Lambda Event Source Mapping with the following params: ", JSON.stringify(event_source_mapping_params));
-                resolve();
-              }).on("error", (e) => {
-                console.log("* FATAL * An error occurred while calling updateEventSourceMapping for trigger ", uuid);
-                reject(Error(e));
-              });
-            });
-
-            return {
-              statusCode: 200,
-              body: 'Concurrency and EventSourceMapping successfully modified! '
-            };
-          }
+        S3Bucket: !Ref MicroserviceBucketName
+        S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/gestoreBucketConcurrencyHandler.zip"
+      Layers:
+        - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
 
   PnSsEventRuleGestoreBucketConcurrencyHandler:
     Type: AWS::Events::Rule

@@ -2,7 +2,7 @@
 const AWS = require('aws-sdk');
 const uuid = process.env.PnSsGestoreBucketTriggerId;
 const lambdaArn = process.env.PnSsGestoreBucketLambdaArn;
-const lambdaArr = lambdaArn.split('function/')
+const lambdaArr = lambdaArn.split('function:')
 var lambdaName = lambdaArr[1]
 console.log('Lambda function named "', lambdaName, '" with arn "', lambdaArn, '" and triggerID = "', uuid, '" will be updated')
 

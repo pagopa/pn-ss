@@ -7,7 +7,7 @@ describe("gestoreBucketConcurrencyHandler tests", function () {
 
     this.beforeEach(() => {
         process.env.PnSsGestoreBucketTriggerId = "uuid";
-        process.env.PnSsGestoreBucketLambdaArn = "function/gestoreBucketConcurrencyHandler";
+        process.env.PnSsGestoreBucketLambdaArn = "arn:aws:lambda:region:123456789:function:pn-safe-storage-gestore-bucket-lambda";
         process.env.PnSsGestoreBucketInstancesPerTaskInstance = "10"
     });
 

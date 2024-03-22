@@ -72,8 +72,8 @@ public class TransformationServiceTest {
 
     private final String FILE_KEY = "FILE_KEY";
     private static final String PROVIDER_SWITCH = "providerSwitch";
-    private static final String ARUBA_PROVIDER = "aruba";
-    private static final String ALTERNATIVE_PROVIDER = "alternative";
+    private static final String ARUBA_PROVIDER = "1999-01-01T10:00:00Z;aruba";
+    private static final String ALTERNATIVE_PROVIDER = "2022-01-01T10:00:00Z;alternative";
 
     @AfterEach
     void afterEach() {

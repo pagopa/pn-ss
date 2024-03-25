@@ -1,7 +1,10 @@
 package it.pagopa.pnss.uribuilder.service;
 
-
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.OperationResultCodeResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UpdateFileMetadataRequest;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
@@ -13,11 +16,11 @@ import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.RetryBackoffSpec;
 
 import java.text.SimpleDateFormat;
 import java.util.stream.Stream;
@@ -31,13 +34,15 @@ public class FileMetadataUpdateService {
     private final UserConfigurationClientCall userConfigClientCall;
     private final DocumentClientCall docClientCall;
     private final DocTypesClientCall docTypesClientCall;
-    @Autowired
-    RepositoryManagerDynamoTableName managerDynamoTableName;
+    private final RepositoryManagerDynamoTableName managerDynamoTableName;
+    private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
 
-    public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall) {
+    public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall, RepositoryManagerDynamoTableName managerDynamoTableName, RetryBackoffSpec gestoreRepositoryRetryStrategy, RetryBackoffSpec s3RetryStrategy) {
         this.userConfigClientCall = userConfigurationClientCall;
         this.docClientCall = documentClientCall;
         this.docTypesClientCall = docTypesClientCall;
+        this.managerDynamoTableName = managerDynamoTableName;
+        this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
     }
 
     public Mono<OperationResultCodeResponse> updateMetadata(String fileKey, String xPagopaSafestorageCxId, UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {
@@ -48,6 +53,7 @@ public class FileMetadataUpdateService {
         var logicalState = request.getStatus();
 
         return docClientCall.getDocument(fileKey)
+                .retryWhen(gestoreRepositoryRetryStrategy)
                 .flatMap(documentResponse -> Mono.zipDelayError(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
                 .handle(((objects, synchronousSink) -> {
 
@@ -114,6 +120,7 @@ public class FileMetadataUpdateService {
                     }
 
                     return docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
+                                        .retryWhen(gestoreRepositoryRetryStrategy)
                                         .flatMap(documentResponsePatch -> {
                                             OperationResultCodeResponse resp = new OperationResultCodeResponse();
                                             resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
@@ -160,7 +167,8 @@ public class FileMetadataUpdateService {
     }
 
     private Mono<String> checkLookUp(String documentType, String logicalState) {
-        return docTypesClientCall.getdocTypes(documentType)//
+        return docTypesClientCall.getdocTypes(documentType)
+                                 .retryWhen(gestoreRepositoryRetryStrategy)
                                  .map(item -> item.getDocType().getStatuses().get(logicalState).getTechnicalState())//
                                  .onErrorResume(NullPointerException.class, e -> {
                                      String errorMsg =

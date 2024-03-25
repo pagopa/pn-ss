@@ -19,6 +19,8 @@ import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
+import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -35,15 +37,18 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
     private final ObjectMapper objectMapper;
     private final DynamoDbAsyncTableDecorator<UserConfigurationEntity> userConfigurationEntityDynamoDbAsyncTable;
+    private final RetryBackoffSpec dynamoRetryStrategy;
+
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
+                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy) {
         this.objectMapper = objectMapper;
         this.userConfigurationEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(
                 dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.anagraficaClientName(),
                         TableSchema.fromBean(UserConfigurationEntity.class)));
+        this.dynamoRetryStrategy = dynamoRetryStrategy;
     }
 
     private Mono<UserConfigurationEntity> getErrorIdClientNotFoundException(String name) {
@@ -56,6 +61,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
         log.debug(INVOKING_METHOD, GET_USER_CONFIGURATION, name);
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
+                   .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity, UserConfiguration.class))
@@ -90,7 +96,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                 .doOnError(ItemAlreadyPresent.class, throwable -> log.debug(throwable.getMessage()))
                 .switchIfEmpty(Mono.just(userConfigurationInput))
                 .flatMap(unused -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.putItem(builder -> builder.item(
-                         userConfigurationEntity))))
+                         userConfigurationEntity))).retryWhen(dynamoRetryStrategy))
                 .doOnSuccess(unused -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, INSERT_USER_CONFIGURATION, userConfigurationInput))
                 .thenReturn(userConfigurationInput);
     }
@@ -101,6 +107,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
         log.debug(INVOKING_METHOD, PATCH_USER_CONFIGURATION, Stream.of(name, userConfigurationChanges).toList());
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
+                   .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(entityStored -> {
@@ -122,7 +129,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                        return entityStored;
                    })
                    .zipWhen(userConfigurationUpdated -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
-                           userConfigurationUpdated))).retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
+                           userConfigurationUpdated))).retryWhen(dynamoRetryStrategy)
                    .map(objects -> objectMapper.convertValue(objects.getT2(), UserConfiguration.class))
                    .doOnSuccess(userConfiguration -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL,PATCH_USER_CONFIGURATION, userConfiguration));
     }
@@ -139,6 +146,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
                    .zipWhen(userConfigurationToDelete -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.deleteItem(
                             userConfigurationKey)))
+                   .retryWhen(dynamoRetryStrategy)
                    .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity.getT1(), UserConfiguration.class))
                    .doOnSuccess(userConfiguration -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, DELETE_USER_CONFIGURATION, userConfiguration));
     }

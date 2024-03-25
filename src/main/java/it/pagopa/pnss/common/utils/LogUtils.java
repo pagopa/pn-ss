@@ -101,10 +101,10 @@ public class LogUtils {
     public static final String INITIALIZING_ARUBA_PROXY_CLIENT = "Initializing Aruba proxy client for '{}' : ArubaServerAddress : {}, EndpointName : {}, ServiceName : {}";
     public static final String SETTING_PROXY_PROPERTIES = "Setting properties for Aruba proxy client : {}";
 
-    // ALTERNATIVE PROVIDER
-    public static final String ALT_SIGN_PDF_DOCUMENT = "AlternativeSignProviderService.signPdfDocument()";
-    public static final String ALT_XML_SIGNATURE = "AlternativeSignProviderService.signXmlDocument()";
-    public static final String ALT_PKCS_7_SIGN_V2 = "AlternativeSignProviderService.pkcs7Signature()";
+    // Namirial PROVIDER
+    public static final String NAMIRIAL_SIGN_PDF_DOCUMENT = "PnSignServiceImpl.signPdfDocument()";
+    public static final String NAMIRIAL_XML_SIGNATURE = "PnSignServiceImpl.signXmlDocument()";
+    public static final String NAMIRIAL_PKCS_7_SIGN_V2 = "PnSignServiceImpl.pkcs7Signature()";
 
     //SQS
     public static final String INSERTING_DATA_IN_SQS = "Inserting data {} in SQS '{}'";

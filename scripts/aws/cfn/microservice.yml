@@ -304,10 +304,6 @@ Parameters:
     Type: String
     Description: 'TsaIdentity'
 
-  PnSsIdentityTimemark:
-    Type: String
-    Description: 'Secret ID for Identity Timemark'
-
   PnSsIdentitySignature:
     Type: String
     Description: 'Secret ID for Identity Signature'
@@ -368,6 +364,29 @@ Parameters:
     Description: 'SpringBoot configuration Task Execution Max Pool Siza'
     Default: '512'
 
+  PnSignProviderSwitch:
+    Type: String
+    Description: 'Parameter used to switch provider for digital signature'
+
+  PnSsSignRetryStrategyMaxAttempts:
+    Type: String
+    Description: 'Parameter used to define max number of retries'
+
+  PnSsSignRetryStrategyMinBackoff:
+    Type: String
+    Description: 'Parameter used to define minimum backoff between attempts'
+
+  CpuValue:
+    Type: Number
+    Default: 1024
+    Description: Fargate virtual CPU quantity 1024 equals one vCPU
+
+  MemoryAmount:
+    Type: String
+    Default: '2GB'
+    Description: Memory amount reserved to the task pod.
+    AllowedValues: [ 2GB, 4GB, 6GB, 8GB ]
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -379,16 +398,26 @@ Parameters:
 
   LogAlarmStrategy:
     Type: String
-    Default: 'FATAL'  
-    
+    Default: 'FATAL'
+
   PnSsPreloadedDocsRetentionDays:
-    Type: Number 
+    Type: Number
     Description: 'Numero di giorni di retention per i file di tipo PRELOADED'
 
   JavaToolOptions:
     Type: String
     Description: 'System properties and parameters for the JVM'
     Default: ''
+
+  GestoreBucketGetObjectChunkSize:
+    Type: String
+    Description: 'Max Chunk size used by Gestore Bucket when retrieving object from bucket'
+    Default: '1048576'
+
+  # Namirial provider properties
+  PnSsNamirialServerAddress:
+    Type: String
+    Description: 'Server address for Namirial'
 
   # Log group parameters
   EcsLogGroup:
@@ -408,8 +437,8 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/ecs-service.yaml'
       Parameters:
         MicroServiceUniqueName: !Sub '${ProjectName}-safe-storage'
-        CpuValue: 4096
-        MemoryAmount: 8GB
+        CpuValue: !Ref CpuValue
+        MemoryAmount: !Ref MemoryAmount
         AlarmSNSTopicArn: !Ref AlarmSNSTopicArn
         ContainerImageURI: !Sub '${ContainerImageUri}'
         ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'
@@ -434,13 +463,16 @@ Resources:
         ContainerEnvEntry33: !Sub 'PnSsArubaQname=${PnSsArubaQname}'
         ContainerEnvEntry34: !Sub 'PnSsArubaSignService=${PnSsArubaSignService}'
         ContainerEnvEntry35: !Sub 'PnSsTsaIdentity=${PnSsTsaIdentity}'
-        ContainerEnvEntry36: !Sub 'PnSsIdentityTimemark=${PnSsIdentityTimemark}'
-        ContainerEnvEntry37: !Sub 'PnSsIdentitySignature=${PnSsIdentitySignature}'
-        ContainerEnvEntry38: !Sub 'PnSsTimemarkUrl=${PnSsTimemarkUrl}'
-        ContainerEnvEntry39: !Sub 'PnSsUriBuilderGetFileWithPatchConfiguration=${PnSsUriBuilderGetFileWithPatchConfiguration}'
-        ContainerEnvEntry40: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
-        ContainerEnvEntry41: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
-        ContainerEnvEntry42: !Sub 'PnSsTaskExecutionPoolMaxSize=${PnSsTaskExecutionPoolMaxSize}'
+        ContainerEnvEntry36: !Sub 'PnSsIdentitySignature=${PnSsIdentitySignature}'
+        ContainerEnvEntry37: !Sub 'PnSsTimemarkUrl=${PnSsTimemarkUrl}'
+        ContainerEnvEntry38: !Sub 'PnSsUriBuilderGetFileWithPatchConfiguration=${PnSsUriBuilderGetFileWithPatchConfiguration}'
+        ContainerEnvEntry39: !Sub 'StateMachineBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry40: !Sub 'InternalBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry41: !Sub 'PnSsTaskExecutionPoolMaxSize=${PnSsTaskExecutionPoolMaxSize}'
+        ContainerEnvEntry42: !Sub 'PnSignProviderSwitch=${PnSignProviderSwitch}'
+        ContainerEnvEntry43: !Sub 'PnSsSignRetryStrategyMaxAttempts=${PnSsSignRetryStrategyMaxAttempts}'
+        ContainerEnvEntry44: !Sub 'PnSsSignRetryStrategyMinBackoff=${PnSsSignRetryStrategyMinBackoff}'
+        ContainerEnvEntry45: !Sub 'PnSsNamirialServerAddress=${PnSsNamirialServerAddress}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -538,7 +570,6 @@ Resources:
               - 'secretsmanager:DescribeSecret'
               - 'secretsmanager:GetSecretValue'
             Resource:
-              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentityTimemark , '*']]
               - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentitySignature , '*']]
           - Effect: Allow
             Action:
@@ -956,6 +987,12 @@ Resources:
           PnSsGestoreRepositoryPathGetDocument: !Ref PnSsGestoreRepositoryPathGetDocument
           PnSsGestoreRepositoryPathPatchDocument: !Ref PnSsGestoreRepositoryPathPatchDocument
           PnSsStagingBucketName: !Ref PnSsStagingBucketName
+          GestoreBucketGetObjectChunkSize: !Ref GestoreBucketGetObjectChunkSize
+      Tags:
+        - Key: "pn-eni-related"
+          Value: "true"
+        - Key: "pn-eni-related-groupName-regexp"
+          Value: !Base64 "^pn-ss-gestore-bucket-sec-group.*$"
 
       Code:
         ZipFile: |
@@ -970,6 +1007,7 @@ Resources:
           const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
           const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
           const STAGINGBUCKET = process.env.PnSsStagingBucketName;
+          const chunkSize = Number(process.env.GestoreBucketGetObjectChunkSize);
 
           exports.handler = async (event) => {
             const s3 = new AWS.S3();
@@ -1010,23 +1048,31 @@ Resources:
                       params.Bucket = bucketName;
                       params.Key = jsonDocument.documentKey;
                       try {
-                        const { Body } = await s3
-                          .getObject(params)
-                          .promise();
-                        const doc = await getDocumentFromDB(jsonDocument.documentKey);
-
-                        console.log(doc.document);
-                        console.log(doc.document.documentType.checksum);
-                        console.log(JSON.stringify(doc.document.documentType.checksum));
-
-                        if( doc.document.documentType.checksum != "NONE" ) {
-                           jsonDocument.checkSum = crypto
-                             .createHash(doc.document.documentType.checksum)
-                             .update(Body)
-                             .digest("base64");
-                        }
-          
-                        jsonDocument.lastStatusChangeTimestamp = bodyData.Records[0].eventTime;
+                            const doc = await getDocumentFromDB(jsonDocument.documentKey);
+                            console.log(doc.document);
+                            console.log(doc.document.documentType.checksum);
+                            console.log(JSON.stringify(doc.document.documentType.checksum));
+                        
+                            if( doc.document.documentType.checksum != "NONE" )
+                            {
+                            console.log("Starting file hashing...")
+                
+                            let hash = crypto.createHash(doc.document.documentType.checksum);
+                            let offset = 0;
+                        
+                            while(offset<jsonDocument.contentLenght)
+                            {
+                              const end = Math.min(offset + chunkSize, jsonDocument.contentLenght);
+                              params.Range=`bytes=${offset}-${end - 1}`
+                              const chunk = await s3.getObject(params).promise();
+                              hash.update(chunk.Body);
+                              offset += chunkSize;
+                            }
+                              jsonDocument.checkSum = hash.digest('base64');
+                              console.log("File hashing done!")
+                            }
+              
+                            jsonDocument.lastStatusChangeTimestamp = bodyData.Records[0].eventTime;
           
                       } catch (error) {
                         console.log(error);

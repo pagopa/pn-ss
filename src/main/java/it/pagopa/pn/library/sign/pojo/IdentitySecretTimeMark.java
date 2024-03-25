@@ -1,4 +1,4 @@
-package it.pagopa.pnss.transformation.model.pojo;
+package it.pagopa.pn.library.sign.pojo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AccessLevel;

@@ -30,7 +30,6 @@ import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import reactor.util.retry.Retry;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -61,18 +60,16 @@ public class DocumentServiceImpl implements DocumentService {
     private final BucketName bucketName;
     private final CallMacchinaStati callMacchinaStati;
     private final S3Service s3Service;
-    private final Retry dynamoRetryStrategy;
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
                                RetentionService retentionService, AwsConfigurationProperties awsConfigurationProperties,
-                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service, Retry dynamoRetryStrategy) {
+                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service) {
         this.docTypesService = docTypesService;
         this.callMacchinaStati = callMacchinaStati;
         this.s3Service = s3Service;
-        this.dynamoRetryStrategy = dynamoRetryStrategy;
         this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
                                                                                   TableSchema.fromBean(DocumentEntity.class)));
         this.objectMapper = objectMapper;
@@ -90,7 +87,6 @@ public class DocumentServiceImpl implements DocumentService {
         final String GET_DOCUMENT = "DocumentService.getDocument()";
         log.debug(LogUtils.INVOKING_METHOD, GET_DOCUMENT, documentKey);
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
-                   .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class));
@@ -122,7 +118,6 @@ public class DocumentServiceImpl implements DocumentService {
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder()
                                                                                     .partitionValue(documentInput.getDocumentKey())
                                                                                     .build()))
-                   .retryWhen(dynamoRetryStrategy)
                    .handle((documentFounded, sink) -> {
                        if (documentFounded != null) {
                            log.debug("insertDocument() : document found : {}", documentFounded);
@@ -156,8 +151,7 @@ public class DocumentServiceImpl implements DocumentService {
 
         AtomicReference<String> oldState = new AtomicReference<>();
 
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
-                .retryWhen(dynamoRetryStrategy)
+        return Mono.defer(()-> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build())))
                 .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                 .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                 .flatMap(documentEntity -> {
@@ -275,7 +269,6 @@ public class DocumentServiceImpl implements DocumentService {
                        }
                    })
                    .flatMap(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
-                   .retryWhen(dynamoRetryStrategy)
                    .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentChanges));
     }
 
@@ -286,11 +279,9 @@ public class DocumentServiceImpl implements DocumentService {
         Key typeKey = Key.builder().partitionValue(documentKey).build();
 
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(typeKey))
-                   .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error("Error in DocumentServiceImpl.deleteDocument(): DocumentKeyNotPresentException - '{}'", throwable.getMessage()))
                    .zipWhen(documentToDelete -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
-                   .retryWhen(dynamoRetryStrategy)
                    .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
                    .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, DELETE_DOCUMENT, documentType));
     }

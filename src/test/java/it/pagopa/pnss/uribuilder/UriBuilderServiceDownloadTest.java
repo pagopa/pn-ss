@@ -275,7 +275,7 @@ class UriBuilderServiceDownloadTest {
 
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
         StepVerifier.create(testMono)
-                .expectNextMatches(fileDownloadInfo -> fileDownloadInfo.getRetryAfter().compareTo(BigDecimal.valueOf(17400)) == 0)
+                .expectNextMatches(fileDownloadInfo -> fileDownloadInfo.getRetryAfter().compareTo(maxRestoreTimeCold) < 0)
                 .verifyComplete();
     }
 

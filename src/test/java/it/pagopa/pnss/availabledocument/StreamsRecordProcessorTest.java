@@ -35,6 +35,22 @@ class StreamsRecordProcessorTest {
 
     @Autowired
     AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
+
+    @Test
+    void testProcessRecordsOk() {
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+
+        ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
+        List<Record> records = new ArrayList<>();
+
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT, AVAILABLE, BOOKED);
+
+        records.add(new RecordAdapter(recordDyanmo));
+        processRecordsInput.withRecords(records);
+
+        Assertions.assertDoesNotThrow(() -> srp.processRecords(processRecordsInput));
+    }
+
     @Test
     void testSendMessageEventBridgeOk() {
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
@@ -42,7 +58,7 @@ class StreamsRecordProcessorTest {
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
 
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,SAVED);
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED);
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
@@ -57,7 +73,7 @@ class StreamsRecordProcessorTest {
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
 
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(INSERT_EVENT,AVAILABLE,SAVED);
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(INSERT_EVENT,AVAILABLE,BOOKED);
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
@@ -72,7 +88,7 @@ class StreamsRecordProcessorTest {
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
 
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(REMOVE_EVENT,AVAILABLE,SAVED);
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(REMOVE_EVENT,AVAILABLE,BOOKED);
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
@@ -94,6 +110,7 @@ class StreamsRecordProcessorTest {
         Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
         StepVerifier.create(eventSendToBridge).expectNextCount(0).verifyComplete();
     }
+
     @NotNull
     private  com.amazonaws.services.dynamodbv2.model.Record createRecorDynamo(String eventName ,String documentStateNew,  String documentStateOld) {
         com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = new com.amazonaws.services.dynamodbv2.model.Record();
@@ -138,6 +155,8 @@ class StreamsRecordProcessorTest {
         return toRet;
 
     }
+
+
 
     @NotNull
     private static AttributeValue createAttributeS(String sVAlue) {

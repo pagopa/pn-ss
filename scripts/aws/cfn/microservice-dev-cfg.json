@@ -28,7 +28,7 @@
     "PnSsUriBuilderGetFileWithPatchConfiguration": "CLIENT_SPECIFIC",
     "JavaToolOptions": "-XX:MaxDirectMemorySize=128M",
     "GestoreBucketGetObjectChunkSize": "10485760",
-    "PnSignProviderSwitch": "1999-02-01T10:00:00Z;aruba",
+    "PnSignProviderSwitch": "1970-01-01T00:00:00Z;namirial",
     "PnSsSignRetryStrategyMaxAttempts": "3",
     "PnSsSignRetryStrategyMinBackoff": "2",
     "PnEcNamirialServerAddress": "https://fspagopa-test.namirial.com/easysign",

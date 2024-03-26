@@ -31,7 +31,7 @@
     "PnSignProviderSwitch": "1999-02-01T10:00:00Z;aruba",
     "PnSsSignRetryStrategyMaxAttempts": "3",
     "PnSsSignRetryStrategyMinBackoff": "2",
-    "PnEcNamirialServerAddress": "",
+    "PnEcNamirialServerAddress": "https://fspagopa-test.namirial.com/easysign",
     "CpuValue": "1024",
     "MemoryAmount": "4GB"
   }

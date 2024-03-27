@@ -94,18 +94,6 @@ public class LogUtils {
     public static final String PN_SIGN_PDF_DOCUMENT = "PnSignProviderService.signPdfDocument()";
     public static final String PN_SIGN_XML_DOCUMENT = "PnSignProviderService.signXmlDocument()";
     public static final String PN_PKCS_7_SIGNATURE = "PnSignProviderService.pkcs7Signature()";
-    //ARUBA
-    public static final String ARUBA_SIGN_PDF_DOCUMENT = "ArubaSignProviderService.signPdfDocument()";
-    public static final String ARUBA_SIGN_XML_DOCUMENT = "ArubaSignProviderService.signXmlDocument()";
-    public static final String ARUBA_PKCS_7_SIGNATURE = "ArubaSignProviderService.pkcs7Signature()";
-    public static final String INITIALIZING_ARUBA_PROXY_CLIENT = "Initializing Aruba proxy client for '{}' : ArubaServerAddress : {}, EndpointName : {}, ServiceName : {}";
-    public static final String SETTING_PROXY_PROPERTIES = "Setting properties for Aruba proxy client : {}";
-
-    // Namirial PROVIDER
-    public static final String NAMIRIAL_SIGN_PDF_DOCUMENT = "PnSignServiceImpl.signPdfDocument()";
-    public static final String NAMIRIAL_XML_SIGNATURE = "PnSignServiceImpl.signXmlDocument()";
-    public static final String NAMIRIAL_PKCS_7_SIGN_V2 = "PnSignServiceImpl.pkcs7Signature()";
-
     //SQS
     public static final String INSERTING_DATA_IN_SQS = "Inserting data {} in SQS '{}'";
     public static final String INSERTED_DATA_IN_SQS = "Inserted data in SQS '{}'";

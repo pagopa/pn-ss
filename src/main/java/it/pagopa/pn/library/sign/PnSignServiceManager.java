@@ -1,8 +1,8 @@
 package it.pagopa.pn.library.sign;
 
 
+import com.namirial.sign.library.service.PnSignServiceImpl;
 import it.pagopa.pn.library.sign.service.PnSignService;
-import it.pagopa.pn.library.sign.service.impl.AlternativeSignProviderService;
 import it.pagopa.pn.library.sign.service.impl.ArubaSignProviderService;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,20 +14,20 @@ import org.springframework.stereotype.Component;
 @DependsOn("pnSignCredentialConf")
 public class PnSignServiceManager {
    ArubaSignProviderService arubaSignProviderService;
-   AlternativeSignProviderService alternativeProviderService;
+   PnSignServiceImpl namirialProviderService;
 
     @Autowired
-    public PnSignServiceManager(ArubaSignProviderService arubaSignProviderService, AlternativeSignProviderService alternativeProviderService) {
+    public PnSignServiceManager(ArubaSignProviderService arubaSignProviderService, PnSignServiceImpl namirialSignProviderService) {
         this.arubaSignProviderService = arubaSignProviderService;
-        this.alternativeProviderService = alternativeProviderService;
+        this.namirialProviderService = namirialSignProviderService;
     }
 
     public PnSignService getArubaSignProviderService() {
         return arubaSignProviderService;
     }
 
-    public PnSignService getAlternativeProviderService() {
-        return alternativeProviderService;
+    public PnSignService getNamirialProviderService() {
+        return namirialProviderService;
     }
 
 }

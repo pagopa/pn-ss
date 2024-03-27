@@ -105,6 +105,9 @@ public class LocalStackTestConfig {
 
             );
 
+            //Set Namirial secret credentials.
+            setNamirialCredentials();
+
             //Create SQS queue
             for (String queueName : ALL_QUEUE_NAME_LIST) {
                 localStackContainer.execInContainer("awslocal", "sqs", "create-queue", "--queue-name", queueName);
@@ -128,6 +131,10 @@ public class LocalStackTestConfig {
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void setNamirialCredentials(){
+        System.setProperty("namirial.server.apikey", "namirial-api-key");
     }
 
     private static String getIdentityTimemarkCredentials() {

@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
+import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.services.s3.model.*;
@@ -41,6 +42,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Stream;
+import java.util.function.Predicate;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
@@ -86,6 +88,7 @@ public class UriBuilderService {
     private final DocTypesClientCall docTypesClientCall;
     private final S3Service s3Service;
     private final S3Presigner s3Presigner;
+    private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
     private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
@@ -94,7 +97,7 @@ public class UriBuilderService {
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, RetryBackoffSpec gestoreRepositoryRetryStrategy) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
@@ -102,6 +105,7 @@ public class UriBuilderService {
         this.s3Service = s3Service;
         this.s3Presigner = s3Presigner;
         this.getFileWithPatchConfiguration= GetFilePatchConfiguration.valueOf(getFileWithPatchConfigValue);
+        this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
     }
 
     private Mono<String> getBucketName(DocumentType docType) {
@@ -125,7 +129,8 @@ public class UriBuilderService {
         metadata.put("secret", secret.toString());
 
         return validationField(contentType, documentType, xTraceIdValue)
-                .flatMap(booleanMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId))
+                .flatMap(booleanMono -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
+                                            .retryWhen(gestoreRepositoryRetryStrategy))
                                             .handle((userConfiguration, synchronousSink) -> {
                                                 if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
                                                     synchronousSink.error((new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -158,18 +163,7 @@ public class UriBuilderService {
                                                                          .retryWhen(Retry.max(10)
                                                                                          .filter(DocumentkeyPresentException.class::isInstance)
                                                                                          .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
-                                                                                             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                                                                                                               "Non e' " +
-                                                                                                                               "stato " +
-                                                                                                                               "possibile" +
-                                                                                                                               " " +
-                                                                                                                               "produrre " +
-                                                                                                                               "una " +
-                                                                                                                               "chiave " +
-                                                                                                                               "per " +
-                                                                                                                               "user " +
-                                                                                                                               xPagopaSafestorageCxId);
-                                                                                         }));
+                                                                                             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Non e' stato possibile produrre una chiave per user " + xPagopaSafestorageCxId);}));
                                             })
                                             .flatMap(insertedDocument ->
 
@@ -212,7 +206,7 @@ public class UriBuilderService {
                         sink.next(contentType);
                     }
                 })
-                .flatMap(mono -> docTypesClientCall.getdocTypes(documentType))
+                .flatMap(mono -> docTypesClientCall.getdocTypes(documentType).retryWhen(gestoreRepositoryRetryStrategy))
                 .onErrorResume(DocumentTypeNotPresentException.class, e -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "DocumentType :" + documentType + " - Not valid")))
                 .map(o -> true);
     }
@@ -314,11 +308,13 @@ public class UriBuilderService {
         log.logCheckingOutcome(X_TRACE_ID_VALUE, true);
 
         return Mono.fromCallable(this::validationFieldCreateUri)//
-                .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId))//
+                .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
+                .retryWhen(gestoreRepositoryRetryStrategy))
                 .zipWhen(userConfigurationResponse -> {
                     List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
 
                     return documentClientCall.getDocument(fileKey)
+                            .retryWhen(gestoreRepositoryRetryStrategy)
                             .onErrorResume(DocumentKeyNotPresentException.class//
                                     , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + fileKey)))
                             .flatMap(documentResponse -> {
@@ -362,6 +358,7 @@ public class UriBuilderService {
                                 })
                                 .filter(documentChanges -> !isBooked || canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()))
                                 .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
+                                        .retryWhen(gestoreRepositoryRetryStrategy)
                                         .map(DocumentResponse::getDocument))
                                 .defaultIfEmpty(document);
                     }

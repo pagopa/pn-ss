@@ -20,6 +20,8 @@ import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.RetryBackoffSpec;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
@@ -35,12 +37,15 @@ public class DocTypesServiceImpl implements DocTypesService {
 
     private final DynamoDbAsyncTableDecorator<DocTypeEntity> docTypeEntityDynamoDbAsyncTable;
 
+    private final RetryBackoffSpec dynamoRetryStrategy;
+
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public DocTypesServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
+                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy) {
         this.objectMapper = objectMapper;
+        this.dynamoRetryStrategy = dynamoRetryStrategy;
         this.docTypeEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.tipologieDocumentiName(),
                                                                                  TableSchema.fromBean(DocTypeEntity.class)));
     }
@@ -63,6 +68,7 @@ public class DocTypesServiceImpl implements DocTypesService {
         final String GET_DOC_TYPE = "DocTypesService.getDocType()";
         log.debug(LogUtils.INVOKING_METHOD, GET_DOC_TYPE, typeId);
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
+                   .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                    .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class))
@@ -106,10 +112,12 @@ public class DocTypesServiceImpl implements DocTypesService {
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder()
                                                                                    .partitionValue(docTypeInput.getTipoDocumento())
                                                                                    .build()))
+                .retryWhen(dynamoRetryStrategy)
                 .flatMap(foundedDocumentType -> Mono.error(new ItemAlreadyPresent(docTypeInput.getTipoDocumento())))
                 .doOnError(ItemAlreadyPresent.class, throwable -> log.error("Error in DocTypesServiceImpl.insertDocType(): ItemAlreadyPresent - '{}'", throwable.getMessage()))
                 .switchIfEmpty(Mono.just(docTypeInput))
                 .flatMap(unused -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.putItem(builder -> builder.item(docTypeEntityInput))))
+                .retryWhen(dynamoRetryStrategy)
                 .doOnSuccess(unused -> log.info(SUCCESSFUL_OPERATION_LABEL, INSERT_DOC_TYPE, docTypeInput))
                 .thenReturn(docTypeInput);
     }
@@ -123,9 +131,11 @@ public class DocTypesServiceImpl implements DocTypesService {
         docTypeEntityInput.setTipoDocumento(typeId);
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
+                   .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error("Error in DocTypesServiceImpl.updateDocType(): DocumentTypeNotPresentException - '{}'", throwable.getMessage()))
                    .zipWhen(unused -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.updateItem(docTypeEntityInput)))
+                   .retryWhen(dynamoRetryStrategy)
                    .map(objects -> objectMapper.convertValue(objects.getT2(), DocumentType.class))
                    .doOnSuccess(documentType -> log.info(SUCCESSFUL_OPERATION_LABEL, UPDATE_DOC_TYPE, documentType));
     }
@@ -138,9 +148,11 @@ public class DocTypesServiceImpl implements DocTypesService {
         Key typeKey = Key.builder().partitionValue(typeId).build();
 
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(typeKey))
+                   .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
                    .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error("Error in DocTypesServiceImpl.deleteDocType(): DocumentTypeNotPresentException - '{}'", throwable.getMessage()))
                    .zipWhen(docTypeToDelete -> Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.deleteItem(typeKey)))
+                   .retryWhen(dynamoRetryStrategy)
                    .map(objects -> objectMapper.convertValue(objects.getT1(), DocumentType.class))
                    .doOnSuccess(documentType -> log.info(SUCCESSFUL_OPERATION_LABEL, DELETE_DOC_TYPE, documentType));
     }

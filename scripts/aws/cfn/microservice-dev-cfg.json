@@ -31,7 +31,7 @@
     "PnSignProviderSwitch": "1970-01-01T00:00:00Z;namirial",
     "PnSsSignRetryStrategyMaxAttempts": "3",
     "PnSsSignRetryStrategyMinBackoff": "2",
-    "PnEcNamirialServerAddress": "https://fspagopa-test.namirial.com/easysign",
+    "PnSsNamirialServerAddress": "https://fspagopa-test.namirial.com/easysign",
     "CpuValue": "1024",
     "MemoryAmount": "4GB"
   }

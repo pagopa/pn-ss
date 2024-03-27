@@ -415,7 +415,7 @@ Parameters:
     Default: '1048576'
 
   # Namirial provider properties
-  PnEcNamirialServerAddress:
+  PnSsNamirialServerAddress:
     Type: String
     Description: 'Server address for Namirial'
 
@@ -472,7 +472,7 @@ Resources:
         ContainerEnvEntry42: !Sub 'PnSignProviderSwitch=${PnSignProviderSwitch}'
         ContainerEnvEntry43: !Sub 'PnSsSignRetryStrategyMaxAttempts=${PnSsSignRetryStrategyMaxAttempts}'
         ContainerEnvEntry44: !Sub 'PnSsSignRetryStrategyMinBackoff=${PnSsSignRetryStrategyMinBackoff}'
-        ContainerEnvEntry45: !Sub 'PnEcNamirialServerAddress=${PnEcNamirialServerAddress}'
+        ContainerEnvEntry45: !Sub 'PnSsNamirialServerAddress=${PnSsNamirialServerAddress}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

@@ -92,7 +92,7 @@ public class TransformationService {
                     var detailObject = createdS3ObjectDto.getCreationDetailObject();
                     var fileKey = detailObject.getObject().getKey();
                     fileKeyReference.set(fileKey);
-                    return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), newStagingBucketObject.getRetry(), true);
+                    return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), newStagingBucketObject.getRetry(), false);
                 })
                 .then()
                 .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())

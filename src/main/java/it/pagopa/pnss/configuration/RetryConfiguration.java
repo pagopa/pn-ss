@@ -1,6 +1,5 @@
 package it.pagopa.pnss.configuration;
 
-import it.pagopa.pnss.configurationproperties.ArubaRetryStrategyProperties;
 import it.pagopa.pnss.configurationproperties.DynamoRetryStrategyProperties;
 import it.pagopa.pnss.configurationproperties.GestoreRepositoryRetryStrategyProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +23,6 @@ public class RetryConfiguration {
     private DynamoRetryStrategyProperties dynamoRetryStrategyProperties;
     @Autowired
     private GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties;
-    @Autowired
-    private ArubaRetryStrategyProperties arubaRetryStrategyProperties;
 
     @Bean
     RetryBackoffSpec dynamoRetryStrategy() {
@@ -49,12 +46,4 @@ public class RetryConfiguration {
                 .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }
-
-    @Bean
-    RetryBackoffSpec arubaRetryStrategy() {
-        return Retry.backoff(arubaRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(arubaRetryStrategyProperties.minBackoff()))
-                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
-                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
-    }
-
 }

@@ -43,7 +43,6 @@ public class PnSignServiceConfigurationProperties {
         String provider = "";
         SortedMap<DateTime, String> dateProviderMap = splitDateProviders(propertyString).descendingMap();
         DateTime now = DateTime.now();
-        log.info("ORARIO: "+now);
 
         for (Map.Entry<DateTime, String> entry : dateProviderMap.entrySet()) {
             if (entry.getKey().isBefore(now)) {

@@ -420,7 +420,7 @@ Parameters:
     Description: 'Server address for Namirial'
 
   PnEcNamirialServerMaxConnections:
-    Type: String
+    Type: Number
 
   PnEcNamirialServerPendingAcquireTimeout:
     Type: Number

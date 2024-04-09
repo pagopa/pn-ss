@@ -31,7 +31,7 @@
     "PnSignProviderSwitch": "1970-01-01T00:00:00Z;aruba,2024-03-26T23:00:00Z;namirial",
     "PnSsSignRetryStrategyMaxAttempts": "3",
     "PnSsSignRetryStrategyMinBackoff": "2",
-    "PnEcNamirialServerMaxConnections": "32",
+    "PnEcNamirialServerMaxConnections": "40",
     "PnEcNamirialServerPendingAcquireTimeout": "600",
     "PnSsNamirialServerAddress": "https://fspagopa.namirial.com/easysign",
     "CpuValue": "1024",

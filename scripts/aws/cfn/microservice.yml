@@ -419,6 +419,14 @@ Parameters:
     Type: String
     Description: 'Server address for Namirial'
 
+  PnEcNamirialServerMaxConnections:
+    Type: Number
+
+  PnEcNamirialServerPendingAcquireTimeout:
+    Type: Number
+    Description: Value in seconds
+
+
   # Log group parameters
   EcsLogGroup:
     Type: String
@@ -473,6 +481,8 @@ Resources:
         ContainerEnvEntry43: !Sub 'PnSsSignRetryStrategyMaxAttempts=${PnSsSignRetryStrategyMaxAttempts}'
         ContainerEnvEntry44: !Sub 'PnSsSignRetryStrategyMinBackoff=${PnSsSignRetryStrategyMinBackoff}'
         ContainerEnvEntry45: !Sub 'PnSsNamirialServerAddress=${PnSsNamirialServerAddress}'
+        ContainerEnvEntry46: !Sub 'PnEcNamirialServerMaxConnections=${PnEcNamirialServerMaxConnections}'
+        ContainerEnvEntry47: !Sub 'PnEcNamirialServerPendingAcquireTimeout=${PnEcNamirialServerPendingAcquireTimeout}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

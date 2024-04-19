@@ -33,7 +33,7 @@
     "PnSsSignRetryStrategyMinBackoff": "2",
     "PnEcNamirialServerMaxConnections": "40",
     "PnEcNamirialServerPendingAcquireTimeout": "600",
-    "PnSsNamirialServerAddress": "https://fspagopa.namirial.com/easysign",
+    "PnSsNamirialServerAddress": "https://fspagopa-test.namirial.com/easysign",
     "CpuValue": "1024",
     "MemoryAmount": "4GB"
   }

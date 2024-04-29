@@ -47,7 +47,7 @@ public class RetryConfiguration {
     RetryBackoffSpec gestoreRepositoryRetryStrategy() {
         return Retry.backoff(gestoreRepositoryRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(gestoreRepositoryRetryStrategyProperties.minBackoff()))
                 .filter(Predicate.not(isNotFound))
-                .filter(throwable -> throwable instanceof PatchDocumentException && !((PatchDocumentException) throwable).getStatusCode().is5xxServerError())
+                .filter(throwable -> throwable instanceof PatchDocumentException && ((PatchDocumentException) throwable).getStatusCode().is5xxServerError())
                 .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }

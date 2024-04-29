@@ -2,6 +2,7 @@ package it.pagopa.pn.library.sign.service;
 
 import com.namirial.sign.library.service.PnSignServiceImpl;
 import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
+import it.pagopa.pn.library.sign.configuration.CloudWatchMetricPublisherConfiguration;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
 import it.pagopa.pn.library.sign.exception.MaxRetryExceededException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
@@ -10,7 +11,9 @@ import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.wsdl.ArubaSignService;
 import org.junit.jupiter.api.Test;
+import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -30,8 +33,14 @@ class PnSignServiceTest {
     private PnSignProviderService pnSignProviderService;
     @Autowired
     private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
+    @SpyBean
+    private CloudWatchMetricPublisherConfiguration cloudWatchMetricPublisherConfiguration;
     @MockBean
     private ArubaSignService arubaSignServiceClient;
+    @Value("${pn.sign.cloudwatch.namespace.aruba}")
+    private String arubaNamespace;
+    @Value("${pn.sign.cloudwatch.namespace.namirial}")
+    private String namirialNamespace;
 
     private static final String PROVIDER_SWITCH = "providerSwitch";
     private static final String CONDITIONAL_DATE_PROVIDER_PAST = "1999-02-01T10:00:00Z;aruba";
@@ -42,6 +51,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_PAST);
         byte[] fileBytes = "file".getBytes();
 
+        var arubaMetricPublisherSpy = spy(cloudWatchMetricPublisherConfiguration.getMetricPublisherByNamespace(arubaNamespace));
         mockArubaPdfSignatureV2Async(arubaSignServiceClient, "ok", fileBytes, RESP_OK);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
@@ -49,6 +59,7 @@ class PnSignServiceTest {
 
         verify(arubaSignProviderService, times(1)).signPdfDocument(fileBytes, true);
         verify(namirialSignProviderService, never()).signPdfDocument(any(), anyBoolean());
+        verify(arubaMetricPublisherSpy, times(1)).publish(any());
     }
 
     @Test
@@ -70,6 +81,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_PAST);
         byte[] fileBytes = "file".getBytes();
 
+        var arubaMetricPublisherSpy = spy(cloudWatchMetricPublisherConfiguration.getMetricPublisherByNamespace(arubaNamespace));
         mockArubaXmlSignatureAsync(arubaSignServiceClient, "ok", fileBytes, RESP_OK);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signXmlDocument(fileBytes, true);
@@ -77,6 +89,7 @@ class PnSignServiceTest {
 
         verify(arubaSignProviderService, times(1)).signXmlDocument(fileBytes, true);
         verify(namirialSignProviderService, never()).signXmlDocument(any(), anyBoolean());
+        verify(arubaMetricPublisherSpy, times(1)).publish(any());
     }
 
     @Test
@@ -98,6 +111,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_PAST);
         byte[] fileBytes = "file".getBytes();
 
+        var arubaMetricPublisherSpy = spy(cloudWatchMetricPublisherConfiguration.getMetricPublisherByNamespace(arubaNamespace));
         mockArubaPkcs7SignV2Async(arubaSignServiceClient, "ok", fileBytes, RESP_OK);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.pkcs7Signature(fileBytes, true);
@@ -105,6 +119,7 @@ class PnSignServiceTest {
 
         verify(arubaSignProviderService, times(1)).pkcs7Signature(fileBytes, true);
         verify(namirialSignProviderService, never()).pkcs7Signature(any(), anyBoolean());
+        verify(arubaMetricPublisherSpy, times(1)).publish(any());
     }
 
     @Test
@@ -126,6 +141,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_FUTURE);
         byte[] fileBytes = "file".getBytes();
 
+        var namirialMetricPublisherSpy = spy(cloudWatchMetricPublisherConfiguration.getMetricPublisherByNamespace(namirialNamespace));
         mockAltProvPdfSignatureV2Async(namirialSignProviderService, RESP_OK);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signPdfDocument(fileBytes, true);
@@ -133,6 +149,7 @@ class PnSignServiceTest {
 
         verify(namirialSignProviderService, times(1)).signPdfDocument(fileBytes, true);
         verify(arubaSignProviderService, never()).signPdfDocument(any(), anyBoolean());
+        verify(namirialMetricPublisherSpy, times(1)).publish(any());
     }
 
     @Test
@@ -168,6 +185,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_FUTURE);
         byte[] fileBytes = "file".getBytes();
 
+        var namirialMetricPublisherSpy = spy(cloudWatchMetricPublisherConfiguration.getMetricPublisherByNamespace(namirialNamespace));
         mockAltProvXmlSignatureAsync(namirialSignProviderService,  RESP_OK);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.signXmlDocument(fileBytes, true);
@@ -175,6 +193,7 @@ class PnSignServiceTest {
 
         verify(namirialSignProviderService, times(1)).signXmlDocument(fileBytes, true);
         verify(arubaSignProviderService, never()).signXmlDocument(any(), anyBoolean());
+        verify(namirialMetricPublisherSpy, times(1)).publish(any());
     }
 
     @Test
@@ -210,6 +229,7 @@ class PnSignServiceTest {
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, CONDITIONAL_DATE_PROVIDER_FUTURE);
         byte[] fileBytes = "file".getBytes();
 
+        var namirialMetricPublisherSpy = spy(cloudWatchMetricPublisherConfiguration.getMetricPublisherByNamespace(namirialNamespace));
         mockAltProvPkcs7SignV2Async(namirialSignProviderService, RESP_OK);
 
         Mono<PnSignDocumentResponse> response = pnSignProviderService.pkcs7Signature(fileBytes, true);
@@ -217,6 +237,7 @@ class PnSignServiceTest {
 
         verify(namirialSignProviderService, times(1)).pkcs7Signature(fileBytes, true);
         verify(arubaSignProviderService, never()).pkcs7Signature(any(), anyBoolean());
+        verify(namirialMetricPublisherSpy, times(1)).publish(any());
     }
 
     @Test

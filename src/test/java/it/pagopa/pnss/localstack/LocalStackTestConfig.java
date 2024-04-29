@@ -13,6 +13,7 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.CustomLog;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -67,7 +68,8 @@ public class LocalStackTestConfig {
             S3,
             SECRETSMANAGER,
             KINESIS,
-            CLOUDWATCH).withEnv("AWS_DEFAULT_REGION", "eu-central-1");
+            CLOUDWATCH,
+            SSM).withEnv("AWS_DEFAULT_REGION", "eu-central-1");
 
     static {
         localStackContainer.start();
@@ -92,6 +94,7 @@ public class LocalStackTestConfig {
         System.setProperty("test.aws.secretsmanager.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SECRETSMANAGER)));
         System.setProperty("test.aws.kinesis.endpoint", String.valueOf(localStackContainer.getEndpointOverride(KINESIS)));
         System.setProperty("test.aws.cloudwatch.endpoint", String.valueOf(localStackContainer.getEndpointOverride(CLOUDWATCH)));
+        System.setProperty("test.aws.ssm.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SSM)));
 
         try {
             //Set Aruba secret credentials.
@@ -116,6 +119,8 @@ public class LocalStackTestConfig {
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
+
+        initParameterStore();
     }
 
     private static String getArubaCredentials() {
@@ -132,6 +137,26 @@ public class LocalStackTestConfig {
             throw new RuntimeException(e);
         }
     }
+
+    private static void initParameterStore() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String dimensionsJsonSchema = objectMapper.readTree(LocalStackTestConfig.class.getClassLoader().getResource("json/sign-dimensions-schema-test.json")).toString();
+            localStackContainer.execInContainer("awslocal",
+                    "ssm",
+                    "put-parameter",
+                    "--name",
+                    "pn-SS-sign-dimensions-schema",
+                    "--type",
+                    "String",
+                    "--value",
+                    dimensionsJsonSchema);
+            log.debug("Created parameter pn-SS-sign-dimensions-schema");
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     private static void setNamirialCredentials(){
         System.setProperty("namirial.server.apikey", "namirial-api-key");

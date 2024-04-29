@@ -27,6 +27,7 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -47,6 +48,7 @@ public class TransformationService {
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
     private final SqsService sqsService;
+    private final Semaphore semaphore;
     @Value("${default.internal.x-api-key.value:#{null}}")
     private String defaultInternalApiKeyValue;
     @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
@@ -57,12 +59,13 @@ public class TransformationService {
     private static final int MAX_RETRIES = 3;
 
     public TransformationService(S3ServiceImpl s3Service,
-                                 PnSignProviderService pnSignService, DocumentClientCall documentClientCall, BucketName bucketName, SqsService sqsService) {
+                                 PnSignProviderService pnSignService, DocumentClientCall documentClientCall, BucketName bucketName, SqsService sqsService, Semaphore semaphore) {
         this.s3Service = s3Service;
         this.pnSignService = pnSignService;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.sqsService = sqsService;
+        this.semaphore = semaphore;
     }
 
     @SqsListener(value = "${s3.queue.sign-queue-name}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
@@ -80,6 +83,12 @@ public class TransformationService {
     public Mono<Void> newStagingBucketObjectCreatedEvent(CreatedS3ObjectDto newStagingBucketObject, Acknowledgment acknowledgment) {
 
         log.debug(LogUtils.INVOKING_METHOD, NEW_STAGING_BUCKET_OBJECT_CREATED, newStagingBucketObject);
+
+        try {
+            semaphore.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
 
         AtomicReference<String> fileKeyReference = new AtomicReference<>("");
         return Mono.fromCallable(() -> {
@@ -101,7 +110,8 @@ public class TransformationService {
                     newStagingBucketObject.setRetry(newStagingBucketObject.getRetry() + 1);
                     acknowledgment.acknowledge();
                     return sqsService.send(signQueueName, newStagingBucketObject).then();
-                });
+                })
+                .doFinally(signalType -> semaphore.release());
     }
 
     public Mono<DeleteObjectResponse> objectTransformation(String key, String stagingBucketName, int retry, Boolean marcatura) {

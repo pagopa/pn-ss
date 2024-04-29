@@ -414,6 +414,11 @@ Parameters:
     Description: 'Max Chunk size used by Gestore Bucket when retrieving object from bucket'
     Default: '1048576'
 
+  TrasformazioneFileMaxThreadPoolSize:
+    Type: Number
+    Description: 'Max ThreadPool size used by Trasformazione File'
+    Default: '50'
+
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -483,6 +488,7 @@ Resources:
         ContainerEnvEntry45: !Sub 'PnSsNamirialServerAddress=${PnSsNamirialServerAddress}'
         ContainerEnvEntry46: !Sub 'PnEcNamirialServerMaxConnections=${PnEcNamirialServerMaxConnections}'
         ContainerEnvEntry47: !Sub 'PnEcNamirialServerPendingAcquireTimeout=${PnEcNamirialServerPendingAcquireTimeout}'
+        ContainerEnvEntry48: !Sub 'TrasformazioneFileMaxThreadPoolSize=${TrasformazioneFileMaxThreadPoolSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

@@ -25,6 +25,7 @@ import reactor.util.retry.RetryBackoffSpec;
 import java.text.SimpleDateFormat;
 import java.util.stream.Stream;
 
+import static it.pagopa.pnss.common.constant.Constant.DELETED;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @Service
@@ -75,6 +76,13 @@ public class FileMetadataUpdateService {
                 }))
                             .flatMap(object -> {
                                 Document document = (Document) object;
+
+                                String docStatus = document.getDocumentState();
+                                if (docStatus.equalsIgnoreCase(DELETED)) {
+                                    return Mono.error(new ResponseStatusException(HttpStatus.GONE,
+                                            "Document with document key : " + fileKey + " has been deleted"));
+                                }
+
                                 String documentType = document.getDocumentType().getTipoDocumento();
 
                                 Mono<String> checkedStatus;

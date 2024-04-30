@@ -93,7 +93,7 @@ class FileMetadataUpdateApiControllerTest {
 	void testErrorStatus() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
                 DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1);
+		var document = new Document().documentType(documentType1).documentState(BOOKED);
 		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
@@ -110,7 +110,7 @@ class FileMetadataUpdateApiControllerTest {
 	void testErrorTechnicalStatus() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
                 DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1);
+		var document = new Document().documentType(documentType1).documentState(BOOKED);
 		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
@@ -148,7 +148,7 @@ class FileMetadataUpdateApiControllerTest {
     void testErrorLookUpDocTypes() {
         var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
                 DocTypesConstant.PN_AAR);
-        var document = new Document().documentType(documentType1);
+        var document = new Document().documentType(documentType1).documentState(BOOKED);
         var documentResponse = new DocumentResponse().document(document);
         when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
@@ -161,7 +161,7 @@ class FileMetadataUpdateApiControllerTest {
     void testErrorLookUpStatus() {
         var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
                 DocTypesConstant.PN_AAR);
-        var document = new Document().documentType(documentType1);
+        var document = new Document().documentType(documentType1).documentState(BOOKED);
         var documentResponse = new DocumentResponse().document(document);
         when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
@@ -176,7 +176,7 @@ class FileMetadataUpdateApiControllerTest {
 	@Test
 	void testFileMetadataUpdateOk() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus()))).tipoDocumento(DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1);
+		var document = new Document().documentType(documentType1).documentState(BOOKED);
 		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
@@ -188,5 +188,22 @@ class FileMetadataUpdateApiControllerTest {
 		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));
 
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(SAVED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isOk();
+	}
+
+	@Test
+	void testFileMetadataUpdateStatusDeleted() {
+		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus()))).tipoDocumento(DocTypesConstant.PN_AAR);
+		var document = new Document().documentType(documentType1).documentState(DELETED);
+		var documentResponse = new DocumentResponse().document(document);
+		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
+		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
+
+		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED,
+						new CurrentStatus().technicalState(Constant.TECHNICAL_STATUS_AVAILABLE))))
+				.tipoDocumento(DocTypesConstant.PN_AAR);
+		var documentTypeResponse = new DocumentTypeResponse().docType(documentType2);
+		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));
+
+		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(SAVED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isEqualTo(410);
 	}
 }

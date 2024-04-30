@@ -125,5 +125,4 @@ public class S3ServiceImpl implements S3Service {
                 .doOnNext(putObjectTaggingResponse ->  log.info(CLIENT_METHOD_RETURN, PUT_OBJECT_TAGGING, putObjectTaggingResponse))
                 .retryWhen(s3RetryStrategy);
     }
-
 }

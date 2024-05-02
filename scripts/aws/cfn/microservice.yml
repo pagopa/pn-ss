@@ -316,10 +316,6 @@ Parameters:
     Type: String
     Description: 'TsaIdentity'
 
-  PnSsIdentityTimemark:
-    Type: String
-    Description: 'Secret ID for Identity Timemark'
-
   PnSsIdentitySignature:
     Type: String
     Description: 'Secret ID for Identity Signature'
@@ -388,7 +384,6 @@ Parameters:
     Type: String
     Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
 
-
   PnSignProviderSwitch:
     Type: String
     Description: 'Parameter used to switch provider for digital signature'
@@ -446,7 +441,6 @@ Parameters:
   MicroserviceBucketBaseKey:
     Type: String
     Description: 'S3 prefix to upload lambda compiled package'
-
 
   # Namirial provider properties
   PnSsNamirialServerAddress:
@@ -517,9 +511,8 @@ Resources:
         ContainerEnvEntry45: !Sub 'PnSsNamirialServerAddress=${PnSsNamirialServerAddress}'
         ContainerEnvEntry46: !Sub 'PnEcNamirialServerMaxConnections=${PnEcNamirialServerMaxConnections}'
         ContainerEnvEntry47: !Sub 'PnEcNamirialServerPendingAcquireTimeout=${PnEcNamirialServerPendingAcquireTimeout}'
-        ContainerEnvEntry48: !Sub 'PnSsIdentityTimemark=${PnSsIdentityTimemark}'
-        ContainerEnvEntry49: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
-        ContainerEnvEntry50: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
+        ContainerEnvEntry48: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
+        ContainerEnvEntry49: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -617,7 +610,6 @@ Resources:
               - 'secretsmanager:DescribeSecret'
               - 'secretsmanager:GetSecretValue'
             Resource:
-              - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentityTimemark , '*']]
               - !Join [ '', [ !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:' , !Ref PnSsIdentitySignature , '*']]
           - Effect: Allow
             Action:
@@ -1239,7 +1231,7 @@ Resources:
               req.write(JSON.stringify(data));
               req.end();
             });
-          }  
+          }
 
 ##### Gestore Bucket Concurrency Handler  #####
 
@@ -1404,7 +1396,6 @@ Resources:
       Principal: 'events.amazonaws.com'
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn
-
 
   ######## Scadenza Documenti Lambda Handler  #########
   PnSsScadenzaDocumentiLambdaRole:

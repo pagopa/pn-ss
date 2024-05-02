@@ -1,6 +1,9 @@
-package it.pagopa.pn.library.sign.utils;
+package it.pagopa.pnss.common.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 
@@ -17,8 +20,14 @@ public class MetricsDimensionParser {
         this.objectMapper = objectMapper;
     }
 
+    @SneakyThrows(JsonProcessingException.class)
     public Map<String, Map<String, List<Long>>> parseSignDimensionJson(String dimensionsJson) {
-        return new HashMap<>();
+        // Creazione di un TypeReference per indicare il tipo di mappa desiderato
+        TypeReference<Map<String, Map<String, List<Long>>>> typeRef = new TypeReference<>() {};
+
+        // Deserializzazione del JSON nella mappa
+        return objectMapper.readValue(dimensionsJson, typeRef);
+
     }
 
 }

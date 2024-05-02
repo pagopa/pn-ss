@@ -146,12 +146,12 @@ public class LocalStackTestConfig {
                     "ssm",
                     "put-parameter",
                     "--name",
-                    "pn-SS-sign-dimensions-schema",
+                    "Pn-SS-SignAndTimemark-MetricsSchema",
                     "--type",
                     "String",
                     "--value",
                     dimensionsJsonSchema);
-            log.debug("Created parameter pn-SS-sign-dimensions-schema");
+            log.debug("Created parameter Pn-SS-SignAndTimemark-MetricsSchema");
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }

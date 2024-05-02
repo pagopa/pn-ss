@@ -19,6 +19,7 @@ public class LogUtils {
     public static final String CLIENT_METHOD_INVOCATION = "Client method '{}' - args: '{}'";
     public static final String CLIENT_METHOD_RETURN = "Return client method: {} = {}";
     public static final String CLIENT_METHOD_RETURN_WITH_ERROR = "Return client method '{}' with error: {} - {}";
+    public static final String EXCEPTION_IN_PROCESS = "Exception in '{}' - {}, {}";
     public static final String ARG = " - '{}'";
 
     //URI BUILDER
@@ -74,6 +75,11 @@ public class LogUtils {
     public static final String PRESIGN_GET_OBJECT = "presignGetObject()";
     public static final String RESTORE_OBJECT = "restoreObject()";
     public static final String DELETE_OBJECT = "deleteObject()";
+
+    //CLOUDWATCH
+    public static final String PUBLISH_RESPONSE_TIME = "CloudWatchMetricsService.publishResponseTime()";
+    public static final String ERROR_RETRIEVING_METRIC_NAMESPACE = "Error retrieving metric namespace. The given provider is not valid.";
+
 
     //VALIDATION
     public static final String X_TRACE_ID_VALUE = "X_TRACE_ID_VALUE";

@@ -17,8 +17,7 @@ import java.util.stream.Stream;
 @CustomLog
 class MetricsDimensionParserTest {
 
-    @Autowired
-    private MetricsDimensionParser metricsDimensionParser;
+    private final MetricsDimensionParser metricsDimensionParser = new MetricsDimensionParser();
     @Autowired
     private ObjectMapper objectMapper;
 

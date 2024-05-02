@@ -79,7 +79,7 @@ public class LogUtils {
     //CLOUDWATCH
     public static final String PUBLISH_RESPONSE_TIME = "CloudWatchMetricsService.publishResponseTime()";
     public static final String ERROR_RETRIEVING_METRIC_NAMESPACE = "Error retrieving metric namespace. The given provider is not valid.";
-
+    public static final String GET_DIMENSION = "MetrcisDimensionConfiguration.getDimension()";
 
     //VALIDATION
     public static final String X_TRACE_ID_VALUE = "X_TRACE_ID_VALUE";

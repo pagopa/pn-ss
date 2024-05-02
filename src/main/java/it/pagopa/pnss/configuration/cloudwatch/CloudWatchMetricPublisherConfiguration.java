@@ -1,6 +1,6 @@
 package it.pagopa.pnss.configuration.cloudwatch;
 
-import it.pagopa.pn.library.sign.exception.CloudWatchResourceNotFoundException;
+import it.pagopa.pnss.common.exception.CloudWatchResourceNotFoundException;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -52,7 +52,6 @@ public class CloudWatchMetricPublisherConfiguration {
 
     @PreDestroy
     private void destroy() {
-        log.debug("Destroying CloudWatchMetricPublisher configurations.");
         cloudWatchMetricPublishers.values().forEach(CloudWatchMetricPublisher::close);
     }
 

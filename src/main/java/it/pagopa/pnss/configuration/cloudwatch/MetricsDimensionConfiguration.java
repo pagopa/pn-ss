@@ -1,20 +1,24 @@
 package it.pagopa.pnss.configuration.cloudwatch;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import it.pagopa.pnss.common.exception.CloudWatchResourceNotFoundException;
 import it.pagopa.pnss.common.utils.MetricsDimensionParser;
+import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import software.amazon.awssdk.services.ssm.SsmClient;
 
 import javax.annotation.PostConstruct;
-import java.io.IOException;
 import java.util.*;
+import java.util.stream.Stream;
+
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 /**
  * A configuration class for metrics dimensions. It prepares objects to handle metrics dimensions.
  */
 @Configuration
+@CustomLog
 public class MetricsDimensionConfiguration {
 
     private final SsmClient ssmClient;
@@ -25,9 +29,9 @@ public class MetricsDimensionConfiguration {
     @Value("${pn.sign.dimension.metrics.schema}")
     private String signMetricsDimensionSchema;
 
-    public MetricsDimensionConfiguration(SsmClient ssmClient, MetricsDimensionParser metricsDimensionParser) {
+    public MetricsDimensionConfiguration(SsmClient ssmClient) {
         this.ssmClient = ssmClient;
-        this.metricsDimensionParser = metricsDimensionParser;
+        this.metricsDimensionParser = new MetricsDimensionParser();
     }
 
     /**
@@ -48,6 +52,7 @@ public class MetricsDimensionConfiguration {
      * @return the dimension
      */
     public Dimension getDimension(String signType, Long fileSize) {
+        log.debug(INVOKING_METHOD, GET_DIMENSION, Stream.of(signType, fileSize).toList());
         Optional<Dimension> dimensionOpt = dimensionsSchema.get(signType).entrySet().stream()
                 .filter(entry -> {
                     List<Long> responseTimeRange = entry.getValue();
@@ -60,7 +65,8 @@ public class MetricsDimensionConfiguration {
                 .findFirst();
 
         if (dimensionOpt.isEmpty()) {
-            throw new IllegalArgumentException("Dimension not found for signType: " + signType + " fileSize: " + fileSize);
+            // if the file size is not included in any range, the dimension is not found, so we throw an exception.
+            throw new CloudWatchResourceNotFoundException.DimensionNotFound(signType, fileSize);
         } else return dimensionOpt.get();
 
     }

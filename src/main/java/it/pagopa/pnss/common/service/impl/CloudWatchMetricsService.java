@@ -1,6 +1,7 @@
 package it.pagopa.pnss.common.service.impl;
 
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
+import it.pagopa.pnss.common.exception.CloudWatchResourceNotFoundException;
 import it.pagopa.pnss.configuration.cloudwatch.CloudWatchMetricPublisherConfiguration;
 import it.pagopa.pnss.configuration.cloudwatch.MetricsDimensionConfiguration;
 import lombok.CustomLog;
@@ -90,7 +91,11 @@ public class CloudWatchMetricsService {
                     cloudWatchMetricPublisherConfiguration.getMetricPublisherByNamespace(namespace).publish(metricCollector.collect());
                 })
                 .onErrorResume(throwable -> {
-                    log.error(EXCEPTION_IN_PROCESS, PUBLISH_RESPONSE_TIME, throwable, throwable.getMessage());
+                    //This exception is thrown when the given file size is not included in a defined range inside the metrics dimension schema.
+                    //So no dimension can be defined for the given file size.
+                    if (throwable instanceof CloudWatchResourceNotFoundException.DimensionNotFound) {
+                        log.warn(throwable.getMessage(), throwable);
+                    } else log.error(EXCEPTION_IN_PROCESS, PUBLISH_RESPONSE_TIME, throwable, throwable.getMessage());
                     return Mono.empty();
                 }).then();
     }

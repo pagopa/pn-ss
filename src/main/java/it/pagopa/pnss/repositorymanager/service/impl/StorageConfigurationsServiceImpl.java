@@ -59,7 +59,7 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
             return listOut;
         }
         listIn.forEach(rule -> {
-            if (rule.filter() != null && (rule.filter().tag() != null || rule.filter().and().hasTags())) {
+            if (rule.filter() != null && (rule.filter().tag() != null || (rule.filter().and() != null && rule.filter().and().hasTags()))) {
                 listOut.add(rule);
             }
         });

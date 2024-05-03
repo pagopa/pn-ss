@@ -11,6 +11,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationResponse;
 import software.amazon.awssdk.services.s3.model.LifecycleRule;
+import software.amazon.awssdk.services.s3.model.Tag;
 
 import java.util.*;
 
@@ -71,17 +72,18 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
      * If the rule contains the expiry tag, the expirationDays is set with the value of the expiration rule field.
      * If the rule contains the freeze tag, the transitionDays field is set with the value of the transition rule field.
      * It then updates the map with the new DTO.
-     * @param rule lifecycle rule
+     *
+     * @param rule       lifecycle rule
      * @param ruleDTOMap map of lifecycle rule DTO
      */
-    private void mapLifecycleRuleDTO(LifecycleRule rule, Map<String, LifecycleRuleDTO> ruleDTOMap)
-    {
+    private void mapLifecycleRuleDTO(LifecycleRule rule, Map<String, LifecycleRuleDTO> ruleDTOMap) {
         if (rule.hasTransitions() && rule.transitions().size() > 1) {
             log.warn("getLifecycleRuleDTO() : rule with name {} has {} transitions : the first is used",
                     rule.id(),
                     rule.transitions().size());
         }
-        rule.filter().and().tags().forEach(tag -> {
+
+        getTags(rule).forEach(tag -> {
             String storageType = tag.value();
             LifecycleRuleDTO dto = ruleDTOMap.getOrDefault(storageType, new LifecycleRuleDTO());
             boolean hasStorageTag = false;
@@ -98,6 +100,27 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
                 ruleDTOMap.put(storageType, dto);
             }
         });
+    }
+
+    /**
+     * Get the tags list from a specific rule
+     *
+     * @param rule lifecycle rule
+     * @return list of tags
+     */
+    private List<Tag> getTags(LifecycleRule rule) {
+        List<Tag> tagList;
+        if (rule.filter().tag() != null) {
+            tagList = new ArrayList<>();
+            tagList.add(rule.filter().tag());
+        } else if (rule.filter().and().tags() != null) {
+            tagList = rule.filter().and().tags();
+        } else {
+            String msgError = String.format("getLifecycleRuleDTO() : rule with id '%s' has no tags", rule.id());
+            log.error(msgError);
+            throw new IllegalArgumentException(msgError);
+        }
+        return tagList;
     }
 
     /**

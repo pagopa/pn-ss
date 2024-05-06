@@ -73,7 +73,7 @@ Parameters:
   PnSsDocumentDeletionMode:
     Type: String
     Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
-    Default: 'MARKER'
+    Default: 'COMPLETE'
     AllowedValues: [MARKER, COMPLETE]
 
 Conditions:

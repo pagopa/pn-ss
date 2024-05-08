@@ -37,7 +37,12 @@ Parameters:
     Type: String
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
     Default: 'pn-safe-storage-gestore-bucket-lambda'
-  
+
+  PnSsScadenzaDocumentiLambdaName:
+    Type: String
+    Description: 'Nome della Lambda function che implementa la gestione delle scadenze dei documenti'
+    Default: 'scadenzaDocumentiEventHandler'
+
   PnSsEventBusExternalNotificationName:
     Type: String 
     Description: 'Nome del Event Bus che raccoglie gli eventi del microservizio Gestore Disponibilita'
@@ -65,8 +70,15 @@ Parameters:
     Type: Number
     Default: 14
 
+  PnSsDocumentDeletionMode:
+    Type: String
+    Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
+    Default: 'COMPLETE'
+    AllowedValues: [MARKER, COMPLETE]
+
 Conditions:
-  IsDevEnv: !Equals [ !Ref EnvType, 'dev'] 
+  IsDevEnv: !Equals [ !Ref EnvType, 'dev']
+  DocumentsCompleteDeletion: !Equals [ !Ref PnSsDocumentDeletionMode, 'COMPLETE']
 
 
 Resources:
@@ -145,6 +157,28 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
+  PnSsTableScadenzaDocumenti:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: 'pn-SsScadenzaDocumenti'
+      TimeToLiveSpecification:
+          AttributeName: 'retentionUntil'
+          Enabled: true
+      AttributeDefinitions:
+        - AttributeName: 'documentKey'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'documentKey'
+          KeyType: 'HASH'
+      StreamSpecification:
+        StreamViewType: 'NEW_AND_OLD_IMAGES'
+      BillingMode: 'PAY_PER_REQUEST'
+      TableClass: 'STANDARD'
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
   PnSsKmsBucket:
     Type: 'AWS::KMS::Key'
     Properties:
@@ -164,7 +198,7 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
-  
+
   PnSsBucket:
     Type: AWS::S3::Bucket
     DependsOn: PnSsQueuePolicyGestoreBucketInvoke 
@@ -195,8 +229,21 @@ Resources:
             Id: 'CORSRuleSafeStorage'
       LifecycleConfiguration:
         Rules:
+          - !If
+            - DocumentsCompleteDeletion
+            - Id: 'PnSsExpiredObjectDeleteMarker'
+              Status: 'Enabled'
+              ExpiredObjectDeleteMarker: true
+            - !Ref "AWS::NoValue"
+          - !If
+            - DocumentsCompleteDeletion
+            - Id: 'PnSsNoncurrentVersionExpiration'
+              Status: 'Enabled'
+              NoncurrentVersionExpiration:
+                NoncurrentDays: 1
+            - !Ref "AWS::NoValue"
           - Id: 'PnSsAbortIncompleteMultipartUpload'
-            AbortIncompleteMultipartUpload: 
+            AbortIncompleteMultipartUpload:
                 DaysAfterInitiation: 1
             Status: 'Enabled'
           - Id: 'PnSsNotificationAttachmentTemporary'
@@ -271,6 +318,108 @@ Resources:
             Transitions: 
               - StorageClass: 'GLACIER'
                 TransitionInDays: 1
+          - Id: 'PnSsNotificationAttachmentTemporary_expiry'
+            ExpirationInDays: !Ref PnSsPreloadedDocsRetentionDays
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_TEMPORARY_DOCUMENT'
+          - Id: 'PnSsNotificationAttachment_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 120
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_NOTIFIED_DOCUMENTS'
+          - Id: 'PnSsAar_freeze'
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_freeze'
+                Value: 'PN_AAR'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 120
+          - Id: 'PnSsAar_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 3655
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_AAR'
+          - Id: 'PnSsLegalFacts_freeze'
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_freeze'
+                Value: 'PN_LEGAL_FACTS'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 120
+          - Id: 'PnSsLegalFacts_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 3655
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_LEGAL_FACTS'
+          - Id: 'PnSsInvoicingActivityReport_freeze'
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_freeze'
+                Value: 'PN_INVOICING_ACTIVITY_REPORT'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 70
+          - Id: 'PnSsInvoicingActivityReport_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 366
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_INVOICING_ACTIVITY_REPORT'
+          - Id: 'PnSsAddresses_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 30
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_ADDRESSES_STORAGE'
+          - Id: 'PnSsLogsArchiveAudit2Y_freeze'
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_freeze'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT2Y'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
+          - Id: 'PnSsLogsArchiveAudit2Y_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 731
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT2Y'
+          - Id: 'PnSsLogsArchiveAudit5Y_freeze'
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_freeze'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT5Y'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
+          - Id: 'PnSsLogsArchiveAudit5Y_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 1830
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT5Y'
+          - Id: 'PnSsLogsArchiveAudit10Y_freeze'
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_freeze'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 1
+          - Id: 'PnSsLogsArchiveAudit10Y_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 3655
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
       NotificationConfiguration:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
@@ -535,7 +684,22 @@ Resources:
         QueueHasAlarm: 'true'
         OncallDLQLimit: '1'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
-    
+
+
+####### ScadenzaDocumenti DynamoDB Stream DLQ ##########
+  PnSsQueueScadenzaDocumentiDynamoStreamDLQStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-scadenza-documenti-dynamoDBStreamDLQ-queue'
+        SqsManagedSseEnabled: true
+        HasDLQ: False
+        QueueHasAlarm: 'true'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+
   # ####### DENY POLICY FROM OUTSIDE ACCOUNT ########
   # PnSsEventBusPolicyDenyExternalNotification:
   #   Type: AWS::Events::EventBusPolicy
@@ -566,6 +730,17 @@ Resources:
         LogsKinesisSourceStreamArn: !Ref LogsKinesisSourceStreamArn
         LogGroupRetention: !Ref LogRetention
 
+  PnSsScadenzaDocumentiEventHandlerLambdaLogGroup:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
+      Parameters:
+        LogGroupName: !Sub "${ProjectName}-${PnSsScadenzaDocumentiLambdaName}"
+        LogGroupRetention: !Ref LogRetention
+        LogGroupPrefix: '/aws/lambda'
+
 
 Outputs:
   PnSsTableNameAnagraficaClient:
@@ -595,6 +770,22 @@ Outputs:
   PnSsTableDocumentiStreamArn:
     Description: 'Nome tabella SS Documenti'
     Value: !GetAtt PnSsTableDocumenti.StreamArn
+
+  PnSsTableNameScadenzaDocumenti:
+    Description: 'Nome tabella SS Scadenza Documenti'
+    Value: !Ref PnSsTableScadenzaDocumenti
+
+  PnSsTableArnScadenzaDocumenti:
+    Description: 'ARN della tabella SS Documenti'
+    Value: !GetAtt PnSsTableScadenzaDocumenti.Arn
+
+  PnSsTableScadenzaDocumentiStreamArn:
+    Description: 'Nome tabella SS Scadenza Documenti'
+    Value: !GetAtt PnSsTableScadenzaDocumenti.StreamArn
+
+  PnSsDocumentDeletionMode:
+    Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
+    Value: !Ref PnSsDocumentDeletionMode
 
   PnSsBucketName:
     Description: 'Nome Bucket SS'
@@ -687,6 +878,18 @@ Outputs:
   PnSsGestoreBucketLambdaName:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
     Value: !Ref PnSsGestoreBucketLambdaName
+
+  PnSsScadenzaDocumentiLambdaName:
+    Description: 'Nome della Lambda function che implementa la gestione delle scadenze dei documenti'
+    Value: !Ref PnSsScadenzaDocumentiLambdaName
+
+  PnSsQueueNameScadenzaDocumentiDynamoStreamDLQ:
+    Description: 'Nome coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+    Value: !GetAtt PnSsQueueScadenzaDocumentiDynamoStreamDLQStack.Outputs.QueueName
+
+  PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ:
+    Description: 'ARN coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+    Value: !GetAtt PnSsQueueScadenzaDocumentiDynamoStreamDLQStack.Outputs.QueueARN
 
   PnSsEventBusNameExternalNotification:
     Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'

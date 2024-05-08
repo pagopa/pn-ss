@@ -24,4 +24,6 @@ public interface S3Service {
     Mono<PutObjectRetentionResponse> putObjectRetention(String key, String bucket, ObjectLockRetention objectLockRetention);
 
     Mono<PutObjectTaggingResponse> putObjectTagging(String key, String bucket, Tagging tagging);
+
+
 }

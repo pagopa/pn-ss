@@ -1455,6 +1455,14 @@ Resources:
                   - 'kms:GenerateDataKey'
                 Resource:
                   - !Ref PnSsKmsArnBucket
+              - Sid: 'SQSSendMessage'
+                Effect: Allow
+                Action:
+                  - 'sqs:Get*'
+                  - 'sqs:List*'
+                  - 'sqs:SendMessage'
+                Resource:
+                  - !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
 
   PnSsScadenzaDocumentiEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
@@ -1474,7 +1482,7 @@ Resources:
       FunctionResponseTypes:
         - ReportBatchItemFailures
       MaximumBatchingWindowInSeconds: 60
-      MaximumRetryAttempts: 5
+      MaximumRetryAttempts: 10
 
 
   PnSsScadenzaDocumentiEventHandlerLambda:

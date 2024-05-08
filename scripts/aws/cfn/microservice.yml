@@ -344,6 +344,10 @@ Parameters:
     Type: String
     Description: 'ARN coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
 
+  PnSsQueueUrlScadenzaDocumentiDynamoStreamDLQ:
+    Type: String
+    Description: 'URL coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+
   PnSsGestoreBucketConcurrencyHandlerLambdaName:
     Type: String
     Description: "Name of Lambda function which updates Gestore Bucket's concurrency"
@@ -1408,6 +1412,9 @@ Resources:
       SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn
 
   ######## Scadenza Documenti Lambda Handler  #########
+  
+  
+  
   PnSsScadenzaDocumentiLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1509,3 +1516,22 @@ Resources:
         S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventHandler.zip"
       Layers:
         - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
+        
+        
+  PnSsQueuePolicyScadenzaDocumentiDynamoStreamDLQ:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref PnSsQueueUrlScadenzaDocumentiDynamoStreamDLQ
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+            - 'sqs:SendMessage'
+            - 'sqs:GetQueueAttributes'
+            - 'sqs:GetQueueUrl'
+            Effect: "Allow"
+            Resource: !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
+            Principal:
+              AWS:
+                !GetAtt PnSsScadenzaDocumentiLambdaRole.Arn

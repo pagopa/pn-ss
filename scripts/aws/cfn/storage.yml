@@ -890,6 +890,10 @@ Outputs:
   PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ:
     Description: 'ARN coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
     Value: !GetAtt PnSsQueueScadenzaDocumentiDynamoStreamDLQStack.Outputs.QueueARN
+    
+  PnSsQueueUrlScadenzaDocumentiDynamoStreamDLQ:
+    Description: 'URL coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+    Value: !GetAtt PnSsQueueScadenzaDocumentiDynamoStreamDLQStack.Outputs.QueueURL
 
   PnSsEventBusNameExternalNotification:
     Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'

@@ -684,7 +684,22 @@ Resources:
         QueueHasAlarm: 'true'
         OncallDLQLimit: '1'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
-    
+
+
+####### ScadenzaDocumenti DynamoDB Stream DLQ ##########
+  PnSsQueueScadenzaDocumentiDynamoStreamDLQStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-scadenza-documenti-dynamoDBStreamDLQ-queue'
+        SqsManagedSseEnabled: true
+        HasDLQ: False
+        QueueHasAlarm: 'true'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+
   # ####### DENY POLICY FROM OUTSIDE ACCOUNT ########
   # PnSsEventBusPolicyDenyExternalNotification:
   #   Type: AWS::Events::EventBusPolicy
@@ -867,6 +882,18 @@ Outputs:
   PnSsScadenzaDocumentiLambdaName:
     Description: 'Nome della Lambda function che implementa la gestione delle scadenze dei documenti'
     Value: !Ref PnSsScadenzaDocumentiLambdaName
+
+  PnSsQueueNameScadenzaDocumentiDynamoStreamDLQ:
+    Description: 'Nome coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+    Value: !GetAtt PnSsQueueScadenzaDocumentiDynamoStreamDLQStack.Outputs.QueueName
+
+  PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ:
+    Description: 'ARN coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+    Value: !GetAtt PnSsQueueScadenzaDocumentiDynamoStreamDLQStack.Outputs.QueueARN
+    
+  PnSsQueueUrlScadenzaDocumentiDynamoStreamDLQ:
+    Description: 'URL coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+    Value: !GetAtt PnSsQueueScadenzaDocumentiDynamoStreamDLQStack.Outputs.QueueURL
 
   PnSsEventBusNameExternalNotification:
     Description: 'Nome event bus per pubblicare eventi di Gestore Disponibilita'

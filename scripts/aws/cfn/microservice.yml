@@ -336,6 +336,18 @@ Parameters:
     Type: String
     Description: 'Name of Lambda function implementing functionality of Scadenza Documenti'
 
+  PnSsQueueNameScadenzaDocumentiDynamoStreamDLQ:
+    Type: String
+    Description: 'Nome coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+
+  PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ:
+    Type: String
+    Description: 'ARN coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+
+  PnSsQueueUrlScadenzaDocumentiDynamoStreamDLQ:
+    Type: String
+    Description: 'URL coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+
   PnSsGestoreBucketConcurrencyHandlerLambdaName:
     Type: String
     Description: "Name of Lambda function which updates Gestore Bucket's concurrency"
@@ -782,6 +794,7 @@ Resources:
             - !Ref PnSsQueueArnGestoreBucketInvoke
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
             - !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
+            - !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
         LambdaArns: !GetAtt PnSsGestoreBucket.Arn
         # KinesisDataArns:
         # KinesisFirehoseArns:
@@ -1399,6 +1412,9 @@ Resources:
       SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn
 
   ######## Scadenza Documenti Lambda Handler  #########
+  
+  
+  
   PnSsScadenzaDocumentiLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1433,10 +1449,10 @@ Resources:
               - Sid: 'DynamoDbStreamPolicy'
                 Effect: 'Allow'
                 Action:
-                  - "dynamodb:DescribeStream"
-                  - "dynamodb:GetRecords"
-                  - "dynamodb:GetShardIterator"
-                  - "dynamodb:ListStreams"
+                  - 'dynamodb:DescribeStream'
+                  - 'dynamodb:GetRecords'
+                  - 'dynamodb:GetShardIterator'
+                  - 'dynamodb:ListStreams'
                 Resource:
                   - !Ref PnSsTableScadenzaDocumentiStreamArn
               - Sid: 'KmsSsBucketRead'
@@ -1446,11 +1462,23 @@ Resources:
                   - 'kms:GenerateDataKey'
                 Resource:
                   - !Ref PnSsKmsArnBucket
+              - Sid: 'SQSSendMessage'
+                Effect: Allow
+                Action:
+                  - 'sqs:Get*'
+                  - 'sqs:List*'
+                  - 'sqs:SendMessage'
+                Resource:
+                  - !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
 
   PnSsScadenzaDocumentiEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
       BatchSize: 100
+      BisectBatchOnFunctionError: true
+      DestinationConfig:
+        OnFailure:
+          Destination: !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
       Enabled: True
       EventSourceArn: !Ref PnSsTableScadenzaDocumentiStreamArn
       StartingPosition: 'LATEST'
@@ -1461,6 +1489,8 @@ Resources:
       FunctionResponseTypes:
         - ReportBatchItemFailures
       MaximumBatchingWindowInSeconds: 60
+      MaximumRetryAttempts: 10
+
 
   PnSsScadenzaDocumentiEventHandlerLambda:
     Type: AWS::Lambda::Function
@@ -1486,3 +1516,22 @@ Resources:
         S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventHandler.zip"
       Layers:
         - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
+        
+        
+  PnSsQueuePolicyScadenzaDocumentiDynamoStreamDLQ:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref PnSsQueueUrlScadenzaDocumentiDynamoStreamDLQ
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+            - 'sqs:SendMessage'
+            - 'sqs:GetQueueAttributes'
+            - 'sqs:GetQueueUrl'
+            Effect: "Allow"
+            Resource: !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
+            Principal:
+              AWS:
+                !GetAtt PnSsScadenzaDocumentiLambdaRole.Arn

@@ -39,8 +39,7 @@ exports.handleEvent = async (event) => {
                                 await client.send(new DeleteObjectCommand({
                                    Bucket: BUCKET_NAME,
                                    Key: version.Key,
-                                   VersionId: version.VersionId,
-                                   BypassGovernanceRetention: true
+                                   VersionId: version.VersionId
                                 }));
                         }
                         ));

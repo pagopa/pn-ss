@@ -42,8 +42,8 @@ import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 @CustomLog
 public class TransformationService {
 
-    private final ArubaSignServiceCall arubaSignServiceCall;
     private final S3ServiceImpl s3Service;
+    private final PnSignProviderService pnSignService;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
     private final SqsService sqsService;
@@ -56,10 +56,10 @@ public class TransformationService {
     // Numero massimo di retry. Due step: 1) firma del documento e inserimento nel bucket 2) delete del file dal bucket di staging, piu' un retry aggiuntivo di sicurezza
     private static final int MAX_RETRIES = 3;
 
-    public TransformationService(ArubaSignServiceCall arubaSignServiceCall, S3ServiceImpl s3Service,
-                                 DocumentClientCall documentClientCall, BucketName bucketName, SqsService sqsService) {
-        this.arubaSignServiceCall = arubaSignServiceCall;
+    public TransformationService(S3ServiceImpl s3Service,
+                                 PnSignProviderService pnSignService, DocumentClientCall documentClientCall, BucketName bucketName, SqsService sqsService) {
         this.s3Service = s3Service;
+        this.pnSignService = pnSignService;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.sqsService = sqsService;
@@ -119,7 +119,7 @@ public class TransformationService {
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
                 .zipWhen(document -> signDocument(document, key, stagingBucketName, marcatura))
-                .flatMap(tuple -> s3Service.putObject(key, tuple.getT2().getBinaryoutput(),  tuple.getT1().getContentType(), bucketName.ssHotName()))
+                .flatMap(tuple -> s3Service.putObject(key, tuple.getT2().getSignedDocument(),  tuple.getT1().getContentType(), bucketName.ssHotName()))
                 .then(removeObjectFromStagingBucket(key, stagingBucketName));
     }
 

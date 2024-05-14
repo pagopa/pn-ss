@@ -1,7 +1,5 @@
 package it.pagopa.pnss.uribuilder;
 
-import com.github.dockerjava.zerodep.shaded.org.apache.commons.codec.binary.Base64;
-import com.github.dockerjava.zerodep.shaded.org.apache.commons.codec.digest.DigestUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.ScadenzaDocumentiClientCall;
 import it.pagopa.pnss.common.constant.Constant;
@@ -14,11 +12,8 @@ import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
-import org.assertj.core.api.Assertions;
-import org.eclipse.angus.mail.iap.ConnectionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -28,16 +23,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -124,8 +115,7 @@ class FileMetadataUpdateApiControllerTest {
 	void testErrorStatus() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
 				DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1);
-		var documentResponse = new DocumentResponse().document(document);
+		var document = new Document().documentType(documentType1).documentState(BOOKED);		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus().technicalState(""))))
@@ -141,8 +131,7 @@ class FileMetadataUpdateApiControllerTest {
 	void testErrorTechnicalStatus() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
 				DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1);
-		var documentResponse = new DocumentResponse().document(document);
+		var document = new Document().documentType(documentType1).documentState(BOOKED);		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(ATTACHED, new CurrentStatus().technicalState(""))))
@@ -162,8 +151,7 @@ class FileMetadataUpdateApiControllerTest {
 		when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userWhoCannotEdit));
 
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus()))).tipoDocumento(DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1);
-		var documentResponse = new DocumentResponse().document(document);
+		var document = new Document().documentType(documentType1).documentState(BOOKED);		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED,
@@ -179,8 +167,7 @@ class FileMetadataUpdateApiControllerTest {
 	void testErrorLookUpDocTypes() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
 				DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1);
-		var documentResponse = new DocumentResponse().document(document);
+		var document = new Document().documentType(documentType1).documentState(BOOKED);		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.error(new DocumentKeyNotPresentException("keyFile")));
@@ -192,8 +179,7 @@ class FileMetadataUpdateApiControllerTest {
 	void testErrorLookUpStatus() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
 				DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1);
-		var documentResponse = new DocumentResponse().document(document);
+		var document = new Document().documentType(documentType1).documentState(BOOKED);		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(ATTACHED, new CurrentStatus().technicalState("")))).tipoDocumento(
@@ -207,8 +193,7 @@ class FileMetadataUpdateApiControllerTest {
 	@Test
 	void testFileMetadataUpdateOk() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus()))).tipoDocumento(DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1);
-		var documentResponse = new DocumentResponse().document(document);
+		var document = new Document().documentType(documentType1).documentState(BOOKED);		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
 

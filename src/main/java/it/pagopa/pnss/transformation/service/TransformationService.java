@@ -5,6 +5,8 @@ import io.awspring.cloud.messaging.listener.Acknowledgment;
 import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import it.pagopa.pn.commons.utils.MDCUtils;
+import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
+import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
@@ -15,16 +17,15 @@ import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
-import it.pagopa.pnss.transformation.rest.call.aruba.ArubaSignServiceCall;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
-import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
 import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -129,7 +130,7 @@ public class TransformationService {
                 .onErrorResume(NoSuchKeyException.class, throwable -> Mono.just(true));
     }
 
-    private Mono<SignReturnV2> signDocument(Document document, String key, String stagingBucketName, boolean marcatura) {
+    private Mono<PnSignDocumentResponse> signDocument(Document document, String key, String stagingBucketName, boolean marcatura) {
         return s3Service.getObject(key, stagingBucketName)
                 .flatMap(getObjectResponse -> {
                     var s3ObjectBytes = getObjectResponse.asByteArray();
@@ -137,16 +138,12 @@ public class TransformationService {
                     log.debug("Content type of document with key '{}' : {}", document.getDocumentKey(), document.getContentType());
 
                     return switch (document.getContentType()) {
-                        case APPLICATION_PDF_VALUE -> arubaSignServiceCall.signPdfDocument(s3ObjectBytes, marcatura);
-                        case APPLICATION_XML_VALUE -> arubaSignServiceCall.xmlSignature(s3ObjectBytes, marcatura);
-                        default -> arubaSignServiceCall.pkcs7signV2(s3ObjectBytes, marcatura);
+                        case APPLICATION_PDF_VALUE -> pnSignService.signPdfDocument(s3ObjectBytes, marcatura);
+                        case APPLICATION_XML_VALUE -> pnSignService.signXmlDocument(s3ObjectBytes, marcatura);
+                        default -> pnSignService.pkcs7Signature(s3ObjectBytes, marcatura);
                     };
 
-                })
-                .doOnNext(signReturnV2 -> log.debug("Aruba sign service return status {}, return code {}, description {}, for document with key {}",
-                        signReturnV2.getStatus(),
-                        signReturnV2.getReturnCode(),
-                        signReturnV2.getDescription(), key));
+                });
     }
 
     private Mono<DeleteObjectResponse> removeObjectFromStagingBucket(String key, String stagingBucketName) {

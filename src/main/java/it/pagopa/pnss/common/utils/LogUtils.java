@@ -50,6 +50,7 @@ public class LogUtils {
     public static final String INSERT_DOC_TYPE = "insertDocType()";
     public static final String UPDATE_DOC_TYPE = "updateDocType()";
     public static final String DELETE_DOC_TYPE = "deleteDocType()";
+    public static final String INSERT_OR_UPDATE_SCADENZA_DOCUMENTI = "insertOrUpdateScadenzaDocumenti()";
 
     //EXTERNAL
     public static final String GET_DOC_TYPES = "getDocTypes()";
@@ -68,6 +69,8 @@ public class LogUtils {
     public static final String PUT_OBJECT = "putObject()";
     public static final String PUT_OBJECT_RETENTION = "putObjectRetention()";
     public static final String PUT_OBJECT_TAGGING = "putObjectTagging()";
+    public static final String GET_OBJECT_TAGGING = "getObjectTagging()";
+    public static final String DELETE_OBJECT_TAGGING = "deleteObjectTagging()";
     public static final String GET_OBJECT = "getObject()";
     public static final String HEAD_OBJECT = "headObject()";
     public static final String GET_BUCKET_LIFECYCLE_CONFIGURATION = "getBucketLifecycleConfiguration()";
@@ -89,17 +92,17 @@ public class LogUtils {
     public static final String GET_RETENTION_UNTIL = "RetentionService.getRetentionUntil()";
     public static final String SET_RETENTION_PERIOD_IN_BUCKET_OBJECT_METADATA = "RetentionService.setRetentionPeriodInBucketObjectMetadata()";
 
-    //ARUBA
-    public static final String SIGN_PDF_DOCUMENT = "ArubaSignServiceCall.signPdfDocument()";
-    public static final String XML_SIGNATURE = "ArubaSignServiceCall.xmlSignature()";
-    public static final String PKCS_7_SIGN_V2 = "ArubaSignServiceCall.pkcs7signV2()";
+    //PN SIGN SERVICE
 
+    public static final String PN_SIGN_PDF_DOCUMENT = "PnSignProviderService.signPdfDocument()";
+    public static final String PN_SIGN_XML_DOCUMENT = "PnSignProviderService.signXmlDocument()";
+    public static final String PN_PKCS_7_SIGNATURE = "PnSignProviderService.pkcs7Signature()";
     //SQS
     public static final String INSERTING_DATA_IN_SQS = "Inserting data {} in SQS '{}'";
     public static final String INSERTED_DATA_IN_SQS = "Inserted data in SQS '{}'";
 
     //RETRY
-    public static final String RETRY_ATTEMPT = "Retry attempt number '{}' caused by : {} - {}";
+    public static final String RETRY_ATTEMPT = "Retry attempt number '{}' caused by : {}";
 
 
 }

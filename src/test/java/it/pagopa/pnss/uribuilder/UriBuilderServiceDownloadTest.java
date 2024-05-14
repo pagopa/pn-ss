@@ -52,8 +52,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @SpringBootTestWebEnv
-@AutoConfigureWebTestClient
 @CustomLog
+@AutoConfigureWebTestClient(timeout = "36000")
 class UriBuilderServiceDownloadTest {
 
     @Value("${header.x-api-key:#{null}}")

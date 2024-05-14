@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.time.*;
@@ -54,9 +55,12 @@ public class RetentionServiceImpl implements RetentionService {
     private final BucketName bucketName;
     private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.systemDefault());
-    public RetentionServiceImpl(ConfigurationApiCall configurationApiCall, BucketName bucketName) {
+    private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
+
+    public RetentionServiceImpl(ConfigurationApiCall configurationApiCall, BucketName bucketName, RetryBackoffSpec gestoreRepositoryRetryStrategy, RetryBackoffSpec s3RetryStrategy) {
         this.configurationApiCall = configurationApiCall;
         this.bucketName = bucketName;
+        this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
     }
 
     /*
@@ -104,7 +108,9 @@ public class RetentionServiceImpl implements RetentionService {
             throw new RetentionException(String.format("Document Type not present for Key '%s'", documentKey));
         }
 
-        return configurationApiCall.getDocumentsConfigs(authPagopaSafestorageCxId, authApiKey).map(response -> {
+        return configurationApiCall.getDocumentsConfigs(authPagopaSafestorageCxId, authApiKey)
+                .retryWhen(gestoreRepositoryRetryStrategy)
+                .map(response -> {
 
             DocumentTypeConfiguration dtcToRefer = null;
             for (DocumentTypeConfiguration dtc : response.getDocumentsTypes()) {

@@ -34,6 +34,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.services.s3.model.Tag;
 import software.amazon.awssdk.services.s3.model.Tagging;
 
 import java.lang.reflect.ParameterizedType;
@@ -44,7 +45,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import static it.pagopa.pnss.common.constant.Constant.STORAGE_TYPE;
+import static it.pagopa.pnss.common.constant.Constant.*;
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
 
 
@@ -151,7 +152,7 @@ public class DocumentServiceImpl implements DocumentService {
 
         AtomicReference<String> oldState = new AtomicReference<>();
 
-        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
+        return Mono.defer(()-> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build())))
                 .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                 .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                 .flatMap(documentEntity -> {
@@ -239,10 +240,9 @@ public class DocumentServiceImpl implements DocumentService {
                                     .getStatuses()
                                     .get(documentEntityStored.getDocumentLogicalState())
                                     .getStorage();
-                            Tagging tagging = Tagging.builder().tagSet(setTag -> {
-                                setTag.key(STORAGE_TYPE);
-                                setTag.value(storageType);
-                            }).build();
+                            Tag expiryTag = Tag.builder().key(STORAGE_EXPIRY).value(storageType).build();
+                            Tag freezeTag = Tag.builder().key(STORAGE_FREEZE).value(storageType).build();
+                            Tagging tagging = Tagging.builder().tagSet(expiryTag, freezeTag).build();
                             return s3Service.putObjectTagging(documentKey, bucketName.ssHotName(), tagging)
                                     .thenReturn(documentEntityStored);
                         } else {
@@ -269,7 +269,6 @@ public class DocumentServiceImpl implements DocumentService {
                        }
                    })
                    .flatMap(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
-                   .retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
                    .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentChanges));
     }
 

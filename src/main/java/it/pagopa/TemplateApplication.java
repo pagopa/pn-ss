@@ -31,6 +31,15 @@ import org.springframework.context.annotation.PropertySource;
 // INTERNAL ENDPOINTS
 @PropertySource("classpath:commons/internal-endpoint.properties")
 
+// ARUBA
+@PropertySource("classpath:sign/aruba/aruba-sign-service.properties")
+
+// PN SIGN
+@PropertySource(("classpath:sign/pn-sign.properties"))
+
+// NAMIRIAL
+@PropertySource("classpath:sign/namirial.properties")
+
 public class TemplateApplication {
 
     public static void main(String[] args) {

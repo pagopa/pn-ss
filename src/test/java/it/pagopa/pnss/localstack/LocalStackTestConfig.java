@@ -13,6 +13,7 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import it.pagopa.pnss.repositorymanager.entity.ScadenzaDocumentiEntity;
 import lombok.CustomLog;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -99,19 +100,14 @@ public class LocalStackTestConfig {
                     "secretsmanager",
                     "create-secret",
                     "--name",
-                    "pn/identity/signature",
+                    "Pn-SS-SignAndTimemark",
                     "--secret-string",
                     getArubaCredentials()
 
             );
 
-            localStackContainer.execInContainer("awslocal",
-                    "secretsmanager",
-                    "create-secret",
-                    "--name",
-                    "pn/identity/timemark",
-                    "--secret-string",
-                    getIdentityTimemarkCredentials());
+            //Set Namirial secret credentials.
+            setNamirialCredentials();
 
             //Create SQS queue
             for (String queueName : ALL_QUEUE_NAME_LIST) {
@@ -125,15 +121,21 @@ public class LocalStackTestConfig {
 
     private static String getArubaCredentials() {
         try {
-            return new JSONObject().put("delegated_domain", "demoprod")
-                    .put("delegated_password", "password11")
-                    .put("delegated_user", "delegato")
-                    .put("otpPwd", "dsign")
-                    .put("typeOtpAuth", "demoprod")
-                    .put("user", "titolare_aut").toString();
+            return new JSONObject().put("aruba.sign.delegated.domain", "demoprod")
+                    .put("aruba.sign.delegated.password", "password11")
+                    .put("aruba.sign.delegated.user", "delegato")
+                    .put("aruba.sign.otp.pwd", "dsign")
+                    .put("aruba.sign.type.otp.auth", "demoprod")
+                    .put("aruba.sign.user", "titolare_aut")
+                    .put("aruba.timemark.user", "user1")
+                    .put("aruba.timemark.password", "password1").toString();
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void setNamirialCredentials(){
+        System.setProperty("namirial.server.apikey", "namirial-api-key");
     }
 
     private static String getIdentityTimemarkCredentials() {
@@ -161,7 +163,8 @@ public class LocalStackTestConfig {
         Map<String, Class<?>> tableNameWithEntityClass =
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),
                         entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), it.pagopa.pnss.repositorymanager.entity.DocTypeEntity.class),
-                        entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class));
+                        entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class),
+                        entry(repositoryManagerDynamoTableName.scadenzaDocumentiName(), ScadenzaDocumentiEntity.class));
 
         tableNameWithEntityClass.forEach((tableName, entityClass) -> {
             log.info("<-- START initLocalStack -->");

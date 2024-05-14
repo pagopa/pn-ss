@@ -2,6 +2,7 @@ package it.pagopa.pnss.availabledocument.event;
 
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
+import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
 import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
@@ -86,7 +87,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     }
                     return Mono.justOrEmpty(putEventsRequestEntry);
                 })
-                .doOnError(e -> log.error("* FATAL * DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
+                .doOnError(e -> log.fatal("DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> {
                     log.info(SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput);
                 });
@@ -101,10 +102,12 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     processRecordsInput.getCheckpointer().checkpoint();
 
             }
-        } catch (ShutdownException e) {
-            log.info("processRecords - checkpointing: {} {}", e, e.getMessage());
+        } catch (ShutdownException se) {
+            log.info("processRecords - Encountered shutdown exception, skipping checkpoint: {} {}", se, se.getMessage());
+        } catch (ThrottlingException te) {
+            log.info("processRecords - Encountered throttling exception, skipping checkpoint: {} {}", te, te.getMessage());
         } catch (Exception e) {
-            log.error("* FATAL * processRecords: {} {}", e, e.getMessage());
+            log.fatal("Error while tring to set checkpoint: {} {} {}", e, processRecordsInput, e.getMessage());
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
     }
@@ -114,9 +117,12 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         if (shutdownInput.getShutdownReason() == ShutdownReason.TERMINATE) {
             try {
                 shutdownInput.getCheckpointer().checkpoint();
-            }
-            catch (Exception e) {
-                log.error("* FATAL * DBStream: Errore durante il processo di shutDown", e);
+            } catch (ShutdownException se) {
+                log.info("shutdown - Encountered shutdown exception, skipping checkpoint: {} {}", se, se.getMessage());
+            } catch (ThrottlingException te) {
+                log.info("shutdown - Encountered throttling exception, skipping checkpoint: {} {}", te, te.getMessage());
+            } catch (Exception e) {
+                log.fatal("DBStream: Error while trying to shutdown checkpoint: {} {} {}",  e , shutdownInput.getShutdownReason(), e.getMessage());
             }
         }
 

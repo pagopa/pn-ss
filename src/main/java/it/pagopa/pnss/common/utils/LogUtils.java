@@ -51,6 +51,7 @@ public class LogUtils {
     public static final String INSERT_DOC_TYPE = "insertDocType()";
     public static final String UPDATE_DOC_TYPE = "updateDocType()";
     public static final String DELETE_DOC_TYPE = "deleteDocType()";
+    public static final String INSERT_OR_UPDATE_SCADENZA_DOCUMENTI = "insertOrUpdateScadenzaDocumenti()";
 
     //EXTERNAL
     public static final String GET_DOC_TYPES = "getDocTypes()";
@@ -69,6 +70,8 @@ public class LogUtils {
     public static final String PUT_OBJECT = "putObject()";
     public static final String PUT_OBJECT_RETENTION = "putObjectRetention()";
     public static final String PUT_OBJECT_TAGGING = "putObjectTagging()";
+    public static final String GET_OBJECT_TAGGING = "getObjectTagging()";
+    public static final String DELETE_OBJECT_TAGGING = "deleteObjectTagging()";
     public static final String GET_OBJECT = "getObject()";
     public static final String HEAD_OBJECT = "headObject()";
     public static final String GET_BUCKET_LIFECYCLE_CONFIGURATION = "getBucketLifecycleConfiguration()";

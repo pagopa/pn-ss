@@ -30,6 +30,8 @@ public final class Constant {
     public static final String DELETED = "deleted";
 
     public static final String STORAGE_TYPE = "storageType";
+    public static final String STORAGE_EXPIRY = "storage_expiry";
+    public static final String STORAGE_FREEZE = "storage_freeze";
     public static final List<String> LISTA_TIPO_DOCUMENTI =
             List.of(APPLICATION_PDF_VALUE, APPLICATION_ZIP_VALUE, APPLICATION_OCTET_STREAM_VALUE, APPLICATION_XML_VALUE, IMAGE_TIFF_VALUE, APPLICATION_PKCS7_MIME);
     public static final String TECHNICAL_STATUS_BOOKED = "BOOKED";

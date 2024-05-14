@@ -13,6 +13,7 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import it.pagopa.pnss.repositorymanager.entity.ScadenzaDocumentiEntity;
 import lombok.CustomLog;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -105,6 +106,9 @@ public class LocalStackTestConfig {
 
             );
 
+            //Set Namirial secret credentials.
+            setNamirialCredentials();
+
             //Create SQS queue
             for (String queueName : ALL_QUEUE_NAME_LIST) {
                 localStackContainer.execInContainer("awslocal", "sqs", "create-queue", "--queue-name", queueName);
@@ -128,6 +132,10 @@ public class LocalStackTestConfig {
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void setNamirialCredentials(){
+        System.setProperty("namirial.server.apikey", "namirial-api-key");
     }
 
     private static String getIdentityTimemarkCredentials() {
@@ -155,7 +163,8 @@ public class LocalStackTestConfig {
         Map<String, Class<?>> tableNameWithEntityClass =
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),
                         entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), it.pagopa.pnss.repositorymanager.entity.DocTypeEntity.class),
-                        entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class));
+                        entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class),
+                        entry(repositoryManagerDynamoTableName.scadenzaDocumentiName(), ScadenzaDocumentiEntity.class));
 
         tableNameWithEntityClass.forEach((tableName, entityClass) -> {
             log.info("<-- START initLocalStack -->");

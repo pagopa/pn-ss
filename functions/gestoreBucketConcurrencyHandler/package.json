@@ -13,8 +13,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "aws-sdk": "^2.1581.0",
-    "aws-sdk-mock": "^5.9.0",
+    "@aws-sdk/client-lambda": "^3.577.0",
+    "aws-sdk-client-mock": "^4.0.0",
     "chai": "^4.3.6",
     "lambda-tester": "^4.0.1",
     "mocha": "^9.2.2",

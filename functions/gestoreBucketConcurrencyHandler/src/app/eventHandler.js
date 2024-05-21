@@ -1,6 +1,6 @@
 "use strict";
-const AWS = require('aws-sdk');
 const uuid = process.env.PnSsGestoreBucketTriggerId;
+const { LambdaClient, PutFunctionConcurrencyCommand, UpdateEventSourceMappingCommand} = require('@aws-sdk/client-lambda');
 const lambdaArn = process.env.PnSsGestoreBucketLambdaArn;
 const lambdaArr = lambdaArn.split('function:')
 var lambdaName = lambdaArr[1]
@@ -9,7 +9,7 @@ console.log('Lambda function named "', lambdaName, '" with arn "', lambdaArn, '"
 exports.handleEvent = async function (event) {
 
   try {
-    const lambda = new AWS.Lambda();
+    const lambda = new LambdaClient();
     console.log(JSON.stringify(event));
 
     const newCapacity = event.detail.responseElements.service.desiredCount;
@@ -21,10 +21,12 @@ exports.handleEvent = async function (event) {
     console.log("New concurrency: ", concurrency);
 
     // Setting lambda concurrency params
-    const lambda_params = {
+    const input = {
       FunctionName: lambdaArn,
       ReservedConcurrentExecutions: concurrency
     };
+
+    const putCommand = new PutFunctionConcurrencyCommand(input);
 
     // Setting lambda params
     const event_source_mapping_params = {
@@ -35,43 +37,32 @@ exports.handleEvent = async function (event) {
       }
     };
 
-    // Modifica la concurrency della funzione Lambda
-    await new Promise(function (resolve, reject) {
-      lambda.putFunctionConcurrency(lambda_params, (err, res) => {
-        if (err) {
+    const eventSourceMappingCommand = new UpdateEventSourceMappingCommand(event_source_mapping_params);
+
+    await lambda.send(putCommand)
+        .catch((err) => {
           console.log("* FATAL * An error occurred while calling putFunctionConcurrency of function ", lambdaName);
-          reject(err);
-        }
-        else {
-          console.log(JSON.stringify(res));
+          throw new Error('Error during Concurrency updating : ' + err)
+        })
+        .then((data) => {
+          console.log(JSON.stringify(data));
           console.log("Changed lambda concurrency to ", concurrency);
-          resolve();
-        }
-      });
-    });
-
-    // Modifica l'EventSourceMapping della funzione Lambda
-    await new Promise(function (resolve, reject) {
-      lambda.updateEventSourceMapping(event_source_mapping_params, (err, res) => {
-        if (err) {
+        });
+    await lambda.send(eventSourceMappingCommand)
+        .catch((err) => {
           console.log("* FATAL * An error occurred while calling updateEventSourceMapping for trigger ", uuid);
-          reject(err);
-        }
-        else {
-          console.log(JSON.stringify(res));
+          throw new Error('Error during Concurrency updating : ' + err)
+        })
+        .then((data) => {
+          console.log(JSON.stringify(data));
           console.log("Updated Lambda Event Source Mapping with the following params: ", JSON.stringify(event_source_mapping_params));
-          resolve();
-        }
-      });
-    });
-  }
+        });
 
-  catch (error) {
-    return { statusCode: 500, body: 'Error during Concurrency and EventSourceMapping updating : ' + error }
-  }
 
-  return {
-    statusCode: 200,
-    body: 'Concurrency and EventSourceMapping successfully modified! '
-  };
+    return {statusCode: 200,  body: 'Concurrency and EventSourceMapping successfully modified! '}
+  }
+  catch(err)
+    {
+      return {statusCode: 500, body: 'Error during Concurrency updating : ' + err}
+    }
 }

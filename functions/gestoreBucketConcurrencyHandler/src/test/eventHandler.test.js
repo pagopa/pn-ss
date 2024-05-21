@@ -1,9 +1,12 @@
-const AWS = require("aws-sdk-mock");
+const { mockClient } = require("aws-sdk-client-mock");
+const { LambdaClient, PutFunctionConcurrencyCommand,UpdateEventSourceMappingCommand } = require('@aws-sdk/client-lambda');
 const proxyquire = require("proxyquire").noPreserveCache();
 const { expect } = require("chai");
 var originalEnv = process.env;
 
 describe("gestoreBucketConcurrencyHandler tests", function () {
+
+    lambdaMockClient=mockClient(LambdaClient)
 
     this.beforeEach(() => {
         process.env.PnSsGestoreBucketTriggerId = "uuid";
@@ -12,32 +15,25 @@ describe("gestoreBucketConcurrencyHandler tests", function () {
     });
 
     it("test ok", async () => {
-
         const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
         var event = createEvent(2, 1);
-        AWS.mock('Lambda', 'putFunctionConcurrency', function (params, callback) {
-            callback(null, {});
-        });
-        AWS.mock('Lambda', 'updateEventSourceMapping', function (params, callback) {
-            callback(null, {});
-        });
+
+        lambdaMockClient.on(PutFunctionConcurrencyCommand).resolves({});
+        lambdaMockClient.on(UpdateEventSourceMappingCommand).resolves({});
+
         const res = await lambda.handleEvent(event);
         expect(res).deep.equals({
             statusCode: 200,
             body: 'Concurrency and EventSourceMapping successfully modified! '
-        });
-    })
+        });    })
 
     it("test putFunctionConcurrency ko", async () => {
 
         const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
         var event = createEvent(2, 1);
-        AWS.mock('Lambda', 'putFunctionConcurrency', function (params, callback) {
-            callback(new Error("Errore!"), null);
-        });
-        AWS.mock('Lambda', 'updateEventSourceMapping', function (params, callback) {
-            callback(null, {});
-        });
+        lambdaMockClient.on(PutFunctionConcurrencyCommand).rejects("Errore!");
+        lambdaMockClient.on(UpdateEventSourceMappingCommand).resolves({});
+
         const res = await lambda.handleEvent(event);
         expect(res.statusCode).deep.equals(500);
     })
@@ -46,19 +42,16 @@ describe("gestoreBucketConcurrencyHandler tests", function () {
 
         const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
         var event = createEvent(2, 1);
-        AWS.mock('Lambda', 'putFunctionConcurrency', function (params, callback) {
-            callback(null, {});
-        });
-        AWS.mock('Lambda', 'updateEventSourceMapping', function (params, callback) {
-            callback(new Error("Errore!"), null);
-        });
+        lambdaMockClient.on(PutFunctionConcurrencyCommand).resolves({});
+        lambdaMockClient.on(UpdateEventSourceMappingCommand).rejects("Errore!");
+
         const res = await lambda.handleEvent(event);
         expect(res.statusCode).deep.equals(500);
     })
 
     this.afterEach(() => {
         process.env = originalEnv;
-        AWS.restore();
+        lambdaMockClient.reset();
     });
 
 })

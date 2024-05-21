@@ -1,4 +1,5 @@
-const AWS = require("aws-sdk-mock");
+const { mockClient } = require("aws-sdk-client-mock");
+const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3")
 const proxyquire = require("proxyquire").noPreserveCache();
 const { expect } = require("chai");
 const fs = require("fs");
@@ -28,6 +29,7 @@ describe("gestoreBucketEventHandler tests", function () {
     process.env.GestoreBucketGetObjectChunkSize = "1048576"
   });
 
+  s3MockClient = mockClient(S3Client);
 
   describe("Event : ObjectCreated:Put", function () {
 
@@ -140,9 +142,7 @@ describe("gestoreBucketEventHandler tests", function () {
           }
         });
 
-        AWS.mock('S3', 'getObject', function (params, callback) {
-          callback(null, { Body: s3Object });
-        });
+        s3MockClient.on(GetObjectCommand).resolves({ Body: s3Object });
 
         const res = await lambda.handleEvent(event);
 
@@ -389,7 +389,7 @@ describe("gestoreBucketEventHandler tests", function () {
 
   this.afterEach(() => {
     process.env = originalEnv;
-    AWS.restore();
+    s3MockClient.reset();
   });
 
 });

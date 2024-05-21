@@ -1,7 +1,7 @@
 "use strict";
 
 const http = require(process.env.PnSsGestoreRepositoryProtocol);
-const AWS = require("aws-sdk");
+const { S3Client, GetObjectCommand} = require("@aws-sdk/client-s3")
 const crypto = require("crypto");
 
 const HOSTNAME = process.env.PnSsHostname;
@@ -12,7 +12,7 @@ const STAGINGBUCKET = process.env.PnSsStagingBucketName;
 const chunkSize = Number(process.env.GestoreBucketGetObjectChunkSize);
 
 exports.handleEvent = async (event) => {
-  const s3 = new AWS.S3();
+  const s3 = new S3Client({});
   const batchItemFailures = [];
   console.log(JSON.stringify(event));
 
@@ -63,8 +63,8 @@ exports.handleEvent = async (event) => {
 
                 while (offset < jsonDocument.contentLenght) {
                   const end = Math.min(offset + chunkSize, jsonDocument.contentLenght);
-                  params.Range = `bytes=${offset}-${end - 1}`
-                  const chunk = await s3.getObject(params).promise();
+                  params.Range = `bytes=${offset}-${end - 1}`;
+                  const chunk = await s3.send(new GetObjectCommand(params));
                   hash.update(chunk.Body);
                   offset += chunkSize;
                 }

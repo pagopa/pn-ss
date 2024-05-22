@@ -65,7 +65,19 @@ exports.handleEvent = async (event) => {
                   const end = Math.min(offset + chunkSize, jsonDocument.contentLenght);
                   params.Range = `bytes=${offset}-${end - 1}`;
                   const chunk = await s3.send(new GetObjectCommand(params));
-                  hash.update(chunk.Body);
+
+                  let data = [];
+
+                  for await (let piece of chunk.Body) {
+                    if(typeof piece === 'number') {
+                        piece = String.fromCharCode(piece);
+                    }
+                    data.push(Buffer.from(piece));
+                  }
+
+                  let buffer = Buffer.concat(data);
+
+                  hash.update(buffer);
                   offset += chunkSize;
                 }
                 jsonDocument.checkSum = hash.digest('base64');

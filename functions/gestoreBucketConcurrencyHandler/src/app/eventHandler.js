@@ -2,25 +2,31 @@
 const uuid = process.env.PnSsGestoreBucketTriggerId;
 const { LambdaClient, PutFunctionConcurrencyCommand, UpdateEventSourceMappingCommand} = require('@aws-sdk/client-lambda');
 const lambdaArn = process.env.PnSsGestoreBucketLambdaArn;
-const lambdaArr = lambdaArn.split('function:')
-var lambdaName = lambdaArr[1]
-console.log('Lambda function named "', lambdaName, '" with arn "', lambdaArn, '" and triggerID = "', uuid, '" will be updated')
+var lambdaName = lambdaArn.split('function:')[1]
+console.log('Lambda function named "', lambdaName, '" with arn "', lambdaArn, '" and triggerID = "', uuid, '" will be updated.')
+
+const lambda = new LambdaClient();
 
 exports.handleEvent = async function (event) {
 
   try {
-    const lambda = new LambdaClient();
+    
     console.log(JSON.stringify(event));
-
-    const newCapacity = event.detail.responseElements.service.desiredCount;
-    const oldCapacity = event.detail.responseElements.service.runningCount;
-    console.log("Safe Storage ECS Task capacity changed from ", oldCapacity, " to ", newCapacity);
+    const newCount = event.detail.responseElements.service.desiredCount;
+    const oldCount = event.detail.responseElements.service.runningCount;
+    
+    if (newCount == oldCount){
+      console.log("The Safe Storage Fargate service is being updated but the number of tasks is not changed.")
+      return {statusCode: 200,  body: 'Reserved concurrency and EventSourceMapping concurrency WERE NOT modified!'}
+    }
+    console.log("Safe Storage ECS Task desired count changed from ", oldCount, " to ", newCount);
 
     const instancesNumberPerTask = process.env.PnSsGestoreBucketInstancesPerTaskInstance;
-    const concurrency = newCapacity * instancesNumberPerTask;
-    console.log("New concurrency: ", concurrency);
+    const concurrency = newCount ? newCount * instancesNumberPerTask : 1;
+    
+    console.log("New function reserved concurrency: ", concurrency);
 
-    // Setting lambda concurrency params
+    // Setting lambda reserved concurrency params
     const input = {
       FunctionName: lambdaArn,
       ReservedConcurrentExecutions: concurrency
@@ -28,7 +34,7 @@ exports.handleEvent = async function (event) {
 
     const putCommand = new PutFunctionConcurrencyCommand(input);
 
-    // Setting lambda params
+    // Setting trigger concurrency params
     const event_source_mapping_params = {
       FunctionName: lambdaArn,
       UUID: uuid,
@@ -46,8 +52,9 @@ exports.handleEvent = async function (event) {
         })
         .then((data) => {
           console.log(JSON.stringify(data));
-          console.log("Changed lambda concurrency to ", concurrency);
+          console.log("Changed function reserved concurrency to ", concurrency);
         });
+        
     await lambda.send(eventSourceMappingCommand)
         .catch((err) => {
           console.error("* FATAL * An error occurred while calling updateEventSourceMapping with uuid ", uuid, ": ", err);

@@ -41,7 +41,7 @@ exports.handleEvent = async function (event) {
 
     await lambda.send(putCommand)
         .catch((err) => {
-          console.log("* FATAL * An error occurred while calling putFunctionConcurrency of function ", lambdaName);
+          console.error("* FATAL * An error occurred while calling putFunctionConcurrency: ", err);
           throw new Error('Error during Concurrency updating : ' + err)
         })
         .then((data) => {
@@ -50,7 +50,7 @@ exports.handleEvent = async function (event) {
         });
     await lambda.send(eventSourceMappingCommand)
         .catch((err) => {
-          console.log("* FATAL * An error occurred while calling updateEventSourceMapping for trigger ", uuid);
+          console.error("* FATAL * An error occurred while calling updateEventSourceMapping with uuid ", uuid, ": ", err);
           throw new Error('Error during Concurrency updating : ' + err)
         })
         .then((data) => {

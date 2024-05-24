@@ -93,7 +93,7 @@ public class CloudWatchMetricPublisherConfiguration {
                 .maximumCallsPerUpload(maximumCallsPerUpload)
                 .uploadFrequency(Duration.ofMillis(uploadFrequencyMillis));
         cloudWatchMetricPublishers.put(arubaPecNamespace, cloudWatchMetricPublisherBuilder.namespace(arubaPecNamespace).build());
-        cloudWatchMetricPublishers.put(namirialPecNamespace, cloudWatchMetricPublisherBuilder.namespace(arubaPecNamespace).build());
+        cloudWatchMetricPublishers.put(namirialPecNamespace, cloudWatchMetricPublisherBuilder.namespace(namirialPecNamespace).build());
     }
 
     /**

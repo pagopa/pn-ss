@@ -408,6 +408,10 @@ Parameters:
     Type: String
     Description: 'Parameter used to define minimum backoff between attempts'
 
+  PnSsSignAndTimemarkMetricsSchema:
+    Type: String
+    Description: 'Name of the AWS parameter that contains the schema for the metrics of the sign and timemark service'
+
   CpuValue:
     Type: Number
     Default: 1024
@@ -525,6 +529,7 @@ Resources:
         ContainerEnvEntry47: !Sub 'PnEcNamirialServerPendingAcquireTimeout=${PnEcNamirialServerPendingAcquireTimeout}'
         ContainerEnvEntry48: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
         ContainerEnvEntry49: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
+        ContainerEnvEntry50: !Sub 'PnSsSignAndTimemarkMetricsSchema=${PnSsSignAndTimemarkMetricsSchema}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -639,7 +644,12 @@ Resources:
               - 'events:DescribeEventBus'
             Resource:
               - !Ref PnSsEventBusArnExternalNotification
-
+          - Sid: 'ReadParameterStore'
+            Effect: Allow
+            Action:
+              - 'ssm:GetParameter'
+            Resource:
+              - '*'
   #####    Staging Bucket Events Rule    #####
   PnSsEventRuleStagingBucket:
     Type: AWS::Events::Rule
@@ -1412,9 +1422,9 @@ Resources:
       SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn
 
   ######## Scadenza Documenti Lambda Handler  #########
-  
-  
-  
+
+
+
   PnSsScadenzaDocumentiLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1516,8 +1526,8 @@ Resources:
         S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventHandler.zip"
       Layers:
         - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
-        
-        
+
+
   PnSsQueuePolicyScadenzaDocumentiDynamoStreamDLQ:
     Type: AWS::SQS::QueuePolicy
     Properties:

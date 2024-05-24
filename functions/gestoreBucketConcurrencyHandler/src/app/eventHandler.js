@@ -22,7 +22,7 @@ exports.handleEvent = async function (event) {
     console.log("Safe Storage ECS Task desired count changed from ", oldCount, " to ", newCount);
 
     const instancesNumberPerTask = process.env.PnSsGestoreBucketInstancesPerTaskInstance;
-    const concurrency = newCount ? newCount * instancesNumberPerTask : 1;
+    const concurrency = newCount * instancesNumberPerTask;
     
     console.log("New function reserved concurrency: ", concurrency);
 

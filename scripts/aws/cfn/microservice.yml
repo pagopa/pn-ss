@@ -1104,6 +1104,7 @@ Resources:
       Runtime: nodejs20.x
       Role: !GetAtt PnSsGestoreBucketConcurrencyHandlerRole.Arn
       Timeout: 240
+      ReservedConcurrentExecutions: 1
       VpcConfig:
         SubnetIds:
           - !Select [ 0, !Split [ ",", !Ref SubnetsIds ] ]

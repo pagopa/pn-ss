@@ -1107,9 +1107,9 @@ Resources:
       ReservedConcurrentExecutions: 1
       VpcConfig:
         SubnetIds:
-          - !Select [ 0, !Split [ ",", !Ref SubnetsIds ] ]
-          - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
-          - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 0, !Split [ ",", !Ref VpcEgressSubnetsIds ] ]
+          - !Select [ 1, !Split [ ",", !Ref VpcEgressSubnetsIds ] ]
+          - !Select [ 2, !Split [ ",", !Ref VpcEgressSubnetsIds ] ]
         SecurityGroupIds:
           - !GetAtt PnSsSecurityGroupSafeStorage.GroupId
       Environment:

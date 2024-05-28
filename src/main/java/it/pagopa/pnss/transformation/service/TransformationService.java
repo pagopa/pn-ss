@@ -118,8 +118,8 @@ public class TransformationService {
                 })
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
-                .flatMap(document -> signDocument(document, key, stagingBucketName, marcatura))
-                .flatMap(pnSignDocumentResponse -> s3Service.putObject(key, pnSignDocumentResponse.getSignedDocument(), bucketName.ssHotName()))
+                .zipWhen(document -> signDocument(document, key, stagingBucketName, marcatura))
+                .flatMap(tuple -> s3Service.putObject(key, tuple.getT2().getSignedDocument(),  tuple.getT1().getContentType(), bucketName.ssHotName()))
                 .then(removeObjectFromStagingBucket(key, stagingBucketName));
     }
 

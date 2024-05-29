@@ -26,7 +26,7 @@ exports.handleEvent = async (event) => {
 
                     console.log(`File ${fileKey} eliminato con successo da S3.`);
                     break;
-                case "COMPLETE":
+/*                case "COMPLETE":
                     console.log(`Ottenendo tutte le versioni del file ${fileKey} da S3...`);
                     const command=new ListObjectVersionsCommand({
                       Bucket: BUCKET_NAME,
@@ -43,7 +43,7 @@ exports.handleEvent = async (event) => {
                                 }));
                         }
                         ));
-                    break;
+                    break; */
                 default:
                     return;
             }

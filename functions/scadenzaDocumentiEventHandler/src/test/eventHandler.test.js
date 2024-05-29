@@ -31,7 +31,7 @@ describe("scadenzaDocumentiEventHandler tests", function() {
         });
     });
 
-    it("test delete complete ok", async () => {
+   /* it("test delete complete ok", async () => {
 
         const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
 
@@ -79,7 +79,7 @@ describe("scadenzaDocumentiEventHandler tests", function() {
                 "itemIdentifier": "fileKey"
             }],
         });
-    });
+    }); */
 
 
 });

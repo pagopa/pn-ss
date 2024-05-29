@@ -45,6 +45,7 @@ exports.handleEvent = async (event) => {
                         ));
                     break; */
                 default:
+                    console.log(`Nessuna azione eseguita per il file ${fileKey}.`);
                     return;
             }
     }

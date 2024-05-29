@@ -45,7 +45,7 @@ exports.handleEvent = async (event) => {
                         ));
                     break; */
                 default:
-                    console.log(`Nessuna azione eseguita per il file ${fileKey}.`);
+                    console.log(`Nessuna azione eseguita per il file ${fileKey} con DELETION_MODE=${DELETION_MODE}.`);
                     return;
             }
     }

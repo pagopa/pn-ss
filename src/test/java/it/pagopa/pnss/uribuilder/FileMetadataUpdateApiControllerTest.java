@@ -2,12 +2,14 @@ package it.pagopa.pnss.uribuilder;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.ScadenzaDocumentiClientCall;
+import it.pagopa.pnss.common.client.exception.PatchDocumentExcetpion;
 import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -20,6 +22,7 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import reactor.core.publisher.Mono;
@@ -212,7 +215,7 @@ class FileMetadataUpdateApiControllerTest {
 		var document = new Document().documentType(documentType1).documentState(DELETED);
 		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
-		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
+		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.error(new PatchDocumentException("Document deleted", HttpStatus.GONE)));
 
 		var documentType2 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED,
 						new CurrentStatus().technicalState(Constant.TECHNICAL_STATUS_AVAILABLE))))

@@ -9,6 +9,7 @@ import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
+import it.pagopa.pnss.repositorymanager.exception.ResourceDeletedException;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -99,6 +100,9 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 		else if (throwable instanceof DateTimeException) {
 			String errorMsg = "Exception in retention date formatting: ";
 			return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, errorMsg + throwable.getMessage());
+		}
+		else if (throwable instanceof ResourceDeletedException.DocumentDeletedException) {
+			return buildErrorResponse(HttpStatus.GONE, throwable);
 		}
 		else {
 			log.error("Internal Error ---> {}", throwable.getMessage());

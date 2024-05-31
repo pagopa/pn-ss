@@ -21,6 +21,9 @@ public class LogUtils {
     public static final String CLIENT_METHOD_RETURN_WITH_ERROR = "Return client method '{}' with error: {} - {}";
     public static final String ARG = " - '{}'";
 
+    //DOWNLOAD
+    public static final String DOWNLOAD_FILE = "DownloadCall.downloadFile()";
+
     //URI BUILDER
     public static final String CREATE_URI_FOR_DOWNLOAD_FILE = "UriBuilderService.createUriForDownloadFile()";
     public static final String CREATE_URI_FOR_UPLOAD_FILE = "UriBuilderService.createUriForUploadFile()";

@@ -74,7 +74,7 @@ Parameters:
     Type: String
     Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
     Default: 'MARKER'
-    AllowedValues: [MARKER] ##, COMPLETE]
+    AllowedValues: [MARKER]
 
 Conditions:
   IsDevEnv: !Equals [ !Ref EnvType, 'dev']

@@ -4,9 +4,11 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
+import it.pagopa.pnss.common.exception.StateMachineServiceException;
 import it.pagopa.pnss.configurationproperties.DynamoRetryStrategyProperties;
 import it.pagopa.pnss.configurationproperties.GestoreRepositoryRetryStrategyProperties;
 import it.pagopa.pnss.configurationproperties.retry.S3RetryStrategyProperties;
+import it.pagopa.pnss.configurationproperties.retry.StateMachineRetryStrategyProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -32,6 +34,8 @@ public class RetryConfiguration {
     private GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties;
     @Autowired
     private S3RetryStrategyProperties s3RetryStrategyProperties;
+    @Autowired
+    private StateMachineRetryStrategyProperties smRetryStrategyProperties;
 
     private final Predicate<Throwable> isNotFound = throwable -> (throwable instanceof DocumentKeyNotPresentException) || (throwable instanceof IdClientNotFoundException)  || (throwable instanceof DocumentTypeNotPresentException);
 
@@ -58,6 +62,14 @@ public class RetryConfiguration {
                 .filter(S3Exception.class::isInstance)
                 .filter(Predicate.not(NoSuchKeyException.class::isInstance))
                 .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
+                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
+    }
+
+    @Bean
+    RetryBackoffSpec smRetryStrategy() {
+        return Retry.backoff(smRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(smRetryStrategyProperties.minBackoff()))
+                .filter(StateMachineServiceException.class::isInstance)
+                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure().getCause()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }
 }

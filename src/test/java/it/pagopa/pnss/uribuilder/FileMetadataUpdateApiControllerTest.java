@@ -1,7 +1,5 @@
 package it.pagopa.pnss.uribuilder;
 
-import com.github.dockerjava.zerodep.shaded.org.apache.commons.codec.binary.Base64;
-import com.github.dockerjava.zerodep.shaded.org.apache.commons.codec.digest.DigestUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.ScadenzaDocumentiClientCall;
 import it.pagopa.pnss.common.constant.Constant;
@@ -10,15 +8,15 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.configuration.IgnoredUpdateMetadataConfigTestSetup;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
-import org.assertj.core.api.Assertions;
-import org.eclipse.angus.mail.iap.ConnectionException;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -32,12 +30,11 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
+import java.sql.Date;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -48,7 +45,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient(timeout = "36000")
 @CustomLog
-class FileMetadataUpdateApiControllerTest {
+class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTestSetup {
 
 	@Autowired
 	private WebTestClient webClient;
@@ -220,4 +217,38 @@ class FileMetadataUpdateApiControllerTest {
 
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(SAVED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isOk();
 	}
+
+	@Test
+	void testIgnoreS3UpdateMetadataOk() {
+		String fileKey = "fileKeyToIgnoreUpdateMetadata1";
+		addFileToBucket(fileKey, bucketName.ssHotName());
+
+		Map<String, CurrentStatus> statuses = Map.ofEntries(Map.entry(SAVED, new CurrentStatus().technicalState(AVAILABLE).storage("storageType")));
+		var documentType1 = new DocumentType().statuses(statuses).tipoDocumento(DocTypesConstant.PN_AAR);
+		var document = new Document().documentState(AVAILABLE).documentType(documentType1);
+		var documentResponse = new DocumentResponse().document(document);
+		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
+		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
+		doReturn(Mono.just(new ScadenzaDocumentiResponse())).when(scadenzaDocumentiClientCall).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
+
+		var documentType2 = new DocumentType().statuses(statuses).tipoDocumento(DocTypesConstant.PN_AAR);
+		var documentTypeResponse = new DocumentTypeResponse().docType(documentType2);
+		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));
+
+		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(Date.from(Instant.now())), fileKey).expectStatus().isOk();
+		verify(s3Service, never()).putObjectTagging(anyString(), anyString(), any());
+
+		//Clean-up
+		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(fileKey));
+	}
+
+	private void addFileToBucket(String fileName, String bucketName) {
+		byte[] fileBytes = new byte[10];
+		PutObjectRequest request = PutObjectRequest.builder()
+				.bucket(bucketName)
+				.key(fileName)
+				.contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(fileBytes)))).build();
+		s3TestClient.putObject(request, RequestBody.fromBytes(fileBytes));
+	}
+
 }

@@ -4,15 +4,17 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import reactor.core.publisher.Flux;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
+import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -34,7 +36,7 @@ public class IgnoredUpdateMetadataConfig {
     public IgnoredUpdateMetadataConfig(@Value("${pn.ss.ignored.update.metadata.list}") String ignoredUpdateMetadataListUri, S3Service s3Service) {
         this.s3Service = s3Service;
         this.ignoredUpdateMetadataSet = ConcurrentHashMap.newKeySet();
-        this.lastModified = Instant.now();
+        this.lastModified = Instant.now().minusSeconds(1);
         //Parse S3 URI
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(ignoredUpdateMetadataListUri);
@@ -46,14 +48,13 @@ public class IgnoredUpdateMetadataConfig {
         }
     }
 
-    //TODO Fix test issues.
-//    @PostConstruct
-//    void init() {
-//        log.debug(INITIALIZING, IGNORED_UPDATE_METADATA_CONFIG);
-//        parseIgnoredUpdateMetadataList()
-//                .doOnError(throwable -> log.warn(EXCEPTION_DURING_INITIALIZATION, IGNORED_UPDATE_METADATA_CONFIG, throwable))
-//                .blockLast();
-//    }
+    @PostConstruct
+    void init() {
+        log.debug(INITIALIZING, IGNORED_UPDATE_METADATA_CONFIG);
+        parseIgnoredUpdateMetadataList()
+                .doOnError(throwable -> log.warn(EXCEPTION_DURING_INITIALIZATION, IGNORED_UPDATE_METADATA_CONFIG, throwable))
+                .blockLast();
+    }
 
     @Scheduled(cron = "0 */5 * * * *")
     void refreshIgnoredUpdateMetadataListScheduled() {

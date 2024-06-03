@@ -40,6 +40,9 @@ import org.springframework.context.annotation.PropertySource;
 // NAMIRIAL
 @PropertySource("classpath:sign/namirial.properties")
 
+// IGNORED UPDATE METADATA
+@PropertySource("classpath:configuration/ignored-update-metadata.properties")
+
 public class TemplateApplication {
 
     public static void main(String[] args) {

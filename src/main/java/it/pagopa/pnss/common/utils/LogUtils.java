@@ -14,11 +14,14 @@ public class LogUtils {
     //LABELS
     public static final String ENDING_PROCESS_WITH_ERROR = "Ending '{}' Process with error = '{}' - '{}'";
     public static final String INVOKING_METHOD = "Invoking operation '{}' with args: '{}'";
+    public static final String INVOKING_METHOD_WITHOUT_ARGS = "Invoking operation '{}'";
     public static final String SUCCESSFUL_OPERATION_LABEL = "Successful operation: '{}' = '{}'";
     public static final String INVOKING_INTERNAL_SERVICE = "Invoking internal service '{}' '{}'. Waiting Sync response.";
     public static final String CLIENT_METHOD_INVOCATION = "Client method '{}' - args: '{}'";
     public static final String CLIENT_METHOD_RETURN = "Return client method: {} = {}";
     public static final String CLIENT_METHOD_RETURN_WITH_ERROR = "Return client method '{}' with error: {} - {}";
+    public static final String INITIALIZING = "Initializing '{}'";
+    public static final String EXCEPTION_DURING_INITIALIZATION = "Exception during '{}' initialization";
     public static final String ARG = " - '{}'";
 
     //DOWNLOAD
@@ -38,7 +41,10 @@ public class LogUtils {
     //UPDATE METADATA
     public static final String UPDATE_FILE_METADATA = "updateFileMetadata()";
     public static final String UPDATE_METADATA = "FileMetadataUpdateService.updateMetadata()";
-
+    public static final String IGNORED_UPDATE_METADATA_CONFIG = "IgnoredUpdateMetadataConfig";
+    public static final String PARSE_IGNORED_UPDATE_METADATA_LIST = "IgnoredUpdateMetadataConfig.parseIgnoredUpdateMetadataList()";
+    public static final String REFRESH_IGNORED_UPDATE_METADATA_LIST = "IgnoredUpdateMetadataConfig.refreshIgnoredUpdateMetadataList()";
+    public static final String REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED = "refreshIgnoredUpdateMetadataListScheduled()";
     public static final String MISSING_CONTENT_TYPE = "ContentType is missing";
     public static final String MISSING_DOCUMENT_TYPE = "Document type is missing";
     public static final String MISSING_TRACE_ID = "XTraceId is missing";

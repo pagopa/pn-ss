@@ -73,6 +73,7 @@ public class IgnoredUpdateMetadataConfig {
     void init() {
         log.debug(INITIALIZING, IGNORED_UPDATE_METADATA_CONFIG);
         parseIgnoredUpdateMetadataList()
+                .doOnNext(ignoredUpdateMetadataHandler::addFileKey)
                 .doOnError(throwable -> log.warn(EXCEPTION_DURING_INITIALIZATION, IGNORED_UPDATE_METADATA_CONFIG, throwable))
                 .blockLast();
     }

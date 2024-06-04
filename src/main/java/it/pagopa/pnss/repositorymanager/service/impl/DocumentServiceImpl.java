@@ -11,7 +11,9 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
+import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
 import it.pagopa.pnss.common.utils.LogUtils;
+import it.pagopa.pnss.configuration.IgnoredUpdateMetadataConfig;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
@@ -63,14 +65,17 @@ public class DocumentServiceImpl implements DocumentService {
     private final S3Service s3Service;
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
+    private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
                                RetentionService retentionService, AwsConfigurationProperties awsConfigurationProperties,
-                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service) {
+                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service,
+                               IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler) {
         this.docTypesService = docTypesService;
         this.callMacchinaStati = callMacchinaStati;
         this.s3Service = s3Service;
+        this.ignoredUpdateMetadataHandler = ignoredUpdateMetadataHandler;
         this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
                                                                                   TableSchema.fromBean(DocumentEntity.class)));
         this.objectMapper = objectMapper;
@@ -231,7 +236,7 @@ public class DocumentServiceImpl implements DocumentService {
                                 documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))) {
 
                     String storageType;
-                    if (documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
+                    if (!ignoredUpdateMetadataHandler.isToIgnore(documentKey) && documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
                         if (documentEntityStored.getDocumentType()
                                 .getStatuses()
                                 .containsKey(documentEntityStored.getDocumentLogicalState())) {
@@ -254,9 +259,10 @@ public class DocumentServiceImpl implements DocumentService {
             })
             .flatMap(documentEntityStored -> {
 
-                if (!StringUtils.isBlank(documentChanges.getRetentionUntil()) || (documentChanges.getDocumentState() != null && (
-                        documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
-                                documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED)))) {
+                if (!ignoredUpdateMetadataHandler.isToIgnore(documentKey) &&
+                        (!StringUtils.isBlank(documentChanges.getRetentionUntil()) || (documentChanges.getDocumentState() != null &&
+                                (documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
+                                documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))))) {
 
 		                   return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
 		                           authApiKey,

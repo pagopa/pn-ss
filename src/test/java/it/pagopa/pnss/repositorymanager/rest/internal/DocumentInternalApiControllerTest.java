@@ -332,6 +332,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 
 		log.warn("DocumentInternalApiControllerTest.patchItem() : START");
 
+		//The fileKey is in ignored-update-metadata.csv file
 		String documentKey = "fileKeyToIgnoreUpdateMetadata";
 
 		List<String> allowedStatusTransitions = new ArrayList<>();

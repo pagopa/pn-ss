@@ -220,6 +220,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 
 	@Test
 	void testIgnoreS3UpdateMetadataOk() {
+		//The fileKey is in ignored-update-metadata.csv file
 		String fileKey = "fileKeyToIgnoreUpdateMetadata1";
 		addFileToBucket(fileKey, bucketName.ssHotName());
 

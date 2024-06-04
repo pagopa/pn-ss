@@ -446,6 +446,11 @@ Parameters:
     Description: 'Max Chunk size used by Gestore Bucket when retrieving object from bucket'
     Default: '1048576'
 
+  TrasformazioneFileMaxThreadPoolSize:
+    Type: Number
+    Description: 'Max ThreadPool size used by Trasformazione File'
+    Default: '50'
+
   MicroserviceBucketName:
     Type: String
     Description: 'Bucket name to upload lambda compiled package'
@@ -523,8 +528,9 @@ Resources:
         ContainerEnvEntry45: !Sub 'PnSsNamirialServerAddress=${PnSsNamirialServerAddress}'
         ContainerEnvEntry46: !Sub 'PnEcNamirialServerMaxConnections=${PnEcNamirialServerMaxConnections}'
         ContainerEnvEntry47: !Sub 'PnEcNamirialServerPendingAcquireTimeout=${PnEcNamirialServerPendingAcquireTimeout}'
-        ContainerEnvEntry48: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
-        ContainerEnvEntry49: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
+        ContainerEnvEntry48: !Sub 'TrasformazioneFileMaxThreadPoolSize=${TrasformazioneFileMaxThreadPoolSize}'
+        ContainerEnvEntry49: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
+        ContainerEnvEntry50: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

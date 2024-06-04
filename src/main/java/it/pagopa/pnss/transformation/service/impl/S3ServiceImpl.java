@@ -53,11 +53,12 @@ public class S3ServiceImpl implements S3Service {
     }
 
     @Override
-    public Mono<PutObjectResponse> putObject(String key, byte[] fileBytes, String bucketName) {
+    public Mono<PutObjectResponse> putObject(String key, byte[] fileBytes, String contentType, String bucketName) {
         log.debug(CLIENT_METHOD_INVOCATION, PUT_OBJECT, Stream.of(key, bucketName).toList());
         return Mono.fromCallable(() -> new String(Base64.encodeBase64(DigestUtils.md5(fileBytes))))
                    .flatMap(contentMD5 -> Mono.fromCompletionStage(s3AsyncClient.putObject(builder -> builder.key(key)
                                                                                                              .contentMD5(contentMD5)
+                                                                                                             .contentType(contentType)
                                                                                                              .bucket(bucketName),
                                                                                            AsyncRequestBody.fromBytes(fileBytes))))
                    .doOnNext(putObjectResponse -> log.info(CLIENT_METHOD_RETURN, PUT_OBJECT, putObjectResponse))

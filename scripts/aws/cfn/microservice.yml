@@ -125,6 +125,18 @@ Parameters:
     Type: String
     Description: 'ARN dello stream relativo alla tabella SS Documenti'
 
+  PnSsTableArnScadenzaDocumenti:
+    Type: String
+    Description: 'ARN della tabella SS Scadenza Documenti'
+
+  PnSsTableNameScadenzaDocumenti:
+    Type: String
+    Description: 'Nome della tabella SS Scadenza Documenti'
+
+  PnSsTableScadenzaDocumentiStreamArn:
+    Type: String
+    Description: 'ARN dello stream relativo alla tabella SS Scadenza Documenti'
+
   PnSsBucketName:
     Type: String
     Description: 'Nome del Bucket SS'
@@ -320,6 +332,22 @@ Parameters:
     Type: String
     Description: 'Name of Lambda function implementing functionality of Gestore Bucket'
 
+  PnSsScadenzaDocumentiLambdaName:
+    Type: String
+    Description: 'Name of Lambda function implementing functionality of Scadenza Documenti'
+
+  PnSsQueueNameScadenzaDocumentiDynamoStreamDLQ:
+    Type: String
+    Description: 'Nome coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+
+  PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ:
+    Type: String
+    Description: 'ARN coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+
+  PnSsQueueUrlScadenzaDocumentiDynamoStreamDLQ:
+    Type: String
+    Description: 'URL coda DLQ per gestione errori di lavorazione dallo stream DynamoDB per lambda scadenzaDocumenti'
+
   PnSsGestoreBucketConcurrencyHandlerLambdaName:
     Type: String
     Description: "Name of Lambda function which updates Gestore Bucket's concurrency"
@@ -363,6 +391,10 @@ Parameters:
     Type: String
     Description: 'SpringBoot configuration Task Execution Max Pool Siza'
     Default: '512'
+
+  PnSsDocumentDeletionMode:
+    Type: String
+    Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
 
   PnSignProviderSwitch:
     Type: String
@@ -418,6 +450,14 @@ Parameters:
     Type: Number
     Description: 'Max ThreadPool size used by Trasformazione File'
     Default: '50'
+
+  MicroserviceBucketName:
+    Type: String
+    Description: 'Bucket name to upload lambda compiled package'
+
+  MicroserviceBucketBaseKey:
+    Type: String
+    Description: 'S3 prefix to upload lambda compiled package'
 
   # Namirial provider properties
   PnSsNamirialServerAddress:
@@ -489,6 +529,8 @@ Resources:
         ContainerEnvEntry46: !Sub 'PnEcNamirialServerMaxConnections=${PnEcNamirialServerMaxConnections}'
         ContainerEnvEntry47: !Sub 'PnEcNamirialServerPendingAcquireTimeout=${PnEcNamirialServerPendingAcquireTimeout}'
         ContainerEnvEntry48: !Sub 'TrasformazioneFileMaxThreadPoolSize=${TrasformazioneFileMaxThreadPoolSize}'
+        ContainerEnvEntry49: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
+        ContainerEnvEntry50: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -535,6 +577,7 @@ Resources:
               - !Ref PnSsTableArnTipologieDocumenti
               - !Ref PnSsTableArnDocumenti
               - !Ref PnSsTableDocumentiStreamArn
+              - !Ref PnSsTableArnScadenzaDocumenti
           - Sid: 'FullAccesStreamMetadataTable'
             Effect: Allow
             Action:
@@ -747,6 +790,7 @@ Resources:
           - - !Ref PnSsTableNameAnagraficaClient
             - !Ref PnSsTableNameTipologieDocumenti
             - !Ref PnSsTableNameDocumenti
+            - !Ref PnSsTableNameScadenzaDocumenti
         # RestApiStageArns:
         # RestApiNames:
         QueueArns:
@@ -756,6 +800,7 @@ Resources:
             - !Ref PnSsQueueArnGestoreBucketInvoke
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
             - !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
+            - !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
         LambdaArns: !GetAtt PnSsGestoreBucket.Arn
         # KinesisDataArns:
         # KinesisFirehoseArns:
@@ -1371,3 +1416,128 @@ Resources:
       Principal: 'events.amazonaws.com'
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn
+
+  ######## Scadenza Documenti Lambda Handler  #########
+  
+  
+  
+  PnSsScadenzaDocumentiLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ !Sub '${PnSsScadenzaDocumentiLambdaName}', '-role' ] ]
+      Description: 'Ruolo della Lambda che implementa la funzionalità di cancellazione dei Documenti'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'PnSsScadenzaDocumentiInlinePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: 'DeleteBucketPolicy'
+                Effect: 'Allow'
+                Action:
+                  - 's3:List*'
+                  - 's3:GetBucket*'
+                  - 's3:Describe*'
+                  - 's3:*ObjectVersion*'
+                  - 's3:DeleteObject*'
+                Resource:
+                  - !Ref PnSsBucketArn
+                  - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*' ] ]
+              - Sid: 'DynamoDbStreamPolicy'
+                Effect: 'Allow'
+                Action:
+                  - 'dynamodb:DescribeStream'
+                  - 'dynamodb:GetRecords'
+                  - 'dynamodb:GetShardIterator'
+                  - 'dynamodb:ListStreams'
+                Resource:
+                  - !Ref PnSsTableScadenzaDocumentiStreamArn
+              - Sid: 'KmsSsBucketRead'
+                Effect: Allow
+                Action:
+                  - 'kms:Decrypt'
+                  - 'kms:GenerateDataKey'
+                Resource:
+                  - !Ref PnSsKmsArnBucket
+              - Sid: 'SQSSendMessage'
+                Effect: Allow
+                Action:
+                  - 'sqs:Get*'
+                  - 'sqs:List*'
+                  - 'sqs:SendMessage'
+                Resource:
+                  - !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
+
+  PnSsScadenzaDocumentiEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 100
+      BisectBatchOnFunctionError: true
+      DestinationConfig:
+        OnFailure:
+          Destination: !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
+      Enabled: True
+      EventSourceArn: !Ref PnSsTableScadenzaDocumentiStreamArn
+      StartingPosition: 'LATEST'
+      FilterCriteria:
+        Filters:
+          - Pattern: '{"userIdentity": {"type": ["Service"], "principalId": ["dynamodb.amazonaws.com"]}}'
+      FunctionName: !Ref PnSsScadenzaDocumentiEventHandlerLambda
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+      MaximumBatchingWindowInSeconds: 60
+      MaximumRetryAttempts: 10
+
+
+  PnSsScadenzaDocumentiEventHandlerLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
+      Runtime: nodejs20.x
+      Handler: "index.handler"
+      Role: !GetAtt PnSsScadenzaDocumentiLambdaRole.Arn
+      Timeout: 240
+      VpcConfig:
+        SubnetIds:
+          - !Select [ 0, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
+        SecurityGroupIds:
+          - !GetAtt PnSsSecurityGroupSafeStorage.GroupId
+      Environment:
+        Variables:
+          PnSsBucketName: !Ref PnSsBucketName
+          PnSsDocumentDeletionMode: !Ref PnSsDocumentDeletionMode
+      Code:
+        S3Bucket: !Ref MicroserviceBucketName
+        S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventHandler.zip"
+      Layers:
+        - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
+        
+        
+  PnSsQueuePolicyScadenzaDocumentiDynamoStreamDLQ:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref PnSsQueueUrlScadenzaDocumentiDynamoStreamDLQ
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+            - 'sqs:SendMessage'
+            - 'sqs:GetQueueAttributes'
+            - 'sqs:GetQueueUrl'
+            Effect: "Allow"
+            Resource: !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
+            Principal:
+              AWS:
+                !GetAtt PnSsScadenzaDocumentiLambdaRole.Arn

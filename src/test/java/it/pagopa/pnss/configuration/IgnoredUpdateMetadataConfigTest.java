@@ -1,16 +1,23 @@
 package it.pagopa.pnss.configuration;
 
+import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import lombok.CustomLog;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
+import org.springframework.beans.factory.annotation.Autowired;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-
 @SpringBootTestWebEnv
-public class IgnoredUpdateMetadataConfigTest extends IgnoredUpdateMetadataConfigTestSetup {
+@CustomLog
+class IgnoredUpdateMetadataConfigTest extends IgnoredUpdateMetadataConfigTestSetup {
+
+    @Autowired
+    private IgnoredUpdateMetadataConfig ignoredUpdateMetadataConfig;
+
     @Test
     void testRefreshIgnoredUpdateMetadataListOk() {
-        Flux<String> fluxToTest = ignoredUpdateMetadataConfig.refreshIgnoredUpdateMetadataList();
-        StepVerifier.create(fluxToTest).expectNextCount(5).verifyComplete();
+        Mono<Integer> fluxToTest = ignoredUpdateMetadataConfig.refreshIgnoredUpdateMetadataList();
+        StepVerifier.create(fluxToTest).expectNextMatches(size -> size.equals(5)).verifyComplete();
     }
 
 }

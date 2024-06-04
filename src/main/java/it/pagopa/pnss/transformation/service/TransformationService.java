@@ -59,13 +59,13 @@ public class TransformationService {
     private static final int MAX_RETRIES = 3;
 
     public TransformationService(S3ServiceImpl s3Service,
-                                 PnSignProviderService pnSignService, DocumentClientCall documentClientCall, BucketName bucketName, SqsService sqsService, Semaphore semaphore) {
+                                 PnSignProviderService pnSignService, DocumentClientCall documentClientCall, BucketName bucketName, @Value("${transformation-service-max-thread-pool-size}") Integer maxThreadPoolSize, SqsService sqsService) {
         this.s3Service = s3Service;
         this.pnSignService = pnSignService;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.sqsService = sqsService;
-        this.semaphore = semaphore;
+        this.semaphore = new Semaphore(maxThreadPoolSize);
     }
 
     @SqsListener(value = "${s3.queue.sign-queue-name}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)

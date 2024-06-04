@@ -65,6 +65,7 @@ public class TransformationService {
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.sqsService = sqsService;
+        log.debug("TransformationService max thread pool size : {} ", maxThreadPoolSize);        
         this.semaphore = new Semaphore(maxThreadPoolSize);
     }
 

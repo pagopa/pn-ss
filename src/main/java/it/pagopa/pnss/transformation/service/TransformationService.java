@@ -131,7 +131,8 @@ public class TransformationService {
                 .filterWhen(document -> isSignatureNeeded(key, retry))
                 .zipWhen(document -> signDocument(document, key, stagingBucketName, marcatura))
                 .flatMap(tuple -> s3Service.putObject(key, tuple.getT2().getSignedDocument(),  tuple.getT1().getContentType(), bucketName.ssHotName()))
-                .then(removeObjectFromStagingBucket(key, stagingBucketName));
+                .then(removeObjectFromStagingBucket(key, stagingBucketName))
+                .doOnSuccess(deleteObjectResponse -> log.debug(SUCCESSFUL_OPERATION_LABEL, OBJECT_TRANSFORMATION, deleteObjectResponse));
     }
 
     private Mono<Boolean> isSignatureNeeded(String key, int retry) {

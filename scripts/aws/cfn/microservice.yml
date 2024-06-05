@@ -620,8 +620,8 @@ Resources:
               - 's3:GetBucket*'
               - 's3:GetObject*'
             Resource:
-              - !Join [ '', [ 'pn-runtime-environment-variables-' , !Sub '${AWS::Region}-${AWS::AccountId}']]
-              - !Join [ '', [ 'pn-runtime-environment-variables-' , !Sub '${AWS::Region}-${AWS::AccountId}', '/pn-safe-storage/*']]
+              - !Join [ '', [ 'arn:aws:s3:::pn-runtime-environment-variables-' , !Sub '${AWS::Region}-${AWS::AccountId}']]
+              - !Join [ '', [ 'arn:aws:s3:::pn-runtime-environment-variables-' , !Sub '${AWS::Region}-${AWS::AccountId}', '/pn-safe-storage/*']]
           - Effect: Allow
             Action:
               - 'sqs:ReceiveMessage'

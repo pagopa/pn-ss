@@ -8,6 +8,8 @@ public interface IgnoredUpdateMetadataHandler {
 
     void addFileKey(String fileKey);
 
+    void removeFileKey(String fileKey);
+
     int updateSet(Set<String> newSet);
 
 }

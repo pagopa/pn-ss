@@ -32,11 +32,7 @@ public class IgnoredUpdateMetadataHandlerImpl implements IgnoredUpdateMetadataHa
      * @return the boolean
      */
     public boolean isToIgnore(String fileKey) {
-        if (ignoredUpdateMetadataSet.contains(fileKey)) {
-            log.warn("S3 updateSet metadata for fileKey '{}' is to ignore", fileKey);
-            return true;
-        }
-        return false;
+        return ignoredUpdateMetadataSet.contains(fileKey);
     }
 
     /**
@@ -46,6 +42,16 @@ public class IgnoredUpdateMetadataHandlerImpl implements IgnoredUpdateMetadataHa
      */
     public void addFileKey(String fileKey) {
         ignoredUpdateMetadataSet.add(fileKey);
+    }
+
+    /**
+     * Remove a fileKey from the set containing those files that should be ignored.
+     *
+     * @param fileKey the file key to remove
+     */
+    @Override
+    public void removeFileKey(String fileKey) {
+        ignoredUpdateMetadataSet.remove(fileKey);
     }
 
     /**

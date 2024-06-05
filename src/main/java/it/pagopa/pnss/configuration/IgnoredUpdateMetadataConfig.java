@@ -104,7 +104,7 @@ public class IgnoredUpdateMetadataConfig {
                 .flatMapMany(s3LastModified -> {
                     //Scarica il file solo se è stato modificato dall'ultima schedulazione
                     if (s3LastModified != null && s3LastModified.isAfter(this.lastModified)) {
-                        log.debug("The file has been modified, refreshing ignored updateSet metadata list...");
+                        log.debug("The file has been modified, refreshing ignored update metadata list...");
                         this.lastModified = s3LastModified;
                         return parseIgnoredUpdateMetadataList();
                     } else {

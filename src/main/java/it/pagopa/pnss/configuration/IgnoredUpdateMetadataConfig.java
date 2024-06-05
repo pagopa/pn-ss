@@ -117,6 +117,7 @@ public class IgnoredUpdateMetadataConfig {
                     return map;
                 })
                 .map(Map::keySet)
+                .filter(keySet -> !keySet.isEmpty())
                 .map(ignoredUpdateMetadataHandler::updateSet)
                 .doOnNext(size -> log.debug("Updated ignoredUpdateMetadataSet, new size: {}", size));
     }

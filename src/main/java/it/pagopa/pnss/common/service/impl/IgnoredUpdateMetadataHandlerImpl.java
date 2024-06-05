@@ -65,4 +65,14 @@ public class IgnoredUpdateMetadataHandlerImpl implements IgnoredUpdateMetadataHa
         ignoredUpdateMetadataSet.addAll(newSet);
         return ignoredUpdateMetadataSet.size();
     }
+
+    /**
+     * Get the size of the ignoredUpdateMetadataSet.
+     *
+     * @return the size of the set
+     */
+    @Override
+    public int getSetSize() {
+        return ignoredUpdateMetadataSet.size();
+    }
 }

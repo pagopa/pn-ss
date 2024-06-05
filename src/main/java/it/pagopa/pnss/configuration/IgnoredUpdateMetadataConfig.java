@@ -1,5 +1,6 @@
 package it.pagopa.pnss.configuration;
 
+import it.pagopa.pnss.common.exception.FileNotModifiedException;
 import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
@@ -75,6 +76,7 @@ public class IgnoredUpdateMetadataConfig {
         parseIgnoredUpdateMetadataList()
                 .doOnNext(ignoredUpdateMetadataHandler::addFileKey)
                 .doOnError(throwable -> log.warn(EXCEPTION_DURING_INITIALIZATION, IGNORED_UPDATE_METADATA_CONFIG, throwable))
+                .doOnComplete(() -> log.debug("Initialized ignoredUpdateMetadataSet, size: {}", ignoredUpdateMetadataHandler.getSetSize()))
                 .blockLast();
     }
 
@@ -85,6 +87,7 @@ public class IgnoredUpdateMetadataConfig {
     void refreshIgnoredUpdateMetadataListScheduled() {
         log.logStartingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED);
         refreshIgnoredUpdateMetadataList()
+                .onErrorResume(FileNotModifiedException.class, throwable -> Mono.empty())
                 .doOnError(throwable -> log.logEndingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED, false, throwable.getMessage()))
                 .doOnSuccess(result -> log.logEndingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED))
                 .subscribe();
@@ -99,7 +102,6 @@ public class IgnoredUpdateMetadataConfig {
     Mono<Integer> refreshIgnoredUpdateMetadataList() {
         log.debug(INVOKING_METHOD_WITHOUT_ARGS, REFRESH_IGNORED_UPDATE_METADATA_LIST);
         return s3Service.headObject(ignoredUpdateMetadataFileName, bucketName)
-                .transform(ignoreNoSuchBucketOrKeyException())
                 .map(HeadObjectResponse::lastModified)
                 .flatMapMany(s3LastModified -> {
                     //Scarica il file solo se è stato modificato dall'ultima schedulazione
@@ -109,7 +111,7 @@ public class IgnoredUpdateMetadataConfig {
                         return parseIgnoredUpdateMetadataList();
                     } else {
                         log.debug("The file has not been modified, nothing to do...");
-                        return Flux.empty();
+                        return Flux.error(new FileNotModifiedException());
                     }
                 })
                 .reduce(new ConcurrentHashMap<String, Boolean>(), (map, line) -> {
@@ -117,9 +119,9 @@ public class IgnoredUpdateMetadataConfig {
                     return map;
                 })
                 .map(Map::keySet)
-                .filter(keySet -> !keySet.isEmpty())
                 .map(ignoredUpdateMetadataHandler::updateSet)
-                .doOnNext(size -> log.debug("Updated ignoredUpdateMetadataSet, new size: {}", size));
+                .doOnNext(size -> log.debug("Updated ignoredUpdateMetadataSet, new size: {}", size))
+                .transform(ignoreNoSuchBucketOrKeyException());
     }
 
     /**

@@ -12,4 +12,6 @@ public interface IgnoredUpdateMetadataHandler {
 
     int updateSet(Set<String> newSet);
 
+    int getSetSize();
+
 }

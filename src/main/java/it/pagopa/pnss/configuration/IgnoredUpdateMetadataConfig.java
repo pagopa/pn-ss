@@ -102,6 +102,7 @@ public class IgnoredUpdateMetadataConfig {
     Mono<Integer> refreshIgnoredUpdateMetadataList() {
         log.debug(INVOKING_METHOD_WITHOUT_ARGS, REFRESH_IGNORED_UPDATE_METADATA_LIST);
         return s3Service.headObject(ignoredUpdateMetadataFileName, bucketName)
+                .transform(ignoreNoSuchBucketOrKeyException())
                 .map(HeadObjectResponse::lastModified)
                 .flatMapMany(s3LastModified -> {
                     //Scarica il file solo se è stato modificato dall'ultima schedulazione
@@ -120,8 +121,7 @@ public class IgnoredUpdateMetadataConfig {
                 })
                 .map(Map::keySet)
                 .map(ignoredUpdateMetadataHandler::updateSet)
-                .doOnNext(size -> log.debug("Updated ignoredUpdateMetadataSet, new size: {}", size))
-                .transform(ignoreNoSuchBucketOrKeyException());
+                .doOnNext(size -> log.debug("Updated ignoredUpdateMetadataSet, new size: {}", size));
     }
 
     /**

@@ -127,10 +127,10 @@ public class FileMetadataUpdateService {
                         }
 
                         if (StringUtils.isEmpty(technicalStatus)) {
-                            log.debug("{} : Technical status not found " +
+                            log.debug("{} : Logical status not found " +
                                       "for document key {}", UPDATE_METADATA, fileKey);
                             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                                          "Technical status not found for document key : " + fileKey));
+                                                                          "Logical status not found for document key : " + fileKey));
                         }
 
                     }

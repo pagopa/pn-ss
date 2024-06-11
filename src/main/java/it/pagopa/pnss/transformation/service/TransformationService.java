@@ -95,12 +95,11 @@ public class TransformationService {
                     return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), newStagingBucketObject.getRetry(), true);
                 })
                 .then()
-                .doOnSuccess(s3ObjectDto -> acknowledgment.acknowledge())
+                .doOnSuccess( s3ObjectDto -> acknowledgment.acknowledge())
                 .doOnError(throwable -> !(throwable instanceof InvalidStatusTransformationException || throwable instanceof IllegalTransformationException), throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()))
                 .onErrorResume(throwable -> newStagingBucketObject.getRetry() <= MAX_RETRIES, throwable -> {
                     newStagingBucketObject.setRetry(newStagingBucketObject.getRetry() + 1);
-                    acknowledgment.acknowledge();
-                    return sqsService.send(signQueueName, newStagingBucketObject).then();
+                    return sqsService.send(signQueueName, newStagingBucketObject).then(Mono.fromRunnable(acknowledgment::acknowledge));
                 });
     }
 

@@ -26,7 +26,8 @@ exports.handleEvent = async (event) => {
 
                     console.log(`File ${fileKey} eliminato con successo da S3.`);
                     break;
-                case "COMPLETE":
+// Questa parte di codice è commentata in quanto, al momento, non ritenuta sicura                    
+/*                case "COMPLETE":
                     console.log(`Ottenendo tutte le versioni del file ${fileKey} da S3...`);
                     const command=new ListObjectVersionsCommand({
                       Bucket: BUCKET_NAME,
@@ -43,8 +44,9 @@ exports.handleEvent = async (event) => {
                                 }));
                         }
                         ));
-                    break;
+                    break; */
                 default:
+                    console.log(`Nessuna azione eseguita per il file ${fileKey} con DELETION_MODE=${DELETION_MODE}.`);
                     return;
             }
     }

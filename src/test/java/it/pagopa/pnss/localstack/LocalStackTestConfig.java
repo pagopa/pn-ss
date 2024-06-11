@@ -20,6 +20,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
+import org.testcontainers.containers.Container;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -95,6 +96,8 @@ public class LocalStackTestConfig {
         System.setProperty("test.aws.cloudwatch.endpoint", String.valueOf(localStackContainer.getEndpointOverride(CLOUDWATCH)));
 
         try {
+            initS3(localStackContainer);
+
             //Set Aruba secret credentials.
             localStackContainer.execInContainer("awslocal",
                     "secretsmanager",
@@ -181,34 +184,45 @@ public class LocalStackTestConfig {
         });
     }
 
-    //TODO aggiungere lifecycleRule per bucket
-    private void initS3() {
-        List<String> bucketNames = List.of(bucketName.ssHotName(), bucketName.ssStageName());
+    private static void initS3(LocalStackContainer localStackContainer) throws IOException, InterruptedException {
 
-        ObjectLockConfiguration objectLockConfiguration = ObjectLockConfiguration.builder().objectLockEnabled(ObjectLockEnabled.ENABLED)
-                .rule(ObjectLockRule.builder().defaultRetention(DefaultRetention.builder().days(1).mode(ObjectLockRetentionMode.GOVERNANCE).build()).build())
-                .build();
+        String objectLockConfiguration = "{\"ObjectLockEnabled\":\"Enabled\",\"Rule\":{\"DefaultRetention\":{\"Mode\":\"GOVERNANCE\",\"Days\":1}}}";
+        String lifecycleRule = "{\"Rules\": [{\"ID\": \"MoveToGlacier\", \"Filter\": {\"Prefix\": \"\"}, \"Status\": \"Enabled\", \"Transitions\": [{\"Days\": 1, \"StorageClass\": \"GLACIER\"}]}]}";
 
-        LifecycleRule lifecycleRule = LifecycleRule.builder().transitions(builder -> builder.storageClass(StorageClass.GLACIER.name()).days(1)).build();
-        BucketLifecycleConfiguration bucketLifecycleConfiguration = BucketLifecycleConfiguration.builder().rules(lifecycleRule).build();
+        List<String> bucketNames = List.of("pn-ss-storage-safestorage", "pn-ss-storage-safestorage-staging");
 
         bucketNames.forEach(bucket -> {
-            log.info("<-- START S3 init-->");
             try {
-                s3Client.headBucket(builder -> builder.bucket(bucket));
-                log.info("Bucket {} already created on local stack S3", bucket);
-            } catch (NoSuchBucketException noSuchBucketException) {
-                s3Client.createBucket(builder -> builder.bucket(bucket).objectLockEnabledForBucket(true));
-                s3Client.putObjectLockConfiguration(builder -> builder.bucket(bucket).objectLockConfiguration(objectLockConfiguration));
-                s3Client.putBucketLifecycleConfiguration(builder -> builder.bucket(bucket).lifecycleConfiguration(bucketLifecycleConfiguration));
-                log.info("New bucket {} created on local stack S3", bucket);
+                log.info("<-- START S3 init-->");
+                Container.ExecResult result = localStackContainer.execInContainer("awslocal", "s3api", "head-bucket", "--bucket", bucket);
+                if (result.getStderr().contains("404")) {
+                    execInContainer("awslocal", "s3api", "create-bucket", "--region", localStackContainer.getRegion(), "--bucket", bucket, "--object-lock-enabled-for-bucket");
+                    execInContainer("awslocal", "s3api", "put-object-lock-configuration", "--bucket", bucket, "--object-lock-configuration", objectLockConfiguration);
+                    execInContainer("awslocal", "s3api", "put-bucket-lifecycle-configuration", "--bucket", bucket, "--lifecycle-configuration", lifecycleRule);
+                    log.info("New bucket " + bucket + " created on local stack S3");
+                } else log.info("Bucket " + bucket + " already created on local stack S3");
+            } catch (IOException | InterruptedException ex) {
+                ex.printStackTrace();
             }
         });
+
+        Container.ExecResult result = localStackContainer.execInContainer("awslocal", "s3api", "head-object", "--region", localStackContainer.getRegion(), "--bucket", "pn-ss-storage-safestorage", "--key", "ignored-update-metadata.csv");
+        String ignoredFileKey = "ignoredFileKey";
+        System.setProperty("ignored.file.key", ignoredFileKey);
+        if (result.getStderr().contains("404")) {
+            execInContainer("awslocal", "s3api", "put-object", "--region", localStackContainer.getRegion(), "--bucket", "pn-ss-storage-safestorage", "--key", "ignored-update-metadata.csv");
+        }
+    }
+
+    private static void execInContainer(String... command) throws IOException, InterruptedException {
+        Container.ExecResult result = localStackContainer.execInContainer(command);
+        if (result.getExitCode() != 0) {
+            throw new RuntimeException(result.toString());
+        }
     }
 
     @PostConstruct
     public void initLocalStack() {
-        initS3();
         initDynamoDb();
     }
 }

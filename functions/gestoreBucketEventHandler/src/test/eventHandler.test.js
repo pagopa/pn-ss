@@ -13,7 +13,8 @@ const OBJECT_CREATED_PUT = "ObjectCreated:Put";
 const OBJECT_CREATED_COPY = "ObjectCreated:Copy";
 const OBJECT_RESTORE_COMPLETED = "ObjectRestore:Completed";
 const OBJECT_RESTORE_DELETE = "ObjectRestore:Delete";
-const OBJECT_REMOVED = "ObjectRemoved:DeleteMarkerCreated";
+const OBJECT_REMOVED_DELETE_MARKER = "ObjectRemoved:DeleteMarkerCreated";
+const OBJECT_REMOVED_DELETE = "ObjectRemoved:Delete";
 const LIFECYCLE_TRANSITION = "LifecycleTransition";
 const LIFECYCLE_EXPIRATION = "LifecycleExpiration:DeleteMarkerCreated";
 
@@ -361,7 +362,7 @@ describe("gestoreBucketEventHandler tests", function () {
     const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
 
     const docKey = "fileKey";
-    var event = createEvent(OBJECT_REMOVED, docKey, "", "bucket", NOW);
+    var event = createEvent(OBJECT_REMOVED_DELETE_MARKER, docKey, "", "bucket", NOW);
 
     var expectedRequest = {
       documentKey: docKey,
@@ -386,6 +387,38 @@ describe("gestoreBucketEventHandler tests", function () {
 
   });
 
+  it("test event ObjectRemoved:Delete ok", async () => {
+
+    const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
+    const NOW = new Date(Date.now()).toISOString();
+
+    const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
+
+    const docKey = "fileKey";
+    var event = createEvent(OBJECT_REMOVED_DELETE, docKey, "", "bucket", NOW);
+
+    var expectedRequest = {
+      documentKey: docKey,
+      documentState: "deleted",
+    };
+
+    var originalRequest;
+    mocker.mock({
+      url: PATHPATCH,
+      response: function (requestInfo) {
+        originalRequest = requestInfo;
+        return {};
+      }
+    });
+
+    const res = await lambda.handleEvent(event);
+
+    expect(JSON.parse(originalRequest.body)).to.deep.equal(expectedRequest);
+    expect(res).deep.equals({
+      batchItemFailures: [],
+    });
+
+  });
 
   this.afterEach(() => {
     process.env = originalEnv;

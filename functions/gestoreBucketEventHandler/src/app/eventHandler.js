@@ -114,6 +114,9 @@ exports.handleEvent = async (event) => {
         case "ObjectRemoved:DeleteMarkerCreated":
           jsonDocument.documentState = "deleted";
           break;
+        case "ObjectRemoved:Delete":
+          jsonDocument.documentState = "deleted";
+          break;
         default:
           return;
       }

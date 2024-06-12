@@ -22,8 +22,10 @@ import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
+import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
+import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -58,7 +60,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient(timeout = "36000")
 @CustomLog
-public class DocumentInternalApiControllerTest {
+public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConfigTestSetup {
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     String testAwsS3Endpoint;
@@ -69,7 +71,8 @@ public class DocumentInternalApiControllerTest {
     private BucketName bucketName;
 	@Autowired
 	private S3Client s3TestClient;
-
+	@SpyBean
+	private S3Service s3Service;
 	@SpyBean
 	private DocumentService documentService;
 
@@ -321,6 +324,135 @@ public class DocumentInternalApiControllerTest {
 				.body(BodyInserters.fromValue(docChanges))
 				.exchange().expectStatus().isOk();
 
+		log.info("\n Test 6 (patchItem) passed \n");
+	}
+
+	@Test
+	void patchItemIgnoreS3UpdateMetadataOk() {
+
+		log.warn("DocumentInternalApiControllerTest.patchItem() : START");
+
+		//The fileKey is in ignored-update-metadata.csv file
+		String documentKey = "fileKeyToIgnoreUpdateMetadata";
+
+		List<String> allowedStatusTransitions = new ArrayList<>();
+		allowedStatusTransitions.add("ATTACHED");
+
+		CurrentStatusEntity currentStatusAttached = new CurrentStatusEntity();
+		currentStatusAttached.setStorage("PN_NOTIFIED_DOCUMENTS");
+		currentStatusAttached.setTechnicalState(ATTACHED);
+
+		CurrentStatusEntity currentStatusPreloaded = new CurrentStatusEntity();
+		currentStatusPreloaded.setStorage("PN_TEMPORARY_DOCUMENT");
+		currentStatusPreloaded.setAllowedStatusTransitions(allowedStatusTransitions);
+		currentStatusPreloaded.setTechnicalState(AVAILABLE);
+
+		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
+		statuses1.put("ATTACHED", currentStatusAttached);
+		statuses1.put("PRELOADED", currentStatusPreloaded);
+
+		DocTypeEntity docTypeEntity = new DocTypeEntity();
+		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
+		docTypeEntity.setStatuses(statuses1);
+
+		var documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(docTypeEntity);
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(PRELOADED);
+		documentEntity.setDocumentLogicalState(AVAILABLE);
+
+		insertDocumentEntity(documentEntity);
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(ATTACHED);
+		docChanges.setContentLenght(new BigDecimal(60));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
+
+		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
+		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
+		documentEntity.setVersion(1L);
+		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(documentEntity));
+
+		webTestClient.patch()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+				.header("x-pagopa-safestorage-cx-id", "pn-test")
+				.header("x-api-key", "pn-test_api_key")
+				.accept(APPLICATION_JSON)
+				.contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isOk();
+
+		verify(s3Service, times(1)).headObject(anyString(), anyString());
+		verify(s3Service, never()).putObjectTagging(anyString(), anyString(), any());
+		verify(retentionService, never()).setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString());
+
+		log.info("\n Test 6 (patchItem) passed \n");
+	}
+
+	@Test
+	void patchItemIgnoreS3UpdateMetadata_FilePresentInS3() {
+
+		log.warn("DocumentInternalApiControllerTest.patchItem() : START");
+
+		//The fileKey is in ignored-update-metadata.csv file
+		String documentKey = "fileKeyToIgnoreUpdateMetadata2";
+
+		List<String> allowedStatusTransitions = new ArrayList<>();
+		allowedStatusTransitions.add("ATTACHED");
+
+		CurrentStatusEntity currentStatusAttached = new CurrentStatusEntity();
+		currentStatusAttached.setStorage("PN_NOTIFIED_DOCUMENTS");
+		currentStatusAttached.setTechnicalState(ATTACHED);
+
+		CurrentStatusEntity currentStatusPreloaded = new CurrentStatusEntity();
+		currentStatusPreloaded.setStorage("PN_TEMPORARY_DOCUMENT");
+		currentStatusPreloaded.setAllowedStatusTransitions(allowedStatusTransitions);
+		currentStatusPreloaded.setTechnicalState(AVAILABLE);
+
+		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
+		statuses1.put("ATTACHED", currentStatusAttached);
+		statuses1.put("PRELOADED", currentStatusPreloaded);
+
+		DocTypeEntity docTypeEntity = new DocTypeEntity();
+		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
+		docTypeEntity.setStatuses(statuses1);
+
+		var documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(docTypeEntity);
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(PRELOADED);
+		documentEntity.setDocumentLogicalState(AVAILABLE);
+
+		insertDocumentEntity(documentEntity);
+		addFileToBucket(documentKey, bucketName.ssHotName());
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(ATTACHED);
+		docChanges.setContentLenght(new BigDecimal(60));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
+
+		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
+		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
+		documentEntity.setVersion(1L);
+		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(documentEntity));
+
+		webTestClient.patch()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+				.header("x-pagopa-safestorage-cx-id", "pn-test")
+				.header("x-api-key", "pn-test_api_key")
+				.accept(APPLICATION_JSON)
+				.contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isOk();
+
+		verify(s3Service, times(1)).headObject(anyString(), anyString());
+		verify(s3Service, times(1)).putObjectTagging(anyString(), anyString(), any());
+		verify(retentionService, times(1)).setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString());
+
+		//Clean-up
+		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(documentKey));
 		log.info("\n Test 6 (patchItem) passed \n");
 	}
 

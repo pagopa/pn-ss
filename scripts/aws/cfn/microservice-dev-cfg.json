@@ -35,6 +35,7 @@
     "PnEcNamirialServerPendingAcquireTimeout": "600",
     "PnSsNamirialServerAddress": "https://fspagopa-test.namirial.com/easysign",
     "CpuValue": "1024",
-    "MemoryAmount": "4GB"
+    "MemoryAmount": "4GB",
+    "PnSsIgnoredUpdateMetadataList": "s3://pn-runtime-environment-variables-eu-south-1-089813480515/pn-safe-storage/UpdateFileMetadataIgnore.list"
   }
 }

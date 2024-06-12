@@ -74,11 +74,11 @@ Parameters:
     Type: String
     Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
     Default: 'MARKER'
-    AllowedValues: [MARKER, COMPLETE]
+    AllowedValues: [MARKER]
 
 Conditions:
   IsDevEnv: !Equals [ !Ref EnvType, 'dev']
-  DocumentsCompleteDeletion: !Equals [ !Ref PnSsDocumentDeletionMode, 'COMPLETE']
+##  DocumentsCompleteDeletion: !Equals [ !Ref PnSsDocumentDeletionMode, 'COMPLETE']
 
 
 Resources:
@@ -229,19 +229,19 @@ Resources:
             Id: 'CORSRuleSafeStorage'
       LifecycleConfiguration:
         Rules:
-          - !If
-            - DocumentsCompleteDeletion
-            - Id: 'PnSsExpiredObjectDeleteMarker'
-              Status: 'Enabled'
-              ExpiredObjectDeleteMarker: true
-            - !Ref "AWS::NoValue"
-          - !If
-            - DocumentsCompleteDeletion
-            - Id: 'PnSsNoncurrentVersionExpiration'
-              Status: 'Enabled'
-              NoncurrentVersionExpiration:
-                NoncurrentDays: 1
-            - !Ref "AWS::NoValue"
+##          - !If
+##            - DocumentsCompleteDeletion
+##            - Id: 'PnSsExpiredObjectDeleteMarker'
+##              Status: 'Enabled'
+##              ExpiredObjectDeleteMarker: true
+##            - !Ref "AWS::NoValue"
+##          - !If
+##            - DocumentsCompleteDeletion
+##            - Id: 'PnSsNoncurrentVersionExpiration'
+##              Status: 'Enabled'
+##              NoncurrentVersionExpiration:
+##                NoncurrentDays: 1
+##            - !Ref "AWS::NoValue"
           - Id: 'PnSsAbortIncompleteMultipartUpload'
             AbortIncompleteMultipartUpload:
                 DaysAfterInitiation: 1

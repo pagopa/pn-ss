@@ -419,6 +419,11 @@ Parameters:
     Description: Memory amount reserved to the task pod.
     AllowedValues: [ 2GB, 4GB, 6GB, 8GB ]
 
+  PnSsIgnoredUpdateMetadataList:
+    Type: String
+    Default: ''
+    Description: URL to the file containing the list of fileKeys which s3 object doesn't need to be updated.
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -525,6 +530,7 @@ Resources:
         ContainerEnvEntry47: !Sub 'PnEcNamirialServerPendingAcquireTimeout=${PnEcNamirialServerPendingAcquireTimeout}'
         ContainerEnvEntry48: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
         ContainerEnvEntry49: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
+        ContainerEnvEntry50: !Sub 'PnSsIgnoredUpdateMetadataList=${PnSsIgnoredUpdateMetadataList}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -608,6 +614,14 @@ Resources:
               - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
               - !Ref PnSsStagingBucketArn
               - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
+          - Effect: Allow
+            Action:
+              - 's3:List*'
+              - 's3:GetBucket*'
+              - 's3:GetObject*'
+            Resource:
+              - !Join [ '', [ 'arn:aws:s3:::pn-runtime-environment-variables-' , !Sub '${AWS::Region}-${AWS::AccountId}']]
+              - !Join [ '', [ 'arn:aws:s3:::pn-runtime-environment-variables-' , !Sub '${AWS::Region}-${AWS::AccountId}', '/pn-safe-storage/*']]
           - Effect: Allow
             Action:
               - 'sqs:ReceiveMessage'

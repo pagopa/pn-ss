@@ -4,6 +4,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
@@ -80,6 +81,8 @@ public class UserConfigurationInternalApiControllerTest {
 		userConfigurationInput.setCanCreate(canCreate);
 		userConfigurationInput.setCanRead(canRead);
 		userConfigurationInput.setCanModifyStatus(canModifyStatus);
+		userConfigurationInput.setCanWriteTags(true);
+		userConfigurationInput.setCanReadTags(true);
 		userConfigurationInput.setSignatureInfo("mmm");
 		userConfigurationInput.setDestination(destination);
 		userConfigurationInput.setApiKey("apiKey");
@@ -94,6 +97,8 @@ public class UserConfigurationInternalApiControllerTest {
 		userConfigurationChanges = new UserConfigurationChanges();
 		userConfigurationChanges.setCanCreate(canCreate1);
 		userConfigurationChanges.setCanRead(canRead1);
+		userConfigurationChanges.setCanWriteTags(true);
+		userConfigurationChanges.setCanReadTags(true);
 		userConfigurationChanges.setCanModifyStatus(canModifyStatus1);
 	}
 
@@ -203,10 +208,18 @@ public class UserConfigurationInternalApiControllerTest {
 				.returnResult();
 
 		log.info("\n Test 6 (patchItem) userConfigurationUpdated2 : {} \n",
-				userConfigurationUpdated.getResponseBody().getUserConfiguration());
+				Objects.requireNonNull(userConfigurationUpdated.getResponseBody()).getUserConfiguration());
 
 		Assertions.assertEquals(userConfigurationChanges.getCanCreate(),
 				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanCreate());
+		Assertions.assertEquals(userConfigurationChanges.getCanRead(),
+				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanRead());
+		Assertions.assertEquals(userConfigurationChanges.getCanModifyStatus(),
+				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanModifyStatus());
+		Assertions.assertEquals(userConfigurationChanges.getCanWriteTags(),
+				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanWriteTags());
+		Assertions.assertEquals(userConfigurationChanges.getCanReadTags(),
+				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanReadTags());
 
 		log.info("\n Test 6 (patchItem) passed \n");
 	}

@@ -95,6 +95,31 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 	@MockBean
 	private UserConfigurationClientCall userConfigurationClientCall;
 
+
+	private static Map<String, List<String>> createTagsList(){
+		Map<String, List<String>> tags = new HashMap<>();
+
+		List<String> valuesForKey1 = new ArrayList<>();
+		valuesForKey1.add("value_1");
+		valuesForKey1.add("value_7");
+		tags.put("key_1", valuesForKey1);
+
+		List<String> valuesForKey2 = new ArrayList<>();
+		valuesForKey2.add("value_2");
+		tags.put("key_2", valuesForKey2);
+
+		List<String> valuesForKey3 = new ArrayList<>();
+		valuesForKey3.add("value_3");
+		valuesForKey3.add("value_9");
+		valuesForKey3.add("value_8");
+		tags.put("key_3", valuesForKey3);
+
+		List<String> valuesForKey4 = new ArrayList<>();
+		valuesForKey4.add("value_4");
+		tags.put("key_4", valuesForKey4);
+		return tags;
+	}
+
 	private static void insertDocumentEntity(String documentKey) {
 		log.info("execute insertDocumentEntity()");
 
@@ -121,6 +146,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		documentEntity.setLastStatusChangeTimestamp(OffsetDateTime.now());
 		documentEntity.setDocumentState(SAVED);
 		documentEntity.setDocumentLogicalState(AVAILABLE);
+		documentEntity.setTags(createTagsList());
 		dynamoDbTable.putItem(builder -> builder.item(documentEntity));
 	}
 
@@ -170,6 +196,8 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		documentInput.setContentType("xxxxx");
 		documentInput.setDocumentType(DOCTYPE_ID_LEGAL_FACTS);
 		documentInput.setContentLenght(new BigDecimal(100));
+		documentInput.setTags(createTagsList());
+
 		log.info("execute createDocument() : documentInput : {}", documentInput);
 
 		documentChanges = new DocumentChanges();
@@ -301,6 +329,8 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		documentEntity.setContentLenght(new BigDecimal(50));
 		documentEntity.setDocumentState(PRELOADED);
 		documentEntity.setDocumentLogicalState(AVAILABLE);
+		documentEntity.setTags(createTagsList());
+
 
 		insertDocumentEntity(documentEntity);
 		addFileToBucket(documentKey, bucketName.ssHotName());
@@ -361,6 +391,8 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		documentEntity.setContentLenght(new BigDecimal(50));
 		documentEntity.setDocumentState(PRELOADED);
 		documentEntity.setDocumentLogicalState(AVAILABLE);
+		documentEntity.setTags(createTagsList());
+
 
 		insertDocumentEntity(documentEntity);
 
@@ -424,6 +456,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		documentEntity.setContentLenght(new BigDecimal(50));
 		documentEntity.setDocumentState(PRELOADED);
 		documentEntity.setDocumentLogicalState(AVAILABLE);
+		documentEntity.setTags(createTagsList());
 
 		insertDocumentEntity(documentEntity);
 		addFileToBucket(documentKey, bucketName.ssHotName());

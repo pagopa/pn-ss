@@ -748,6 +748,13 @@ components:
           format: date-time
           description: >-
             Timestamp dell'ultima variazione di stato del documento.
+        tags:
+          type: object
+          additionalProperties:
+              type: array
+              items:
+                type: string
+
 
     DocumentInput:
       allOf:

@@ -424,6 +424,10 @@ Parameters:
     Default: ''
     Description: URL to the file containing the list of fileKeys which s3 object doesn't need to be updated.
 
+  PnSsIndexingConfiguration:
+    Type: String
+    Description: 'Name of the parameter store containing the configuration for the indexing service'
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String

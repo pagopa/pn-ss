@@ -60,12 +60,9 @@ import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
+import software.amazon.awssdk.services.ssm.SsmAsyncClient;
+import software.amazon.awssdk.services.ssm.SsmAsyncClientBuilder;
 import java.net.URI;
-import java.net.URL;
 import java.util.List;
 
 @Configuration
@@ -101,6 +98,9 @@ public class AwsConfiguration {
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
+
+    @Value("${test.aws.ssm.endpoint:#{null}}")
+    private String testAwsSsmEndpoint;
 
     private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
@@ -210,6 +210,19 @@ public class AwsConfiguration {
         }
 
         return s3Client.build();
+    }
+
+    @Bean
+    public SsmAsyncClient ssmAsyncClient() {
+        SsmAsyncClientBuilder ssmClient = SsmAsyncClient.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            ssmClient.endpointOverride(URI.create(testAwsSsmEndpoint));
+        }
+
+        return ssmClient.build();
     }
 
     @Bean

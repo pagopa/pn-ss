@@ -179,6 +179,20 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
+  PnSsTableTags:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: 'pn-SsTags'
+      AttributeDefinitions:
+        - AttributeName: 'tagKey'
+          AttributeType: 'S'
+      BillingMode: 'PAY_PER_REQUEST'
+      TableClass: 'STANDARD'
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
   PnSsKmsBucket:
     Type: 'AWS::KMS::Key'
     Properties:
@@ -782,6 +796,14 @@ Outputs:
   PnSsTableScadenzaDocumentiStreamArn:
     Description: 'Nome tabella SS Scadenza Documenti'
     Value: !GetAtt PnSsTableScadenzaDocumenti.StreamArn
+
+  PnSsTableNameTags:
+    Description: 'Nome tabella conteniente i tags'
+    Value: !Ref PnSsTableTags
+
+  PnSsTableArnTags:
+    Description: 'ARN tabella conteniente i tags'
+    Value: !GetAtt PnSsTableTags.Arn
 
   PnSsDocumentDeletionMode:
     Description: 'Modalità cancellazione da tabella scadenzaDocumenti'

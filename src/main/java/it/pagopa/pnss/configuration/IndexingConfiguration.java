@@ -1,6 +1,7 @@
 package it.pagopa.pnss.configuration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import it.pagopa.pnss.common.exception.MissingIndexingLimitsException;
 import it.pagopa.pnss.common.model.pojo.IndexingLimits;
 import it.pagopa.pnss.common.model.pojo.IndexingSettings;
 import it.pagopa.pnss.common.model.pojo.IndexingTag;
@@ -11,13 +12,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
-import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.ssm.SsmAsyncClient;
 
 import javax.annotation.PostConstruct;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentMap;
+
 
 import static it.pagopa.pnss.common.utils.LogUtils.INDEXING_CONFIGURATION;
 import static it.pagopa.pnss.common.utils.LogUtils.INITIALIZING;
@@ -31,8 +30,7 @@ public class IndexingConfiguration {
     private final SsmAsyncClient ssmAsyncClient;
     private final JsonUtils jsonUtils;
     private final String indexingConfigurationName;
-    private Map<String, IndexingTag> globalTags = new ConcurrentHashMap<>();
-    private Map<String, IndexingTag> localTags = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, IndexingTag> tags;
     private IndexingLimits indexingLimits;
 
     public IndexingConfiguration(SsmAsyncClient ssmAsyncClient, JsonUtils jsonUtils, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) {
@@ -55,6 +53,10 @@ public class IndexingConfiguration {
         throw new NotImplementedException("Method not implemented");
     }
 
+    public boolean isTagGlobal(String tagKey) {
+        throw new NotImplementedException("Method not implemented");
+    }
+
     public IndexingTag getTagInfo(String tagKey) {
         return null;
     }
@@ -63,12 +65,8 @@ public class IndexingConfiguration {
         return null;
     }
 
-    public Map<String, IndexingTag> getGlobalTags() {
-        return globalTags;
-    }
-
-    public Map<String, IndexingTag> getLocalTags() {
-        return localTags;
+    public ConcurrentMap<String, IndexingTag> getTags() {
+        return tags;
     }
 
 }

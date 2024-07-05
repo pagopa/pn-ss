@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.ssm.SsmAsyncClient;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.util.concurrent.ConcurrentMap;
 
 @SpringBootTestWebEnv
 @CustomLog
@@ -28,6 +29,8 @@ class IndexingConfigurationTest {
     @Value("${pn.ss.indexing.configuration.name}")
     String indexingConfigurationName;
     private static final String IUN = "IUN";
+    private static final String NON_EXISTING_TAG = "NON_EXISTING_TAG";
+    private static final String DATA_CREAZIONE = "pn-radd-fsu~DataCreazione";
 
     @BeforeAll
     static void setup() {
@@ -50,21 +53,35 @@ class IndexingConfigurationTest {
             indexingConfiguration.init();
 
             // Checking correct parsing of json string.
-            Assertions.assertEquals(3, indexingConfiguration.getGlobalTags().size());
-            Assertions.assertEquals(2, indexingConfiguration.getLocalTags().size());
+            ConcurrentMap<String, IndexingTag> tags = indexingConfiguration.getTags();
+            Assertions.assertNotNull(tags);
+            Assertions.assertEquals(5, tags.size());
             assertAllLimitsNotNull(indexingConfiguration.getIndexingLimits());
+
+            // Checking correct count of global and local tags.
+            long globalTagsCount = tags.values().stream().filter(IndexingTag::isGlobal).count();
+            long localTagsCount = tags.values().stream().filter(tag -> !tag.isGlobal()).count();
+            Assertions.assertEquals(3, globalTagsCount);
+            Assertions.assertEquals(2, localTagsCount);
 
             // Checking correct usage of isTagValid() method.
             Assertions.assertTrue(indexingConfiguration.isTagValid(IUN));
-            Assertions.assertFalse(indexingConfiguration.isTagValid("NonExistingTag"));
+            Assertions.assertTrue(indexingConfiguration.isTagValid(DATA_CREAZIONE));
+            Assertions.assertFalse(indexingConfiguration.isTagValid(NON_EXISTING_TAG));
+
+            // Checking correct usage of isTagGlobal() method.
+            Assertions.assertThrows(MissingTagException.class, () -> indexingConfiguration.isTagGlobal(NON_EXISTING_TAG));
+            Assertions.assertTrue(indexingConfiguration.isTagGlobal(IUN));
+            Assertions.assertFalse(indexingConfiguration.isTagGlobal(DATA_CREAZIONE));
 
             // Checking correct usage of getTagInfo() method.
+            Assertions.assertThrows(MissingTagException.class, () -> indexingConfiguration.getTagInfo(NON_EXISTING_TAG));
             IndexingTag tagInfo = indexingConfiguration.getTagInfo(IUN);
             Assertions.assertNotNull(tagInfo);
             Assertions.assertEquals(IUN, tagInfo.getKey());
             Assertions.assertTrue(tagInfo.isIndexed());
             Assertions.assertTrue(tagInfo.isMultivalue());
-
+            Assertions.assertTrue(tagInfo.isGlobal());
         }
     }
 
@@ -85,12 +102,14 @@ class IndexingConfigurationTest {
             indexingConfiguration.init();
 
             // Checking correct parsing of json string.
-            Assertions.assertEquals(0, indexingConfiguration.getGlobalTags().size());
-            Assertions.assertEquals(0, indexingConfiguration.getLocalTags().size());
+            Assertions.assertEquals(0, indexingConfiguration.getTags().size());
             assertAllLimitsNotNull(indexingConfiguration.getIndexingLimits());
 
             // Checking correct usage of isTagValid() method.
             Assertions.assertFalse(indexingConfiguration.isTagValid(IUN));
+
+            // Checking correct usage of isTagGlobal() method.
+            Assertions.assertThrows(MissingTagException.class, () -> indexingConfiguration.isTagGlobal(IUN));
 
             // Checking correct usage of getTagInfo() method.
             Assertions.assertThrows(MissingTagException.class, () -> indexingConfiguration.getTagInfo(IUN));

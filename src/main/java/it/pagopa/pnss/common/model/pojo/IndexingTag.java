@@ -16,5 +16,6 @@ public class IndexingTag {
     String key;
     boolean indexed;
     boolean multivalue;
+    boolean isGlobal;
 
 }

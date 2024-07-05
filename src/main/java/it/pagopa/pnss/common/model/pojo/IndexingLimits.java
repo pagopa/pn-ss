@@ -9,6 +9,9 @@ import lombok.experimental.FieldDefaults;
 
 import javax.validation.constraints.NotNull;
 
+/**
+ * A pojo class representing the limits options for the indexing service.
+ */
 @Data
 @Builder
 @AllArgsConstructor

@@ -6,6 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+/**
+ * A pojo class representing a tag for the indexing service
+ */
 @Data
 @Builder
 @AllArgsConstructor
@@ -16,6 +19,6 @@ public class IndexingTag {
     String key;
     boolean indexed;
     boolean multivalue;
-    boolean isGlobal;
+    boolean global;
 
 }

@@ -1,16 +1,15 @@
 package it.pagopa.pnss.configuration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import it.pagopa.pnss.common.exception.MissingIndexingLimitsException;
+import it.pagopa.pnss.common.exception.MissingTagException;
 import it.pagopa.pnss.common.model.pojo.IndexingLimits;
+import it.pagopa.pnss.common.model.pojo.IndexingTag;
+import it.pagopa.pnss.common.utils.JsonUtils;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import software.amazon.awssdk.services.ssm.SsmAsyncClient;
@@ -25,9 +24,10 @@ class IndexingConfigurationTest {
     @Autowired
     SsmAsyncClient ssmAsyncClient;
     @Autowired
-    ObjectMapper objectMapper;
+    JsonUtils jsonUtils;
     @Value("${pn.ss.indexing.configuration.name}")
     String indexingConfigurationName;
+    private static final String IUN = "IUN";
 
     @BeforeAll
     static void setup() {
@@ -36,6 +36,7 @@ class IndexingConfigurationTest {
 
     @Nested
     class TestDefaultConfiguration {
+
         @BeforeAll
         static void setup(@Autowired SsmAsyncClient ssmAsyncClient, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) throws FileNotFoundException {
             log.info("Setting up default configuration for indexing...");
@@ -45,12 +46,25 @@ class IndexingConfigurationTest {
 
         @Test
         void testDefaultConfigurationOk() {
-            IndexingConfiguration indexingConfiguration = new IndexingConfiguration(ssmAsyncClient, objectMapper, indexingConfigurationName);
+            IndexingConfiguration indexingConfiguration = new IndexingConfiguration(ssmAsyncClient, jsonUtils, indexingConfigurationName);
             indexingConfiguration.init();
 
+            // Checking correct parsing of json string.
             Assertions.assertEquals(3, indexingConfiguration.getGlobalTags().size());
             Assertions.assertEquals(2, indexingConfiguration.getLocalTags().size());
             assertAllLimitsNotNull(indexingConfiguration.getIndexingLimits());
+
+            // Checking correct usage of isTagValid() method.
+            Assertions.assertTrue(indexingConfiguration.isTagValid(IUN));
+            Assertions.assertFalse(indexingConfiguration.isTagValid("NonExistingTag"));
+
+            // Checking correct usage of getTagInfo() method.
+            IndexingTag tagInfo = indexingConfiguration.getTagInfo(IUN);
+            Assertions.assertNotNull(tagInfo);
+            Assertions.assertEquals(IUN, tagInfo.getKey());
+            Assertions.assertTrue(tagInfo.isIndexed());
+            Assertions.assertTrue(tagInfo.isMultivalue());
+
         }
     }
 
@@ -67,12 +81,19 @@ class IndexingConfigurationTest {
 
         @Test
         void testEmptyTagsOk() {
-            IndexingConfiguration indexingConfiguration = new IndexingConfiguration(ssmAsyncClient, objectMapper, indexingConfigurationName);
+            IndexingConfiguration indexingConfiguration = new IndexingConfiguration(ssmAsyncClient, jsonUtils, indexingConfigurationName);
             indexingConfiguration.init();
 
+            // Checking correct parsing of json string.
             Assertions.assertEquals(0, indexingConfiguration.getGlobalTags().size());
             Assertions.assertEquals(0, indexingConfiguration.getLocalTags().size());
             assertAllLimitsNotNull(indexingConfiguration.getIndexingLimits());
+
+            // Checking correct usage of isTagValid() method.
+            Assertions.assertFalse(indexingConfiguration.isTagValid(IUN));
+
+            // Checking correct usage of getTagInfo() method.
+            Assertions.assertThrows(MissingTagException.class, () -> indexingConfiguration.getTagInfo(IUN));
         }
     }
 
@@ -88,7 +109,7 @@ class IndexingConfigurationTest {
 
         @Test
         void testMissingLimitsKo() {
-            IndexingConfiguration indexingConfiguration = new IndexingConfiguration(ssmAsyncClient, objectMapper, indexingConfigurationName);
+            IndexingConfiguration indexingConfiguration = new IndexingConfiguration(ssmAsyncClient, jsonUtils, indexingConfigurationName);
             Assertions.assertThrows(MissingIndexingLimitsException.class, indexingConfiguration::init);
         }
     }

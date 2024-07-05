@@ -4,18 +4,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.common.model.pojo.IndexingLimits;
 import it.pagopa.pnss.common.model.pojo.IndexingSettings;
 import it.pagopa.pnss.common.model.pojo.IndexingTag;
+import it.pagopa.pnss.common.utils.JsonUtils;
 import lombok.CustomLog;
 import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.ssm.SsmAsyncClient;
 
 import javax.annotation.PostConstruct;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static it.pagopa.pnss.common.utils.LogUtils.INDEXING_CONFIGURATION;
 import static it.pagopa.pnss.common.utils.LogUtils.INITIALIZING;
@@ -27,15 +29,15 @@ import static it.pagopa.pnss.common.utils.LogUtils.INITIALIZING;
 public class IndexingConfiguration {
 
     private final SsmAsyncClient ssmAsyncClient;
-    private final ObjectMapper objectMapper;
+    private final JsonUtils jsonUtils;
     private final String indexingConfigurationName;
     private Map<String, IndexingTag> globalTags = new ConcurrentHashMap<>();
     private Map<String, IndexingTag> localTags = new ConcurrentHashMap<>();
     private IndexingLimits indexingLimits;
 
-    public IndexingConfiguration(SsmAsyncClient ssmAsyncClient, ObjectMapper objectMapper, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) {
+    public IndexingConfiguration(SsmAsyncClient ssmAsyncClient, JsonUtils jsonUtils, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) {
         this.ssmAsyncClient = ssmAsyncClient;
-        this.objectMapper = objectMapper;
+        this.jsonUtils = jsonUtils;
         this.indexingConfigurationName = indexingConfigurationName;
     }
 

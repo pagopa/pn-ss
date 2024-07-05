@@ -2,8 +2,7 @@ package it.pagopa.pnss.common.model.pojo;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.springframework.validation.annotation.Validated;
-
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.util.List;
 
@@ -12,10 +11,10 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-@Validated
+@Valid
 public class IndexingSettings {
 
-    @NotNull
+    @NotNull @Valid
     IndexingLimits limits;
     @NotNull
     List<IndexingTag> globals;

@@ -2,7 +2,7 @@ package it.pagopa.pnss.configuration;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import it.pagopa.pnss.common.exception.MissingIndexingLimitsException;
+import it.pagopa.pnss.common.exception.JsonStringToObjectException;
 import it.pagopa.pnss.common.exception.MissingTagException;
 import it.pagopa.pnss.common.model.pojo.IndexingLimits;
 import it.pagopa.pnss.common.model.pojo.IndexingTag;
@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.ssm.SsmAsyncClient;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 
 @SpringBootTestWebEnv
 @CustomLog
@@ -41,10 +42,10 @@ class IndexingConfigurationTest {
     class TestDefaultConfiguration {
 
         @BeforeAll
-        static void setup(@Autowired SsmAsyncClient ssmAsyncClient, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) throws FileNotFoundException {
+        static void setup(@Autowired SsmAsyncClient ssmAsyncClient, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) throws FileNotFoundException, ExecutionException, InterruptedException {
             log.info("Setting up default configuration for indexing...");
             String jsonString = parseJsonFile("src/test/resources/indexing/json/indexing-configuration-default.json");
-            ssmAsyncClient.putParameter(builder -> builder.name(indexingConfigurationName).type("String").value(jsonString));
+            ssmAsyncClient.putParameter(builder -> builder.name(indexingConfigurationName).overwrite(true).type("String").value(jsonString)).get();
         }
 
         @Test
@@ -90,10 +91,10 @@ class IndexingConfigurationTest {
 
 
         @BeforeAll
-        static void setup(@Autowired SsmAsyncClient ssmAsyncClient, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) throws FileNotFoundException {
+        static void setup(@Autowired SsmAsyncClient ssmAsyncClient, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) throws FileNotFoundException, ExecutionException, InterruptedException {
             log.info("Setting up empty tags configuration for indexing...");
             String jsonString = parseJsonFile("src/test/resources/indexing/json/indexing-configuration-empty-tags.json");
-            ssmAsyncClient.putParameter(builder -> builder.name(indexingConfigurationName).type("String").value(jsonString));
+            ssmAsyncClient.putParameter(builder -> builder.name(indexingConfigurationName).overwrite(true).type("String").value(jsonString)).get();
         }
 
         @Test
@@ -120,16 +121,32 @@ class IndexingConfigurationTest {
     class TestMissingLimits {
 
         @BeforeAll
-        static void setup(@Autowired SsmAsyncClient ssmAsyncClient, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) throws FileNotFoundException {
+        static void setup(@Autowired SsmAsyncClient ssmAsyncClient, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) throws FileNotFoundException, ExecutionException, InterruptedException {
             log.info("Setting up missing limits configuration for indexing...");
             String jsonString = parseJsonFile("src/test/resources/indexing/json/indexing-configuration-missing-limits.json");
-            ssmAsyncClient.putParameter(builder -> builder.name(indexingConfigurationName).type("String").value(jsonString));
+            ssmAsyncClient.putParameter(builder -> builder.name(indexingConfigurationName).overwrite(true).type("String").value(jsonString)).get();
         }
 
         @Test
         void testMissingLimitsKo() {
             IndexingConfiguration indexingConfiguration = new IndexingConfiguration(ssmAsyncClient, jsonUtils, indexingConfigurationName);
-            Assertions.assertThrows(MissingIndexingLimitsException.class, indexingConfiguration::init);
+            Assertions.assertThrows(JsonStringToObjectException.class, indexingConfiguration::init);
+        }
+    }
+
+    @Nested
+    class TestEmptyJson {
+
+        @BeforeAll
+        static void setup(@Autowired SsmAsyncClient ssmAsyncClient, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) throws FileNotFoundException, ExecutionException, InterruptedException {
+            log.info("Setting up empty json configuration for indexing...");
+            ssmAsyncClient.putParameter(builder -> builder.name(indexingConfigurationName).overwrite(true).type("String").value("{}")).get();
+        }
+
+        @Test
+        void testEmptyJsonKo() {
+            IndexingConfiguration indexingConfiguration = new IndexingConfiguration(ssmAsyncClient, jsonUtils, indexingConfigurationName);
+            Assertions.assertThrows(JsonStringToObjectException.class, indexingConfiguration::init);
         }
     }
 

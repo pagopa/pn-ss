@@ -75,7 +75,8 @@ public class LocalStackTestConfig {
             S3,
             SECRETSMANAGER,
             KINESIS,
-            CLOUDWATCH).withEnv("AWS_DEFAULT_REGION", "eu-central-1");
+            CLOUDWATCH,
+            SSM).withEnv("AWS_DEFAULT_REGION", "eu-central-1");
 
     static {
         localStackContainer.start();
@@ -100,6 +101,7 @@ public class LocalStackTestConfig {
         System.setProperty("test.aws.secretsmanager.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SECRETSMANAGER)));
         System.setProperty("test.aws.kinesis.endpoint", String.valueOf(localStackContainer.getEndpointOverride(KINESIS)));
         System.setProperty("test.aws.cloudwatch.endpoint", String.valueOf(localStackContainer.getEndpointOverride(CLOUDWATCH)));
+        System.setProperty("test.aws.ssm.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SSM)));
 
         try {
             initS3(localStackContainer);

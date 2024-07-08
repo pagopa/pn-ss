@@ -748,6 +748,13 @@ components:
           format: date-time
           description: >-
             Timestamp dell'ultima variazione di stato del documento.
+        tags:
+          type: object
+          additionalProperties:
+              type: array
+              items:
+                type: string
+
 
     DocumentInput:
       allOf:
@@ -834,6 +841,12 @@ components:
           items:
             type: string
           description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
+        canWriteTags:
+          type: boolean
+          description: Definisce se il client è autorizzato a scrivere i tag.
+        canReadTags:
+            type: boolean
+            description: Definisce se il client è autorizzato a leggere i tag.
         canExecutePatch:
           type: boolean
         signatureInfo:
@@ -865,6 +878,12 @@ components:
           items:
             type: string
           description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
+        canWriteTags:
+          type: boolean
+          description: Definisce se il client è autorizzato a scrivere i tag.
+        canReadTags:
+            type: boolean
+            description: Definisce se il client è autorizzato a leggere i tag.
         canModifyStatus:
           type: array
           items:

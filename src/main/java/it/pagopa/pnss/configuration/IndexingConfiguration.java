@@ -25,7 +25,6 @@ import static it.pagopa.pnss.common.utils.LogUtils.*;
  */
 @Configuration
 @CustomLog
-@ConditionalOnProperty(name = "pn.ss.indexing.configuration.test", havingValue = "false", matchIfMissing = true)
 public class IndexingConfiguration {
 
     private final SsmAsyncClient ssmAsyncClient;

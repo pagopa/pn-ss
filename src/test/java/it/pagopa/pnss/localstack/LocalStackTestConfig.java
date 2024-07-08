@@ -7,12 +7,18 @@ import static org.testcontainers.containers.localstack.LocalStackContainer.Servi
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SECRETSMANAGER;
 import static software.amazon.awssdk.services.dynamodb.model.TableStatus.ACTIVE;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import it.pagopa.pnss.repositorymanager.entity.ScadenzaDocumentiEntity;
 import lombok.CustomLog;
 import org.json.JSONException;
@@ -69,7 +75,8 @@ public class LocalStackTestConfig {
             S3,
             SECRETSMANAGER,
             KINESIS,
-            CLOUDWATCH).withEnv("AWS_DEFAULT_REGION", "eu-central-1");
+            CLOUDWATCH,
+            SSM).withEnv("AWS_DEFAULT_REGION", "eu-central-1");
 
     static {
         localStackContainer.start();
@@ -94,9 +101,11 @@ public class LocalStackTestConfig {
         System.setProperty("test.aws.secretsmanager.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SECRETSMANAGER)));
         System.setProperty("test.aws.kinesis.endpoint", String.valueOf(localStackContainer.getEndpointOverride(KINESIS)));
         System.setProperty("test.aws.cloudwatch.endpoint", String.valueOf(localStackContainer.getEndpointOverride(CLOUDWATCH)));
+        System.setProperty("test.aws.ssm.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SSM)));
 
         try {
             initS3(localStackContainer);
+            initIndexingConfigurationSsm();
 
             //Set Aruba secret credentials.
             localStackContainer.execInContainer("awslocal",
@@ -213,6 +222,28 @@ public class LocalStackTestConfig {
             execInContainer("awslocal", "s3api", "put-object", "--region", localStackContainer.getRegion(), "--bucket", "pn-ss-storage-safestorage", "--key", "ignored-update-metadata.csv");
         }
     }
+
+    private static void initIndexingConfigurationSsm() throws IOException {
+        log.info("<-- START INDEXING CONFIGURATION SSM init-->");
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        var fileReader = new FileReader("src/test/resources/indexing/json/indexing-configuration-default.json");
+        Object json = gson.fromJson(fileReader, Object.class);
+        String jsonStr = gson.toJson(json);
+        try {
+            localStackContainer.execInContainer("awslocal",
+                    "ssm",
+                    "put-parameter",
+                    "--name",
+                    "Pn-SS-IndexingConfiguration",
+                    "--type",
+                    "String",
+                    "--value",
+                    jsonStr);
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     private static void execInContainer(String... command) throws IOException, InterruptedException {
         Container.ExecResult result = localStackContainer.execInContainer(command);

@@ -113,5 +113,8 @@ public class LogUtils {
     //RETRY
     public static final String RETRY_ATTEMPT = "Retry attempt number '{}' caused by : {}";
 
+    //INDEXING
+    public static final String INDEXING_CONFIGURATION = "IndexingConfiguration";
+
 
 }

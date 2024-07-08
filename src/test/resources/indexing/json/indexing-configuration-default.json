@@ -1,0 +1,41 @@
+{
+  "globals": [
+    {
+      "key": "IUN",
+      "indexed": true,
+      "multivalue": true
+    },
+    {
+      "key": "DataNotifica",
+      "indexed": true,
+      "multivalue": true
+    },
+    {
+      "key": "Conservazione",
+      "indexed": false,
+      "multivalue": false
+    }
+  ],
+  "locals": [
+    {
+      "key": "pn-radd-fsu~DataCreazione",
+      "indexed": true,
+      "multivalue": true
+    },
+    {
+      "key": "pn-downtime-logs~active",
+      "indexed": false,
+      "multivalue": false
+    }
+  ],
+  "limits": {
+    "MaxTagsPerRequest": 50,
+    "MaxOperationsOnTagsPerRequest": 50,
+    "MaxFileKeys": 1000,
+    "MaxMapValuesForSearch": 10,
+    "MaxFileKeysUpdateMassivePerRequest": 100,
+    "MaxTagsPerDocument": 40,
+    "MaxValuesPerTagDocument": 1000,
+    "MaxValuesPerTagPerRequest": 100
+  }
+}

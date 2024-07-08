@@ -535,6 +535,7 @@ Resources:
         ContainerEnvEntry48: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
         ContainerEnvEntry49: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
         ContainerEnvEntry50: !Sub 'PnSsIgnoredUpdateMetadataList=${PnSsIgnoredUpdateMetadataList}'
+        ContainerEnvEntry51: !Sub 'PnSsIndexingConfiguration=${PnSsIndexingConfiguration}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

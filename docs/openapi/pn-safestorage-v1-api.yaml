@@ -645,6 +645,8 @@ components:
         - name
         - canCreate
         - canRead
+        - canReadTags
+        - canWriteTags
         - destination
       properties:
         name:
@@ -661,6 +663,12 @@ components:
           items: 
             type: string
           description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+        canWriteTags:
+          type: boolean
+          description: Indica se il client è autorizzato a scrivere i tag sui file.
+        canReadTags:
+          type: boolean
+          description: Indica se il client è autorizzato a leggere i tag sui file.
         signatureInfo:
           type: object
           description: __DA DEFINIRE__ configurazioni necessarie per la firma digitale

@@ -798,7 +798,7 @@ Outputs:
     Value: !GetAtt PnSsTableScadenzaDocumenti.StreamArn
 
   PnSsTableNameTags:
-    Description: 'Nome tabella conteniente i tags'
+    Description: 'Nome tabella contenente le fileKey associate ad una coppia chiave-valore di un tag'
     Value: !Ref PnSsTableTags
 
   PnSsTableArnTags:

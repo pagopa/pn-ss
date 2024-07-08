@@ -22,6 +22,8 @@ tags:
     description: Scadenza documenti
   - name: userConfigurationInternal
     description: Anagrafica Client
+  - name: tagsInternal
+    description: Tags
 paths:
 
   ################################################################################################
@@ -628,6 +630,58 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserConfigurationResponse'
 
+  '/safestorage/internal/v1/tags/{tagKeyValue}':
+    get:
+      operationId: getTags
+      summary: Restituisce una serie di fileKey associate ad una singola coppia chiave-valore di un tag
+      tags:
+        - tagsInternal
+      parameters:
+        - $ref: '#/components/parameters/tagKeyValue'
+      responses:
+        '400':
+          description: >-
+            #### Bad request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsResponse'
+              example:
+                tagsDto: null
+                error:
+                  code: 404
+                  description: Tags with key _TEST not found
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsResponse'
+
+  '/safestorage/internal/v1/tags':
+    put:
+      operationId: putTags
+      summary: Aggiorna i tag associati ad un documento nella tabella pn-SsDocumenti e le associazioni chiave-valore nella tabella pn-SsTags
+      tags:
+        - tagsInternal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagsChanges'
+      responses:
+        '400':
+          description: >-
+            #### Bad request
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsUpdateResponse'
+
 components:
   parameters:
     typeId:
@@ -651,6 +705,13 @@ components:
       required: true
       schema:
         type: string
+    tagKeyValue:
+        name: tagKeyValue
+        description: Associazione chiave-valore del tag
+        in: path
+        required: true
+        schema:
+            type: string
 
   schemas:
     Error:
@@ -893,6 +954,54 @@ components:
           type: string
         signatureInfo:
           type: string
+    TagsDto:
+      type: object
+      properties:
+        tagKeyValue:
+          type: string
+        fileKeys:
+          type: array
+          items:
+            type: string
+    TagsChanges:
+      type: object
+      properties:
+        fileKey:
+          type: string
+        SET:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Tags to be set
+        DELETE:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Tags to be deleted
+      required:
+        - fileKey
+
+    TagsResponse:
+      type: object
+      properties:
+        tagsDto:
+          $ref: '#/components/schemas/TagsDto'
+        error:
+          $ref: '#/components/schemas/Error'
+
+    TagsUpdateResponse:
+      type: object
+      properties:
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
 
   securitySchemes:
     ApiKeyAuth:

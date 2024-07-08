@@ -70,7 +70,6 @@ public class LogUtils {
     public static final String GET_DOCUMENTS_CONFIGS = "getDocumentsConfigs()";
 
 
-
     // ---------------------------------------------------------------------------
 
     //S3
@@ -112,6 +111,10 @@ public class LogUtils {
 
     //RETRY
     public static final String RETRY_ATTEMPT = "Retry attempt number '{}' caused by : {}";
+
+    //INDEXING
+    public static final String GET_TAGS = "getTags";
+    public static final String PUT_TAGS = "putTags";
 
 
 }

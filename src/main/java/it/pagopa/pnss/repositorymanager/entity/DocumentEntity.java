@@ -4,8 +4,11 @@ import it.pagopa.pnss.common.model.entity.DocumentVersion;
 import lombok.*;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 
 @DynamoDbBean
 @Data
@@ -35,6 +38,7 @@ public class DocumentEntity extends DocumentVersion {
     private String contentType;
     private DocTypeEntity documentType;
     private OffsetDateTime lastStatusChangeTimestamp;
+    private Map<String, List<String>> tags;
 
     @DynamoDbPartitionKey
     public String getDocumentKey() {

@@ -14,6 +14,7 @@ import java.util.Map;
 import javax.annotation.PostConstruct;
 
 import it.pagopa.pnss.repositorymanager.entity.ScadenzaDocumentiEntity;
+import it.pagopa.pnss.repositorymanager.entity.TagsEntity;
 import lombok.CustomLog;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -167,7 +168,8 @@ public class LocalStackTestConfig {
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),
                         entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), it.pagopa.pnss.repositorymanager.entity.DocTypeEntity.class),
                         entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class),
-                        entry(repositoryManagerDynamoTableName.scadenzaDocumentiName(), ScadenzaDocumentiEntity.class));
+                        entry(repositoryManagerDynamoTableName.scadenzaDocumentiName(), ScadenzaDocumentiEntity.class),
+                        entry(repositoryManagerDynamoTableName.tagsName(), TagsEntity.class));
 
         tableNameWithEntityClass.forEach((tableName, entityClass) -> {
             log.info("<-- START initLocalStack -->");

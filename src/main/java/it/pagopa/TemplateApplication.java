@@ -43,6 +43,9 @@ import org.springframework.context.annotation.PropertySource;
 // IGNORED UPDATE METADATA
 @PropertySource("classpath:configuration/ignored-update-metadata.properties")
 
+// INDEXING
+@PropertySource("classpath:indexing/indexing.properties")
+
 public class TemplateApplication {
 
     public static void main(String[] args) {

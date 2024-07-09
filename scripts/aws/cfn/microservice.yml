@@ -144,7 +144,7 @@ Parameters:
   PnSsTableArnTags:
     Type: String
     Description: 'ARN tabella conteniente i tags'
-    
+
   PnSsBucketName:
     Type: String
     Description: 'Nome del Bucket SS'
@@ -432,6 +432,10 @@ Parameters:
     Default: ''
     Description: URL to the file containing the list of fileKeys which s3 object doesn't need to be updated.
 
+  PnSsIndexingConfiguration:
+    Type: String
+    Description: 'Name of the parameter store containing the configuration for the indexing service'
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -539,7 +543,8 @@ Resources:
         ContainerEnvEntry48: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
         ContainerEnvEntry49: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
         ContainerEnvEntry50: !Sub 'PnSsIgnoredUpdateMetadataList=${PnSsIgnoredUpdateMetadataList}'
-        ContainerEnvEntry51: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
+        ContainerEnvEntry51: !Sub 'PnSsIndexingConfiguration=${PnSsIndexingConfiguration}'
+        ContainerEnvEntry52: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

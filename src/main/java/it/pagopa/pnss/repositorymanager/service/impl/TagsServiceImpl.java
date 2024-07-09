@@ -10,6 +10,7 @@ import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.TagsEntity;
 import it.pagopa.pnss.repositorymanager.exception.IndexingLimitException;
+import it.pagopa.pnss.repositorymanager.exception.TagKeyNotPresentException;
 import it.pagopa.pnss.repositorymanager.service.TagsService;
 import lombok.CustomLog;
 import org.springframework.stereotype.Service;

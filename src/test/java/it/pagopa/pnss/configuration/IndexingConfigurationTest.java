@@ -169,5 +169,4 @@ class IndexingConfigurationTest {
         return gson.toJson(json);
     }
 
-
 }

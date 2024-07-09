@@ -272,7 +272,7 @@ public class ConfigurationApiControllerTest {
         Mockito.doReturn(userConfigurationResponse).when(userConfigurationClientCall).getUser(Mockito.any());
 		
 		webTestClient.get()
-			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_CONFIGURATIONS_USER_CONF_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT_USER_CONF))
+			.uri(uriBuilder -> uriBuilder.path(BASE_PATH_CONFIGURATIONS_USER_CONF_WITH_PARAM).build("NonExistingClient"))
 	        .accept(APPLICATION_JSON)
 	        .header(xApiKey,xApiKeyValue)
 	        .header(xPagopaSafestorageCxId,xPagopaSafestorageCxIdValue)

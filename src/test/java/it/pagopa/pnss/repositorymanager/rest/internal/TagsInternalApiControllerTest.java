@@ -42,11 +42,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class TagsInternalApiControllerTest {
     @Value("${test.aws.s3.endpoint:#{null}}")
     String testAwsS3Endpoint;
-
     @Autowired
     private WebTestClient webTestClient;
-
-
     private static TagsDto tagsDto;
     private static DynamoDbTable<TagsEntity> tagsEntityDynamoDbAsyncTable;
     private static DynamoDbTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
@@ -54,7 +51,7 @@ class TagsInternalApiControllerTest {
     private DynamoDbAsyncClient dynamoDbAsyncClient;
     @Autowired
     private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
-    private static final String PUT_TAGS_PATH = "/safestorage/internal/v1/tags";
+    private static final String PUT_TAGS_PATH = "/safestorage/internal/v1/tags/{documentKey}";
 
 
     @BeforeAll
@@ -179,8 +176,8 @@ class TagsInternalApiControllerTest {
             void putTags_Set_Indexed_OneValue_Ok() {
                 String tagValue = "ABCDEF";
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
@@ -207,8 +204,8 @@ class TagsInternalApiControllerTest {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue1, tagValue2));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
@@ -235,8 +232,8 @@ class TagsInternalApiControllerTest {
             void putTags_Set_NotIndexed_OneValue_Ok() {
                 String tagValue = "ABCDEF";
                 Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
@@ -261,8 +258,8 @@ class TagsInternalApiControllerTest {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1, tagValue2));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
@@ -301,12 +298,12 @@ class TagsInternalApiControllerTest {
                 String initialTagValue = "initialTagValue";
                 String newTagValue = "newTagValue";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(TAG_SINGLEVALUE_INDEXED, List.of(initialTagValue)))).block();
+                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(TAG_SINGLEVALUE_INDEXED, List.of(initialTagValue)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(TAG_SINGLEVALUE_INDEXED, List.of(newTagValue));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
@@ -333,12 +330,12 @@ class TagsInternalApiControllerTest {
                 String initialTagValue = "initialTagValue";
                 String newTagValue = "newTagValue";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(CONSERVAZIONE, List.of(initialTagValue)))).block();
+                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(CONSERVAZIONE, List.of(initialTagValue)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of(newTagValue));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
@@ -363,12 +360,12 @@ class TagsInternalApiControllerTest {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1)))).block();
+                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of(tagValue1)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue1, tagValue2));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
@@ -397,12 +394,12 @@ class TagsInternalApiControllerTest {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1)))).block();
+                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1, tagValue2));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
@@ -441,12 +438,12 @@ class TagsInternalApiControllerTest {
             void putTags_Delete_Singlevalue_Indexed_Ok() {
                 String tagValue = "OK";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(CONSERVAZIONE, List.of(tagValue))));
+                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(CONSERVAZIONE, List.of(tagValue))));
 
                 // Delete
                 Map<String, List<String>> deleteTags = Map.of(CONSERVAZIONE, List.of(tagValue));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).DELETE(deleteTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().DELETE(deleteTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
@@ -471,12 +468,12 @@ class TagsInternalApiControllerTest {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1, tagValue2)))).block();
+                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of(tagValue1, tagValue2)))).block();
 
                 // Delete
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue2));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).DELETE(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().DELETE(setTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
@@ -522,12 +519,12 @@ class TagsInternalApiControllerTest {
                 String tagValue5 = "MNOPQR";
                 String tagValue6 = "STUVWX";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1, tagValue2)))).block();
+                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of(tagValue1, tagValue2)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue3, tagValue4, tagValue5, tagValue6));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isBadRequest();
@@ -543,12 +540,12 @@ class TagsInternalApiControllerTest {
             void putTags_MaxTagsPerDocument_Ko() {
 
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of("tagValue1")))).block();
+                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of("tagValue1")))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of("tagValue2"), TAG_MULTIVALUE_NOT_INDEXED, List.of("tagValue3"));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isBadRequest();
@@ -572,14 +569,15 @@ class TagsInternalApiControllerTest {
                 // Setup
                 for (int i = 0; i < 5; i++) {
                     DocumentEntity documentEntity = new DocumentEntity();
-                    documentEntity.setDocumentKey(PARTITION_ID + i);
+                    String documentKey = PARTITION_ID + i;
+                    documentEntity.setDocumentKey(documentKey);
                     documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(documentEntity));
-                    tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID + i).SET(Map.of(IUN, List.of(tagValue)))).block();
+                    tagsService.updateTags(documentKey, new TagsChanges().SET(Map.of(IUN, List.of(tagValue)))).block();
                 }
                 // Update
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(LAST_PARTITION_ID).SET(setTags))
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(LAST_PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
                         .exchange()
                         .expectStatus()
                         .isBadRequest();

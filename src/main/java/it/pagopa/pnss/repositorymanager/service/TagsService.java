@@ -11,6 +11,6 @@ public interface TagsService {
 
     Mono<TagsDto> getTags(String tagKeyValue);
 
-    Mono<Map<String, List<String>>> updateTags(TagsChanges tagsChanges);
+    Mono<Map<String, List<String>>> updateTags(String documentKey, TagsChanges tagsChanges);
 
 }

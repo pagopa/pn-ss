@@ -55,17 +55,16 @@ public class TagsServiceImpl implements TagsService {
     }
 
     @Override
-    public Mono<Map<String, List<String>>> updateTags(TagsChanges tagsChanges) {
+    public Mono<Map<String, List<String>>> updateTags(String documentKey,TagsChanges tagsChanges) {
         return Mono.defer(() -> {
             log.debug("updateTags: {}", tagsChanges);
-            var fileKey = tagsChanges.getFileKey();
             var set = tagsChanges.getSET();
             var delete = tagsChanges.getDELETE();
-            return Mono.fromCompletionStage(() -> documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(fileKey).build()))
+            return Mono.fromCompletionStage(() -> documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                     .flatMap(documentEntity -> setTags(documentEntity, set))
                     .flatMap(documentEntity -> deleteTags(documentEntity, delete))
                     .flatMap(documentEntity -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(documentEntity)).thenReturn(documentEntity))
-                    .flatMap(documentEntity -> updateRelations(set, delete, fileKey).thenReturn(documentEntity.getTags() == null ? new HashMap<>() : documentEntity.getTags()));
+                    .flatMap(documentEntity -> updateRelations(set, delete, documentKey).thenReturn(documentEntity.getTags() == null ? new HashMap<>() : documentEntity.getTags()));
         });
 
     }

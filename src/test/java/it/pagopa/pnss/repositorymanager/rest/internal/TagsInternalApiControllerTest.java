@@ -4,6 +4,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.TagsEntity;
+import it.pagopa.pnss.repositorymanager.service.TagsService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @SpringBootTestWebEnv
 class TagsInternalApiControllerTest {
@@ -35,17 +37,21 @@ class TagsInternalApiControllerTest {
 
     @Autowired
     private WebTestClient webTestClient;
+    @Autowired
+    private TagsService tagsService;
 
     @Nested
     class PutTagsTest {
-        private static final String PARTITION_ID = "DocumentKeyPutTagsTest";
         private static final String IUN = "IUN";
         private static final String CONSERVAZIONE = "Conservazione";
         private static final String TAG_MULTIVALUE_NOT_INDEXED = "TAG_MULTIVALUE_NOT_INDEXED";
+        private static final String TAG_SINGLEVALUE_INDEXED = "TAG_SINGLEVALUE_INDEXED";
 
         // Serie di test su un documento senza tag sulla pn-SsDocumenti o associazioni sulla pn-SsTags (documento pulito)
         @Nested
-        class DocumentWithNoTags {
+        class UpdateDocumentWithNoTags {
+            private static final String PARTITION_ID = "UpdateDocumentWithNoTagsTest";
+
             @BeforeEach
             void beforeEach() {
                 DocumentEntity documentEntity = new DocumentEntity();
@@ -115,74 +121,418 @@ class TagsInternalApiControllerTest {
                 assertThat(Arrays.asList(tagKeyValueEntity1.getFileKeys(), tagKeyValueEntity2.getFileKeys()), everyItem(hasSize(1)));
                 assertThat(Arrays.asList(tagKeyValueEntity1.getFileKeys(), tagKeyValueEntity2.getFileKeys()), everyItem(hasItem(PARTITION_ID)));
             }
+
+            /**
+             * Inserimento di un singolo valore su un tag multivalue e non indicizzato
+             * Risultato atteso: 200 OK
+             */
+            @Test
+            void putTags_Set_NotIndexed_OneValue_Ok() {
+                String tagValue = "ABCDEF";
+                Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isOk();
+
+                //pn-SsDocumenti check
+                Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
+                assertThat(tags, aMapWithSize(1));
+                assertThat(tags.get(TAG_MULTIVALUE_NOT_INDEXED), hasSize(1));
+                assertThat(tags.get(TAG_MULTIVALUE_NOT_INDEXED), hasItem(tagValue));
+
+                //pn-SsTags check
+                var tagKeyValueEntity = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_MULTIVALUE_NOT_INDEXED + "~" + tagValue)));
+                assertNull(tagKeyValueEntity);
+            }
+
+            /**
+             * Inserimento di piu' valori su un tag multivalue e non indicizzato
+             * Risultato atteso: 200 OK
+             */
+            @Test
+            void putTags_Set_NotIndexed_Multivalue_Ok() {
+                String tagValue1 = "ABCDEF";
+                String tagValue2 = "123456";
+                Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1, tagValue2));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isOk();
+
+                //pn-SsDocumenti check
+                Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
+                assertThat(tags, aMapWithSize(1));
+                assertThat(tags.get(TAG_MULTIVALUE_NOT_INDEXED), hasSize(2));
+                assertThat(tags.get(TAG_MULTIVALUE_NOT_INDEXED), hasItems(tagValue1, tagValue2));
+
+                //pn-SsTags check
+                var tagKeyValueEntity1 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_MULTIVALUE_NOT_INDEXED + "~" + tagValue1)));
+                var tagKeyValueEntity2 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_MULTIVALUE_NOT_INDEXED + "~" + tagValue2)));
+                assertThat(Arrays.asList(tagKeyValueEntity1, tagKeyValueEntity2), everyItem(nullValue()));
+            }
+
+            /**
+             * Inserimento di piu' valori su un tag non multivalue
+             * Risultato atteso: 400 BAD REQUEST
+             */
+            @Test
+            void putTags_Set_Multivalue_Ko() {
+                String tagValue1 = "OK";
+                String tagValue2 = "KO";
+                Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of(tagValue1, tagValue2));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isBadRequest();
+            }
+
         }
 
-        /**
-         * Inserimento di un singolo valore su un tag multivalue e non indicizzato
-         * Risultato atteso: 200 OK
-         */
-        @Test
-        void putTags_Set_NotIndexed_OneValue_Ok() {
-            String tagValue = "ABCDEF";
-            Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue));
-            webTestClient.put().uri(PUT_TAGS_PATH)
-                    .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
-                    .exchange()
-                    .expectStatus()
-                    .isOk();
+        @Nested
+        class UpdateDocumentWithTags {
+            private static final String PARTITION_ID = "UpdateDocumentWithTagsTest";
 
-            //pn-SsDocumenti check
-            Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
-            assertThat(tags, aMapWithSize(1));
-            assertThat(tags.get(TAG_MULTIVALUE_NOT_INDEXED), hasSize(1));
-            assertThat(tags.get(TAG_MULTIVALUE_NOT_INDEXED), hasItem(tagValue));
+            @BeforeEach
+            void beforeEach() {
+                DocumentEntity documentEntity = new DocumentEntity();
+                documentEntity.setDocumentKey(PARTITION_ID);
+                documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(documentEntity));
+            }
 
-            //pn-SsTags check
-            var tagKeyValueEntity = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_MULTIVALUE_NOT_INDEXED + "~" + tagValue)));
-            Assertions.assertNull(tagKeyValueEntity);
+            @AfterEach
+            void afterEach() {
+                // Tables clean-up
+                documentEntityDynamoDbAsyncTable.scan().stream().forEach(documentEntityPage -> documentEntityPage.items().forEach(documentEntity -> documentEntityDynamoDbAsyncTable.deleteItem(documentEntity)));
+                tagsEntityDynamoDbAsyncTable.scan().stream().forEach(tagsEntityPage -> tagsEntityPage.items().forEach(tagsEntity -> tagsEntityDynamoDbAsyncTable.deleteItem(tagsEntity)));
+            }
+
+
+            /**
+             * Aggiornamento di un tag indicizzato e singlevalue, modalità di aggiornamento replace.
+             * Risultato atteso: 200 OK
+             */
+            @Test
+            void putTags_Indexed_Singlevalue_Ok() {
+                String initialTagValue = "initialTagValue";
+                String newTagValue = "newTagValue";
+                // Setup
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(TAG_SINGLEVALUE_INDEXED, List.of(initialTagValue))));
+
+                // Update
+                Map<String, List<String>> setTags = Map.of(TAG_SINGLEVALUE_INDEXED, List.of(newTagValue));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isOk();
+
+                //pn-SsDocumenti check
+                Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
+                assertThat(tags, aMapWithSize(1));
+                assertThat(tags.get(TAG_SINGLEVALUE_INDEXED), hasSize(1));
+                assertThat(tags.get(TAG_SINGLEVALUE_INDEXED), hasItems(newTagValue));
+
+                //pn-SsTags check
+                var tagKeyValueEntity1 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_SINGLEVALUE_INDEXED + "~" + newTagValue)));
+                assertThat(tagKeyValueEntity1.getFileKeys(), hasSize(1));
+                assertThat(tagKeyValueEntity1.getFileKeys(), hasItem(PARTITION_ID));
+            }
+
+            /**
+             * Aggiornamento di un tag non indicizzato e singlevalue, modalità di aggiornamento replace.
+             * Nessuna scrittura su pn-SsTags
+             * Risultato atteso: 200 OK
+             */
+            @Test
+            void putTags_NotIndexed_Singlevalue_Ok() {
+                String initialTagValue = "initialTagValue";
+                String newTagValue = "newTagValue";
+                // Setup
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(CONSERVAZIONE, List.of(initialTagValue))));
+
+                // Update
+                Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of(newTagValue));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isOk();
+
+                //pn-SsDocumenti check
+                Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
+                assertThat(tags, aMapWithSize(1));
+                assertThat(tags.get(CONSERVAZIONE), hasSize(1));
+                assertThat(tags.get(CONSERVAZIONE), hasItems(newTagValue));
+
+                //pn-SsTags check
+                var tagKeyValueEntity = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_SINGLEVALUE_INDEXED + "~" + newTagValue)));
+                assertNull(tagKeyValueEntity);
+            }
+
+            /**
+             * Aggiornamento di un tag indicizzato e multivalue, modalità di aggiornamento merge.
+             * Risultato atteso: 200 OK
+             */
+            @Test
+            void putTags_Indexed_Multivalue_Ok() {
+                String tagValue1 = "ABCDEF";
+                String tagValue2 = "123456";
+                // Setup
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1))));
+
+                // Update
+                Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue1, tagValue2));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isOk();
+
+                //pn-SsDocumenti check
+                Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
+                assertThat(tags, aMapWithSize(1));
+                assertThat(tags.get(IUN), hasSize(2));
+                assertThat(tags.get(IUN), hasItems(tagValue1, tagValue2));
+
+                //pn-SsTags check
+                var tagKeyValueEntity1 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(IUN + "~" + tagValue1)));
+                var tagKeyValueEntity2 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(IUN + "~" + tagValue2)));
+                assertThat(Arrays.asList(tagKeyValueEntity1, tagKeyValueEntity2), everyItem(notNullValue()));
+                assertThat(Arrays.asList(tagKeyValueEntity1.getFileKeys(), tagKeyValueEntity2.getFileKeys()), everyItem(hasSize(1)));
+                assertThat(Arrays.asList(tagKeyValueEntity1.getFileKeys(), tagKeyValueEntity2.getFileKeys()), everyItem(hasItem(PARTITION_ID)));
+            }
+
+            /**
+             * Aggiornamento di un tag non indicizzato e multivalue, modalità di aggiornamento merge.
+             * Nessuna scrittura su pn-SsTags
+             * Risultato atteso: 200 OK
+             */
+            @Test
+            void putTags_NotIndexed_Multivalue_Ok() {
+                String tagValue1 = "ABCDEF";
+                String tagValue2 = "123456";
+                // Setup
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1))));
+
+                // Update
+                Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1, tagValue2));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isOk();
+
+                //pn-SsDocumenti check
+                Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
+                assertThat(tags, aMapWithSize(1));
+                assertThat(tags.get(TAG_MULTIVALUE_NOT_INDEXED), hasSize(2));
+                assertThat(tags.get(TAG_MULTIVALUE_NOT_INDEXED), hasItems(tagValue1, tagValue2));
+
+                //pn-SsTags check
+                var tagKeyValueEntity1 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_MULTIVALUE_NOT_INDEXED + "~" + tagValue1)));
+                var tagKeyValueEntity2 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_MULTIVALUE_NOT_INDEXED + "~" + tagValue2)));
+                assertThat(Arrays.asList(tagKeyValueEntity1, tagKeyValueEntity2), everyItem(nullValue()));
+            }
+
+            /**
+             * Aggiornamento con piu' valori di un tag singlevalue.
+             * Risultato atteso: 400 BAD REQUEST
+             */
+            @Test
+            void putTags_Multivalue_Ko() {
+                String initialTagValue = "initialTagValue";
+                String tagValue1 = "OK";
+                String tagValue2 = "KO";
+                // Setup
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(CONSERVAZIONE, List.of(initialTagValue))));
+
+                // Update
+                Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of(tagValue1, tagValue2));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isBadRequest();
+            }
+
         }
 
-        /**
-         * Inserimento di piu' valori su un tag multivalue e non indicizzato
-         * Risultato atteso: 200 OK
-         */
-        @Test
-        void putTags_Set_NotIndexed_Multivalue_Ok() {
-            String tagValue1 = "ABCDEF";
-            String tagValue2 = "123456";
-            Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1, tagValue2));
-            webTestClient.put().uri(PUT_TAGS_PATH)
-                    .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
-                    .exchange()
-                    .expectStatus()
-                    .isOk();
+        @Nested
+        class DeleteTags {
+            private static final String PARTITION_ID = "DocumentDeleteTagsTest";
 
-            //pn-SsDocumenti check
-            Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
-            assertThat(tags, aMapWithSize(1));
-            assertThat(tags.get(TAG_MULTIVALUE_NOT_INDEXED), hasSize(2));
-            assertThat(tags.get(TAG_MULTIVALUE_NOT_INDEXED), hasItems(tagValue1, tagValue2));
+            @BeforeEach
+            void beforeEach() {
+                DocumentEntity documentEntity = new DocumentEntity();
+                documentEntity.setDocumentKey(PARTITION_ID);
+                documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(documentEntity));
+            }
 
-            //pn-SsTags check
-            var tagKeyValueEntity1 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_MULTIVALUE_NOT_INDEXED + "~" + tagValue1)));
-            var tagKeyValueEntity2 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_MULTIVALUE_NOT_INDEXED + "~" + tagValue2)));
-            assertThat(Arrays.asList(tagKeyValueEntity1, tagKeyValueEntity2), everyItem(nullValue()));
+            @AfterEach
+            void afterEach() {
+                // Tables clean-up
+                documentEntityDynamoDbAsyncTable.scan().stream().forEach(documentEntityPage -> documentEntityPage.items().forEach(documentEntity -> documentEntityDynamoDbAsyncTable.deleteItem(documentEntity)));
+                tagsEntityDynamoDbAsyncTable.scan().stream().forEach(tagsEntityPage -> tagsEntityPage.items().forEach(tagsEntity -> tagsEntityDynamoDbAsyncTable.deleteItem(tagsEntity)));
+            }
+
+            /**
+             * Rimozione di un tag singlevalue e indicizzato.
+             * Eliminazione associazione su pn-SsTags.
+             * Mappa dei tag in pn-SsDocumenti vuota.
+             * Risultato atteso: 200 OK
+             */
+            @Test
+            void deleteTags_Singlevalue_Indexed_Ok() {
+                String tagValue = "OK";
+                // Setup
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(CONSERVAZIONE, List.of(tagValue))));
+
+                // Delete
+                Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).DELETE(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isOk();
+
+                //pn-SsDocumenti check
+                Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
+                assertThat(tags, aMapWithSize(0));
+
+                //pn-SsTags check
+                var tagKeyValueEntity = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(CONSERVAZIONE + "~" + tagValue)));
+                assertNull(tagKeyValueEntity);
+            }
+
+            /**
+             * Rimozione di un valore per un tag multivalue e indicizzato.
+             * Eliminazione di una associazione su pn-SsTags. Mantenimento dell'altra.
+             * Rimozione di un valore dalla mappa dei tag in pn-SsDocumenti.
+             * Risultato atteso: 200 OK
+             */
+            @Test
+            void deleteTags_Multivalue_Indexed_Ok() {
+                String tagValue1 = "ABCDEF";
+                String tagValue2 = "123456";
+                // Setup
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1, tagValue2))));
+
+                // Delete
+                Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue2));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).DELETE(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isOk();
+
+                //pn-SsDocumenti check
+                Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
+                assertThat(tags, aMapWithSize(1));
+                assertThat(tags.get(IUN), hasSize(1));
+                assertThat(tags.get(IUN), hasItems(tagValue1));
+
+                //pn-SsTags check
+                var tagKeyValueEntity1 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(IUN + "~" + tagValue1)));
+                var tagKeyValueEntity2 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(IUN + "~" + tagValue2)));
+                assertThat(tagKeyValueEntity1, notNullValue());
+                assertThat(tagKeyValueEntity1.getFileKeys(), hasItem(PARTITION_ID));
+                assertNull(tagKeyValueEntity2);
+            }
+
         }
 
-        /**
-         * Inserimento di piu' valori su un tag non multivalue
-         * Risultato atteso: 400 BAD REQUEST
-         */
-        @Test
-        void putTags_Set_Multivalue_Ko() {
-            String tagValue1 = "OK";
-            String tagValue2 = "KO";
-            Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of(tagValue1, tagValue2));
-            webTestClient.put().uri(PUT_TAGS_PATH)
-                    .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
-                    .exchange()
-                    .expectStatus()
-                    .isBadRequest();
+        @Nested
+        class LimitsTest {
+            private static final String PARTITION_ID = "TagsLimitsTest";
+
+            @BeforeEach
+            void beforeEach() {
+                DocumentEntity documentEntity = new DocumentEntity();
+                documentEntity.setDocumentKey(PARTITION_ID);
+                documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(documentEntity));
+            }
+
+            @AfterEach
+            void afterEach() {
+                // Tables clean-up
+                documentEntityDynamoDbAsyncTable.scan().stream().forEach(documentEntityPage -> documentEntityPage.items().forEach(documentEntity -> documentEntityDynamoDbAsyncTable.deleteItem(documentEntity)));
+                tagsEntityDynamoDbAsyncTable.scan().stream().forEach(tagsEntityPage -> tagsEntityPage.items().forEach(tagsEntity -> tagsEntityDynamoDbAsyncTable.deleteItem(tagsEntity)));
+            }
+
+            /**
+             * Test in cui viene superato il numero massimo di valori associabili ad un tag.
+             * Il default va impostato a 5.
+             * Risultato atteso: 400 BAD REQUEST
+             */
+            @Test
+            void putTags_MaxValuesPerTagDocument_Ko() {
+                String tagValue1 = "ABCDEF";
+                String tagValue2 = "123456";
+                String tagValue3 = "GHIJKL";
+                String tagValue4 = "78910";
+                String tagValue5 = "MNOPQR";
+                String tagValue6 = "STUVWX";
+                // Setup
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1, tagValue2))));
+
+                // Update
+                Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue3, tagValue4, tagValue5, tagValue6));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isBadRequest();
+
+            }
+
+            /**
+             * Test in cui viene superato il numero massimo di tag associabili ad una entry della pn-SsDocumenti
+             * Il default va impostato a 2.
+             * Risultato atteso: 400 BAD REQUEST
+             */
+            @Test
+            void putTags_MaxTagsPerDocument_Ko() {
+
+                // Setup
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of("tagValue1"))));
+
+                // Update
+                Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of("tagValue2"), TAG_MULTIVALUE_NOT_INDEXED, List.of("tagValue3"));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isBadRequest();
+
+            }
+
+
+            /**
+             * Test in cui viene superato il numero massimo di fileKey associabili ad una coppia chiave-valore all'interno della pn-SsTags.
+             * Il default va impostato a 5.
+             * Risultato atteso: 400 BAD REQUEST
+             */
+            @Test
+            void putTags_MaxFileKeys_Ko() {
+                String tagValue = "ABCDEF";
+                String LAST_PARTITION_ID = PARTITION_ID + "5";
+                // Setup
+                for (int i = 0; i < 5; i++) {
+                    tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID + i).SET(Map.of(IUN, List.of(tagValue))));
+                }
+                // Update
+                Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue));
+                webTestClient.put().uri(PUT_TAGS_PATH)
+                        .bodyValue(new TagsChanges().fileKey(LAST_PARTITION_ID).SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isBadRequest();
+            }
+
         }
 
     }

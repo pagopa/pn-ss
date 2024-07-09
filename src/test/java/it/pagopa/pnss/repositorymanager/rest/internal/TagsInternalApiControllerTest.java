@@ -1,5 +1,7 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsDto;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
@@ -7,28 +9,45 @@ import it.pagopa.pnss.repositorymanager.entity.TagsEntity;
 import it.pagopa.pnss.repositorymanager.service.TagsService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
+import lombok.CustomLog;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
+
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+
+import java.util.Arrays;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient(timeout = "50000")
 @CustomLog
 class TagsInternalApiControllerTest {
+    @Value("${test.aws.s3.endpoint:#{null}}")
+    String testAwsS3Endpoint;
 
+    @Autowired
+    private WebTestClient webTestClient;
+
+
+    private static TagsDto tagsDto;
     private static DynamoDbTable<TagsEntity> tagsEntityDynamoDbAsyncTable;
     private static DynamoDbTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
     @Autowired
@@ -37,15 +56,80 @@ class TagsInternalApiControllerTest {
     private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
     private static final String PUT_TAGS_PATH = "/safestorage/internal/v1/tags";
 
+
     @BeforeAll
     public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
                                              @Autowired RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
         tagsEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.tagsName(), TableSchema.fromBean(TagsEntity.class));
         documentEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+        GetTagsTest.insertTagEntity();
     }
 
-    @Autowired
-    private WebTestClient webTestClient;
+
+    @Nested
+    class GetTagsTest {
+        private static final String BASE_PATH = "/safestorage/internal/v1";
+        private static final String BASE_PATH_WITH_PARAM = String.format("%s/tags/{tagKeyValue}", BASE_PATH);
+        private static final String TAG_KEY_DEFAULT = "tagKeyTest";
+        private static final String TAG_KEY_DEFAULT_NOT_EXIST = "tagKeyNotExist";
+
+        @BeforeEach
+        public void insertDefaultTag() {
+
+        }
+
+
+        private static void insertTagEntity() {
+            log.info("execute insertTagsEntity()");
+
+            TagsEntity tagsEntity = new TagsEntity();
+            tagsEntity.setTagKeyValue(GetTagsTest.TAG_KEY_DEFAULT);
+
+            List<String> fileKeys = new ArrayList<>();
+            fileKeys.add("FILE_1");
+            fileKeys.add("FILE_2");
+
+            tagsEntity.setFileKeys(fileKeys);
+            log.info("execute insertTagsEntity() : tagsEntity : {}", tagsEntity);
+            tagsEntityDynamoDbAsyncTable.putItem(builder -> builder.item(tagsEntity));
+        }
+
+
+        /**
+         * GET sulla tabella pn-SsTags di un tag con associazione fileKey
+         * Risulato atteso: 200 OK
+         */
+        @Test
+        void getTags_success() {
+
+            webTestClient.get()
+                    .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(TAG_KEY_DEFAULT))
+                    .accept(APPLICATION_JSON)
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody(TagsResponse.class);
+
+            System.out.println("\n Test getTags_success passed \n");
+        }
+
+
+        /**
+         * GET sulla tabella pn-SsTags di un tag con partitionKey non esistente.
+         * Risulato atteso 404 NOT FOUND
+         */
+        @Test
+        void getTags_ko() {
+
+            webTestClient.get()
+                    .uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(TAG_KEY_DEFAULT_NOT_EXIST))
+                    .accept(APPLICATION_JSON)
+                    .exchange()
+                    .expectStatus().isNotFound()
+                    .expectBody(TagsResponse.class);
+
+            System.out.println("\n Test getTags_ko passed \n");
+        }
+    }
     @Autowired
     private TagsService tagsService;
 

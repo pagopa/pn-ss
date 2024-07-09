@@ -5,6 +5,7 @@ import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsDto;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
+import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.TagsEntity;
@@ -18,9 +19,11 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
-import javax.print.Doc;
 import java.util.*;
 
+import java.util.List;
+import java.util.Map;
+import static it.pagopa.pnss.common.utils.LogUtils.GET_TAGS;
 @Service
 @CustomLog
 public class TagsServiceImpl implements TagsService {
@@ -37,9 +40,17 @@ public class TagsServiceImpl implements TagsService {
         this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class)));
     }
 
+    private Mono<TagsEntity> getErrorIdTagNotFoundException(String tagKeyValue) {
+        return Mono.error(new TagKeyNotPresentException(tagKeyValue));
+    }
+
     @Override
     public Mono<TagsDto> getTags(String tagKeyValue) {
-        return null;
+        log.debug(LogUtils.INVOKING_METHOD, GET_TAGS, tagKeyValue);
+        return Mono.fromCompletionStage(tagsEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(tagKeyValue).build()))
+                .switchIfEmpty(getErrorIdTagNotFoundException(tagKeyValue))
+                .doOnError(Exception.class, throwable -> log.debug(throwable.getMessage()))
+                .map(tagsEntity -> objectMapper.convertValue(tagsEntity, TagsDto.class));
     }
 
     @Override

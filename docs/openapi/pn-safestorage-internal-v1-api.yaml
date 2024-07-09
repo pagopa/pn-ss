@@ -1002,6 +1002,8 @@ components:
             type: array
             items:
               type: string
+        error:
+          $ref: '#/components/schemas/Error'
 
   securitySchemes:
     ApiKeyAuth:

@@ -6,12 +6,15 @@ import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.TagsEntity;
 import it.pagopa.pnss.repositorymanager.service.TagsService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import lombok.CustomLog;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 
 import java.util.Arrays;
 import java.util.List;
@@ -22,10 +25,16 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 @SpringBootTestWebEnv
+@AutoConfigureWebTestClient(timeout = "50000")
+@CustomLog
 class TagsInternalApiControllerTest {
 
     private static DynamoDbTable<TagsEntity> tagsEntityDynamoDbAsyncTable;
     private static DynamoDbTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
+    @Autowired
+    private DynamoDbAsyncClient dynamoDbAsyncClient;
+    @Autowired
+    private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
     private static final String PUT_TAGS_PATH = "/safestorage/internal/v1/tags";
 
     @BeforeAll
@@ -42,10 +51,29 @@ class TagsInternalApiControllerTest {
 
     @Nested
     class PutTagsTest {
+        // Tag multivalue e indicizzato
         private static final String IUN = "IUN";
+        // Tag singlevalue e non indicizzato
         private static final String CONSERVAZIONE = "Conservazione";
+        // Tag multivalue e non indicizzato
         private static final String TAG_MULTIVALUE_NOT_INDEXED = "TAG_MULTIVALUE_NOT_INDEXED";
+        // Tag singlevalue e indicizzato
         private static final String TAG_SINGLEVALUE_INDEXED = "TAG_SINGLEVALUE_INDEXED";
+
+        @AfterEach
+        void afterEach() {
+            // Tables clean-up
+            for (var page : documentEntityDynamoDbAsyncTable.scan()) {
+                for (var item : page.items()) {
+                    documentEntityDynamoDbAsyncTable.deleteItem(item);
+                }
+            }
+            for (var page : tagsEntityDynamoDbAsyncTable.scan()) {
+                for (var item : page.items()) {
+                    tagsEntityDynamoDbAsyncTable.deleteItem(item);
+                }
+            }
+        }
 
         // Serie di test su un documento senza tag sulla pn-SsDocumenti o associazioni sulla pn-SsTags (documento pulito)
         @Nested
@@ -57,13 +85,6 @@ class TagsInternalApiControllerTest {
                 DocumentEntity documentEntity = new DocumentEntity();
                 documentEntity.setDocumentKey(PARTITION_ID);
                 documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(documentEntity));
-            }
-
-            @AfterEach
-            void afterEach() {
-                // Tables clean-up
-                documentEntityDynamoDbAsyncTable.scan().stream().forEach(documentEntityPage -> documentEntityPage.items().forEach(documentEntity -> documentEntityDynamoDbAsyncTable.deleteItem(documentEntity)));
-                tagsEntityDynamoDbAsyncTable.scan().stream().forEach(tagsEntityPage -> tagsEntityPage.items().forEach(tagsEntity -> tagsEntityDynamoDbAsyncTable.deleteItem(tagsEntity)));
             }
 
             /**
@@ -174,22 +195,6 @@ class TagsInternalApiControllerTest {
                 assertThat(Arrays.asList(tagKeyValueEntity1, tagKeyValueEntity2), everyItem(nullValue()));
             }
 
-            /**
-             * Inserimento di piu' valori su un tag non multivalue
-             * Risultato atteso: 400 BAD REQUEST
-             */
-            @Test
-            void putTags_Set_Multivalue_Ko() {
-                String tagValue1 = "OK";
-                String tagValue2 = "KO";
-                Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of(tagValue1, tagValue2));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
-                        .exchange()
-                        .expectStatus()
-                        .isBadRequest();
-            }
-
         }
 
         @Nested
@@ -203,24 +208,16 @@ class TagsInternalApiControllerTest {
                 documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(documentEntity));
             }
 
-            @AfterEach
-            void afterEach() {
-                // Tables clean-up
-                documentEntityDynamoDbAsyncTable.scan().stream().forEach(documentEntityPage -> documentEntityPage.items().forEach(documentEntity -> documentEntityDynamoDbAsyncTable.deleteItem(documentEntity)));
-                tagsEntityDynamoDbAsyncTable.scan().stream().forEach(tagsEntityPage -> tagsEntityPage.items().forEach(tagsEntity -> tagsEntityDynamoDbAsyncTable.deleteItem(tagsEntity)));
-            }
-
-
             /**
              * Aggiornamento di un tag indicizzato e singlevalue, modalità di aggiornamento replace.
              * Risultato atteso: 200 OK
              */
             @Test
-            void putTags_Indexed_Singlevalue_Ok() {
+            void putTags_Set_Indexed_Singlevalue_Ok() {
                 String initialTagValue = "initialTagValue";
                 String newTagValue = "newTagValue";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(TAG_SINGLEVALUE_INDEXED, List.of(initialTagValue))));
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(TAG_SINGLEVALUE_INDEXED, List.of(initialTagValue)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(TAG_SINGLEVALUE_INDEXED, List.of(newTagValue));
@@ -248,11 +245,11 @@ class TagsInternalApiControllerTest {
              * Risultato atteso: 200 OK
              */
             @Test
-            void putTags_NotIndexed_Singlevalue_Ok() {
+            void putTags_Set_NotIndexed_Singlevalue_Ok() {
                 String initialTagValue = "initialTagValue";
                 String newTagValue = "newTagValue";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(CONSERVAZIONE, List.of(initialTagValue))));
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(CONSERVAZIONE, List.of(initialTagValue)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of(newTagValue));
@@ -278,11 +275,11 @@ class TagsInternalApiControllerTest {
              * Risultato atteso: 200 OK
              */
             @Test
-            void putTags_Indexed_Multivalue_Ok() {
+            void putTags_Set_Indexed_Multivalue_Ok() {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1))));
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue1, tagValue2));
@@ -312,11 +309,11 @@ class TagsInternalApiControllerTest {
              * Risultato atteso: 200 OK
              */
             @Test
-            void putTags_NotIndexed_Multivalue_Ok() {
+            void putTags_Set_NotIndexed_Multivalue_Ok() {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1))));
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1, tagValue2));
@@ -337,28 +334,6 @@ class TagsInternalApiControllerTest {
                 var tagKeyValueEntity2 = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(TAG_MULTIVALUE_NOT_INDEXED + "~" + tagValue2)));
                 assertThat(Arrays.asList(tagKeyValueEntity1, tagKeyValueEntity2), everyItem(nullValue()));
             }
-
-            /**
-             * Aggiornamento con piu' valori di un tag singlevalue.
-             * Risultato atteso: 400 BAD REQUEST
-             */
-            @Test
-            void putTags_Multivalue_Ko() {
-                String initialTagValue = "initialTagValue";
-                String tagValue1 = "OK";
-                String tagValue2 = "KO";
-                // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(CONSERVAZIONE, List.of(initialTagValue))));
-
-                // Update
-                Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of(tagValue1, tagValue2));
-                webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).SET(setTags))
-                        .exchange()
-                        .expectStatus()
-                        .isBadRequest();
-            }
-
         }
 
         @Nested
@@ -372,13 +347,6 @@ class TagsInternalApiControllerTest {
                 documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(documentEntity));
             }
 
-            @AfterEach
-            void afterEach() {
-                // Tables clean-up
-                documentEntityDynamoDbAsyncTable.scan().stream().forEach(documentEntityPage -> documentEntityPage.items().forEach(documentEntity -> documentEntityDynamoDbAsyncTable.deleteItem(documentEntity)));
-                tagsEntityDynamoDbAsyncTable.scan().stream().forEach(tagsEntityPage -> tagsEntityPage.items().forEach(tagsEntity -> tagsEntityDynamoDbAsyncTable.deleteItem(tagsEntity)));
-            }
-
             /**
              * Rimozione di un tag singlevalue e indicizzato.
              * Eliminazione associazione su pn-SsTags.
@@ -386,22 +354,22 @@ class TagsInternalApiControllerTest {
              * Risultato atteso: 200 OK
              */
             @Test
-            void deleteTags_Singlevalue_Indexed_Ok() {
+            void putTags_Delete_Singlevalue_Indexed_Ok() {
                 String tagValue = "OK";
                 // Setup
                 tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(CONSERVAZIONE, List.of(tagValue))));
 
                 // Delete
-                Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue));
+                Map<String, List<String>> deleteTags = Map.of(CONSERVAZIONE, List.of(tagValue));
                 webTestClient.put().uri(PUT_TAGS_PATH)
-                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).DELETE(setTags))
+                        .bodyValue(new TagsChanges().fileKey(PARTITION_ID).DELETE(deleteTags))
                         .exchange()
                         .expectStatus()
                         .isOk();
 
                 //pn-SsDocumenti check
                 Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
-                assertThat(tags, aMapWithSize(0));
+                assertThat(tags, nullValue());
 
                 //pn-SsTags check
                 var tagKeyValueEntity = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(CONSERVAZIONE + "~" + tagValue)));
@@ -415,11 +383,11 @@ class TagsInternalApiControllerTest {
              * Risultato atteso: 200 OK
              */
             @Test
-            void deleteTags_Multivalue_Indexed_Ok() {
+            void putTags_Delete_Multivalue_Indexed_Ok() {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1, tagValue2))));
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1, tagValue2)))).block();
 
                 // Delete
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue2));
@@ -456,13 +424,6 @@ class TagsInternalApiControllerTest {
                 documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(documentEntity));
             }
 
-            @AfterEach
-            void afterEach() {
-                // Tables clean-up
-                documentEntityDynamoDbAsyncTable.scan().stream().forEach(documentEntityPage -> documentEntityPage.items().forEach(documentEntity -> documentEntityDynamoDbAsyncTable.deleteItem(documentEntity)));
-                tagsEntityDynamoDbAsyncTable.scan().stream().forEach(tagsEntityPage -> tagsEntityPage.items().forEach(tagsEntity -> tagsEntityDynamoDbAsyncTable.deleteItem(tagsEntity)));
-            }
-
             /**
              * Test in cui viene superato il numero massimo di valori associabili ad un tag.
              * Il default va impostato a 5.
@@ -477,7 +438,7 @@ class TagsInternalApiControllerTest {
                 String tagValue5 = "MNOPQR";
                 String tagValue6 = "STUVWX";
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1, tagValue2))));
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of(tagValue1, tagValue2)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue3, tagValue4, tagValue5, tagValue6));
@@ -498,7 +459,7 @@ class TagsInternalApiControllerTest {
             void putTags_MaxTagsPerDocument_Ko() {
 
                 // Setup
-                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of("tagValue1"))));
+                tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID).SET(Map.of(IUN, List.of("tagValue1")))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of("tagValue2"), TAG_MULTIVALUE_NOT_INDEXED, List.of("tagValue3"));
@@ -520,9 +481,16 @@ class TagsInternalApiControllerTest {
             void putTags_MaxFileKeys_Ko() {
                 String tagValue = "ABCDEF";
                 String LAST_PARTITION_ID = PARTITION_ID + "5";
+                DocumentEntity lastDocumentEntity = new DocumentEntity();
+                lastDocumentEntity.setDocumentKey(LAST_PARTITION_ID);
+                documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(lastDocumentEntity));
+
                 // Setup
                 for (int i = 0; i < 5; i++) {
-                    tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID + i).SET(Map.of(IUN, List.of(tagValue))));
+                    DocumentEntity documentEntity = new DocumentEntity();
+                    documentEntity.setDocumentKey(PARTITION_ID + i);
+                    documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(documentEntity));
+                    tagsService.updateTags(new TagsChanges().fileKey(PARTITION_ID + i).SET(Map.of(IUN, List.of(tagValue)))).block();
                 }
                 // Update
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue));

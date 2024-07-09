@@ -114,7 +114,7 @@ public class LogUtils {
 
     //INDEXING
     public static final String INDEXING_CONFIGURATION = "IndexingConfiguration";
-    public static final String GET_TAGS = "getTags";
+    public static final String GET_TAGS = "getTag";
     public static final String PUT_TAGS = "putTags";
 
 

@@ -55,6 +55,7 @@ class TagsInternalApiControllerTest {
                                              @Autowired RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
         tagsEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.tagsName(), TableSchema.fromBean(TagsEntity.class));
         documentEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+        GetTagsTest.insertTagEntity();
     }
 
 
@@ -67,7 +68,7 @@ class TagsInternalApiControllerTest {
 
         @BeforeEach
         public void insertDefaultTag() {
-            insertTagEntity();
+
         }
 
 

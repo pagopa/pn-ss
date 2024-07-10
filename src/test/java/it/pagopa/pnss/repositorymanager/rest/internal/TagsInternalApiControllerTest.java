@@ -5,10 +5,9 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
-import it.pagopa.pnss.repositorymanager.entity.TagsEntity;
+import it.pagopa.pnss.repositorymanager.entity.TagsRelationsEntity;
 import it.pagopa.pnss.repositorymanager.service.TagsService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import lombok.CustomLog;
 import lombok.CustomLog;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +44,7 @@ class TagsInternalApiControllerTest {
     @Autowired
     private WebTestClient webTestClient;
     private static TagsDto tagsDto;
-    private static DynamoDbTable<TagsEntity> tagsEntityDynamoDbAsyncTable;
+    private static DynamoDbTable<TagsRelationsEntity> tagsEntityDynamoDbAsyncTable;
     private static DynamoDbTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
     @Autowired
     private DynamoDbAsyncClient dynamoDbAsyncClient;
@@ -57,7 +56,7 @@ class TagsInternalApiControllerTest {
     @BeforeAll
     public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
                                              @Autowired RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
-        tagsEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.tagsName(), TableSchema.fromBean(TagsEntity.class));
+        tagsEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.tagsName(), TableSchema.fromBean(TagsRelationsEntity.class));
         documentEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
         GetTagsTest.insertTagEntity();
     }
@@ -79,16 +78,16 @@ class TagsInternalApiControllerTest {
         private static void insertTagEntity() {
             log.info("execute insertTagsEntity()");
 
-            TagsEntity tagsEntity = new TagsEntity();
-            tagsEntity.setTagKeyValue(GetTagsTest.TAG_KEY_DEFAULT);
+            TagsRelationsEntity tagsRelationsEntity = new TagsRelationsEntity();
+            tagsRelationsEntity.setTagKeyValue(GetTagsTest.TAG_KEY_DEFAULT);
 
             List<String> fileKeys = new ArrayList<>();
             fileKeys.add("FILE_1");
             fileKeys.add("FILE_2");
 
-            tagsEntity.setFileKeys(fileKeys);
-            log.info("execute insertTagsEntity() : tagsEntity : {}", tagsEntity);
-            tagsEntityDynamoDbAsyncTable.putItem(builder -> builder.item(tagsEntity));
+            tagsRelationsEntity.setFileKeys(fileKeys);
+            log.info("execute insertTagsEntity() : tagsEntity : {}", tagsRelationsEntity);
+            tagsEntityDynamoDbAsyncTable.putItem(builder -> builder.item(tagsRelationsEntity));
         }
 
 

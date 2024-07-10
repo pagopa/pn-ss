@@ -14,7 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @Data
-public class TagsEntity {
+public class TagsRelationsEntity {
 
     @Getter(AccessLevel.NONE)
     String tagKeyValue;

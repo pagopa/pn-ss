@@ -632,7 +632,7 @@ paths:
 
   '/safestorage/internal/v1/tags/{tagKeyValue}':
     get:
-      operationId: getTags
+      operationId: getTagsRelations
       summary: Restituisce una serie di fileKey associate ad una singola coppia chiave-valore di un tag
       tags:
         - tagsInternal
@@ -647,7 +647,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TagsResponse'
+                $ref: '#/components/schemas/TagsRelationsResponse'
               example:
                 tagsDto: null
                 error:
@@ -658,7 +658,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TagsResponse'
+                $ref: '#/components/schemas/TagsRelationsResponse'
 
   '/safestorage/internal/v1/tags/{documentKey}':
     put:
@@ -682,7 +682,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TagsUpdateResponse'
+                $ref: '#/components/schemas/TagsResponse'
 
 components:
   parameters:
@@ -928,6 +928,7 @@ components:
           $ref: '#/components/schemas/UserConfiguration'
         error:
           $ref: '#/components/schemas/Error'
+
     UserConfigurationChanges:
       type: object
       properties:
@@ -956,7 +957,8 @@ components:
           type: string
         signatureInfo:
           type: string
-    TagsDto:
+
+    TagsRelationsDto:
       type: object
       properties:
         tagKeyValue:
@@ -965,6 +967,17 @@ components:
           type: array
           items:
             type: string
+
+    TagsDto:
+      type: object
+      properties:
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
     TagsChanges:
       type: object
       properties:
@@ -985,23 +998,19 @@ components:
       required:
         - fileKey
 
+    TagsRelationsResponse:
+      type: object
+      properties:
+        tagsRelationsDto:
+          $ref: '#/components/schemas/TagsRelationsDto'
+        error:
+          $ref: '#/components/schemas/Error'
+
     TagsResponse:
       type: object
       properties:
         tagsDto:
           $ref: '#/components/schemas/TagsDto'
-        error:
-          $ref: '#/components/schemas/Error'
-
-    TagsUpdateResponse:
-      type: object
-      properties:
-        tags:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              type: string
         error:
           $ref: '#/components/schemas/Error'
 

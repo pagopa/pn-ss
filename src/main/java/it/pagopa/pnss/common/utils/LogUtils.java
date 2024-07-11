@@ -16,6 +16,7 @@ public class LogUtils {
     public static final String INVOKING_METHOD = "Invoking operation '{}' with args: '{}'";
     public static final String INVOKING_METHOD_WITHOUT_ARGS = "Invoking operation '{}'";
     public static final String SUCCESSFUL_OPERATION_LABEL = "Successful operation: '{}' = '{}'";
+    public static final String SUCCESSFUL_OPERATION_LABEL_NO_ARGS = "Successful operation: '{}'";
     public static final String INVOKING_INTERNAL_SERVICE = "Invoking internal service '{}' '{}'. Waiting Sync response.";
     public static final String CLIENT_METHOD_INVOCATION = "Client method '{}' - args: '{}'";
     public static final String CLIENT_METHOD_RETURN = "Return client method: {} = {}";
@@ -116,7 +117,11 @@ public class LogUtils {
     public static final String INDEXING_CONFIGURATION = "IndexingConfiguration";
     public static final String GET_TAGS_RELATIONS_OP = "getTagsRelations";
     public static final String GET_TAGS_RELATIONS = "TagsService.getTagsRelations()";
+    public static final String PUT_TAGS = "TagsService.putTags()";
     public static final String UPDATE_TAGS = "TagsService.updateTags()";
+    public static final String SET_TAG = "TagsService.setTag()";
+    public static final String DELETE_TAG = "TagsService.deleteTag()";
+    public static final String UPDATE_RELATIONS = "TagsService.updateRelations()";
     public static final String PUT_TAGS_OP = "putTags";
 
 

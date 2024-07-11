@@ -4,6 +4,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Error;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsRelationsResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.exception.MissingTagException;
 import it.pagopa.pnss.repositorymanager.exception.IndexingLimitException;
 import it.pagopa.pnss.repositorymanager.exception.TagKeyValueNotPresentException;
 import it.pagopa.pnss.repositorymanager.rest.internal.TagsInternalApiController;
@@ -40,13 +41,23 @@ public class TagsInternalRestErrorHandler {
     }
 
     @ExceptionHandler(DocumentKeyNotPresentException.class)
-    public final ResponseEntity<TagsResponse> handleDocumentKeyNotPresent(IndexingLimitException exception) {
+    public final ResponseEntity<TagsResponse> handleDocumentKeyNotPresent(DocumentKeyNotPresentException exception) {
         var response = new TagsResponse();
         Error error = new Error();
         error.setCode("404");
         error.setDescription(exception.getMessage());
         response.setError(error);
         return new ResponseEntity<>(response, NOT_FOUND);
+    }
+
+    @ExceptionHandler(MissingTagException.class)
+    public final ResponseEntity<TagsResponse> handleMissingTagException(MissingTagException exception) {
+        var response = new TagsResponse();
+        Error error = new Error();
+        error.setCode("400");
+        error.setDescription(exception.getMessage());
+        response.setError(error);
+        return new ResponseEntity<>(response, BAD_REQUEST);
     }
 
 }

@@ -13,7 +13,7 @@ public class DynamoDbUtils {
 
     public static final Retry DYNAMO_OPTIMISTIC_LOCKING_RETRY = Retry.fixedDelay(2, Duration.ofSeconds(4))
             .filter(ConditionalCheckFailedException.class::isInstance)
-            .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
+            .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
             .onRetryExhaustedThrow((retrySpec, retrySignal) -> retrySignal.failure());
 
     private DynamoDbUtils() {

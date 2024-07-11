@@ -275,6 +275,40 @@ class TagsInternalApiControllerTest {
                 assertThat(Arrays.asList(tagKeyValueEntity1, tagKeyValueEntity2), everyItem(nullValue()));
             }
 
+            /**
+             * Aggiornamento dei tag su un documento non esistente.
+             * Risultato atteso: 400 BAD_REQUEST
+             */
+            @Test
+            void putTags_NonExistingDocument_Ko() {
+                String tagValue = "ABCDEF";
+
+                // Update
+                Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue));
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build("NonExistingDocumentKey"))
+                        .bodyValue(new TagsChanges().SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isNotFound();
+            }
+
+            /**
+             * Aggiornamento di un tag non valido.
+             * Risultato atteso: 400 BAD_REQUEST
+             */
+            @Test
+            void putTags_MissingTag_Ko() {
+                String tagValue = "ABCDEF";
+
+                // Update
+                Map<String, List<String>> setTags = Map.of("NonExistingTag", List.of(tagValue));
+                webTestClient.put().uri(uriBuilder -> uriBuilder.path(PUT_TAGS_PATH).build(PARTITION_ID))
+                        .bodyValue(new TagsChanges().SET(setTags))
+                        .exchange()
+                        .expectStatus()
+                        .isBadRequest();
+            }
+
         }
 
         @Nested
@@ -297,7 +331,7 @@ class TagsInternalApiControllerTest {
                 String initialTagValue = "initialTagValue";
                 String newTagValue = "newTagValue";
                 // Setup
-                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(TAG_SINGLEVALUE_INDEXED, List.of(initialTagValue)))).block();
+                tagsService.putTags(PARTITION_ID, new TagsChanges().SET(Map.of(TAG_SINGLEVALUE_INDEXED, List.of(initialTagValue)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(TAG_SINGLEVALUE_INDEXED, List.of(newTagValue));
@@ -329,7 +363,7 @@ class TagsInternalApiControllerTest {
                 String initialTagValue = "initialTagValue";
                 String newTagValue = "newTagValue";
                 // Setup
-                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(CONSERVAZIONE, List.of(initialTagValue)))).block();
+                tagsService.putTags(PARTITION_ID, new TagsChanges().SET(Map.of(CONSERVAZIONE, List.of(initialTagValue)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of(newTagValue));
@@ -359,7 +393,7 @@ class TagsInternalApiControllerTest {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 // Setup
-                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of(tagValue1)))).block();
+                tagsService.putTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of(tagValue1)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue1, tagValue2));
@@ -393,7 +427,7 @@ class TagsInternalApiControllerTest {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 // Setup
-                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1)))).block();
+                tagsService.putTags(PARTITION_ID, new TagsChanges().SET(Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(TAG_MULTIVALUE_NOT_INDEXED, List.of(tagValue1, tagValue2));
@@ -437,7 +471,7 @@ class TagsInternalApiControllerTest {
             void putTags_Delete_Singlevalue_Indexed_Ok() {
                 String tagValue = "OK";
                 // Setup
-                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(CONSERVAZIONE, List.of(tagValue))));
+                tagsService.putTags(PARTITION_ID, new TagsChanges().SET(Map.of(CONSERVAZIONE, List.of(tagValue))));
 
                 // Delete
                 Map<String, List<String>> deleteTags = Map.of(CONSERVAZIONE, List.of(tagValue));
@@ -449,7 +483,7 @@ class TagsInternalApiControllerTest {
 
                 //pn-SsDocumenti check
                 Map<String, List<String>> tags = documentEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(PARTITION_ID))).getTags();
-                assertThat(tags, nullValue());
+                assertThat(tags, aMapWithSize(0));
 
                 //pn-SsTags check
                 var tagKeyValueEntity = tagsEntityDynamoDbAsyncTable.getItem(builder -> builder.key(keyBuilder -> keyBuilder.partitionValue(CONSERVAZIONE + "~" + tagValue)));
@@ -467,7 +501,7 @@ class TagsInternalApiControllerTest {
                 String tagValue1 = "ABCDEF";
                 String tagValue2 = "123456";
                 // Setup
-                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of(tagValue1, tagValue2)))).block();
+                tagsService.putTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of(tagValue1, tagValue2)))).block();
 
                 // Delete
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue2));
@@ -518,7 +552,7 @@ class TagsInternalApiControllerTest {
                 String tagValue5 = "MNOPQR";
                 String tagValue6 = "STUVWX";
                 // Setup
-                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of(tagValue1, tagValue2)))).block();
+                tagsService.putTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of(tagValue1, tagValue2)))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue3, tagValue4, tagValue5, tagValue6));
@@ -539,7 +573,7 @@ class TagsInternalApiControllerTest {
             void putTags_MaxTagsPerDocument_Ko() {
 
                 // Setup
-                tagsService.updateTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of("tagValue1")))).block();
+                tagsService.putTags(PARTITION_ID, new TagsChanges().SET(Map.of(IUN, List.of("tagValue1")))).block();
 
                 // Update
                 Map<String, List<String>> setTags = Map.of(CONSERVAZIONE, List.of("tagValue2"), TAG_MULTIVALUE_NOT_INDEXED, List.of("tagValue3"));
@@ -571,7 +605,7 @@ class TagsInternalApiControllerTest {
                     String documentKey = PARTITION_ID + i;
                     documentEntity.setDocumentKey(documentKey);
                     documentEntityDynamoDbAsyncTable.putItem(documentEntityBuilder -> documentEntityBuilder.item(documentEntity));
-                    tagsService.updateTags(documentKey, new TagsChanges().SET(Map.of(IUN, List.of(tagValue)))).block();
+                    tagsService.putTags(documentKey, new TagsChanges().SET(Map.of(IUN, List.of(tagValue)))).block();
                 }
                 // Update
                 Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue));

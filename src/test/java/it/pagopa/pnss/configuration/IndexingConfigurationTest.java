@@ -56,13 +56,13 @@ class IndexingConfigurationTest {
             // Checking correct parsing of json string.
             ConcurrentMap<String, IndexingTag> tags = indexingConfiguration.getTags();
             Assertions.assertNotNull(tags);
-            Assertions.assertEquals(5, tags.size());
+            Assertions.assertEquals(7, tags.size());
             assertAllLimitsNotNull(indexingConfiguration.getIndexingLimits());
 
             // Checking correct count of global and local tags.
             long globalTagsCount = tags.values().stream().filter(IndexingTag::isGlobal).count();
             long localTagsCount = tags.values().stream().filter(tag -> !tag.isGlobal()).count();
-            Assertions.assertEquals(3, globalTagsCount);
+            Assertions.assertEquals(5, globalTagsCount);
             Assertions.assertEquals(2, localTagsCount);
 
             // Checking correct usage of isTagValid() method.
@@ -168,6 +168,5 @@ class IndexingConfigurationTest {
         Object json = gson.fromJson(fileReader, Object.class);
         return gson.toJson(json);
     }
-
 
 }

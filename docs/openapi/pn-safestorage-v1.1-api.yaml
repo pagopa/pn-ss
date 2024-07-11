@@ -648,25 +648,22 @@ components:
       description: Aggiunge, elimina o aggiorna i tag associati ad una fileKey
       type: object
       properties:
-        tags:
+        SET:
           type: object
-          properties:
-            SET:
-              type: object
-              additionalProperties:
-                type: array
-                items:
-                  type: string
-              description: >-
-                tags da settare o modificare
-            DELETE:
-              type: object
-              additionalProperties:
-                type: array
-                items:
-                  type: string
-              description: >-
-                tags da eliminare
+          additionalProperties:
+            type: array
+            items:
+              type: string
+            description: >-
+              tags da settare o modificare
+        DELETE:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+            description: >-
+              tags da eliminare
 
     AdditionalFileTagsUpdateResponse:
       description: Informazioni necessarie per l'esito dell'operazione di update sui tag

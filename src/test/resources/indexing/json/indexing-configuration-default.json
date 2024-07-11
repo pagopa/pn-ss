@@ -14,6 +14,16 @@
       "key": "Conservazione",
       "indexed": false,
       "multivalue": false
+    },
+    {
+      "key": "TAG_MULTIVALUE_NOT_INDEXED",
+      "indexed": false,
+      "multivalue": true
+    },
+    {
+      "key": "TAG_SINGLEVALUE_INDEXED",
+      "indexed": true,
+      "multivalue": false
     }
   ],
   "locals": [
@@ -31,11 +41,11 @@
   "limits": {
     "MaxTagsPerRequest": 50,
     "MaxOperationsOnTagsPerRequest": 50,
-    "MaxFileKeys": 1000,
+    "MaxFileKeys": 5,
     "MaxMapValuesForSearch": 10,
     "MaxFileKeysUpdateMassivePerRequest": 100,
-    "MaxTagsPerDocument": 40,
-    "MaxValuesPerTagDocument": 1000,
+    "MaxTagsPerDocument": 2,
+    "MaxValuesPerTagDocument": 5,
     "MaxValuesPerTagPerRequest": 100
   }
 }

@@ -70,7 +70,6 @@ public class LogUtils {
     public static final String GET_DOCUMENTS_CONFIGS = "getDocumentsConfigs()";
 
 
-
     // ---------------------------------------------------------------------------
 
     //S3
@@ -115,6 +114,10 @@ public class LogUtils {
 
     //INDEXING
     public static final String INDEXING_CONFIGURATION = "IndexingConfiguration";
+    public static final String GET_TAGS_RELATIONS_OP = "getTagsRelations";
+    public static final String GET_TAGS_RELATIONS = "TagsService.getTagsRelations()";
+    public static final String UPDATE_TAGS = "TagsService.updateTags()";
+    public static final String PUT_TAGS_OP = "putTags";
 
 
 }

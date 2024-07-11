@@ -7,11 +7,8 @@ import static org.testcontainers.containers.localstack.LocalStackContainer.Servi
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SECRETSMANAGER;
 import static software.amazon.awssdk.services.dynamodb.model.TableStatus.ACTIVE;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +17,7 @@ import javax.annotation.PostConstruct;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import it.pagopa.pnss.repositorymanager.entity.ScadenzaDocumentiEntity;
+import it.pagopa.pnss.repositorymanager.entity.TagsRelationsEntity;
 import lombok.CustomLog;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -43,7 +41,6 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
 
 @TestConfiguration
 @CustomLog
@@ -176,7 +173,8 @@ public class LocalStackTestConfig {
                 Map.ofEntries(entry(repositoryManagerDynamoTableName.anagraficaClientName(), UserConfigurationEntity.class),
                         entry(repositoryManagerDynamoTableName.tipologieDocumentiName(), it.pagopa.pnss.repositorymanager.entity.DocTypeEntity.class),
                         entry(repositoryManagerDynamoTableName.documentiName(), DocumentEntity.class),
-                        entry(repositoryManagerDynamoTableName.scadenzaDocumentiName(), ScadenzaDocumentiEntity.class));
+                        entry(repositoryManagerDynamoTableName.scadenzaDocumentiName(), ScadenzaDocumentiEntity.class),
+                        entry(repositoryManagerDynamoTableName.tagsName(), TagsRelationsEntity.class));
 
         tableNameWithEntityClass.forEach((tableName, entityClass) -> {
             log.info("<-- START initLocalStack -->");

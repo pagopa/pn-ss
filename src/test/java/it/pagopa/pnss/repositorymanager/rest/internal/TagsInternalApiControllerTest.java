@@ -50,7 +50,7 @@ class TagsInternalApiControllerTest {
     private DynamoDbAsyncClient dynamoDbAsyncClient;
     @Autowired
     private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
-    private static final String PUT_TAGS_PATH = "/safestorage/internal/v1/tags/{documentKey}";
+    private static final String PUT_TAGS_PATH = "/safestorage/internal/v1/documents/{documentKey}/tags";
 
 
     @BeforeAll

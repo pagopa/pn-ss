@@ -40,12 +40,12 @@
   ],
   "limits": {
     "MaxTagsPerRequest": 50,
-    "MaxOperationsOnTagsPerRequest": 50,
+    "MaxOperationsOnTagsPerRequest": 4,
     "MaxFileKeys": 5,
     "MaxMapValuesForSearch": 10,
     "MaxFileKeysUpdateMassivePerRequest": 100,
     "MaxTagsPerDocument": 2,
     "MaxValuesPerTagDocument": 5,
-    "MaxValuesPerTagPerRequest": 100
+    "MaxValuesPerTagPerRequest": 5
   }
 }

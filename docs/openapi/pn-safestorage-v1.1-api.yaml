@@ -542,6 +542,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
 
+  /safe-storage/v1/files/tags:
+    get:
+      operationId: additionalFileTagsSearch
+      tags:
+        - additionalFileTags
+      summary: Ricerca le fileKey che hanno associato uno specifico tag
+      description: >-
+        L’API prevederà un elenco di query parameter scritti nella forma seguente: <br/>
+
+        /safe-storage/v1/files/tags?key_1=value_1&key_2=value_2 <br/>
+        
+        Il servizio provvederà a ricercare nella tabella pn-SsTags tutte le fileKey che
+        avranno un tag key_1 valorizzato a value_1, quindi eseguirà la stessa operazione
+        per key_2 e value_2 e risponderà con un elenco di fileKey che corrisponderà all'intersezione
+        dei due insiemi (and logico). Il parametro opzionale logic permetterà di specificare se avere
+        il comportamento di default (and) oppure ragionare facendo un or. L’operazione logica viene
+        applicata su tutte le chiavi passate (non sarà possibile applicare una logica con espressioni booleane complesse). <br/>
+        
+        La chiamata restituirà un 400 anche in cui venisse superato <br/>
+        un numero massimo di tag passabili in una singola richiesta (parametro configurabile). <br/>
+
+        La stessa API potrà essere invocata aggiungendo un parametro opzionale (tags, di default false) che consentirà di reperire, 
+        oltre all’elenco delle fileKey anche tutti i tag associati ad ognuna di esse. <br/>
+      parameters:
+        - $ref: '#/components/parameters/clientIdHeader'
+        - $ref: '#/components/parameters/logic'
+        - $ref: '#/components/parameters/tags'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsSearchResponse'
+        '400':
+          description: >-
+            Richiesta non validata correttamente o limite di tag della request superato.
+        '403':
+          description: >-
+            Non autorizzato in lettura sui tag.
+
+            
+
 
 components:
   parameters:
@@ -569,7 +612,23 @@ components:
       schema:
         type: string
       example: '8F7E/9A3B/1234/AB87'
-      
+    logic:
+      name: logic
+      description: La logica ('and' oppure 'or') da applicare al meccanismo di ricerca della additionalFileTagsSearch.
+      in: query
+      schema:
+        type: string
+        enum: [ and, or ]
+        example: and
+    tags:
+      name: tags
+      description: Booleano che indica se nella additionalFileTagsSearch bisogna ritornare, oltre all’elenco delle fileKey, anche tutti i tag associati ad ognuna di esse.
+      in: query
+      schema:
+        type: boolean
+      example: true
+
+
   schemas:
     FileCreationRequest:
       description: Richiesta di autorizzazione a caricare un nuovo file
@@ -675,7 +734,23 @@ components:
         resultDescription:
           type: string
 
-
+    AdditionalFileTagsSearchResponse:
+      description: Esito della ricerca dei tag
+      type: object
+      properties:
+        fileKeys:
+          type: array
+          items:
+            type: object
+            properties:
+              fileKey:
+                type: string
+              tags:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
 
     AdditionalFileTagsDto:
       type: object

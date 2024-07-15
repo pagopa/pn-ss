@@ -32,7 +32,7 @@ public class TagsInternalApiController implements TagsInternalApi {
 
     @Override
     public Mono<ResponseEntity<TagsResponse>> putTags(String documentKey, Mono<TagsChanges> tagsChanges, ServerWebExchange exchange) {
-        return tagsChanges.flatMap(changes -> tagsService.updateTags(documentKey, changes))
+        return tagsChanges.flatMap(changes -> tagsService.putTags(documentKey, changes))
                 .map(tagsDto -> ResponseEntity.ok().body(new TagsResponse().tagsDto(tagsDto)))
                 .doOnSuccess(result -> log.logEndingProcess(PUT_TAGS_OP))
                 .doOnError(throwable -> log.logEndingProcess(PUT_TAGS_OP, false, throwable.getMessage()));

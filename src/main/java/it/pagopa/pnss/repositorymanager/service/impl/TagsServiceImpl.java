@@ -117,16 +117,6 @@ public class TagsServiceImpl implements TagsService {
     }
 
 
-
-    private Mono<DocumentEntity> setTags(DocumentEntity documentEntity, Map<String, List<String>> set) {
-        log.debug("setTags: {}", set);
-        return Mono.justOrEmpty(documentEntity.getTags())
-                .defaultIfEmpty(new HashMap<>())
-                .filter(tags -> set != null && !set.isEmpty())
-                .flatMap(tags -> handleTagSetting(tags, set))
-                .doOnNext(documentEntity::setTags)
-                .thenReturn(documentEntity);
-}
     /**
      * A method to update tags on pn-SsDocumenti table.
      *

@@ -652,6 +652,12 @@ components:
             lo stato del documento, ne definisce il tempo di permanenza all'interno 
             di _SafeStorage_.
           example: PRELOADED
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
 
     FileCreationResponse:
       description: Informazioni necessarie a caricare il contenuto di un file

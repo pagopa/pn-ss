@@ -116,6 +116,7 @@ public class TagsServiceImpl implements TagsService {
                 .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, PUT_TAGS, result));
     }
 
+
     /**
      * A method to update tags on pn-SsDocumenti table.
      *
@@ -136,6 +137,7 @@ public class TagsServiceImpl implements TagsService {
                         })
                         .thenReturn(documentEntity))
                 .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, UPDATE_TAGS, result));
+
     }
 
     /**

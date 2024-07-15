@@ -565,6 +565,7 @@ paths:
         La stessa API potrà essere invocata aggiungendo un parametro opzionale (tags, di default false) che consentirà di reperire, 
         oltre all’elenco delle fileKey anche tutti i tag associati ad ognuna di esse. <br/>
       parameters:
+        - $ref: '#/components/parameters/clientIdHeader'
         - $ref: '#/components/parameters/logic'
         - $ref: '#/components/parameters/tags'
       responses:

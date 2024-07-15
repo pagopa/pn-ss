@@ -72,6 +72,7 @@ public class TagsServiceImpl implements TagsService {
                 .map(tags -> new TagsDto().tags(tags));
     }
 
+
     private Mono<DocumentEntity> setTags(DocumentEntity documentEntity, Map<String, List<String>> set) {
         log.debug("setTags: {}", set);
         return Mono.justOrEmpty(documentEntity.getTags())

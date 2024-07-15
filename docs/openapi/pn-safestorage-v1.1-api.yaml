@@ -70,7 +70,9 @@ tags:
   - name: fileDownload
     description: Lettura file 
   - name: fileMetadataUpdate
-    description: Aggiornamento metadati file 
+    description: Aggiornamento metadati file
+  - name: additionalFileTags
+    description: Servizi di indicizzazione dei documenti
 paths:
   /status:
     get:
@@ -434,9 +436,9 @@ paths:
                   description: OK
                 '404':
                   description: SQS queue not found
-  
-  
-  
+
+      
+
   ################################################################################################
   ###                                   AGGIORNA METADATI FILE                                 ###
   ################################################################################################
@@ -473,7 +475,72 @@ paths:
             - il parametro clientId è diverso dal client autenticato; <br/>
             - se il file identificato da fileKey non è ancora stato salvato; <br/>
             
-      
+    ################################################################################################
+    ###                                  TAG DOCUMENTI                                 ###
+    ################################################################################################
+  '/safe-storage/v1/files/{fileKey}/tags':
+    parameters:
+      - $ref: '#/components/parameters/fileKey'
+    get:
+      operationId: additionalFileTagsGet
+      tags:
+        - additionalFileTags
+      summary: ottieni i tags associati ad un file tramite la fileKey
+      description: >-
+        Questa operazione rende possibile reperire i tag associati ad una singola fileKey.<br/>
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsGetResponse'
+
+        '404':
+          description: >-
+            Non trovato nessun tag per la fileKey.
+    post:
+      operationId: additionalFileTagsUpdate
+      tags:
+        - additionalFileTags
+      summary: aggiungi, elimina o aggiorna i tags associati ad un file tramite la fileKey
+      description: >-
+        Questa operazione rende possibile aggiungere, eliminare o aggiornare i tag associati ad una singola fileKey.<br/>
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdditionalFileTagsUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+        '400':
+          description: >-
+            Richiesta non validata correttamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+        '403':
+          description: >-
+            Non autorizzato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+        '404':
+          description: >-
+            Documento non trovato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+            
 
 components:
   parameters:
@@ -570,6 +637,54 @@ components:
             download: 
               $ref: '#/components/schemas/FileDownloadInfo'
     
+
+    AdditionalFileTagsGetResponse:
+      description: Restituisce i tag associati ad una fileKey
+      allOf:
+        - $ref: '#/components/schemas/AdditionalFileTagsDto'
+        - type: object
+
+    AdditionalFileTagsUpdateRequest:
+      description: Aggiunge, elimina o aggiorna i tag associati ad una fileKey
+      type: object
+      properties:
+        SET:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+            description: >-
+              tags da settare o modificare
+        DELETE:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+            description: >-
+              tags da eliminare
+
+    AdditionalFileTagsUpdateResponse:
+      description: Informazioni necessarie per l'esito dell'operazione di update sui tag
+      type: object
+      properties:
+        resultCode:
+          type: string
+        resultDescription:
+          type: string
+
+
+
+    AdditionalFileTagsDto:
+      type: object
+      properties:
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
 
     FileCreatedDto:
       description: >-

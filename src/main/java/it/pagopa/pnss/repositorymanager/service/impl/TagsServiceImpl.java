@@ -13,7 +13,7 @@ import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.TagsRelationsEntity;
 import it.pagopa.pnss.repositorymanager.exception.IndexingLimitException;
-import it.pagopa.pnss.repositorymanager.exception.TagKeyValueNotPresentException;
+import it.pagopa.pnss.repositorymanager.exception.ItemDoesNotExist;
 import it.pagopa.pnss.repositorymanager.service.TagsService;
 import lombok.CustomLog;
 import org.springframework.stereotype.Service;
@@ -74,7 +74,7 @@ public class TagsServiceImpl implements TagsService {
     }
 
     private Mono<TagsRelationsEntity> getErrorIdTagNotFoundException(String tagKeyValue) {
-        return Mono.error(new TagKeyValueNotPresentException(tagKeyValue));
+        return Mono.error(new ItemDoesNotExist(tagKeyValue));
     }
 
     /**
@@ -82,7 +82,7 @@ public class TagsServiceImpl implements TagsService {
      *
      * @param tagKeyValue the pn-SsTags partitionKey, representing a tag key~value association.
      * @return Mono<TagsRelationsDto> a mono with the fileKeys associated to the given tag key~value association
-     * @throws TagKeyValueNotPresentException if the tag key~value association does not exist
+     * @throws ItemDoesNotExist if the tag key~value association does not exist
      */
     @Override
     public Mono<TagsRelationsDto> getTagsRelations(String tagKeyValue) {

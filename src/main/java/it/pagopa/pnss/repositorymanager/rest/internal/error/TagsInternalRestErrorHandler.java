@@ -6,7 +6,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.exception.MissingTagException;
 import it.pagopa.pnss.repositorymanager.exception.IndexingLimitException;
-import it.pagopa.pnss.repositorymanager.exception.TagKeyValueNotPresentException;
+import it.pagopa.pnss.repositorymanager.exception.ItemDoesNotExist;
 import it.pagopa.pnss.repositorymanager.rest.internal.TagsInternalApiController;
 import lombok.CustomLog;
 import org.springframework.http.ResponseEntity;
@@ -20,8 +20,8 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @CustomLog
 public class TagsInternalRestErrorHandler {
 
-    @ExceptionHandler(TagKeyValueNotPresentException.class)
-    public final ResponseEntity<TagsRelationsResponse> handleTagKeyValueNotPresent(TagKeyValueNotPresentException exception) {
+    @ExceptionHandler(ItemDoesNotExist.class)
+    public final ResponseEntity<TagsRelationsResponse> handleItemDoesNotExistException(ItemDoesNotExist exception) {
         var response = new TagsRelationsResponse();
         Error error = new Error();
         error.setCode("404");

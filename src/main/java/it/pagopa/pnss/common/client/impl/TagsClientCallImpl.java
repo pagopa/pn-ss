@@ -10,9 +10,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import static it.pagopa.pnss.common.utils.LogUtils.INVOKING_INTERNAL_SERVICE;
+import static it.pagopa.pnss.common.utils.LogUtils.REPOSITORY_MANAGER;
+
 @CustomLog
 @Service
 public class TagsClientCallImpl implements TagsClientCall {
+
+    @Value("${header.x-pagopa-safestorage-cx-id}")
+    private String xPagopaSafestorageCxId;
 
     @Value("${gestore.repository.anagrafica.internal.tags.get}")
     private String anagraficaTagsClientEndpointGet;
@@ -24,6 +30,15 @@ public class TagsClientCallImpl implements TagsClientCall {
 
     public TagsClientCallImpl(WebClient ssWebClient) {
         this.ssWebClient = ssWebClient;
+    }
+
+    @Override
+    public Mono<TagsResponse> getTags(String tagKeyValue) {
+        log.info(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, "getTags()");
+        return ssWebClient.get()
+                .uri(String.format(anagraficaTagsClientEndpointGet, tagKeyValue))
+                .retrieve()
+                .bodyToMono(TagsResponse.class);
     }
 
     @Override

@@ -83,7 +83,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di una filekey con aggiunta/modifica di differenti tag
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con aggiunta/modifica di differenti tag
      * Risultato atteso: 200 OK
      */
     @Test
@@ -119,7 +119,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di una filekey con aggiunta/modifica ed eliminazione di differenti tag
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con aggiunta/modifica ed eliminazione di differenti tag
      * Risultato atteso: 200 OK
      */
     @Test
@@ -138,7 +138,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di una filekey con aggiunta/modifica ed eliminazione dello stesso tag
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con aggiunta/modifica ed eliminazione dello stesso tag
      * Risultato atteso: 400 BAD REQUEST
      */
     @Test
@@ -158,7 +158,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di una filekey con aggiunta di tag singlevalue a cui sono stati associati più valori
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con aggiunta di tag singlevalue a cui sono stati associati più valori
      * Risultato atteso: 400 BAD REQUEST
      */
     @Test
@@ -176,7 +176,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di una filekey con aggiunta di tag con numero di value che supera il limite consentito
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con aggiunta di tag che supera il limite consentito
      * Risultato atteso: 400 BAD REQUEST
      */
     @Test
@@ -199,7 +199,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di una filekey con aggiunta di tag con numero di value che supera il limite consentito
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con aggiunta di tag con numero di value che supera il limite consentito
      * Risultato atteso: 400 BAD REQUEST
      */
     @Test
@@ -218,7 +218,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di una filekey con aggiunta di tag da parte di un utente senza permessi
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con aggiunta di tag da parte di un utente senza permessi
      * Risultato atteso: 403 FORBIDDEN
      */
     @Test
@@ -241,7 +241,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di una fileKey esistente con tag invalido
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una fileKey esistente con tag invalido
      * Risultato atteso: 400 BAD REQUEST
      */
     @Test
@@ -259,7 +259,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di una fileKey esistente per eliminazione di un tag invalido
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una fileKey esistente per eliminazione di un tag invalido
      * Risultato atteso: 400 BAD REQUEST
      */
     @Test
@@ -277,7 +277,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di un documento inesistente con relativi tag
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di un documento inesistente con relativi tag
      * Risultato atteso: 404 NOT FOUND
      */
     @Test

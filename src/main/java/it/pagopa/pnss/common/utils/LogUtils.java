@@ -125,6 +125,7 @@ public class LogUtils {
     public static final String DELETE_TAG = "TagsService.deleteTag()";
     public static final String UPDATE_RELATIONS = "TagsService.updateRelations()";
     public static final String PUT_TAGS_OP = "putTags";
+    public static final String POST_TAG_DOCUMENT = "postTagsDocument";
 
 
 }

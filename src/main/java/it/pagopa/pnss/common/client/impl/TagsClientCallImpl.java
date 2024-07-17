@@ -1,6 +1,8 @@
 package it.pagopa.pnss.common.client.impl;
 
 
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsRelationsResponse;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
@@ -43,5 +45,14 @@ public class TagsClientCallImpl implements TagsClientCall {
                 .bodyToMono(TagsRelationsResponse.class);
     }
 
+    @Override
+    public Mono<TagsResponse> putTags(String documentKey, TagsChanges tagsChanges) {
+        return ssWebClient.put()
+                          .uri( builder -> builder.path(anagraficaTagsClientEndpointPut)
+                          .build(documentKey))
+                          .bodyValue(tagsChanges)
+                          .retrieve()
+                          .bodyToMono(TagsResponse.class);
+    }
 
 }

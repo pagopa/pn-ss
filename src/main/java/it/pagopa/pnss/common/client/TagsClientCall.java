@@ -12,6 +12,5 @@ public interface TagsClientCall {
     Mono<TagsResponse> getTags(String tagKeyValue);
     Mono<TagsResponse> putTags(String documentKey, TagsChanges tagsChanges);
 
-    Mono<TagsResponse> putTags(String documentKey, TagsChanges tagsChanges);
 
 }

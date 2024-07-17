@@ -379,6 +379,13 @@ paths:
           required: false
           schema:
             type: boolean
+        - name: tags
+          in: query
+          description: >-
+            Filtra i file basati sui tags specificati.
+          required: false
+          schema:
+            type: boolean
       responses:
         '200':
           description: OK
@@ -812,6 +819,19 @@ components:
           description: >-
             data e ora fino a cui il documento sarà garantito all'interno di _SafeStorage_. <br/>
             Può essere ritardata nel tempo, mai anticipata. Formattata con timezone secondo l'rfc 3339
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: >-
+            Mappa di tag associati al documento. Ogni chiave è una stringa e ogni valore è un array di stringhe.
+          example:
+            key_1: [ "value_1", "value_7" ]
+            key_2: [ "value_2" ]
+            key_3: [ "value_3", "value_9", "value_8" ]
+            key_4: [ "value_4" ]
             
                   
     FileDownloadInfo:

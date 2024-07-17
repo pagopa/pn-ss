@@ -9,12 +9,13 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
@@ -23,7 +24,6 @@ import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
@@ -61,27 +61,28 @@ class AdditionalFileTagsSearchTest {
     }
 
     private WebTestClient.ResponseSpec additionalFileTagsSearchCall(String logic, Boolean tags, String xPagopaSafestorageCxId, String xApiKey, Map<String, String> tagsToSearch) {
-        WebTestClient.RequestHeadersSpec request = webTestClient.get()
-                .uri(SEARCH_URI)
-                .accept(MediaType.APPLICATION_JSON)
-                .header("x-pagopa-safestorage-cx-id", xPagopaSafestorageCxId)
-                .header("x-api-key", xApiKey);
+        MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
 
         if (logic != null) {
-            request.attribute("logic", logic);
+            queryParams.add("logic", logic);
         }
 
         if (tags != null) {
-            request.attribute("tags", tags);
+            queryParams.add("tags", tags.toString());
         }
 
         if (tagsToSearch != null) {
             for (Map.Entry<String, String> tag : tagsToSearch.entrySet()) {
-                request.attribute(tag.getKey(), tag.getValue());
+                queryParams.add(tag.getKey(), tag.getValue());
             }
         }
 
-        return request.exchange();
+        return webTestClient.get()
+                .uri(uriBuilder -> uriBuilder.path(SEARCH_URI).queryParams(queryParams).build())
+                .accept(MediaType.APPLICATION_JSON)
+                .header("x-pagopa-safestorage-cx-id", xPagopaSafestorageCxId)
+                .header("x-api-key", xApiKey)
+                .exchange();
     }
 
     @SafeVarargs

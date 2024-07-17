@@ -437,7 +437,7 @@ paths:
                 '404':
                   description: SQS queue not found
 
-      
+
 
   ################################################################################################
   ###                                   AGGIORNA METADATI FILE                                 ###
@@ -481,6 +481,7 @@ paths:
   '/safe-storage/v1/files/{fileKey}/tags':
     parameters:
       - $ref: '#/components/parameters/fileKey'
+      - $ref: '#/components/parameters/clientIdHeader'
     get:
       operationId: additionalFileTagsGet
       tags:
@@ -583,6 +584,7 @@ paths:
             Non autorizzato in lettura sui tag.
 
             
+
 
 components:
   parameters:

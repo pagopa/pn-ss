@@ -660,7 +660,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TagsRelationsResponse'
 
-  '/safestorage/internal/v1/tags/{documentKey}':
+  '/safestorage/internal/v1/documents/{documentKey}/tags':
     put:
       operationId: putTags
       summary: Aggiorna i tag associati ad un documento nella tabella pn-SsDocumenti e le associazioni chiave-valore nella tabella pn-SsTags

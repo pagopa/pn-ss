@@ -9,6 +9,6 @@ public interface TagsService {
 
     Mono<TagsRelationsDto> getTagsRelations(String tagKeyValue);
 
-    Mono<TagsDto> updateTags(String documentKey, TagsChanges tagsChanges);
+    Mono<TagsDto> putTags(String documentKey, TagsChanges tagsChanges);
 
 }

@@ -1,4 +1,4 @@
-package it.pagopa.pnss.common.client.exception;
+package it.pagopa.pnss.repositorymanager.exception;
 
 public class TagKeyValueNotPresentException extends RuntimeException {
 

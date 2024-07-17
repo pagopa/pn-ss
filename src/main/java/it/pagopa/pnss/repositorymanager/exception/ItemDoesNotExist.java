@@ -4,9 +4,9 @@ import java.io.Serializable;
 
 public class ItemDoesNotExist extends RuntimeException implements Serializable {
 
-    private static final long serialVersionUID = 1441959267059588702L;
+	private static final long serialVersionUID = 1441959267059588702L;
 
-    public ItemDoesNotExist(String partitionKey) {
-        super(String.format("Item with partition key '%s' doesn't exist", partitionKey));
+	public ItemDoesNotExist(String idClient) {
+        super(String.format("Item with Id %s doesn't exists", idClient));
     }
 }

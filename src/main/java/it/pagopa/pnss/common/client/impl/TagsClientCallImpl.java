@@ -1,6 +1,7 @@
 package it.pagopa.pnss.common.client.impl;
 
 
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import lombok.CustomLog;
@@ -40,5 +41,14 @@ public class TagsClientCallImpl implements TagsClientCall {
                 .bodyToMono(TagsResponse.class);
     }
 
+    @Override
+    public Mono<TagsResponse> putTags(String documentKey, TagsChanges tagsChanges) {
+        return ssWebClient.put()
+                          .uri( builder -> builder.path(anagraficaTagsClientEndpointPut)
+                          .build(documentKey))
+                          .bodyValue(tagsChanges)
+                          .retrieve()
+                          .bodyToMono(TagsResponse.class);
+    }
 
 }

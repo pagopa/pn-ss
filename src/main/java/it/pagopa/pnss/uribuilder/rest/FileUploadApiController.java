@@ -1,11 +1,10 @@
 package it.pagopa.pnss.uribuilder.rest;
 
-import com.amazonaws.services.s3.model.CORSRule;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.FileUploadApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.FileCreationRequest;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.FileCreationResponse;
-import it.pagopa.pnss.repositorymanager.exception.IndexingLimitException;
+import it.pagopa.pnss.common.exception.IndexingLimitException;
 import lombok.CustomLog;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;

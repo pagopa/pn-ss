@@ -5,7 +5,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsRelationsRes
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.exception.MissingTagException;
-import it.pagopa.pnss.repositorymanager.exception.IndexingLimitException;
+import it.pagopa.pnss.common.exception.IndexingLimitException;
 import it.pagopa.pnss.repositorymanager.exception.ItemDoesNotExist;
 import it.pagopa.pnss.repositorymanager.rest.internal.TagsInternalApiController;
 import lombok.CustomLog;

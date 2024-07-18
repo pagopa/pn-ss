@@ -3,12 +3,17 @@ package it.pagopa.pnss.indexing.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsDto;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsSearchResponseFileKeys;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
 import it.pagopa.pnss.common.exception.ClientNotAuthorizedException;
+import it.pagopa.pnss.common.exception.InvalidSearchLogicException;
 import it.pagopa.pnss.common.exception.RequestValidationException;
+import it.pagopa.pnss.common.exception.IndexingLimitException;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
@@ -20,6 +25,7 @@ import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -27,7 +33,13 @@ import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @CustomLog
@@ -42,13 +54,10 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
 
-    public AdditionalFileTagsServiceImpl(TagsClientCall tagsClientCall, ObjectMapper objectMapper,
-                                         DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                                         RepositoryManagerDynamoTableName repositoryManagerDynamoTableName,
-                                         IndexingConfiguration indexingConfiguration,
-                                         DocumentClientCall documentClientCall,
-                                         UserConfigurationClientCall userConfigurationClientCall,
-                                         RetryBackoffSpec gestoreRepositoryRetryStrategy) {
+
+
+
+    public AdditionalFileTagsServiceImpl(TagsClientCall tagsClientCall, ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient, RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, IndexingConfiguration indexingConfiguration, DocumentClientCall documentClientCall, UserConfigurationClientCall userConfigurationClientCall, RetryBackoffSpec gestoreRepositoryRetryStrategy) {
         this.tagsClientCall = tagsClientCall;
         this.objectMapper = objectMapper;
         this.indexingConfiguration = indexingConfiguration;
@@ -251,6 +260,74 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                 sink.error(e);
             }
         });
+    }
+
+    @Override
+    public Mono<List<AdditionalFileTagsSearchResponseFileKeys>> searchTags(String xPagopaSafestorageCxId, String logic, Boolean tags, Map<String, String> queryParams) {
+        var reducingFunction = getLogicFunction(logic);
+        return userConfigurationClientCall.getUser(xPagopaSafestorageCxId).handle((userConfigurationResponse, sink) -> {
+                    if (Boolean.FALSE.equals(userConfigurationResponse.getUserConfiguration().getCanReadTags())) {
+                        sink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, String.format("Client: %s does not have privilege to read tags", xPagopaSafestorageCxId)));
+                    } else sink.complete();
+                })
+                .thenMany(validateQueryParams(queryParams))
+                .flatMap(this::getFileKeysList)
+                .map(HashSet::new)
+                .reduce(reducingFunction)
+                .flatMapMany(Flux::fromIterable)
+                .map(fileKey -> new AdditionalFileTagsSearchResponseFileKeys().fileKey(fileKey))
+                .flatMap(fileKey -> {
+                    if (Boolean.TRUE.equals(tags)) {
+                        return documentClientCall.getDocument(fileKey.getFileKey()).map(documentResponse -> {
+                            fileKey.setTags(documentResponse.getDocument().getTags());
+                            return fileKey;
+                        });
+                    } else return Mono.just(fileKey);
+                })
+                .collectList();
+    }
+
+    private BinaryOperator<HashSet<String>> getLogicFunction(String logic) {
+        return switch (logic) {
+            case "or" -> orLogicFunction();
+            case "and" -> andLogicFunction();
+            default -> throw new InvalidSearchLogicException(logic);
+        };
+    }
+
+    private BinaryOperator<HashSet<String>> orLogicFunction() {
+        return (set1, set2) -> {
+            set1.addAll(set2);
+            return set1;
+        };
+    }
+
+    private BinaryOperator<HashSet<String>> andLogicFunction() {
+        return (set1, set2) -> {
+            HashSet<String> intersection = new HashSet<>(set1);
+            intersection.retainAll(set2);
+            return intersection;
+        };
+    }
+
+    private Mono<List<String>> getFileKeysList(Map.Entry<String, String> mapEntry) {
+        return Mono.just(mapEntry).flatMap(entry -> tagsClientCall.getTagsRelations(entry.getKey() + "~" + entry.getValue()))
+                .doOnError(TagKeyValueNotPresentException.class, e -> log.debug("TagKeyValueNotPresentException: {}", e.getMessage()))
+                .map(tagsResponse -> tagsResponse.getTagsRelationsDto().getFileKeys())
+                .onErrorResume(TagKeyValueNotPresentException.class, e -> Mono.fromSupplier(ArrayList::new));
+    }
+
+    private Flux<Map.Entry<String, String>> validateQueryParams(Map<String, String> queryParams) {
+        // Inizializzo un flusso con i queryParam, escludendo i parametri "tags" e "logic"
+        Flux<Map.Entry<String, String>> queryParamsFlux = Flux.fromIterable(queryParams.entrySet()).filter(entry -> !entry.getKey().equals("tags") && !entry.getKey().equals("logic"));
+        return queryParamsFlux
+                .count()
+                .handle((count, sink) -> {
+                    if (count > indexingConfiguration.getIndexingLimits().getMaxMapValuesForSearch()) {
+                        sink.error(new IndexingLimitException("MaxMapValuesForSearch", Math.toIntExact(count), indexingConfiguration.getIndexingLimits().getMaxMapValuesForSearch()));
+                    } else sink.complete();
+                })
+                .thenMany(queryParamsFlux);
     }
 
 }

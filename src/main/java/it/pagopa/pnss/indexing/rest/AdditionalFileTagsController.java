@@ -2,14 +2,13 @@ package it.pagopa.pnss.indexing.rest;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.AdditionalFileTagsApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsGetResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsSearchResponse;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.common.exception.MissingTagException;
+import it.pagopa.pnss.common.exception.*;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsUpdateRequest;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsUpdateResponse;
-import it.pagopa.pnss.common.exception.ClientNotAuthorizedException;
-import it.pagopa.pnss.common.exception.RequestValidationException;
 import lombok.CustomLog;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import static it.pagopa.pnss.common.utils.LogUtils.POST_TAG_DOCUMENT;
@@ -60,6 +60,16 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new AdditionalFileTagsUpdateResponse().resultCode("400.00").resultDescription(ex.getMessage()));
     }
 
+    @ExceptionHandler(InvalidSearchLogicException.class)
+    public ResponseEntity<String> handleInvalidSearchLogicException(InvalidSearchLogicException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(IndexingLimitException.class)
+    public ResponseEntity<String> handleIndexingLimitException(IndexingLimitException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    }
+
     @Override
     public Mono<ResponseEntity<AdditionalFileTagsGetResponse>> additionalFileTagsGet(String fileKey, String xPagopaSafestorageCxId, final ServerWebExchange exchange) {
         log.logStartingProcess(GET_TAGS_DOCUMENT);
@@ -73,6 +83,13 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
                 .doOnError(throwable -> log.logEndingProcess(GET_TAGS_DOCUMENT, false, throwable.getMessage()));
     }
 
+    @Override
+    public Mono<ResponseEntity<AdditionalFileTagsSearchResponse>> additionalFileTagsSearch(String xPagopaSafestorageCxId, String logic, Boolean tags, ServerWebExchange exchange) {
+        logic = logic == null ? "and" : logic;
+        tags = tags != null && tags;
+        return additionalFileTagsService.searchTags(xPagopaSafestorageCxId, logic, tags, exchange.getRequest().getQueryParams().toSingleValueMap())
+                .map(fileKeys -> ResponseEntity.ok().body(new AdditionalFileTagsSearchResponse().fileKeys(fileKeys)));
+    }
     @Override
     public Mono<ResponseEntity<AdditionalFileTagsUpdateResponse>> additionalFileTagsUpdate(String fileKey, String xPagopaSafestorageCxId,
                                                                                            Mono<AdditionalFileTagsUpdateRequest> additionalFileTagsUpdateRequest,

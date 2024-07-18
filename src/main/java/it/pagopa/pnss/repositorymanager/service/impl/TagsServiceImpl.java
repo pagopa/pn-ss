@@ -12,7 +12,7 @@ import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.TagsRelationsEntity;
-import it.pagopa.pnss.repositorymanager.exception.IndexingLimitException;
+import it.pagopa.pnss.common.exception.IndexingLimitException;
 import it.pagopa.pnss.repositorymanager.exception.ItemDoesNotExist;
 import it.pagopa.pnss.repositorymanager.service.TagsService;
 import lombok.CustomLog;

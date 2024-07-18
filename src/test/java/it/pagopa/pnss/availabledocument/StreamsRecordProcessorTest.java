@@ -5,19 +5,25 @@ import com.amazonaws.services.dynamodbv2.model.StreamRecord;
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.model.Record;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
+import it.pagopa.pnss.availabledocument.dto.NotificationMessage;
 import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,10 +38,56 @@ import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 @AutoConfigureWebTestClient
 class StreamsRecordProcessorTest {
 
+    @Autowired
+    DynamoDbClient dynamoDbClient;
 
     @Autowired
     AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
 
+    @BeforeEach
+    void setUp() {
+        putAnagraficaClient(createClient());
+    }
+
+    @Test
+    void testProcessRecordsWithoutPermissions()  {
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+
+        UserConfiguration client = createClient();
+        client.setCanReadTags(false);
+        putAnagraficaClient(client);
+
+        ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
+        List<Record> records = new ArrayList<>();
+
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED);
+
+        records.add(new RecordAdapter(recordDyanmo));
+        processRecordsInput.withRecords(records);
+        Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
+        StepVerifier.create(eventSendToBridge).assertNext(putEventsRequestEntry -> {
+            NotificationMessage notificationMessage = eventToNotificationMessage(putEventsRequestEntry.detail());
+            Assertions.assertNull(notificationMessage.getTags());
+        }).verifyComplete();
+    }
+
+    @Test
+    void testProcessRecordsWithPermissions(){
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+
+        ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
+        List<Record> records = new ArrayList<>();
+
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED);
+
+        records.add(new RecordAdapter(recordDyanmo));
+        processRecordsInput.withRecords(records);
+        Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
+        StepVerifier.create(eventSendToBridge).assertNext(putEventsRequestEntry -> {
+            NotificationMessage notificationMessage = eventToNotificationMessage(putEventsRequestEntry.detail());
+            Assertions.assertNotNull(notificationMessage.getTags());
+        }).verifyComplete();
+    }
     @Test
     void testProcessRecordsOk() {
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
@@ -117,6 +169,8 @@ class StreamsRecordProcessorTest {
         recordDyanmo.setEventName(eventName);
         StreamRecord dynamodbRecord = new StreamRecord();
         Map<String, AttributeValue> image = new HashMap<>();
+        Map<String,AttributeValue> tags = new HashMap<>();
+        tags.put("tag1", new AttributeValue().withL(new AttributeValue().withS("value1"),new AttributeValue().withS("value2")));
         image.put(DOCUMENTKEY_KEY, createAttributeS("111"));
 
 
@@ -128,6 +182,7 @@ class StreamsRecordProcessorTest {
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));
         image.put(RETENTIONUNTIL_KEY, createAttributeS("80"));
         image.put(CLIENTSHORTCODE_KEY, createAttributeS("pn-delivery"));
+        image.put(TAGS_KEY, new AttributeValue().withM(tags));
         dynamodbRecord.setNewImage(image);
 
         image = new HashMap<>();
@@ -146,6 +201,35 @@ class StreamsRecordProcessorTest {
         recordDyanmo.setDynamodb(dynamodbRecord);
         return recordDyanmo;
 
+    }
+
+    private void putAnagraficaClient(UserConfiguration client) {
+        dynamoDbClient.putItem(request -> request.tableName("pn-SsAnagraficaClient")
+                .item(Map.of("name", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(client.getName()).build(),
+                        "canReadTags", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().bool(client.getCanReadTags()).build(),
+                        "canWriteTags", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().bool(client.getCanWriteTags()).build(),
+                        "canExecutePatch", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().bool(client.getCanExecutePatch()).build(),
+                        "apiKey", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(client.getApiKey()).build())));
+
+    }
+    private static UserConfiguration createClient() {
+        UserConfiguration client = new UserConfiguration();
+        client.setName("pn-delivery");
+        client.setCanReadTags(true);
+        client.setCanWriteTags(true);
+        client.setCanExecutePatch(true);
+        client.setApiKey("apiKey");
+
+        return client;
+    }
+
+    private NotificationMessage eventToNotificationMessage(String event) {
+        ObjectMapper objMapper = new ObjectMapper();
+        try {
+            return objMapper.readValue(event, NotificationMessage.class);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private  AttributeValue createAttributeM() {

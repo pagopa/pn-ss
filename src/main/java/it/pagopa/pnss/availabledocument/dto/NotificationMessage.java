@@ -4,6 +4,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 @Data
 @NoArgsConstructor
 public class NotificationMessage {
@@ -17,6 +21,7 @@ public class NotificationMessage {
     String retentionUntil;
     @JsonProperty("client_short_code")
     String clientShortCode;
+    Map<String,List<String>> tags;
     @Override
     public String toString() {
         return "NotificationMessage{" +
@@ -28,6 +33,7 @@ public class NotificationMessage {
                 ", checksum='" + checksum + '\'' +
                 ", retentionUntil='" + retentionUntil + '\'' +
                 ", clientShortCode='" + clientShortCode + '\'' +
+                ", tags=" + (tags != null ? tags.toString() : "null") +
                 '}';
     }
 }

@@ -30,6 +30,7 @@ public class ManageDynamoEvent {
     public static final String RETENTIONUNTIL_KEY = "retentionUntil";
     public static final String CONTENTTYPE_KEY = "contentType";
     public static final String CLIENTSHORTCODE_KEY = "clientShortCode";
+    public static final String TAGS_KEY = "tags";
 
     public PutEventsRequestEntry manageItem(String disponibilitaDocumentiEventBridge, Map<String, AttributeValue> newImage,
                                             Map<String, AttributeValue> oldImage) {

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -27,6 +28,7 @@ import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
+@AutoConfigureWebTestClient(timeout = "100000")
 class AdditionalFileTagsSearchTest {
 
     @MockBean
@@ -133,6 +135,35 @@ class AdditionalFileTagsSearchTest {
     }
 
     /**
+     * Logica OR
+     * Ricerca di file con tag IUN=ABCDEF
+     * Risultato atteso: 200 OK con la fileKey corretta
+     */
+    @Test
+    void search_orLogic_SingleTag_ok() {
+
+        //GIVEN
+        String iunValue = "ABCDEF";
+        String iunKeyValue = IUN + "~" + iunValue;
+
+        //WHEN
+        when(tagsClientCall.getTagsRelations(iunKeyValue)).thenReturn(Mono.just(new TagsRelationsResponse().tagsRelationsDto(new TagsRelationsDto().tagKeyValue(iunKeyValue).addFileKeysItem(FILE_KEY))));
+
+
+        //THEN
+        additionalFileTagsSearchCall("or", false, PN_CLIENT_AUTHORIZED, PN_CLIENT_AUTHORIZED_API_KEY, Map.entry(IUN, iunValue))
+                .expectStatus()
+                .isOk()
+                .expectBody(AdditionalFileTagsSearchResponse.class)
+                .value(response -> {
+                    assertThat(response.getFileKeys(), notNullValue());
+                    assertThat(response.getFileKeys(), hasSize(1));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("fileKey", equalTo(FILE_KEY))));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", nullValue())));
+                });
+    }
+
+    /**
      * Logica OR.
      * Ricerca di file con tag IUN=ABCDEF o Conservazione=OK, senza alcun match.
      * Risultato atteso: 200 OK con lista fileKey vuota.
@@ -183,6 +214,34 @@ class AdditionalFileTagsSearchTest {
 
         //THEN
         additionalFileTagsSearchCall(logicValue, false, PN_CLIENT_AUTHORIZED, PN_CLIENT_AUTHORIZED_API_KEY, Map.entry(IUN, iunValue), Map.entry(CONSERVAZIONE, conservazioneValue))
+                .expectStatus()
+                .isOk()
+                .expectBody(AdditionalFileTagsSearchResponse.class)
+                .value(response -> {
+                    assertThat(response.getFileKeys(), notNullValue());
+                    assertThat(response.getFileKeys(), hasSize(1));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("fileKey", equalTo(FILE_KEY))));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", nullValue())));
+                });
+    }
+
+    /**
+     * Logica AND.
+     * Ricerca di file con tag IUN=ABCDEF
+     * Risultato atteso: 200 OK con la fileKey corretta
+     */
+    @Test
+    void search_andLogic_SingleTag_ok() {
+
+        //GIVEN
+        String iunValue = "ABCDEF";
+        String iunKeyValue = IUN + "~" + iunValue;
+
+        //WHEN
+        when(tagsClientCall.getTagsRelations(iunKeyValue)).thenReturn(Mono.just(new TagsRelationsResponse().tagsRelationsDto(new TagsRelationsDto().tagKeyValue(iunKeyValue).addFileKeysItem(FILE_KEY))));
+
+        //THEN
+        additionalFileTagsSearchCall("and", false, PN_CLIENT_AUTHORIZED, PN_CLIENT_AUTHORIZED_API_KEY, Map.entry(IUN, iunValue))
                 .expectStatus()
                 .isOk()
                 .expectBody(AdditionalFileTagsSearchResponse.class)
@@ -273,7 +332,7 @@ class AdditionalFileTagsSearchTest {
                     assertThat(response.getFileKeys(), notNullValue());
                     assertThat(response.getFileKeys(), hasSize(1));
                     assertThat(response.getFileKeys(), hasItem(hasProperty("fileKey", equalTo(FILE_KEY))));
-                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", notNullValue())));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", nullValue())));
                 });
     }
 

@@ -47,12 +47,13 @@ public class TagsClientCallImpl implements TagsClientCall {
 
     @Override
     public Mono<TagsResponse> putTags(String documentKey, TagsChanges tagsChanges) {
+        log.info(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, "putTags()");
         return ssWebClient.put()
-                          .uri( builder -> builder.path(anagraficaTagsClientEndpointPut)
-                          .build(documentKey))
-                          .bodyValue(tagsChanges)
-                          .retrieve()
-                          .bodyToMono(TagsResponse.class);
+                .uri( builder -> builder.path(anagraficaTagsClientEndpointPut)
+                        .build(documentKey))
+                .bodyValue(tagsChanges)
+                .retrieve()
+                .bodyToMono(TagsResponse.class);
     }
 
 }

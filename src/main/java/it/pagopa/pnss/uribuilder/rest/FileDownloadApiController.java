@@ -28,8 +28,8 @@ public class FileDownloadApiController implements FileDownloadApi {
     @Value("${queryParam.presignedUrl.traceId}")
     private String xTraceId;
 
-    @Override
-    public Mono<ResponseEntity<FileDownloadResponse>> getFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly,
+   @Override
+    public Mono<ResponseEntity<FileDownloadResponse>> getFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly, Boolean tags,
                                                               final ServerWebExchange exchange) {
 
         MDC.clear();

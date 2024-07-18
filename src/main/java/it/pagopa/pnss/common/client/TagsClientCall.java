@@ -4,7 +4,6 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsRelationsRes
 import reactor.core.publisher.Mono;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
-import reactor.core.publisher.Mono;
 
 public interface TagsClientCall {
     Mono<TagsRelationsResponse> getTagsRelations(String tagKeyValue);

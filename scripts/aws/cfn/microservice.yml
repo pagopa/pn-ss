@@ -668,6 +668,12 @@ Resources:
               - 'events:DescribeEventBus'
             Resource:
               - !Ref PnSsEventBusArnExternalNotification
+          - Sid: 'ReadParameterStore'
+            Effect: Allow
+            Action:
+              - 'ssm:GetParameter'
+            Resource:
+              - '*'
 
   #####    Staging Bucket Events Rule    #####
   PnSsEventRuleStagingBucket:

@@ -196,10 +196,10 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     private void validateTagsLimit(Map<String, List<String>> setTags, Map<String, List<String>> deleteTags) throws RequestValidationException {
         int setSize = setTags != null ? setTags.size() : 0;
         int deleteSize = deleteTags != null ? deleteTags.size() : 0;
-        int maxTags = Math.toIntExact(indexingConfiguration.getIndexingLimits().getMaxTagsPerDocument());
+        int maxTags = Math.toIntExact(indexingConfiguration.getIndexingLimits().getMaxOperationsOnTagsPerRequest());
 
         if ((setSize + deleteSize) > maxTags) {
-            throw new RequestValidationException("Number of tags to update exceeds maxTags limit");
+            throw new RequestValidationException("Number of tags to update exceeds maxOperationsOnTags limit");
         }
     }
 

@@ -270,6 +270,8 @@ paths:
         contenuto del file. Il tempo massimo che può intercorrere tra le due invocazioni è ```pst```.
       parameters:
         - $ref: '#/components/parameters/clientIdHeader'
+        - $ref: '#/components/parameters/x-checksum-value'
+        - $ref: '#/components/parameters/x-checksum'
       requestBody:
         content:
           application/json:
@@ -675,6 +677,20 @@ components:
       schema:
         type: boolean
       example: true
+    x-checksum-value:
+      name: x-checksum-value
+      description: Stringa che indica il valore del checksum
+      in: header
+      required: true
+      schema:
+        type: string
+    x-checksum:
+      name: x-checksum
+      description: Stringa che identifica l'algoritmo di checksum inserito per retrocompatibilità, ma che viene ignorato (viene dedotto dal tipo del file).
+      in: header
+      required: false
+      schema:
+        type: string
 
 
   schemas:

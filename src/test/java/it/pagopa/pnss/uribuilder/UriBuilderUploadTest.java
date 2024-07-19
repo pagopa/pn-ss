@@ -101,6 +101,7 @@ class UriBuilderUploadTest {
 
         return callRequestHeadersSpec(fileCreationRequest)
                 .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                .header("x-checksum-value", "checkumValueExample")
                 .exchange();
     }
 

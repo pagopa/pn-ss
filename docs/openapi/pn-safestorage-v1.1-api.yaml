@@ -645,7 +645,7 @@ components:
         type: string
     x-checksum:
       name: x-checksum
-      description: Stringa che identifica il valore checksum che viene ignorato
+      description: Stringa che identifica l'algoritmo di checksum inserito per retrocompatibilità, ma che viene ignorato (viene dedotto dal tipo del file).
       in: header
       required: false
       schema:

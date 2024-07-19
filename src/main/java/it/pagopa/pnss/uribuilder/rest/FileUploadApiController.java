@@ -39,10 +39,9 @@ public class FileUploadApiController implements FileUploadApi {
 
 
     @Override
-    public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId,
+    public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId, String xChecksumValue, String xChecksum,
 																 Mono<FileCreationRequest> fileCreationRequest,
 																 final ServerWebExchange exchange) {
-
 
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
 		MDC.clear();
@@ -51,9 +50,8 @@ public class FileUploadApiController implements FileUploadApi {
 
         return MDCUtils.addMDCToContextAndExecute(fileCreationRequest.flatMap(request -> {
         								String checksumValue = null;
-										if (headerXChecksumValue != null && !headerXChecksumValue.isBlank()
-												&& exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
-												checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
+										if (headerXChecksumValue != null && !headerXChecksumValue.isBlank()) {
+												checksumValue = xChecksumValue;
 										}
 										return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
         																				request,

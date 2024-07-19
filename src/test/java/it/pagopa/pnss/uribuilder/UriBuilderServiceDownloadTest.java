@@ -43,10 +43,11 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import static it.pagopa.pnss.common.DocTypesConstant.*;
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -74,6 +75,10 @@ class UriBuilderServiceDownloadTest {
             new UserConfigurationResponse().userConfiguration(new UserConfiguration().apiKey(X_API_KEY_VALUE));
 
     private final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+    private static final String SEPARATORE = "~";
+    private static final String PREFIX = "CLIENT_ID" + SEPARATORE;
+
+    private static final String IUN = "IUN";
     private final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
 
     @Value("${file.download.api.url}")
@@ -110,6 +115,9 @@ class UriBuilderServiceDownloadTest {
     @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
     private String defaultInternalClientIdValue;
 
+    private static final DocumentResponse DOCUMENT_RESPONSE_TAGS = new DocumentResponse().document(new Document().documentKey("documentKey").tags(createTagsList()).documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
+
+
     private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(String requestIdx, Boolean metadataOnly)
     {
         this.webClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
@@ -132,6 +140,35 @@ class UriBuilderServiceDownloadTest {
     private WebTestClient.ResponseSpec noTraceIdFileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
         return callRequestHeadersSpec(requestIdx, metadataOnly)
                 .exchange();
+    }
+
+
+    private static Map<String, List<String>> createTagsList(){
+        Map<String, List<String>> tags = new HashMap<>();
+
+        List<String> valuesForKey1 = new ArrayList<>();
+        valuesForKey1.add("AABBCC");
+        valuesForKey1.add("DAHKLAO");
+        tags.put(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE+SEPARATORE+IUN, valuesForKey1);
+
+        List<String> valuesForKey2 = new ArrayList<>();
+        valuesForKey2.add("BGDKAO");
+        tags.put(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE+"_2"+SEPARATORE+IUN, valuesForKey2);
+
+        List<String> valuesForKey3 = new ArrayList<>();
+        valuesForKey3.add("UHANCLX");
+        valuesForKey3.add("CNALUZX");
+        valuesForKey3.add("DDEEFFGG");
+        tags.put(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE+"_3"+SEPARATORE+IUN, valuesForKey3);
+
+        List<String> valuesForKey4 = new ArrayList<>();
+        valuesForKey4.add("BCAGIST");
+        tags.put(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE+"_4"+SEPARATORE+IUN, valuesForKey4);
+
+        List<String> valuesForKey5 = new ArrayList<>();
+        valuesForKey5.add("XJSHAOP");
+        tags.put("Conservazione", valuesForKey5);
+        return tags;
     }
 
     @BeforeEach
@@ -259,6 +296,7 @@ class UriBuilderServiceDownloadTest {
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false);
         StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
     }
+
 
     @Test
     void recoverDocumentFromBucketRestoreAlreadyInProgress() {
@@ -519,6 +557,110 @@ class UriBuilderServiceDownloadTest {
         fileDownloadTestCall(docId, false).expectStatus().isForbidden();
     }
 
+    @Test
+    void testCreateUriForDownloadFileTags() {
+        // Inizializzazione dei parametri di input per il metodo da testare
+     //   String fileKey = "fileKey";
+        String xPagopaSafestorageCxId = "xPagopaSafestorageCxId";
+        String xTraceIdValue = "xTraceIdValue";
+        Boolean metadataOnly = false;
+
+        // Mock delle risposte delle chiamate interne
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+        userConfiguration.setApiKey(X_API_KEY_VALUE);
+        userConfiguration.setCanReadTags(true);
+        userConfiguration.setCanRead(Collections.singletonList(PN_AAR));
+        userConfig.setUserConfiguration(userConfiguration);
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(TECHNICAL_STATUS_AVAILABLE);
+        d.setDocumentKey("documentKey");
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        mockGetDocumentTags(d, "documentKey");
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+        // Chiamata al metodo da testare
+        Mono<FileDownloadResponse> result = uriBuilderService.createUriForDownloadFile("documentKey", xPagopaSafestorageCxId, xTraceIdValue, metadataOnly, true);
+
+        // Verifica del risultato
+        StepVerifier.create(result)
+                .expectNextMatches(Objects::nonNull)
+                .verifyComplete();
+
+        // Verifica che il metodo mock sia stato chiamato con i parametri corretti
+        verify(documentClientCall, times(2)).getDocument("documentKey");
+
+    }
+
+    /**
+     * Test con queryParam 'tags' valorizzato a 'false'.
+     * Restityisce una response priva di informazione sui tag
+     */
+    @Test
+    void testCreateUriForDownloadFileTags_tagFalse() {
+        // Inizializzazione dei parametri di input per il metodo da testare
+        //   String fileKey = "fileKey";
+        String xPagopaSafestorageCxId = "xPagopaSafestorageCxId";
+        String xTraceIdValue = "xTraceIdValue";
+        Boolean metadataOnly = false;
+
+        // Mock delle risposte delle chiamate interne
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+        userConfiguration.setApiKey(X_API_KEY_VALUE);
+        userConfiguration.setCanReadTags(true);
+        userConfiguration.setCanRead(Collections.singletonList(PN_AAR));
+        userConfig.setUserConfiguration(userConfiguration);
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(TECHNICAL_STATUS_AVAILABLE);
+        d.setDocumentKey("documentKey");
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        mockGetDocumentTags(d, "documentKey");
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+        // Chiamata al metodo da testare
+        Mono<FileDownloadResponse> result = uriBuilderService.createUriForDownloadFile("documentKey", xPagopaSafestorageCxId, xTraceIdValue, metadataOnly, false);
+
+        // Verifica del risultato
+        StepVerifier.create(result)
+                .expectNextMatches(Objects::nonNull)
+                .verifyComplete();
+
+        // Verifica che il metodo mock sia stato chiamato con i parametri corretti
+        verify(documentClientCall, times(1)).getDocument("documentKey");
+
+    }
+
+    @Test
+    void testCreateUriForDownloadFileTags_noPermessi_Ko() {
+
+        // Mock delle risposte delle chiamate interne
+        UserConfigurationResponse userConfig = new UserConfigurationResponse();
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName("testXXXX");
+        userConfiguration.setApiKey("xxxx");
+        userConfiguration.setCanReadTags(false);
+        userConfiguration.setCanRead(Collections.singletonList(PN_AAR));
+        userConfig.setUserConfiguration(userConfiguration);
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(TECHNICAL_STATUS_AVAILABLE);
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+        when(uriBuilderService.createUriForDownloadFile("documentKey", "testXXXX", "xxxxx", false, true))
+                .thenReturn(Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN)));
+        // Chiamata al metodo da testare
+        fileDownloadTestCall("documentKey", false).expectStatus().isForbidden();
+
+    }
+
     private void mockGetDocument(DocumentInput d, String docId) {
         DocumentResponse documentResponse = new DocumentResponse();
         Document doc = new Document();
@@ -530,6 +672,22 @@ class UriBuilderServiceDownloadTest {
         doc.setDocumentState(d.getDocumentState());
         doc.setDocumentLogicalState(d.getDocumentLogicalState());
         doc.setRetentionUntil(OffsetDateTime.now().format(DATE_TIME_FORMATTER));
+        documentResponse.setDocument(doc);
+        Mono<DocumentResponse> docRespEntity = Mono.just(documentResponse);
+        doReturn(docRespEntity).when(documentClientCall).getDocument(docId);
+    }   private void mockGetDocumentTags(DocumentInput d, String docId) {
+        DocumentResponse documentResponse = new DocumentResponse();
+        Document doc = new Document();
+        DocumentType type = new DocumentType();
+        type.setTipoDocumento(d.getDocumentType());
+        type.setChecksum(DocumentType.ChecksumEnum.MD5);
+        type.setStatuses(Map.of(SAVED, new CurrentStatus().technicalState(AVAILABLE)));
+        doc.setDocumentType(type);
+        doc.setDocumentState(d.getDocumentState());
+        doc.setDocumentLogicalState(d.getDocumentLogicalState());
+        doc.setRetentionUntil(OffsetDateTime.now().format(DATE_TIME_FORMATTER));
+        doc.setTags(createTagsList());
+        doc.setDocumentKey(docId);
         documentResponse.setDocument(doc);
         Mono<DocumentResponse> docRespEntity = Mono.just(documentResponse);
         doReturn(docRespEntity).when(documentClientCall).getDocument(docId);

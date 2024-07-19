@@ -14,6 +14,7 @@ import it.pagopa.pnss.common.exception.InvalidConfigurationException;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import it.pagopa.pnss.repositorymanager.exception.IndexingLimitException;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -46,6 +47,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.function.Predicate;
 
@@ -93,18 +95,18 @@ public class UriBuilderService {
     private final DocTypesClientCall docTypesClientCall;
     private final TagsClientCall tagsClientCall;
     private final S3Service s3Service;
+    private final AdditionalFileTagsService additionalFileTagsService;
     private final S3Presigner s3Presigner;
     private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
     private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+    private static final String SEPARATORE = "~";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
     private final IndexingConfiguration indexingConfiguration;
 
-    @Autowired
-    RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, RetryBackoffSpec gestoreRepositoryRetryStrategy, IndexingConfiguration indexingConfiguration) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService, RetryBackoffSpec gestoreRepositoryRetryStrategy, IndexingConfiguration indexingConfiguration) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
@@ -113,6 +115,7 @@ public class UriBuilderService {
         this.s3Service = s3Service;
         this.s3Presigner = s3Presigner;
         this.getFileWithPatchConfiguration= GetFilePatchConfiguration.valueOf(getFileWithPatchConfigValue);
+        this.additionalFileTagsService = additionalFileTagsService;
         this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
         this.indexingConfiguration = indexingConfiguration;
     }
@@ -123,7 +126,6 @@ public class UriBuilderService {
             return Mono.just(bucketName.ssHotName());
         } else return Mono.just(bucketName.ssStageName());
     }
-
 
     public Mono<FileCreationResponse> createUriForUploadFile(String xPagopaSafestorageCxId, FileCreationRequest request,
                                                              String checksumValue, String xTraceIdValue) {
@@ -148,21 +150,14 @@ public class UriBuilderService {
                                     synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
                                             String.format("Client '%s' does not have privilege to create document type '%s'",
                                                     xPagopaSafestorageCxId, documentType)));
+                                }  else if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty() && !userConfiguration.getUserConfiguration().getCanWriteTags()) {
+                                    synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                            String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
                                 } else {
                                     synchronousSink.next(userConfiguration);
                                 }
                             })
-                            .flatMap(user -> userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
-                                    .retryWhen(gestoreRepositoryRetryStrategy)
-                                    .handle((userConfiguration, synchronousSink) -> {
-                                        if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty() && !userConfiguration.getUserConfiguration().getCanWriteTags()) {
-                                            synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                                    String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
-                                        } else {
-                                            synchronousSink.next(userConfiguration);
-                                        }
-                                    })
-                                    .flatMap(userConfiguration -> {
+                               .flatMap(userConfiguration -> {
                                         // Creazione del documento con o senza tags
                                         var fileExtension = getFileExtension(contentType);
                                         var documentKeyTmp = String.format("%s%s",
@@ -207,7 +202,7 @@ public class UriBuilderService {
                                                             }
                                                         }));
                                     }))
-                            .doOnSuccess(fileCreationResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_UPLOAD_FILE, fileCreationResponse)));
+                            .doOnSuccess(fileCreationResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_UPLOAD_FILE, fileCreationResponse));
                 });
     }
 
@@ -345,10 +340,10 @@ public class UriBuilderService {
                 });
     }
 
-    public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, String xTraceIdValue, Boolean metadataOnly) {
+    public Mono<FileDownloadResponse> createUriForDownloadFile(String fileKey, String xPagopaSafestorageCxId, String xTraceIdValue, Boolean metadataOnly, Boolean tags) {
         log.debug(LogUtils.INVOKING_METHOD, CREATE_URI_FOR_DOWNLOAD_FILE, Stream.of(fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly).toList());
-
         log.logChecking(X_TRACE_ID_VALUE);
+
         if (xTraceIdValue == null || StringUtils.isBlank(xTraceIdValue)) {
             String errorMsg = String.format("Header %s is missing", queryParamPresignedUrlTraceId);
             log.logCheckingOutcome(X_TRACE_ID_VALUE, false, errorMsg);
@@ -356,67 +351,143 @@ public class UriBuilderService {
         }
         log.logCheckingOutcome(X_TRACE_ID_VALUE, true);
 
-        return Mono.fromCallable(this::validationFieldCreateUri)//
+        return Mono.fromCallable(this::validationFieldCreateUri)
                 .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
-                .retryWhen(gestoreRepositoryRetryStrategy))
+                        .retryWhen(gestoreRepositoryRetryStrategy))
                 .zipWhen(userConfigurationResponse -> {
                     List<String> canRead = userConfigurationResponse.getUserConfiguration().getCanRead();
+                    boolean canReadTags = userConfigurationResponse.getUserConfiguration().getCanReadTags() != null
+                            ? userConfigurationResponse.getUserConfiguration().getCanReadTags()
+                            : true;
 
                     return documentClientCall.getDocument(fileKey)
                             .retryWhen(gestoreRepositoryRetryStrategy)
-                            .onErrorResume(DocumentKeyNotPresentException.class//
-                                    , throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + fileKey)))
-                            .flatMap(documentResponse -> {
-                                var document = documentResponse.getDocument();
-                                var documentType = document.getDocumentType();
-
-                                if (!canRead.contains(documentType.getTipoDocumento())) {
-                                    return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN//
-                                            , String.format("Client : %s not has privilege for read document type %s", xPagopaSafestorageCxId, documentType)));
-                                } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
-                                    return Mono.error(new ResponseStatusException(HttpStatus.GONE//
-                                            , "Document has been deleted"));
-                                } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
-                                    return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND//
-                                            , "Document not found"));
-                                } else return Mono.just(document);
-
-                            });
+                            .onErrorResume(DocumentKeyNotPresentException.class,
+                                    throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document key not found : " + fileKey)))
+                            .flatMap(documentResponse -> checkDocumentPermissions(canRead, documentResponse.getDocument(), xPagopaSafestorageCxId, canReadTags, tags));
                 })
                 .flatMap(tuple -> {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
                     Document document = tuple.getT2();
-                    boolean isBooked = document.getDocumentState().equalsIgnoreCase(BOOKED);
-                    boolean hasRetentionUntilNull = StringUtils.isBlank(document.getRetentionUntil());
-                    if (isBooked || hasRetentionUntilNull) {
-                        log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", fileKey, bucketName.ssHotName());
-
-                        return s3Service.headObject(fileKey, bucketName.ssHotName())
-                                .onErrorResume(NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(fileKey)))
-                                .map(headObjectResponse -> {
-                                    DocumentChanges documentChanges;
-                                    if (isBooked) {
-                                        log.debug(">> after check presence in createUriForDownloadFile {}", headObjectResponse);// HeadObjectResponse
-                                        documentChanges = fixBookedDocument(document, headObjectResponse);
-                                    } else {
-                                        String retentionUntil = DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate());
-                                        document.setRetentionUntil(retentionUntil);
-                                        documentChanges = new DocumentChanges().retentionUntil(retentionUntil);
-                                    }
-                                    return documentChanges;
-                                })
-                                .filter(documentChanges -> !isBooked || canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()))
-                                .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
-                                        .retryWhen(gestoreRepositoryRetryStrategy)
-                                        .map(DocumentResponse::getDocument))
-                                .defaultIfEmpty(document);
-                    }
-                    else return Mono.just(document);
+                    return handleDocumentState(document, userConfigurationResponse);
                 })
-                .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly))//
+                .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly)
+                        .flatMap(fileDownloadResponse -> setFileTags(tags, doc.getDocumentKey(), xPagopaSafestorageCxId, fileDownloadResponse)))
                 .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
-                .onErrorResume(InvalidConfigurationException.class, throwable-> Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, throwable.getMessage())))
+                .onErrorResume(InvalidConfigurationException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, throwable.getMessage())))
                 .doOnSuccess(fileDownloadResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_DOWNLOAD_FILE, fileDownloadResponse));
+    }
+
+    private Mono<Document> checkDocumentPermissions(List<String> canRead, Document document, String xPagopaSafestorageCxId, boolean canReadTags, Boolean tags) {
+        var documentType = document.getDocumentType();
+        if (!canRead.contains(documentType.getTipoDocumento())) {
+            return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    String.format("Client : %s not has privilege for read document type %s", xPagopaSafestorageCxId, documentType)));
+        } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
+            return Mono.error(new ResponseStatusException(HttpStatus.GONE,
+                    "Document has been deleted"));
+        } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
+            return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Document not found"));
+        } else if (tags != null && tags && !canReadTags) {
+            return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    String.format("Client '%s' does not have privilege to read tags", xPagopaSafestorageCxId)));
+        } else {
+            return Mono.just(document);
+        }
+    }
+
+    private Mono<Document> handleDocumentState(Document document, UserConfigurationResponse userConfigurationResponse) {
+        boolean isBooked = document.getDocumentState().equalsIgnoreCase(BOOKED);
+        boolean hasRetentionUntilNull = StringUtils.isBlank(document.getRetentionUntil());
+
+        if (isBooked || hasRetentionUntilNull) {
+            log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", document.getDocumentKey(), bucketName.ssHotName());
+
+            return s3Service.headObject(document.getDocumentKey(), bucketName.ssHotName())
+                    .onErrorResume(NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(document.getDocumentKey())))
+                    .map(headObjectResponse -> {
+                        DocumentChanges documentChanges;
+                        if (isBooked) {
+                            log.debug(">> after check presence in createUriForDownloadFile {}", headObjectResponse);
+                            documentChanges = fixBookedDocument(document, headObjectResponse);
+                        } else {
+                            String retentionUntil = DATE_TIME_FORMATTER.format(headObjectResponse.objectLockRetainUntilDate());
+                            document.setRetentionUntil(retentionUntil);
+                            documentChanges = new DocumentChanges().retentionUntil(retentionUntil);
+                        }
+                        return documentChanges;
+                    })
+                    .filter(documentChanges -> !isBooked || canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()))
+                    .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
+                            .retryWhen(gestoreRepositoryRetryStrategy)
+                            .map(DocumentResponse::getDocument))
+                    .defaultIfEmpty(document);
+        } else {
+            return Mono.just(document);
+        }
+    }
+
+    /**
+     * Metodo che prende in ingresso una serie di parametri
+     * al fine di reperire la lista di tag di un documento
+     * e aggiungerli alla response
+     *
+     * @param tags booleano che indica se restituire o meno la lista di tag
+     * @param documentKey chiave del documento
+     * @param xPagopaSafestorageCxId identificativo univoco del client
+     * @param fileDownloadResponse oggetto della response
+     * @return fileDownloadResponse con l'aggiunta dei tag
+     */
+    private Mono<FileDownloadResponse> setFileTags(Boolean tags, String documentKey, String xPagopaSafestorageCxId, FileDownloadResponse fileDownloadResponse) {
+        if (tags != null && tags) {
+            return additionalFileTagsService.getDocumentTags(documentKey, xPagopaSafestorageCxId)
+                    .map(AdditionalFileTagsDto::getTags)
+                    .map(tagList -> {
+                        processTags(tagList);
+                        fileDownloadResponse.setTags(tagList);
+                        return fileDownloadResponse;
+                    });
+        } else {
+            return Mono.just(fileDownloadResponse);
+        }
+    }
+
+    /**
+     * Metodo che prende in ingresso una mappa di tag
+     * e la lavora in modo da restituire una nuova mappa
+     * secondo la logica del metodo 'extractTagKey(param)'
+     *
+     * @param tags Mappa di stringa di una lista di stringhe di tag
+     * @return Map<String, List<String>> dei tag privi di prefisso
+     */
+    public static Map<String, List<String>> processTags(Map<String, List<String>> tags) {
+        if (tags == null) {
+            return new HashMap<>();
+        }
+        return tags.entrySet().stream()
+                .collect(Collectors.toMap(
+                        entry -> extractTagKey(entry.getKey()),
+                        Map.Entry::getValue
+                ));
+    }
+
+    /**
+     * Estrae la chiave del tag rimuovendo il prefisso composto da clientId e tilde.
+     *
+     * @param key Chiave del tag con prefisso.
+     * @return Chiave senza prefisso.
+     */
+    private static String extractTagKey(String key) {
+        if (key.contains(SEPARATORE)) {
+            int tildeIndex = key.indexOf(SEPARATORE);
+            if (tildeIndex != -1) {
+                return key.substring(tildeIndex + 1);
+            } else {
+                return key;
+            }
+        }
+        return key;
     }
 
     private DocumentChanges fixBookedDocument(Document document, HeadObjectResponse hor) {

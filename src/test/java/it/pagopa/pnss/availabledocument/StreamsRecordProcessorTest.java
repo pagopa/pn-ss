@@ -20,9 +20,7 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.io.IOException;
@@ -41,7 +39,7 @@ import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 class StreamsRecordProcessorTest {
 
 
-    DynamoDbClientBuilder dynamoDbClientBuilder;
+    @Autowired
     DynamoDbClient dynamoDbClient;
 
     @Autowired
@@ -49,8 +47,6 @@ class StreamsRecordProcessorTest {
 
     @BeforeEach
     void setUp() {
-        dynamoDbClientBuilder = DynamoDbClient.builder().region(Region.EU_CENTRAL_1);
-        dynamoDbClient = dynamoDbClientBuilder.build();
 
         putAnagraficaClient(createClient());
     }

@@ -13,11 +13,20 @@ import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
 import lombok.CustomLog;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.MDC;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
+
+import java.util.Map;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
@@ -30,6 +39,11 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     private final EventBridgeClient eventBridgeClient = EventBridgeClient.create();
     private boolean test = false;
     private final String disponibilitaDocumentiEventBridge;
+    String region = "eu-central-1";
+    DynamoDbClientBuilder dynamoDbClientBuilder = DynamoDbClient.builder().credentialsProvider(DefaultCredentialsProvider.create()).region(Region.of(region));
+    DynamoDbClient dynamoDbClient = dynamoDbClientBuilder.build();
+
+
 
     public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge) {
         this.disponibilitaDocumentiEventBridge = disponibilitaDocumentiEventBridge;
@@ -49,7 +63,8 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         final String PROCESS_RECORDS = "processRecords()";
         MDC.clear();
         log.logStartingProcess(PROCESS_RECORDS);
-        MDCUtils.addMDCToContextAndExecute(findEventSendToBridge(processRecordsInput)
+        MDCUtils.addMDCToContextAndExecute(
+                findEventSendToBridge(processRecordsInput)
                 .buffer(10)
                 .map(putEventsRequestEntries -> {
 
@@ -77,10 +92,11 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .filter(RecordAdapter.class::isInstance)
                 .map(recordEvent -> ((RecordAdapter) recordEvent).getInternalObject())
                 .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))
-                .flatMap(streamRecord -> {
+                .flatMap(streamRecord -> {String cxId = streamRecord.getDynamodb().getNewImage().get("clientShortCode").getS();
+                    Boolean canReadTags = getCanReadTags(cxId);
                     ManageDynamoEvent mde = new ManageDynamoEvent();
                     PutEventsRequestEntry putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
-                            streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage());
+                            streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage(), canReadTags);
                     if (putEventsRequestEntry != null) {
                         log.info("Event send to bridge {}", putEventsRequestEntry);
 
@@ -92,6 +108,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     log.info(SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput);
                 });
     }
+
 
     private void setCheckpoint(ProcessRecordsInput processRecordsInput) {
         try {
@@ -125,6 +142,17 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 log.fatal("DBStream: Error while trying to shutdown checkpoint: {} {} {}",  e , shutdownInput.getShutdownReason(), e.getMessage());
             }
         }
-
     }
+
+    private Boolean getCanReadTags(String cxId) {
+
+        GetItemResponse getItemResponse = dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
+                .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
+                .projectionExpression("canReadTags"));
+
+        return getItemResponse.item().get("canReadTags").bool();
+    }
+
+
+
 }

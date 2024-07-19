@@ -20,7 +20,9 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.io.IOException;
@@ -38,7 +40,8 @@ import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 @AutoConfigureWebTestClient
 class StreamsRecordProcessorTest {
 
-    @Autowired
+
+    DynamoDbClientBuilder dynamoDbClientBuilder;
     DynamoDbClient dynamoDbClient;
 
     @Autowired
@@ -46,6 +49,9 @@ class StreamsRecordProcessorTest {
 
     @BeforeEach
     void setUp() {
+        dynamoDbClientBuilder = DynamoDbClient.builder().region(Region.EU_CENTRAL_1);
+        dynamoDbClient = dynamoDbClientBuilder.build();
+
         putAnagraficaClient(createClient());
     }
 
@@ -182,7 +188,7 @@ class StreamsRecordProcessorTest {
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));
         image.put(RETENTIONUNTIL_KEY, createAttributeS("80"));
         image.put(CLIENTSHORTCODE_KEY, createAttributeS("pn-delivery"));
-        image.put(TAGS_KEY, new AttributeValue().withM(tags));
+        image.put(TAGS_KEY, createAttributeM().withM(tags));
         dynamodbRecord.setNewImage(image);
 
         image = new HashMap<>();
@@ -195,6 +201,7 @@ class StreamsRecordProcessorTest {
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));
         image.put(RETENTIONUNTIL_KEY, createAttributeS("80"));
         image.put(CLIENTSHORTCODE_KEY, createAttributeS("pn-delivery"));
+        image.put(TAGS_KEY, createAttributeM().withM(tags));
 
         dynamodbRecord.setOldImage(image);
 

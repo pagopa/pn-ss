@@ -1,11 +1,13 @@
 package it.pagopa.pnss.indexing.rest;
 
+import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.AdditionalFileTagsApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsGetResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsSearchResponse;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.*;
+import it.pagopa.pnss.indexing.model.SearchLogic;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsUpdateRequest;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsUpdateResponse;
@@ -14,17 +16,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import static it.pagopa.pnss.common.utils.LogUtils.POST_TAG_DOCUMENT;
 
 import java.util.List;
 import java.util.Map;
 
-import static it.pagopa.pnss.common.utils.LogUtils.GET_TAGS_DOCUMENT;
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @CustomLog
 @RestController
@@ -85,11 +83,15 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
 
     @Override
     public Mono<ResponseEntity<AdditionalFileTagsSearchResponse>> additionalFileTagsSearch(String xPagopaSafestorageCxId, String logic, Boolean tags, ServerWebExchange exchange) {
-        logic = logic == null ? "and" : logic;
+        log.logStartingProcess(ADDITIONAL_FILE_TAGS_SEARCH);
+        logic = logic == null ? SearchLogic.AND.getLogic() : logic;
         tags = tags != null && tags;
-        return additionalFileTagsService.searchTags(xPagopaSafestorageCxId, logic, tags, exchange.getRequest().getQueryParams().toSingleValueMap())
-                .map(fileKeys -> ResponseEntity.ok().body(new AdditionalFileTagsSearchResponse().fileKeys(fileKeys)));
+        return MDCUtils.addMDCToContextAndExecute(additionalFileTagsService.searchTags(xPagopaSafestorageCxId, logic, tags, exchange.getRequest().getQueryParams().toSingleValueMap())
+                .map(fileKeys -> ResponseEntity.ok().body(new AdditionalFileTagsSearchResponse().fileKeys(fileKeys)))
+                .doOnSuccess(result -> log.logEndingProcess(ADDITIONAL_FILE_TAGS_SEARCH))
+                .doOnError(throwable -> log.logEndingProcess(ADDITIONAL_FILE_TAGS_SEARCH, false, throwable.getMessage())));
     }
+
     @Override
     public Mono<ResponseEntity<AdditionalFileTagsUpdateResponse>> additionalFileTagsUpdate(String fileKey, String xPagopaSafestorageCxId,
                                                                                            Mono<AdditionalFileTagsUpdateRequest> additionalFileTagsUpdateRequest,

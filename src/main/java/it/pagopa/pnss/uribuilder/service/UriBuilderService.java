@@ -8,6 +8,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.*;
+import it.pagopa.pnss.common.exception.IndexingLimitException;
 import it.pagopa.pnss.common.exception.RestoreRequestDateNotFound;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.common.exception.InvalidConfigurationException;
@@ -15,7 +16,6 @@ import it.pagopa.pnss.configuration.IndexingConfiguration;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
-import it.pagopa.pnss.repositorymanager.exception.IndexingLimitException;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
@@ -104,6 +104,8 @@ public class UriBuilderService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
     private final IndexingConfiguration indexingConfiguration;
 
+    @Autowired
+    RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
                              BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService, RetryBackoffSpec gestoreRepositoryRetryStrategy, IndexingConfiguration indexingConfiguration) {
@@ -126,6 +128,7 @@ public class UriBuilderService {
             return Mono.just(bucketName.ssHotName());
         } else return Mono.just(bucketName.ssStageName());
     }
+
 
     public Mono<FileCreationResponse> createUriForUploadFile(String xPagopaSafestorageCxId, FileCreationRequest request,
                                                              String checksumValue, String xTraceIdValue) {

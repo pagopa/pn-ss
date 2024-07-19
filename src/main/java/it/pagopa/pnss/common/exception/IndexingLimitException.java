@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.exception;
+package it.pagopa.pnss.common.exception;
 
 public class IndexingLimitException extends RuntimeException {
 

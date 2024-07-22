@@ -28,15 +28,15 @@ public class FileDownloadApiController implements FileDownloadApi {
     @Value("${queryParam.presignedUrl.traceId}")
     private String xTraceId;
 
-    @Override
-    public Mono<ResponseEntity<FileDownloadResponse>> getFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly,
+   @Override
+    public Mono<ResponseEntity<FileDownloadResponse>> getFile(String fileKey, String xPagopaSafestorageCxId, Boolean metadataOnly, Boolean tags,
                                                               final ServerWebExchange exchange) {
 
         MDC.clear();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(GET_FILE);
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
-        return MDCUtils.addMDCToContextAndExecute(uriBuilderService.createUriForDownloadFile(fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly)
+        return MDCUtils.addMDCToContextAndExecute(uriBuilderService.createUriForDownloadFile(fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly, tags)
                 .map(ResponseEntity::ok)
                 .doOnSuccess(result -> log.logEndingProcess(GET_FILE))
                 .doOnError(throwable -> log.logEndingProcess(GET_FILE, false, throwable.getMessage())));

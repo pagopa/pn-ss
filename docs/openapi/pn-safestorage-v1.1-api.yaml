@@ -270,6 +270,8 @@ paths:
         contenuto del file. Il tempo massimo che può intercorrere tra le due invocazioni è ```pst```.
       parameters:
         - $ref: '#/components/parameters/clientIdHeader'
+        - $ref: '#/components/parameters/x-checksum-value'
+        - $ref: '#/components/parameters/x-checksum'
       requestBody:
         content:
           application/json:
@@ -376,6 +378,13 @@ paths:
           in: query
           description: >-
             se assente o valorizzato _false_ allora la risposta conterrà il campo _download_.
+          required: false
+          schema:
+            type: boolean
+        - name: tags
+          in: query
+          description: >-
+            Filtra i file basati sui tags specificati.
           required: false
           schema:
             type: boolean
@@ -583,6 +592,47 @@ paths:
           description: >-
             Non autorizzato in lettura sui tag.
 
+    post:
+      operationId: additionalFileTagsMassiveUpdate
+      tags:
+        - additionalFileTags
+      summary: aggiunge, elimina o aggiorna i tags associati alle filekeys inserite in un file.
+      description: >-
+        L'API prenderà in ingresso una request contenente delle fileKeys e dei tag in SET o DELETE ad esse associate.<br/>
+        
+        Il servizio provvederà a inserire/aggiornare nelle tabelle pn-SsTags e pn-SsDocuments i vari tag associati alle fileKey. 
+        La chiamata restituirà un 400 nel caso in cui si provassero a settare i tag per un numero di fileKey superiore a <br/>
+        un dato limite e nei casi in cui la request fosse generata con parametri errati, mentre restituirà un 200 nel caso <br/>
+        in cui venisse meno il rispetto di un vincolo su un risultato atteso, popolando l'elenco degli errori specificando <br/>
+        con 400 le fileKey relative.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdditionalFileTagsMassiveUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsMassiveUpdateResponse'
+        '400':
+          description: >-
+            Richiesta non validata correttamente o numero di filekey massime superato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+        '403':
+          description: >-
+            Non autorizzato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
             
 
 
@@ -627,6 +677,20 @@ components:
       schema:
         type: boolean
       example: true
+    x-checksum-value:
+      name: x-checksum-value
+      description: Stringa che indica il valore del checksum
+      in: header
+      required: true
+      schema:
+        type: string
+    x-checksum:
+      name: x-checksum
+      description: Stringa che identifica l'algoritmo di checksum inserito per retrocompatibilità, ma che viene ignorato (viene dedotto dal tipo del file).
+      in: header
+      required: false
+      schema:
+        type: string
 
 
   schemas:
@@ -654,6 +718,12 @@ components:
             lo stato del documento, ne definisce il tempo di permanenza all'interno 
             di _SafeStorage_.
           example: PRELOADED
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
 
     FileCreationResponse:
       description: Informazioni necessarie a caricare il contenuto di un file
@@ -709,21 +779,27 @@ components:
       type: object
       properties:
         SET:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              type: string
-            description: >-
-              tags da settare o modificare
+          $ref: '#/components/schemas/SetTags'
         DELETE:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              type: string
-            description: >-
-              tags da eliminare
+          $ref: '#/components/schemas/DeleteTags'
+
+    SetTags:
+      description: >-
+        tags da settare o modificare
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
+
+    DeleteTags:
+      description: >-
+        tags da eliminare
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
 
     AdditionalFileTagsUpdateResponse:
       description: Informazioni necessarie per l'esito dell'operazione di update sui tag
@@ -733,6 +809,50 @@ components:
           type: string
         resultDescription:
           type: string
+
+    Tags:
+      type: object
+      properties:
+        fileKey:
+          type: string
+        SET:
+          $ref: '#/components/schemas/SetTags'
+        DELETE:
+          $ref: '#/components/schemas/DeleteTags'
+      required:
+        - fileKey
+
+    AdditionalFileTagsMassiveUpdateRequest:
+      description: Aggiunge, elimina o aggiorna i tag associati ad una fileKey
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tags'
+      required:
+          - tags
+
+    AdditionalFileTagsMassiveUpdateResponse:
+      description: Informazioni necessarie per l'esito dell'operazione di update sui tag
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+
+    ErrorDetail:
+       type: object
+       properties:
+         resultCode:
+           type: string
+         resultDescription:
+           type: string
+         fileKey:
+           type: array
+           items:
+             type: string
 
     AdditionalFileTagsSearchResponse:
       description: Esito della ricerca dei tag
@@ -812,6 +932,19 @@ components:
           description: >-
             data e ora fino a cui il documento sarà garantito all'interno di _SafeStorage_. <br/>
             Può essere ritardata nel tempo, mai anticipata. Formattata con timezone secondo l'rfc 3339
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: >-
+            Mappa di tag associati al documento. Ogni chiave è una stringa e ogni valore è un array di stringhe.
+          example:
+            key_1: [ "value_1", "value_7" ]
+            key_2: [ "value_2" ]
+            key_3: [ "value_3", "value_9", "value_8" ]
+            key_4: [ "value_4" ]
             
                   
     FileDownloadInfo:

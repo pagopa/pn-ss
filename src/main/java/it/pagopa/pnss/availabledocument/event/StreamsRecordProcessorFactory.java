@@ -2,7 +2,6 @@ package it.pagopa.pnss.availabledocument.event;
 
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor;
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory;
-import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 

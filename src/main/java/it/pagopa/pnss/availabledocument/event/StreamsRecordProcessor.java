@@ -101,9 +101,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     return Mono.justOrEmpty(putEventsRequestEntry);
                 })
                 .doOnError(e -> log.fatal("DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
-                .doOnComplete(() -> {
-                    log.info(SUCCESSFUL_OPERATION_LABEL, FIND_EVENT_SEND_TO_BRIDGE, processRecordsInput);
-                });
+                .doOnComplete(() -> log.info("DBStream: Nessun evento da inviare a bridge"));
     }
 
 

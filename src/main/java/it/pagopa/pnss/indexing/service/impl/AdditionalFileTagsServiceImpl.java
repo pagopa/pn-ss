@@ -98,19 +98,15 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         return getPermission(cxId)
                 .flatMap(authorizationGranted -> {
                     if (authorizationGranted) {
-                        return documentClientCall.getDocument(fileKey)
-                                .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
-                                .flatMap(documentResponse ->
-                                        requestValidation(request, cxId)
-                                                .flatMap(tagsChanges ->
-                                                        tagsClientCall.putTags(fileKey, tagsChanges)
-                                                                .map(response -> {
-                                                                    AdditionalFileTagsUpdateResponse updateResponse = new AdditionalFileTagsUpdateResponse();
-                                                                    updateResponse.setResultCode("200.00");
-                                                                    updateResponse.setResultDescription(response.toString());
-                                                                    return updateResponse;
-                                                                })
-                                                )
+                        return requestValidation(request, cxId)
+                                .flatMap(tagsChanges ->
+                                        tagsClientCall.putTags(fileKey, tagsChanges)
+                                                .map(response -> {
+                                                    AdditionalFileTagsUpdateResponse updateResponse = new AdditionalFileTagsUpdateResponse();
+                                                    updateResponse.setResultCode("200.00");
+                                                    updateResponse.setResultDescription(response.toString());
+                                                    return updateResponse;
+                                                })
                                 );
                     } else {
                         return Mono.error(new ClientNotAuthorizedException(cxId));

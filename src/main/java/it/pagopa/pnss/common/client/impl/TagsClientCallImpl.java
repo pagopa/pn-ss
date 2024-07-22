@@ -5,6 +5,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsRelationsResponse;
 import it.pagopa.pnss.common.client.TagsClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,10 +50,10 @@ public class TagsClientCallImpl implements TagsClientCall {
     public Mono<TagsResponse> putTags(String documentKey, TagsChanges tagsChanges) {
         log.info(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, "putTags()");
         return ssWebClient.put()
-                .uri( builder -> builder.path(anagraficaTagsClientEndpointPut)
-                        .build(documentKey))
+                .uri(String.format(anagraficaTagsClientEndpointPut, documentKey))
                 .bodyValue(tagsChanges)
                 .retrieve()
+                .onStatus(NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentKeyNotPresentException(documentKey)))
                 .bodyToMono(TagsResponse.class);
     }
 

@@ -53,7 +53,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testProcessRecordsWithoutPermissions()  {
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
 
         UserConfiguration client = createClient();
         client.setCanReadTags(false);
@@ -75,7 +75,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testProcessRecordsWithPermissions(){
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -87,12 +87,12 @@ class StreamsRecordProcessorTest {
         Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
         StepVerifier.create(eventSendToBridge).assertNext(putEventsRequestEntry -> {
             NotificationMessage notificationMessage = eventToNotificationMessage(putEventsRequestEntry.detail());
-            Assertions.assertNotNull(notificationMessage.getTags());
+            Assertions.assertLinesMatch(List.of("value1","value2"),notificationMessage.getTags().get("tag1"));
         }).verifyComplete();
     }
     @Test
     void testProcessRecordsOk() {
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -107,7 +107,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testSendMessageEventBridgeOk() {
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -122,7 +122,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testSendMessageEventBridgeInsert() {
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient, true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -137,7 +137,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testSendMessageEventBridgeDelete(){
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -152,7 +152,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testSendMessageEventOldNewSameState(){
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();

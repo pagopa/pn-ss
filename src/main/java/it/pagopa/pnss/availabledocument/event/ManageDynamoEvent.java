@@ -65,7 +65,11 @@ public class ManageDynamoEvent {
             Map<String, AttributeValue> tagsMap = docEntity.get(TAGS_KEY).getM();
             Map<String, List<String>> tags = new HashMap<>();
             for (Map.Entry<String, AttributeValue> entry : tagsMap.entrySet()) {
-                tags.put(entry.getKey(), Collections.singletonList(entry.getValue().getS()));
+                List<String> tagValues = new ArrayList<>();
+                for (AttributeValue value : entry.getValue().getL()) {
+                    tagValues.add(value.getS());
+                }
+                tags.put(entry.getKey(), tagValues);
             }
             message.setTags(tags);
         }

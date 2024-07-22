@@ -15,17 +15,13 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.MDC;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
-import java.net.URI;
 import java.util.Map;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
@@ -41,36 +37,18 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     private final EventBridgeClient eventBridgeClient = EventBridgeClient.create();
     private boolean test = false;
     private final String disponibilitaDocumentiEventBridge;
-    String region = "eu-central-1";
-    DynamoDbClientBuilder dynamoDbClientBuilder;
     DynamoDbClient dynamoDbClient;
 
 
 
-    public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge) {
+    public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge, DynamoDbClient dynamoDbClient) {
         this.disponibilitaDocumentiEventBridge = disponibilitaDocumentiEventBridge;
-        this.dynamoDbClientBuilder = DynamoDbClient.builder().credentialsProvider(DefaultCredentialsProvider.create());
-        String dynamoDbLocalStackEndpoint = System.getProperty("test.aws.dynamodb.endpoint");
-        if (dynamoDbLocalStackEndpoint != null) {
-            dynamoDbClientBuilder.region(Region.EU_CENTRAL_1);
-            this.dynamoDbClientBuilder.endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
-        }
-
-        dynamoDbClient = dynamoDbClientBuilder.build();
+          this.dynamoDbClient = dynamoDbClient;
     }
-    public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge, boolean test) {
+    public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge,DynamoDbClient dynamoDbClient, boolean test) {
         this.disponibilitaDocumentiEventBridge = disponibilitaDocumentiEventBridge;
         this.test = test;
-        this.dynamoDbClientBuilder = DynamoDbClient.builder().credentialsProvider(DefaultCredentialsProvider.create());
-        String dynamoDbLocalStackEndpoint = System.getProperty("test.aws.dynamodb.endpoint");
-        if (dynamoDbLocalStackEndpoint != null) {
-            dynamoDbClientBuilder.region(Region.EU_CENTRAL_1);
-            this.dynamoDbClientBuilder.endpointOverride(URI.create(dynamoDbLocalStackEndpoint));
-        }
-
-        dynamoDbClient = dynamoDbClientBuilder.build();
-        log.info("dynamodblocalstackendpoint: {}",dynamoDbLocalStackEndpoint);
-        log.info("tables: {}",dynamoDbClient.listTables());
+        this.dynamoDbClient = dynamoDbClient;
     }
     @Override
     public void initialize(InitializationInput initializationInput) {

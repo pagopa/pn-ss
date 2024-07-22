@@ -53,8 +53,6 @@ class AdditionalFileTagsUpdateTest {
     private UserConfigurationClientCall userConfigurationClientCall;
     @MockBean
     private TagsClientCall tagsClientCall;
-    @MockBean
-    private DocumentClientCall documentClientCall;
     private static final String X_API_KEY_VALUE = "apiKey_value";
     private static final String X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE = "CLIENT_ID_123";
     private static final String DOCUMENT_KEY = "DOCUMENT_KEY";
@@ -91,13 +89,6 @@ class AdditionalFileTagsUpdateTest {
                 new UserConfiguration().name(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE).apiKey(X_API_KEY_VALUE).canWriteTags(true);
         var userConfigurationResponse = new UserConfigurationResponse().userConfiguration(userConfiguration);
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfigurationResponse));
-    }
-
-    @BeforeEach
-    public void createDocumentClientCall(){
-        var documentConfiguration = new Document();
-        var documentResponse = new DocumentResponse().document(documentConfiguration);
-        when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
     }
 
     /**
@@ -304,13 +295,10 @@ class AdditionalFileTagsUpdateTest {
         set.put("IUN", List.of("XXXFEF3RFD", "CHDGDTFENM"));
         var tag = new AdditionalFileTagsUpdateRequest().SET(set);
         var tagsDto = new TagsDto().tags(set);
-        var tagResponse = new TagsResponse().tagsDto(tagsDto);
 
-        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
-        when(documentClientCall.getDocument("NOTFOUND")).thenReturn(Mono.error(new DocumentKeyNotPresentException("NOTFOUND")));
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.error(new DocumentKeyNotPresentException("NOTFOUND")));
 
         additionalFileTagsUpdateTestCall(tag, "NOTFOUND").expectStatus().isNotFound();
-        verify(tagsClientCall, never()).putTags(anyString(), any(TagsChanges.class));
     }
 
     // UPDATE MASSIVA

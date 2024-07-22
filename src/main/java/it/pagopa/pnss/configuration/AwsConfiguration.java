@@ -285,7 +285,7 @@ public class AwsConfiguration {
             		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
 
             IRecordProcessorFactory recordProcessorFactory =
-                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient());
+                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient());
             Worker worker = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory,
                                                                              workerConfig,
                                                                              adapterClient,

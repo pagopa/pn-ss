@@ -20,6 +20,7 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
@@ -38,10 +39,10 @@ import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 @AutoConfigureWebTestClient
 class StreamsRecordProcessorTest {
 
-
+    @Autowired
+    DynamoDbAsyncClient dynamoDbAsyncClient;
     @Autowired
     DynamoDbClient dynamoDbClient;
-
     @Autowired
     AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
 
@@ -53,7 +54,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testProcessRecordsWithoutPermissions()  {
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
 
         UserConfiguration client = createClient();
         client.setCanReadTags(false);
@@ -71,11 +72,12 @@ class StreamsRecordProcessorTest {
             NotificationMessage notificationMessage = eventToNotificationMessage(putEventsRequestEntry.detail());
             Assertions.assertNull(notificationMessage.getTags());
         }).verifyComplete();
+        System.out.println("response: "+eventSendToBridge.toString());
     }
 
     @Test
     void testProcessRecordsWithPermissions(){
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -89,10 +91,11 @@ class StreamsRecordProcessorTest {
             NotificationMessage notificationMessage = eventToNotificationMessage(putEventsRequestEntry.detail());
             Assertions.assertLinesMatch(List.of("value1","value2"),notificationMessage.getTags().get("tag1"));
         }).verifyComplete();
+
     }
     @Test
     void testProcessRecordsOk() {
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -107,7 +110,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testSendMessageEventBridgeOk() {
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -122,7 +125,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testSendMessageEventBridgeInsert() {
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient, true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient, true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -137,7 +140,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testSendMessageEventBridgeDelete(){
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -152,7 +155,7 @@ class StreamsRecordProcessorTest {
 
     @Test
     void testSendMessageEventOldNewSameState(){
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbClient,true);
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();

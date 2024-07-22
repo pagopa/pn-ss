@@ -15,9 +15,8 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.MDC;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
@@ -37,15 +36,15 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     private final EventBridgeClient eventBridgeClient = EventBridgeClient.create();
     private boolean test = false;
     private final String disponibilitaDocumentiEventBridge;
-    DynamoDbClient dynamoDbClient;
+    DynamoDbAsyncClient dynamoDbClient;
 
 
 
-    public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge, DynamoDbClient dynamoDbClient) {
+    public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge, DynamoDbAsyncClient dynamoDbClient) {
         this.disponibilitaDocumentiEventBridge = disponibilitaDocumentiEventBridge;
           this.dynamoDbClient = dynamoDbClient;
     }
-    public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge,DynamoDbClient dynamoDbClient, boolean test) {
+    public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge,DynamoDbAsyncClient dynamoDbClient, boolean test) {
         this.disponibilitaDocumentiEventBridge = disponibilitaDocumentiEventBridge;
         this.test = test;
         this.dynamoDbClient = dynamoDbClient;
@@ -89,16 +88,18 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .filter(RecordAdapter.class::isInstance)
                 .map(recordEvent -> ((RecordAdapter) recordEvent).getInternalObject())
                 .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))
-                .flatMap(streamRecord -> {String cxId = streamRecord.getDynamodb().getNewImage().get("clientShortCode").getS();
-                    Boolean canReadTags = getCanReadTags(cxId);
-                    ManageDynamoEvent mde = new ManageDynamoEvent();
-                    PutEventsRequestEntry putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
-                            streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage(), canReadTags);
-                    if (putEventsRequestEntry != null) {
-                        log.info("Event send to bridge {}", putEventsRequestEntry);
-
-                    }
-                    return Mono.justOrEmpty(putEventsRequestEntry);
+                .flatMap(streamRecord -> {
+                    String cxId = streamRecord.getDynamodb().getNewImage().get("clientShortCode").getS();
+                    return getCanReadTags(cxId)
+                            .mapNotNull(canReadTags -> {
+                                ManageDynamoEvent mde = new ManageDynamoEvent();
+                                PutEventsRequestEntry putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
+                                        streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage(), canReadTags);
+                                if (putEventsRequestEntry != null) {
+                                    log.info("Event send to bridge {}", putEventsRequestEntry);
+                                }
+                                return putEventsRequestEntry;
+                            });
                 })
                 .doOnError(e -> log.fatal("DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> log.info("DBStream: Nessun evento da inviare a bridge"));
@@ -139,13 +140,13 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         }
     }
 
-    private Boolean getCanReadTags(String cxId) {
-
-        GetItemResponse getItemResponse = dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
-                .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
-                .projectionExpression("canReadTags"));
-
-        return getItemResponse.item().get("canReadTags").bool();
+    private Mono<Boolean> getCanReadTags(String cxId) {
+        return Mono.fromCompletionStage(
+                dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
+                                .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
+                                .projectionExpression("canReadTags"))
+                        .thenApply(getItemResponse -> getItemResponse.item().get("canReadTags").bool())
+        );
     }
 
 

@@ -14,7 +14,6 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcess
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
-import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,8 +25,6 @@ import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -54,8 +51,6 @@ import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
@@ -110,7 +105,6 @@ public class AwsConfiguration {
         this.awsConfigurationProperties = awsConfigurationProperties;
         this.dynamoEventStreamName = dynamoEventStreamName;
         this.availabelDocumentEventBridgeName = availabelDocumentEventBridgeName;
-
     }
 
     //  <-- spring-cloud-starter-aws-messaging -->
@@ -291,7 +285,7 @@ public class AwsConfiguration {
             		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
 
             IRecordProcessorFactory recordProcessorFactory =
-                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());
+                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient());
             Worker worker = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory,
                                                                              workerConfig,
                                                                              adapterClient,

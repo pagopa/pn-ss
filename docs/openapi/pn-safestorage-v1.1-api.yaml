@@ -605,7 +605,8 @@ paths:
         un dato limite e nei casi in cui la request fosse generata con parametri errati, mentre restituirà un 200 nel caso <br/>
         in cui venisse meno il rispetto di un vincolo su un risultato atteso, popolando l'elenco degli errori specificando <br/>
         con 400 le fileKey relative.
-
+      parameters:
+        - $ref: '#/components/parameters/clientIdHeader'
       requestBody:
         required: true
         content:

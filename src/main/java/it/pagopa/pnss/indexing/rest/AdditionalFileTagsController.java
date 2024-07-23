@@ -1,30 +1,23 @@
 package it.pagopa.pnss.indexing.rest;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.AdditionalFileTagsApi;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsGetResponse;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsSearchResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.*;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsUpdateRequest;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsUpdateResponse;
 import lombok.CustomLog;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import static it.pagopa.pnss.common.utils.LogUtils.POST_TAG_DOCUMENT;
 
 import java.util.List;
 import java.util.Map;
 
-import static it.pagopa.pnss.common.utils.LogUtils.GET_TAGS_DOCUMENT;
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @CustomLog
 @RestController
@@ -96,6 +89,18 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
         return additionalFileTagsService.searchTags(xPagopaSafestorageCxId, logic, tags, exchange.getRequest().getQueryParams().toSingleValueMap())
                 .map(fileKeys -> ResponseEntity.ok().body(new AdditionalFileTagsSearchResponse().fileKeys(fileKeys)));
     }
+
+    @Override
+    public Mono<ResponseEntity<AdditionalFileTagsMassiveUpdateResponse>> additionalFileTagsMassiveUpdate(String xPagopaSafestorageCxId,
+                                                                                                         Mono<AdditionalFileTagsMassiveUpdateRequest> additionalFileTagsMassiveUpdateRequest,
+                                                                                                         final ServerWebExchange exchange) {
+        log.logStartingProcess(MASSIVE_POST_TAG_DOCUMENT);
+        return additionalFileTagsMassiveUpdateRequest.flatMap(request -> additionalFileTagsService.postMassiveTags(request, xPagopaSafestorageCxId).map(response -> {
+                    return ResponseEntity.ok().body(response);
+                })).doOnSuccess(result -> log.logEndingProcess(MASSIVE_POST_TAG_DOCUMENT))
+                .doOnError(throwable -> log.logEndingProcess(MASSIVE_POST_TAG_DOCUMENT, false, throwable.getMessage()));
+    }
+
     @Override
     public Mono<ResponseEntity<AdditionalFileTagsUpdateResponse>> additionalFileTagsUpdate(String fileKey, String xPagopaSafestorageCxId,
                                                                                            Mono<AdditionalFileTagsUpdateRequest> additionalFileTagsUpdateRequest,

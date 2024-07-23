@@ -126,6 +126,7 @@ public class LogUtils {
     public static final String UPDATE_RELATIONS = "TagsService.updateRelations()";
     public static final String PUT_TAGS_OP = "putTags";
     public static final String POST_TAG_DOCUMENT = "postTagsDocument";
+    public static final String MASSIVE_POST_TAG_DOCUMENT = "massivePostTagDocument";
 
 
 }

@@ -8,6 +8,7 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,13 +18,16 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.testcontainers.shaded.org.hamcrest.core.AllOf;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -44,6 +48,7 @@ class AdditionalFileTagsUpdateTest {
     @SpyBean
     private AdditionalFileTagsService additionalFileTagsService;
     private static final String PATH_WITH_PARAM = "/safe-storage/v1/files/{fileKey}/tags";
+    private static final String PATH_NO_PARAM = "/safe-storage/v1/files/tags";
     @MockBean
     private UserConfigurationClientCall userConfigurationClientCall;
     @MockBean
@@ -62,6 +67,19 @@ class AdditionalFileTagsUpdateTest {
                 .header(xApiKey, X_API_KEY_VALUE)
                 .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                 .bodyValue(additionalFileTagsUpdateRequest)
+                .exchange();
+    }
+
+    private WebTestClient.ResponseSpec additionalFileTagsMassiveUpdateTestCall(AdditionalFileTagsMassiveUpdateRequest additionalFileTagsMassiveUpdateRequest) {
+
+        webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
+
+        return webTestClient.post()
+                .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
+                .bodyValue(additionalFileTagsMassiveUpdateRequest)
                 .exchange();
     }
 
@@ -92,7 +110,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags di una filekey con eliminazione di differenti tag
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con eliminazione di differenti tag
      * Risultato atteso: 200 OK
      */
     @Test
@@ -281,6 +299,310 @@ class AdditionalFileTagsUpdateTest {
         when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.error(new DocumentKeyNotPresentException("NOTFOUND")));
 
         additionalFileTagsUpdateTestCall(tag, "NOTFOUND").expectStatus().isNotFound();
+    }
+
+    // UPDATE MASSIVA
+
+    Tags createTagPerRequest (String key) {
+        Map<String, List<String>> set = new HashMap<>();
+        Map<String, List<String>> delete = new HashMap<>();
+        set.put("IUN", List.of("XXXFEF3RFD"));
+        set.put("Conservazione", List.of("2030-12-12"));
+        delete.put("DataNotifica", List.of("2024-07-18"));
+        String fileKey = key;
+        return new Tags().fileKey(fileKey).SET(set).DELETE(delete);
+
+    }
+    @Test
+    void testMassiveRequestOk() {
+
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(createTagPerRequest("fileKey"));
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        additionalFileTagsMassiveUpdateTestCall(tagsMassiveUpdateRequest).expectStatus().isOk();
+    }
+
+    @Test
+    void testMassiveRequestKo() {
+        List<Tags> tagsList = new ArrayList<>();
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto();
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        additionalFileTagsMassiveUpdateTestCall(tagsMassiveUpdateRequest).expectStatus().isBadRequest();
+        verify(tagsClientCall, never()).putTags(anyString(), any(TagsChanges.class));
+    }
+
+    @Test
+    void testMassiveRequestDuplicateFileKeyKo() {
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(createTagPerRequest("fileKey"));
+        tagsList.add(createTagPerRequest("fileKey"));
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        additionalFileTagsMassiveUpdateTestCall(tagsMassiveUpdateRequest).expectStatus().isBadRequest();
+        verify(tagsClientCall, never()).putTags(anyString(), any(TagsChanges.class));
+
+    }
+
+    @Test
+    void testMassiveRequestMaxFileKeysUpdateMassivePerRequestKo() {
+        List<Tags> tagsList = new ArrayList<>();
+        for (int i = 1; i <= 101; i++) {
+            tagsList.add(createTagPerRequest("fileKey"+i));
+        }
+
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        additionalFileTagsMassiveUpdateTestCall(tagsMassiveUpdateRequest).expectStatus().isBadRequest();
+        verify(tagsClientCall, never()).putTags(anyString(), any(TagsChanges.class));
+    }
+
+    @Test
+    void testMassiveRequestUnauthorizedKo() {
+
+        var userConfiguration =
+                new UserConfiguration().name(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE).apiKey(X_API_KEY_VALUE).canWriteTags(false);
+        var userConfigurationResponse = new UserConfigurationResponse().userConfiguration(userConfiguration);
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfigurationResponse));
+
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(createTagPerRequest("fileKey"));
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        additionalFileTagsMassiveUpdateTestCall(tagsMassiveUpdateRequest).expectStatus().isForbidden();
+        verify(tagsClientCall, never()).putTags(anyString(), any(TagsChanges.class));
+
+    }
+
+    @Test
+    void testMassiveRequestOkWithSetAndDeleteError() {
+
+        Map<String, List<String>> set = new HashMap<>();
+        Map<String, List<String>> delete = new HashMap<>();
+        set.put("Conservazione", List.of("2030-12-12"));
+        delete.put("Conservazione", List.of("2024-07-18"));
+        String fileKey = "documentKey";
+        Tags tag = new Tags().fileKey(fileKey).SET(set).DELETE(delete);
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(tag);
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
+        webTestClient.post()
+                    .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
+                    .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                    .header(xApiKey, X_API_KEY_VALUE)
+                    .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
+                    .bodyValue(tagsMassiveUpdateRequest)
+                    .exchange()
+                    .expectStatus()
+                    .isOk()
+                    .expectBody(AdditionalFileTagsMassiveUpdateResponse.class)
+                    .value(AdditionalFileTagsMassiveUpdateResponse::getErrors,
+                            Matchers.hasItem(allOf(
+                                    hasProperty("resultCode", is("400.00")),
+                                    hasProperty("resultDescription", containsStringIgnoringCase("SET and DELETE cannot contain the same tags")),
+                                    hasProperty("fileKey", hasItem(containsString("documentKey"))))));
+
+    }
+
+    @Test
+    void testMassiveRequestOkWithSingleValueError () {
+        Map<String, List<String>> set = new HashMap<>();
+        set.put("Conservazione", List.of("2024-07-18", "2030-12-12"));
+        String fileKey = "documentKey";
+        Tags tag = new Tags().fileKey(fileKey).SET(set);
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(tag);
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
+        webTestClient.post()
+                .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
+                .bodyValue(tagsMassiveUpdateRequest)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(AdditionalFileTagsMassiveUpdateResponse.class)
+                .value(AdditionalFileTagsMassiveUpdateResponse::getErrors,
+                        Matchers.hasItem(allOf(
+                                hasProperty("resultCode", is("400.00")),
+                                hasProperty("resultDescription", containsStringIgnoringCase("marked as singleValue cannot have multiple values")),
+                                hasProperty("fileKey", hasItem(containsString("documentKey"))))));
+    }
+
+    @Test
+    void testMassiveRequestOkWithMaxOperationsOnTagsPerRequestError() {
+        Map<String, List<String>> set = new HashMap<>();
+        set.put("Conservazione", List.of("2030-12-12"));
+        set.put("IUN", List.of("IUN1", "IUN2"));
+        set.put("DataNotifica", List.of("2024-06-29", "2023-06-22"));
+        set.put("TAG_MULTIVALUE_NOT_INDEXED", List.of("NONINDEX1", "NONINDEX2"));
+        set.put("TAG_SINGLEVALUE_INDEXED", List.of("INDEX1"));
+        String fileKey = "documentKey";
+        Tags tag = new Tags().fileKey(fileKey).SET(set);
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(tag);
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
+        webTestClient.post()
+                .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
+                .bodyValue(tagsMassiveUpdateRequest)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(AdditionalFileTagsMassiveUpdateResponse.class)
+                .value(AdditionalFileTagsMassiveUpdateResponse::getErrors,
+                        Matchers.hasItem(allOf(
+                                hasProperty("resultCode", is("400.00")),
+                                hasProperty("resultDescription", containsStringIgnoringCase("Number of tags to update exceeds maxOperationsOnTags limit")),
+                                hasProperty("fileKey", hasItem(containsString("documentKey"))))));
+    }
+
+    @Test
+    void testMassiveRequestOkWithMaxValuesPerTagPerRequestError() {
+        Map<String, List<String>> set = new HashMap<>();
+        set.put("IUN", List.of("IUN1", "IUN2", "IUN3", "IUN4", "IUN5", "IUN6"));
+        String fileKey = "documentKey";
+        Tags tag = new Tags().fileKey(fileKey).SET(set);
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(tag);
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
+        webTestClient.post()
+                .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
+                .bodyValue(tagsMassiveUpdateRequest)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(AdditionalFileTagsMassiveUpdateResponse.class)
+                .value(AdditionalFileTagsMassiveUpdateResponse::getErrors,
+                        Matchers.hasItem(allOf(
+                                hasProperty("resultCode", is("400.00")),
+                                hasProperty("resultDescription", containsStringIgnoringCase("Number of values for tag ")),
+                                hasProperty("fileKey", hasItem(containsString("documentKey"))))));
+    }
+
+    @Test
+    void testMassiveRequestOkWithSetInvalidTagError() {
+        Map<String, List<String>> set = new HashMap<>();
+        set.put("INVALID", List.of("XXXFEF3RFD", "CHDGDTFENM"));
+        String fileKey = "documentKey";
+        Tags tag = new Tags().fileKey(fileKey).SET(set);
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(tag);
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
+        webTestClient.post()
+                .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
+                .bodyValue(tagsMassiveUpdateRequest)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(AdditionalFileTagsMassiveUpdateResponse.class)
+                .value(AdditionalFileTagsMassiveUpdateResponse::getErrors,
+                        Matchers.hasItem(allOf(
+                                hasProperty("resultCode", is("400.00")),
+                                hasProperty("resultDescription", containsStringIgnoringCase("not found in the indexing configuration")),
+                                hasProperty("fileKey", hasItem(containsString("documentKey"))))));
+    }
+
+    @Test
+    void testMassiveRequestOkWithDeleteInvalidTagError() {
+        Map<String, List<String>> delete = new HashMap<>();
+        delete.put("INVALID", List.of("XXXFEF3RFD", "CHDGDTFENM"));
+        String fileKey = "documentKey";
+        Tags tag = new Tags().fileKey(fileKey).DELETE(delete);
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(tag);
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
+        webTestClient.post()
+                .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
+                .bodyValue(tagsMassiveUpdateRequest)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(AdditionalFileTagsMassiveUpdateResponse.class)
+                .value(AdditionalFileTagsMassiveUpdateResponse::getErrors,
+                        Matchers.hasItem(allOf(
+                                hasProperty("resultCode", is("400.00")),
+                                hasProperty("resultDescription", containsStringIgnoringCase("not found in the indexing configuration")),
+                                hasProperty("fileKey", hasItem(containsString("documentKey"))))));
     }
 
 }

@@ -16,7 +16,7 @@ public interface AdditionalFileTagsService {
 
     Mono<AdditionalFileTagsUpdateResponse> postTags(String cxId, AdditionalFileTagsUpdateRequest request, String fileKey);
 
-    Mono<Boolean> getPermission(String cxId);
+    Mono<Boolean> getWriteTagsPermission(String cxId);
 
     Mono<TagsChanges> requestValidation(AdditionalFileTagsUpdateRequest request, String cxId);
 }

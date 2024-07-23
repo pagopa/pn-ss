@@ -303,6 +303,11 @@ class AdditionalFileTagsUpdateTest {
 
     // UPDATE MASSIVA
 
+    /**
+     * Metodo per la creazione di un Tag per popolare la request
+     * @param key la documentKey per la creazione dell'elemento Tag della request
+     * @return Tags , l'oggetto contenente le informazioni fileKey, SET e DELETE su cui andare in aggiornamento
+     */
     Tags createTagPerRequest (String key) {
         Map<String, List<String>> set = new HashMap<>();
         Map<String, List<String>> delete = new HashMap<>();
@@ -313,6 +318,12 @@ class AdditionalFileTagsUpdateTest {
         return new Tags().fileKey(fileKey).SET(set).DELETE(delete);
 
     }
+
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una o più fileKey esistente per l'aggiornamento e
+     * l'eliminazione di tag validi
+     * Risultato atteso: 200 OK
+     */
     @Test
     void testMassiveRequestOk() {
 
@@ -328,6 +339,10 @@ class AdditionalFileTagsUpdateTest {
         additionalFileTagsMassiveUpdateTestCall(tagsMassiveUpdateRequest).expectStatus().isOk();
     }
 
+    /**
+     * tentativo di POST sulla tabella pn-SsTags, update su pn-SsDocuments con request vuota
+     * Risultato atteso: 400 BAD REQUEST
+     */
     @Test
     void testMassiveRequestKo() {
         List<Tags> tagsList = new ArrayList<>();
@@ -342,6 +357,10 @@ class AdditionalFileTagsUpdateTest {
         verify(tagsClientCall, never()).putTags(anyString(), any(TagsChanges.class));
     }
 
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments con una fileKey duplicata nella request
+     * Risultato atteso: 400 BAD REQUEST
+     */
     @Test
     void testMassiveRequestDuplicateFileKeyKo() {
         List<Tags> tagsList = new ArrayList<>();
@@ -359,6 +378,10 @@ class AdditionalFileTagsUpdateTest {
 
     }
 
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di un numero di fileKey che supera quello impostato come limite
+     * Risultato atteso: 400 BAD REQUEST
+     */
     @Test
     void testMassiveRequestMaxFileKeysUpdateMassivePerRequestKo() {
         List<Tags> tagsList = new ArrayList<>();
@@ -377,6 +400,11 @@ class AdditionalFileTagsUpdateTest {
         verify(tagsClientCall, never()).putTags(anyString(), any(TagsChanges.class));
     }
 
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una o più fileKey esistente per l'aggiornamento e
+     * l'eliminazione di tag validi, ma con un client non autorizzato
+     * Risultato atteso: 403 FORBIDDEN
+     */
     @Test
     void testMassiveRequestUnauthorizedKo() {
 
@@ -399,6 +427,12 @@ class AdditionalFileTagsUpdateTest {
 
     }
 
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una o più fileKey esistenti per l'aggiornamento e
+     * l'eliminazione dello stesso tag
+     * Risultato atteso: 200 OK
+     * Errori popolati
+     */
     @Test
     void testMassiveRequestOkWithSetAndDeleteError() {
 
@@ -436,6 +470,12 @@ class AdditionalFileTagsUpdateTest {
 
     }
 
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una o più fileKey esistenti,
+     * ma passando più valori a un tag single value
+     * Risultato atteso: 200 OK
+     * Errori popolati
+     */
     @Test
     void testMassiveRequestOkWithSingleValueError () {
         Map<String, List<String>> set = new HashMap<>();
@@ -469,6 +509,12 @@ class AdditionalFileTagsUpdateTest {
                                 hasProperty("fileKey", hasItem(containsString("documentKey"))))));
     }
 
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una o più fileKey esistenti,
+     * ma passando un numero di operazioni su tag maggiore del limite consentito
+     * Risultato atteso: 200 OK
+     * Errori popolati
+     */
     @Test
     void testMassiveRequestOkWithMaxOperationsOnTagsPerRequestError() {
         Map<String, List<String>> set = new HashMap<>();
@@ -506,6 +552,12 @@ class AdditionalFileTagsUpdateTest {
                                 hasProperty("fileKey", hasItem(containsString("documentKey"))))));
     }
 
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una o più fileKey esistenti,
+     * ma passando più valori del limite consentito a un tag multivalue
+     * Risultato atteso: 200 OK
+     * Errori popolati
+     */
     @Test
     void testMassiveRequestOkWithMaxValuesPerTagPerRequestError() {
         Map<String, List<String>> set = new HashMap<>();
@@ -539,6 +591,12 @@ class AdditionalFileTagsUpdateTest {
                                 hasProperty("fileKey", hasItem(containsString("documentKey"))))));
     }
 
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una fileKey esistente,
+     * ma passando per update/set un tag non esistente
+     * Risultato atteso: 200 OK
+     * Errori popolati
+     */
     @Test
     void testMassiveRequestOkWithSetInvalidTagError() {
         Map<String, List<String>> set = new HashMap<>();
@@ -572,6 +630,12 @@ class AdditionalFileTagsUpdateTest {
                                 hasProperty("fileKey", hasItem(containsString("documentKey"))))));
     }
 
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una fileKey esistente,
+     * ma passando per delete un tag non esistente
+     * Risultato atteso: 200 OK
+     * Errori popolati
+     */
     @Test
     void testMassiveRequestOkWithDeleteInvalidTagError() {
         Map<String, List<String>> delete = new HashMap<>();

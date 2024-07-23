@@ -101,17 +101,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         return getPermission(cxId)
                 .flatMap(authorizationGranted -> {
                     if (authorizationGranted) {
-//                        return postSingleTag(cxId, request, fileKey);
-                        return requestValidation(request, cxId)
-                                .flatMap(tagsChanges ->
-                                        tagsClientCall.putTags(fileKey, tagsChanges)
-                                                .map(response -> {
-                                                    AdditionalFileTagsUpdateResponse updateResponse = new AdditionalFileTagsUpdateResponse();
-                                                    updateResponse.setResultCode("200.00");
-                                                    updateResponse.setResultDescription(response.toString());
-                                                    return updateResponse;
-                                                })
-                                );
+                        return postSingleTag(cxId, request, fileKey);
                     } else {
                         return Mono.error(new ClientNotAuthorizedException(cxId));
                     }
@@ -183,50 +173,59 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         return getPermission(cxId)
                 .flatMap(authorizationGranted -> {
                     if (authorizationGranted) {
-                        return Mono.fromSupplier(() -> validateMassiveRequest(request.getTags()))
-                                .flatMapMany(Flux::fromIterable)
-                                .flatMap(argument -> {
-                                    Map<String, List<String>> toSet = argument.getSET();
-                                    Map<String, List<String>> toDelete = argument.getDELETE();
-
-                                    AdditionalFileTagsUpdateRequest singleRequest = new AdditionalFileTagsUpdateRequest()
-                                            .SET(toSet)
-                                            .DELETE(toDelete);
-
-                                    return postSingleTag(cxId, singleRequest, argument.getFileKey())
-                                            .map(additionalFileTagsUpdateResponse -> new ErrorDetail())
-                                            .onErrorResume(throwable -> createUpdateResponse(throwable)
-                                                    .map(error -> {
-                                                        ErrorDetail errorDetail = new ErrorDetail()
-                                                                .fileKey(List.of(argument.getFileKey()))
-                                                                .resultDescription(throwable.getMessage())
-                                                                .resultCode(error.getResultCode());
-                                                        return errorDetail;
-                                                    })
-                                            );
-                                })
-                                .filter(obj -> obj.getResultDescription() != null)
-                                .reduce(new HashMap<String, ErrorDetail>(), (map, err) -> {
-                                    if (map.containsKey(err.getResultDescription())) {
-                                        ErrorDetail existingErrDetail = map.get(err.getResultDescription());
-                                        existingErrDetail.getFileKey().addAll(err.getFileKey());
-                                        map.put(err.getResultDescription(), existingErrDetail);
-                                    } else {
-                                        map.put(err.getResultDescription(), err);
-                                    }
-                                    return map;
-                                })
-                                .flatMap(errorMap -> {
-                                    List<ErrorDetail> errList = new ArrayList<>();
-                                    for (ErrorDetail errorDetail : errorMap.values()) {
-                                        errList.add(errorDetail);
-                                    }
-                                    return Mono.just(new AdditionalFileTagsMassiveUpdateResponse().errors(errList));
-                                });
+                        return handleMassiveUpdate(request, cxId);
                     } else {
                         return Mono.error(new ClientNotAuthorizedException(cxId));
                     }
                 });
+    }
+
+    private Mono<AdditionalFileTagsMassiveUpdateResponse> handleMassiveUpdate(AdditionalFileTagsMassiveUpdateRequest request, String cxId) {
+        return Mono.fromSupplier(() -> validateMassiveRequest(request.getTags()))
+                .flatMapMany(Flux::fromIterable)
+                .flatMap(tag -> processSingleRequest(cxId, tag.getSET(), tag.getDELETE(), tag.getFileKey()))
+                .filter(this::hasError)
+                .reduce(new HashMap<String, ErrorDetail>(), this::accumulateErrors)
+                .flatMap(this::createResponse);
+    }
+
+    private Mono<ErrorDetail> processSingleRequest(String cxId, Map<String, List<String>> toSet, Map<String, List<String>> toDelete, String fileKey) {
+        AdditionalFileTagsUpdateRequest singleRequest = new AdditionalFileTagsUpdateRequest()
+                .SET(toSet)
+                .DELETE(toDelete);
+
+        return postSingleTag(cxId, singleRequest, fileKey)
+                .map(response -> new ErrorDetail())
+                .onErrorResume(throwable -> createUpdateResponse(throwable)
+                        .map(error -> createErrorDetail(fileKey, throwable, error.getResultCode()))
+                );
+    }
+
+    private ErrorDetail createErrorDetail(String fileKey, Throwable throwable, String errorCode) {
+        return new ErrorDetail()
+                .fileKey(List.of(fileKey))
+                .resultDescription(throwable.getMessage())
+                .resultCode(errorCode);
+    }
+
+    private boolean hasError(ErrorDetail obj) {
+        return obj.getResultDescription() != null;
+    }
+
+    private Map<String, ErrorDetail> accumulateErrors(Map<String, ErrorDetail> map, ErrorDetail err) {
+        if (map.containsKey(err.getResultDescription())) {
+            ErrorDetail existingErrDetail = map.get(err.getResultDescription());
+            existingErrDetail.getFileKey().addAll(err.getFileKey());
+            map.put(err.getResultDescription(), existingErrDetail);
+        } else {
+            map.put(err.getResultDescription(), err);
+        }
+        return map;
+    }
+
+    private Mono<AdditionalFileTagsMassiveUpdateResponse> createResponse(Map<String, ErrorDetail> errorMap) {
+        List<ErrorDetail> errList = new ArrayList<>(errorMap.values());
+        return Mono.just(new AdditionalFileTagsMassiveUpdateResponse().errors(errList));
     }
 
     private List<Tags> validateMassiveRequest(List<Tags> tagList) throws RequestValidationException {
@@ -316,7 +315,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
 
                 if (!indexingConfiguration.isTagValid(tag)) {
                     if (!indexingConfiguration.isTagValid(cxId + "~" + tag)) {
-                        throw new RequestValidationException("Tag " + tag + " does not exist");
+                        throw new RequestValidationException("Tag " + tag + " not found in the indexing configuration");
                     }
                     result.put(cxId + "~" + tag, entry.getValue());
                 } else {

@@ -568,7 +568,7 @@ class AdditionalFileTagsUpdateTest {
                 .value(AdditionalFileTagsMassiveUpdateResponse::getErrors,
                         Matchers.hasItem(allOf(
                                 hasProperty("resultCode", is("400.00")),
-                                hasProperty("resultDescription", containsStringIgnoringCase("does not exist")),
+                                hasProperty("resultDescription", containsStringIgnoringCase("not found in the indexing configuration")),
                                 hasProperty("fileKey", hasItem(containsString("documentKey"))))));
     }
 
@@ -601,7 +601,7 @@ class AdditionalFileTagsUpdateTest {
                 .value(AdditionalFileTagsMassiveUpdateResponse::getErrors,
                         Matchers.hasItem(allOf(
                                 hasProperty("resultCode", is("400.00")),
-                                hasProperty("resultDescription", containsStringIgnoringCase("does not exist")),
+                                hasProperty("resultDescription", containsStringIgnoringCase("not found in the indexing configuration")),
                                 hasProperty("fileKey", hasItem(containsString("documentKey"))))));
     }
 

@@ -8,10 +8,7 @@ import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
-import it.pagopa.pnss.common.exception.ClientNotAuthorizedException;
-import it.pagopa.pnss.common.exception.InvalidSearchLogicException;
-import it.pagopa.pnss.common.exception.RequestValidationException;
-import it.pagopa.pnss.common.exception.IndexingLimitException;
+import it.pagopa.pnss.common.exception.*;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
@@ -104,6 +101,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         return getPermission(cxId)
                 .flatMap(authorizationGranted -> {
                     if (authorizationGranted) {
+//                        return postSingleTag(cxId, request, fileKey);
                         return requestValidation(request, cxId)
                                 .flatMap(tagsChanges ->
                                         tagsClientCall.putTags(fileKey, tagsChanges)
@@ -118,6 +116,29 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                         return Mono.error(new ClientNotAuthorizedException(cxId));
                     }
                 });
+    }
+
+    private Mono<AdditionalFileTagsUpdateResponse> postSingleTag(String cxId, AdditionalFileTagsUpdateRequest request, String fileKey) {
+        return requestValidation(request, cxId)
+                .flatMap(tagsChanges ->
+                        tagsClientCall.putTags(fileKey, tagsChanges)
+                                .map(response -> {
+                                    AdditionalFileTagsUpdateResponse updateResponse = new AdditionalFileTagsUpdateResponse();
+                                    updateResponse.setResultCode("200.00");
+                                    updateResponse.setResultDescription(response.toString());
+                                    return updateResponse;
+                                })
+                );
+    }
+
+    private Mono<AdditionalFileTagsUpdateResponse> createUpdateResponse (Throwable throwable) {
+        if (throwable instanceof RequestValidationException) {
+            return Mono.just(new AdditionalFileTagsUpdateResponse().resultCode("400.00").resultDescription(throwable.getMessage()));
+        }
+        if (throwable instanceof MissingTagException) {
+            return Mono.just (new AdditionalFileTagsUpdateResponse().resultCode("400.00").resultDescription(throwable.getMessage()));
+        }
+        return Mono.just ( new AdditionalFileTagsUpdateResponse().resultCode("500.00").resultDescription(throwable.getMessage()));
     }
 
 
@@ -152,6 +173,81 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                 sink.error(e);
             }
         });
+    }
+
+    @Override
+    public Mono<AdditionalFileTagsMassiveUpdateResponse> postMassiveTags(AdditionalFileTagsMassiveUpdateRequest request, String cxId) {
+        final String POST_MASSIVE_TAG = "AdditionalFileTagsService.postMassiveTags()";
+        log.debug(LogUtils.INVOKING_METHOD, POST_MASSIVE_TAG);
+
+        return getPermission(cxId)
+                .flatMap(authorizationGranted -> {
+                    if (authorizationGranted) {
+                        return Mono.fromSupplier(() -> validateMassiveRequest(request.getTags()))
+                                .flatMapMany(Flux::fromIterable)
+                                .flatMap(argument -> {
+                                    Map<String, List<String>> toSet = argument.getSET();
+                                    Map<String, List<String>> toDelete = argument.getDELETE();
+
+                                    AdditionalFileTagsUpdateRequest singleRequest = new AdditionalFileTagsUpdateRequest()
+                                            .SET(toSet)
+                                            .DELETE(toDelete);
+
+                                    return postSingleTag(cxId, singleRequest, argument.getFileKey())
+                                            .map(additionalFileTagsUpdateResponse -> new ErrorDetail())
+                                            .onErrorResume(throwable -> createUpdateResponse(throwable)
+                                                    .map(error -> {
+                                                        ErrorDetail errorDetail = new ErrorDetail()
+                                                                .fileKey(List.of(argument.getFileKey()))
+                                                                .resultDescription(throwable.getMessage())
+                                                                .resultCode(error.getResultCode());
+                                                        return errorDetail;
+                                                    })
+                                            );
+                                })
+                                .filter(obj -> obj.getResultDescription() != null)
+                                .reduce(new HashMap<String, ErrorDetail>(), (map, err) -> {
+                                    if (map.containsKey(err.getResultDescription())) {
+                                        ErrorDetail existingErrDetail = map.get(err.getResultDescription());
+                                        existingErrDetail.getFileKey().addAll(err.getFileKey());
+                                        map.put(err.getResultDescription(), existingErrDetail);
+                                    } else {
+                                        map.put(err.getResultDescription(), err);
+                                    }
+                                    return map;
+                                })
+                                .flatMap(errorMap -> {
+                                    List<ErrorDetail> errList = new ArrayList<>();
+                                    for (ErrorDetail errorDetail : errorMap.values()) {
+                                        errList.add(errorDetail);
+                                    }
+                                    return Mono.just(new AdditionalFileTagsMassiveUpdateResponse().errors(errList));
+                                });
+                    } else {
+                        return Mono.error(new ClientNotAuthorizedException(cxId));
+                    }
+                });
+    }
+
+    private List<Tags> validateMassiveRequest(List<Tags> tagList) throws RequestValidationException {
+        List<Tags> tagsList = tagList;
+        if (tagsList.isEmpty()) {
+            throw new RequestValidationException("No tags to set nor delete.");
+        }
+
+        if (tagsList.size() > indexingConfiguration.getIndexingLimits().getMaxFileKeysUpdateMassivePerRequest()) {
+            throw new RequestValidationException("Number of documents to update exceeds MaxFileKeysUpdateMassivePerRequest limit.");
+        }
+
+        Map<String, Tags> tagsMap = new HashMap<>();
+        for (Tags tag : tagList) {
+            String fileKey = tag.getFileKey();
+            if (tagsMap.containsKey(fileKey)) {
+                throw new RequestValidationException("Duplicate fileKey found: " + fileKey);
+            }
+            tagsMap.put(fileKey, tag);
+        }
+        return tagsList;
     }
 
     private void validateRequest(Map<String, List<String>> setTags, Map<String, List<String>> deleteTags) throws RequestValidationException {

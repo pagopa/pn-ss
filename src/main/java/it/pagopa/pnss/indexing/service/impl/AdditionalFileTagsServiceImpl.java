@@ -1,5 +1,6 @@
 package it.pagopa.pnss.indexing.service.impl;
 
+import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsDto;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsSearchResponseFileKeys;
@@ -12,13 +13,13 @@ import it.pagopa.pnss.common.exception.ClientNotAuthorizedException;
 import it.pagopa.pnss.common.exception.EmptyIntersectionException;
 import it.pagopa.pnss.common.exception.RequestValidationException;
 import it.pagopa.pnss.common.exception.IndexingLimitException;
-import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
 import it.pagopa.pnss.common.exception.*;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
 import it.pagopa.pnss.indexing.model.SearchLogic;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import lombok.CustomLog;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -31,7 +32,9 @@ import java.util.function.BinaryOperator;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
-import java.util.function.BinaryOperator;
+
+import static it.pagopa.pnss.common.utils.LogUtils.INVOKING_METHOD;
+import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 
 @Service
 @CustomLog
@@ -196,15 +199,19 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     }
 
     private Mono<ErrorDetail> processSingleRequest(String cxId, Map<String, List<String>> toSet, Map<String, List<String>> toDelete, String fileKey) {
+        MDC.put(MDC_CORR_ID_KEY, fileKey);
+
+        final String PROCESS_SINGLE_REQUEST = "AdditionalFileTagsService.processSingleRequest()";
+        log.debug(INVOKING_METHOD, PROCESS_SINGLE_REQUEST);
         AdditionalFileTagsUpdateRequest singleRequest = new AdditionalFileTagsUpdateRequest()
                 .SET(toSet)
                 .DELETE(toDelete);
 
-        return postSingleTag(cxId, singleRequest, fileKey)
+        return MDCUtils.addMDCToContextAndExecute(postSingleTag(cxId, singleRequest, fileKey)
                 .map(response -> new ErrorDetail())
                 .onErrorResume(throwable -> createUpdateResponse(throwable)
                         .map(error -> createErrorDetail(fileKey, throwable, error.getResultCode()))
-                );
+                ));
     }
 
     private ErrorDetail createErrorDetail(String fileKey, Throwable throwable, String errorCode) {

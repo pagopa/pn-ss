@@ -184,8 +184,11 @@ Resources:
     Properties:
       TableName: 'pn-SsTags'
       AttributeDefinitions:
-        - AttributeName: 'tagKey'
+        - AttributeName: 'tagKeyValue'
           AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'tagKeyValue'
+          KeyType: 'HASH'
       BillingMode: 'PAY_PER_REQUEST'
       TableClass: 'STANDARD'
       PointInTimeRecoverySpecification:

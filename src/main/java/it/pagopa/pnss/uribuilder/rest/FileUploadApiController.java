@@ -24,9 +24,6 @@ import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 @RestController
 @CustomLog
 public class FileUploadApiController implements FileUploadApi {
-	
-	@Value("${header.x-checksum-value:#{null}}")
-	private String headerXChecksumValue;
 
     @Value("${queryParam.presignedUrl.traceId}")
     private String xTraceId;
@@ -39,27 +36,19 @@ public class FileUploadApiController implements FileUploadApi {
 
 
     @Override
-    public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId,
+    public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId, String xChecksumValue, String xChecksum,
 																 Mono<FileCreationRequest> fileCreationRequest,
 																 final ServerWebExchange exchange) {
-
 
         String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
 		MDC.clear();
 		MDC.put(MDC_CORR_ID_KEY, xTraceIdValue);
 		log.logStartingProcess(CREATE_FILE);
 
-        return MDCUtils.addMDCToContextAndExecute(fileCreationRequest.flatMap(request -> {
-        								String checksumValue = null;
-										if (headerXChecksumValue != null && !headerXChecksumValue.isBlank()
-												&& exchange.getRequest().getHeaders().containsKey(headerXChecksumValue)) {
-												checksumValue = exchange.getRequest().getHeaders().getFirst(headerXChecksumValue);
-										}
-										return uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
-        																				request,
-        																				checksumValue,
-        																				xTraceIdValue);
-        						  })
+        return MDCUtils.addMDCToContextAndExecute(fileCreationRequest.flatMap(request -> uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
+                                                        request,
+                                                        xChecksumValue,
+                                                        xTraceIdValue))
         						  .onErrorResume(ChecksumException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage())))
         						  .onErrorResume(IndexingLimitException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage())))
 								  .map(ResponseEntity::ok)

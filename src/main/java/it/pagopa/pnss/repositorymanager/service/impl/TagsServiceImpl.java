@@ -202,10 +202,14 @@ public class TagsServiceImpl implements TagsService {
         String tagKey = tagInfo.getKey();
         if (tags.containsKey(tagKey)) {
             var tagValues = tags.get(tagKey);
+
             if (tagValues != null) {
                 tagValues.removeAll(setEntry.getValue());
+
+                if (tagValues.isEmpty()) tags.remove(tagKey);
+                else tags.put(tagKey, tagValues);
             }
-            tags.put(tagInfo.getKey(), tagValues);
+
         }
         return tags;
     }

@@ -129,6 +129,7 @@ public class LogUtils {
     public static final String ADDITIONAL_FILE_TAGS_SEARCH = "additionalFileTagsSearch";
     public static final String SEARCH_TAGS = "AdditionalFileTagsService.searchTags()";
     public static final String VALIDATE_QUERY_PARAMS = "AdditionalFileTagsService.validateQueryParams()";
+    public static final String MASSIVE_POST_TAG_DOCUMENT = "massivePostTagDocument";
 
 
 }

@@ -8,9 +8,15 @@ import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
+import it.pagopa.pnss.common.exception.ClientNotAuthorizedException;
+import it.pagopa.pnss.common.exception.EmptyIntersectionException;
+import it.pagopa.pnss.common.exception.RequestValidationException;
+import it.pagopa.pnss.common.exception.IndexingLimitException;
+import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
 import it.pagopa.pnss.common.exception.*;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
+import it.pagopa.pnss.indexing.model.SearchLogic;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import lombok.CustomLog;
 import org.springframework.http.HttpStatus;
@@ -21,6 +27,10 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.RetryBackoffSpec;
 
 import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.stream.Stream;
+
+import static it.pagopa.pnss.common.utils.LogUtils.*;
 import java.util.function.BinaryOperator;
 
 @Service
@@ -48,7 +58,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     @Override
     public Mono<AdditionalFileTagsDto> getDocumentTags(String fileKey, String clientId) {
         final String GET_DOCUMENT = "AdditionalFileTagsService.getDocumentTags()";
-        log.debug(LogUtils.INVOKING_METHOD, GET_DOCUMENT, fileKey);
+        log.debug(INVOKING_METHOD, GET_DOCUMENT, fileKey);
 
         return userConfigurationClientCall.getUser(clientId)
                 .retryWhen(gestoreRepositoryRetryStrategy)
@@ -92,7 +102,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     @Override
     public Mono<AdditionalFileTagsUpdateResponse> postTags(String cxId, AdditionalFileTagsUpdateRequest request, String fileKey) {
         final String POST_TAG = "AdditionalFileTagsService.postTags()";
-        log.debug(LogUtils.INVOKING_METHOD, POST_TAG, fileKey);
+        log.debug(INVOKING_METHOD, POST_TAG, fileKey);
 
         return getWriteTagsPermission(cxId)
                 .flatMap(authorizationGranted -> {
@@ -321,18 +331,29 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         }
     }
 
+    /**
+     * A method to search for fileKeys having the given tags with the given values passed as query parameters.
+     *
+     * @param xPagopaSafestorageCxId the clientId
+     * @param logic the search logic to apply
+     * @param tags the option to retrieve fileKeys with or without tags
+     * @param queryParams the query parameters
+     * @return Mono<List<AdditionalFileTagsSearchResponseFileKeys>> the mono containing the list of fileKeys with or without tags
+     */
     @Override
     public Mono<List<AdditionalFileTagsSearchResponseFileKeys>> searchTags(String xPagopaSafestorageCxId, String logic, Boolean tags, Map<String, String> queryParams) {
+        log.debug(INVOKING_METHOD, SEARCH_TAGS, Stream.of(xPagopaSafestorageCxId, logic, tags, queryParams).toList());
         var reducingFunction = getLogicFunction(logic);
         return userConfigurationClientCall.getUser(xPagopaSafestorageCxId).handle((userConfigurationResponse, sink) -> {
                     if (Boolean.FALSE.equals(userConfigurationResponse.getUserConfiguration().getCanReadTags())) {
                         sink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, String.format("Client: %s does not have privilege to read tags", xPagopaSafestorageCxId)));
                     } else sink.complete();
                 })
-                .thenMany(validateQueryParams(queryParams))
+                .thenMany(Flux.defer(() -> validateQueryParams(queryParams)))
                 .flatMap(this::getFileKeysList)
                 .map(HashSet::new)
                 .reduce(reducingFunction)
+                .onErrorResume(EmptyIntersectionException.class, throwable -> Mono.just(new HashSet<>()))
                 .flatMapMany(Flux::fromIterable)
                 .map(fileKey -> new AdditionalFileTagsSearchResponseFileKeys().fileKey(fileKey))
                 .flatMap(fileKey -> {
@@ -343,17 +364,28 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                         });
                     } else return Mono.just(fileKey);
                 })
-                .collectList();
+                .collectList()
+                .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, SEARCH_TAGS, result));
     }
 
+    /**
+     * A method to get the right function to apply based on logic parameter.
+     *
+     * @param logic the search logic to apply
+     * @return BinaryOperator<HashSet<String>> a binary operator
+     */
     private BinaryOperator<HashSet<String>> getLogicFunction(String logic) {
-        return switch (logic) {
-            case "or" -> orLogicFunction();
-            case "and" -> andLogicFunction();
-            default -> throw new InvalidSearchLogicException(logic);
+        return switch (SearchLogic.getEnumLogic(logic)) {
+            case OR -> orLogicFunction();
+            case AND -> andLogicFunction();
         };
     }
 
+    /**
+     * The function to apply in case of OR logic
+     *
+     * @return BinaryOperator<HashSet<String>> a binary operator
+     */
     private BinaryOperator<HashSet<String>> orLogicFunction() {
         return (set1, set2) -> {
             set1.addAll(set2);
@@ -361,22 +393,44 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         };
     }
 
+    /**
+     * The function to apply in case of AND logic
+     *
+     * @return BinaryOperator<HashSet < String>> a binary operator
+     */
     private BinaryOperator<HashSet<String>> andLogicFunction() {
         return (set1, set2) -> {
             HashSet<String> intersection = new HashSet<>(set1);
             intersection.retainAll(set2);
+            // we throw an exception to stop the reducing process when the intersection is empty.
+            if (intersection.isEmpty()) {
+                throw new EmptyIntersectionException();
+            }
             return intersection;
         };
     }
 
+    /**
+     * A method to get the list of fileKeys with the given tag and value.
+     *
+     * @param mapEntry the tag and value to search
+     * @return Mono<List<String>> the mono containing the list of fileKeys
+     */
     private Mono<List<String>> getFileKeysList(Map.Entry<String, String> mapEntry) {
         return Mono.just(mapEntry).flatMap(entry -> tagsClientCall.getTagsRelations(entry.getKey() + "~" + entry.getValue()))
-                .doOnError(TagKeyValueNotPresentException.class, e -> log.debug("TagKeyValueNotPresentException: {}", e.getMessage()))
                 .map(tagsResponse -> tagsResponse.getTagsRelationsDto().getFileKeys())
                 .onErrorResume(TagKeyValueNotPresentException.class, e -> Mono.fromSupplier(ArrayList::new));
     }
 
+    /**
+     * A method to validate the query parameters.
+     * It checks if the number of tag key-value pairs exceeds the MaxMapValuesForSearch setting.
+     *
+     * @param queryParams the query parameters to check
+     * @return Flux<Map.Entry<String, String>> the flux containing the query parameters, without the "tags" and "logic" parameters
+     */
     private Flux<Map.Entry<String, String>> validateQueryParams(Map<String, String> queryParams) {
+        log.debug(INVOKING_METHOD, VALIDATE_QUERY_PARAMS, queryParams);
         // Inizializzo un flusso con i queryParam, escludendo i parametri "tags" e "logic"
         Flux<Map.Entry<String, String>> queryParamsFlux = Flux.fromIterable(queryParams.entrySet()).filter(entry -> !entry.getKey().equals("tags") && !entry.getKey().equals("logic"));
         return queryParamsFlux

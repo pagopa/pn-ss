@@ -2,11 +2,16 @@ package it.pagopa.pnss.indexing.rest;
 
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.AdditionalFileTagsApi;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsGetResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsSearchResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.*;
+import it.pagopa.pnss.indexing.model.SearchLogic;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsUpdateRequest;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsUpdateResponse;
 import lombok.CustomLog;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
@@ -18,6 +23,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
@@ -56,11 +62,6 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new AdditionalFileTagsUpdateResponse().resultCode(RESULT_CODE_400).resultDescription(ex.getMessage()));
     }
 
-    @ExceptionHandler(InvalidSearchLogicException.class)
-    public ResponseEntity<String> handleInvalidSearchLogicException(InvalidSearchLogicException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
-    }
-
     @ExceptionHandler(IndexingLimitException.class)
     public ResponseEntity<String> handleIndexingLimitException(IndexingLimitException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
@@ -69,6 +70,11 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
     @ExceptionHandler(PutTagsBadRequestException.class)
     public ResponseEntity<AdditionalFileTagsUpdateResponse> handlePutTagsBadRequestException(PutTagsBadRequestException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new AdditionalFileTagsUpdateResponse().resultCode(RESULT_CODE_400).resultDescription(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidSearchLogicException.class)
+    public ResponseEntity<String> handleInvalidSearchLogicException(InvalidSearchLogicException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
 
     @Override
@@ -86,11 +92,15 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
     }
 
     @Override
-    public Mono<ResponseEntity<AdditionalFileTagsSearchResponse>> additionalFileTagsSearch(String xPagopaSafestorageCxId, String logic, Boolean tags, ServerWebExchange exchange) {
-        logic = logic == null ? "and" : logic;
+    public Mono<ResponseEntity<AdditionalFileTagsSearchResponse>> additionalFileTagsSearch(String xPagopaSafestorageCxId, String logic, Boolean tags, Map<String, String> tagParams, final ServerWebExchange exchange) {
+        MDC.put(MDC_CORR_ID_KEY, UUID.randomUUID().toString());
+        log.logStartingProcess(ADDITIONAL_FILE_TAGS_SEARCH);
+        logic = logic == null ? SearchLogic.AND.getLogic() : logic;
         tags = tags != null && tags;
-        return additionalFileTagsService.searchTags(xPagopaSafestorageCxId, logic, tags, exchange.getRequest().getQueryParams().toSingleValueMap())
-                .map(fileKeys -> ResponseEntity.ok().body(new AdditionalFileTagsSearchResponse().fileKeys(fileKeys)));
+        return MDCUtils.addMDCToContextAndExecute(additionalFileTagsService.searchTags(xPagopaSafestorageCxId, logic, tags, tagParams)
+                .map(fileKeys -> ResponseEntity.ok().body(new AdditionalFileTagsSearchResponse().fileKeys(fileKeys)))
+                .doOnSuccess(result -> log.logEndingProcess(ADDITIONAL_FILE_TAGS_SEARCH))
+                .doOnError(throwable -> log.logEndingProcess(ADDITIONAL_FILE_TAGS_SEARCH, false, throwable.getMessage())));
     }
 
     @Override

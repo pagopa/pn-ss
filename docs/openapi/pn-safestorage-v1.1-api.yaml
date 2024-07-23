@@ -578,6 +578,7 @@ paths:
         - $ref: '#/components/parameters/clientIdHeader'
         - $ref: '#/components/parameters/logic'
         - $ref: '#/components/parameters/tags'
+        - $ref: '#/components/parameters/tagParams'
       responses:
         '200':
           description: OK
@@ -692,6 +693,17 @@ components:
       required: false
       schema:
         type: string
+    tagParams:
+      in: query
+      name: tagParams
+      description: >-
+        Una serie di query parameters che rappresentano le associazioni chiave-valore dei tag su cui basare la additionalFileTagsSearch.
+      schema:
+        type: object
+        additionalProperties:
+          type: string
+      style: form
+      explode: true
 
 
   schemas:

@@ -60,9 +60,6 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                                 .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                                 .flatMap(documentResponse -> {
                                     Map<String, List<String>> tags = documentResponse.getDocument().getTags();
-                                    if(tags.isEmpty()) {
-                                        tags = new HashMap<>();
-                                    }
                                     return removePrefixTags(tags);
                                 })
                                 .map(tags -> {
@@ -78,10 +75,9 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     }
 
     private Mono<Map<String, List<String>>> removePrefixTags(Map<String, List<String>> tags) {
-        if(tags.isEmpty()){
-            return Mono.just(new HashMap<>());
-        }
-        return Flux.fromIterable(tags.entrySet())
+        return Mono.justOrEmpty(tags)
+                .defaultIfEmpty(new HashMap<>())
+                .flatMapMany(tagsMap -> Flux.fromIterable(tagsMap.entrySet()))
                 .flatMap(entry -> {
                     String key = entry.getKey();
                     List<String> values = entry.getValue();

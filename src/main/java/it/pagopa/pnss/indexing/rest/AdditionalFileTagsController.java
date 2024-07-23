@@ -1,5 +1,6 @@
 package it.pagopa.pnss.indexing.rest;
 
+import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.AdditionalFileTagsApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
@@ -7,6 +8,7 @@ import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.*;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import lombok.CustomLog;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -71,15 +73,16 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
 
     @Override
     public Mono<ResponseEntity<AdditionalFileTagsGetResponse>> additionalFileTagsGet(String fileKey, String xPagopaSafestorageCxId, final ServerWebExchange exchange) {
+        MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(GET_TAGS_DOCUMENT);
-        return additionalFileTagsService.getDocumentTags(fileKey, xPagopaSafestorageCxId)
+        return MDCUtils.addMDCToContextAndExecute(additionalFileTagsService.getDocumentTags(fileKey, xPagopaSafestorageCxId)
                 .map(additionalFileTagsDto -> {
                     Map<String, List<String>> tags = additionalFileTagsDto.getTags();
                     AdditionalFileTagsGetResponse response = new AdditionalFileTagsGetResponse().tags(tags);
                     return ResponseEntity.ok().body(response);
                 })
                 .doOnSuccess(result -> log.logEndingProcess(GET_TAGS_DOCUMENT))
-                .doOnError(throwable -> log.logEndingProcess(GET_TAGS_DOCUMENT, false, throwable.getMessage()));
+                .doOnError(throwable -> log.logEndingProcess(GET_TAGS_DOCUMENT, false, throwable.getMessage())));
     }
 
     @Override

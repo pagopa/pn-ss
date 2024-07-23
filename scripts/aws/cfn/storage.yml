@@ -182,7 +182,7 @@ Resources:
   PnSsTableTags:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: 'pn-SsTags'
+      TableName: 'pn-SsTags-1'
       AttributeDefinitions:
         - AttributeName: 'tagKeyValue'
           AttributeType: 'S'

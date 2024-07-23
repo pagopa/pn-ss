@@ -118,12 +118,13 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
     public Mono<ResponseEntity<AdditionalFileTagsUpdateResponse>> additionalFileTagsUpdate(String fileKey, String xPagopaSafestorageCxId,
                                                                                            Mono<AdditionalFileTagsUpdateRequest> additionalFileTagsUpdateRequest,
                                                                                            final ServerWebExchange exchange) {
+        MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(POST_TAG_DOCUMENT);
-        return additionalFileTagsUpdateRequest.flatMap(request -> additionalFileTagsService.postTags(xPagopaSafestorageCxId, request, fileKey)
+        return MDCUtils.addMDCToContextAndExecute(additionalFileTagsUpdateRequest.flatMap(request -> additionalFileTagsService.postTags(xPagopaSafestorageCxId, request, fileKey)
                         .map(response -> ResponseEntity.ok().body(response))).doOnSuccess(result -> log.logEndingProcess(POST_TAG_DOCUMENT))
                 .onErrorResume(DocumentKeyNotPresentException.class, throwable -> Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new AdditionalFileTagsUpdateResponse().resultCode("404.00").resultDescription(throwable.getMessage()))))
-                .doOnError(throwable -> log.logEndingProcess(POST_TAG_DOCUMENT, false, throwable.getMessage()));
+                .doOnError(throwable -> log.logEndingProcess(POST_TAG_DOCUMENT, false, throwable.getMessage())));
     }
 
 }

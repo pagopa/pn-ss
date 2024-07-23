@@ -8,7 +8,6 @@ import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
 import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
-import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,7 +19,6 @@ import static it.pagopa.pnss.common.utils.LogUtils.INVOKING_INTERNAL_SERVICE;
 import static it.pagopa.pnss.common.utils.LogUtils.REPOSITORY_MANAGER;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @CustomLog
 @Service

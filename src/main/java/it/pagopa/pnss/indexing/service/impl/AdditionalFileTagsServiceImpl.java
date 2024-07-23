@@ -98,7 +98,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         final String POST_TAG = "AdditionalFileTagsService.postTags()";
         log.debug(LogUtils.INVOKING_METHOD, POST_TAG, fileKey);
 
-        return getPermission(cxId)
+        return getWriteTagsPermission(cxId)
                 .flatMap(authorizationGranted -> {
                     if (authorizationGranted) {
                         return postSingleTag(cxId, request, fileKey);
@@ -133,7 +133,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
 
 
     @Override
-    public Mono<Boolean> getPermission(String cxId) {
+    public Mono<Boolean> getWriteTagsPermission(String cxId) {
         return userConfigurationClientCall.getUser(cxId).map(user -> user.getUserConfiguration().getCanWriteTags())
                 .map(canWriteTags -> {
                     if (!canWriteTags) {
@@ -170,7 +170,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         final String POST_MASSIVE_TAG = "AdditionalFileTagsService.postMassiveTags()";
         log.debug(LogUtils.INVOKING_METHOD, POST_MASSIVE_TAG);
 
-        return getPermission(cxId)
+        return getWriteTagsPermission(cxId)
                 .flatMap(authorizationGranted -> {
                     if (authorizationGranted) {
                         return handleMassiveUpdate(request, cxId);

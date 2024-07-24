@@ -5,6 +5,8 @@ import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -556,6 +558,46 @@ class UriBuilderUploadTest {
 
             fileUploadTestCall(fileCreationRequest)
                     .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+
+        @Test
+        void createFileWithTags_PutTagsBadRequest_Ko() {
+            FileCreationRequest fcr = createFileCreationRequest();
+
+            UserConfigurationResponse userConfig = new UserConfigurationResponse();
+            UserConfiguration userConfiguration = new UserConfiguration();
+            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setCanCreate(List.of(PN_AAR));
+            userConfiguration.setCanWriteTags(true);
+            userConfig.setUserConfiguration(userConfiguration);
+
+            when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
+            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new PutTagsBadRequestException()));
+
+            fileUploadTestCall(fcr).expectStatus().isBadRequest();
+        }
+
+        @Test
+        void createFileWithTags_DocumentKeyNotFound_Ko() {
+            FileCreationRequest fcr = createFileCreationRequest();
+
+            UserConfigurationResponse userConfig = new UserConfigurationResponse();
+            UserConfiguration userConfiguration = new UserConfiguration();
+            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setCanCreate(List.of(PN_AAR));
+            userConfiguration.setCanWriteTags(true);
+            userConfig.setUserConfiguration(userConfiguration);
+
+            when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
+            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new DocumentKeyNotPresentException("documentKey")));
+
+            fileUploadTestCall(fcr).expectStatus().isNotFound();
         }
 
         private Map<String, List<String>> generateRandomTagsWithMaxValuesExceeded() {

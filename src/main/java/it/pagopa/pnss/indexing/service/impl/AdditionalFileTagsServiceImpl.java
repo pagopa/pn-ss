@@ -131,11 +131,15 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     }
 
     private Mono<AdditionalFileTagsUpdateResponse> createUpdateResponse (Throwable throwable) {
+        final String ERROR_400 = "400.00";
         if (throwable instanceof RequestValidationException) {
-            return Mono.just(new AdditionalFileTagsUpdateResponse().resultCode("400.00").resultDescription(throwable.getMessage()));
+            return Mono.just(new AdditionalFileTagsUpdateResponse().resultCode(ERROR_400).resultDescription(throwable.getMessage()));
         }
         if (throwable instanceof MissingTagException) {
-            return Mono.just (new AdditionalFileTagsUpdateResponse().resultCode("400.00").resultDescription(throwable.getMessage()));
+            return Mono.just (new AdditionalFileTagsUpdateResponse().resultCode(ERROR_400).resultDescription(throwable.getMessage()));
+        }
+        if (throwable instanceof PutTagsBadRequestException) {
+            return Mono.just(new AdditionalFileTagsUpdateResponse().resultCode(ERROR_400).resultDescription(throwable.getMessage()));
         }
         return Mono.just ( new AdditionalFileTagsUpdateResponse().resultCode("500.00").resultDescription(throwable.getMessage()));
     }

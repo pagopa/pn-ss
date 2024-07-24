@@ -7,12 +7,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.availabledocument.dto.NotificationMessage;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
-import java.util.Date;
-import java.util.Map;
+import java.util.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
@@ -30,22 +28,21 @@ public class ManageDynamoEvent {
     public static final String RETENTIONUNTIL_KEY = "retentionUntil";
     public static final String CONTENTTYPE_KEY = "contentType";
     public static final String CLIENTSHORTCODE_KEY = "clientShortCode";
+    public static final String TAGS_KEY = "tags";
 
     public PutEventsRequestEntry manageItem(String disponibilitaDocumentiEventBridge, Map<String, AttributeValue> newImage,
-                                            Map<String, AttributeValue> oldImage) {
+                                            Map<String, AttributeValue> oldImage, Boolean canReadTags) {
         String oldDocumentState = oldImage.get(DOCUMENTSTATE_KEY).getS();
         String newDocumentState = newImage.get(DOCUMENTSTATE_KEY).getS();
 
         if (!oldDocumentState.equalsIgnoreCase(newDocumentState) && newDocumentState.equalsIgnoreCase(AVAILABLE)){
-            return  createMessage(newImage, disponibilitaDocumentiEventBridge, oldDocumentState);
-
+            return  createMessage(newImage, disponibilitaDocumentiEventBridge, oldDocumentState,canReadTags);
         }
-
 
         return null;
     }
 
-    public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState){
+    public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState, Boolean canReadTags){
         String key = docEntity.get(DOCUMENTKEY_KEY).getS();
         MDC.put(MDC_CORR_ID_KEY, key);
         NotificationMessage message = new NotificationMessage();
@@ -63,17 +60,31 @@ public class ManageDynamoEvent {
 
         message.setRetentionUntil(docEntity.get(RETENTIONUNTIL_KEY)!=null ? docEntity.get(RETENTIONUNTIL_KEY).getS(): null);
         message.setClientShortCode(docEntity.get(CLIENTSHORTCODE_KEY)!=null ? docEntity.get(CLIENTSHORTCODE_KEY).getS(): null);
+
+        if (docEntity.get(TAGS_KEY) != null && canReadTags) {
+            Map<String, AttributeValue> tagsMap = docEntity.get(TAGS_KEY).getM();
+            Map<String, List<String>> tags = new HashMap<>();
+            for (Map.Entry<String, AttributeValue> entry : tagsMap.entrySet()) {
+                List<String> tagValues = new ArrayList<>();
+                for (AttributeValue value : entry.getValue().getL()) {
+                    tagValues.add(value.getS());
+                }
+                tags.put(entry.getKey(), tagValues);
+            }
+            message.setTags(tags);
+        }
+
         ObjectMapper objMap = new ObjectMapper();
 
         try {
             String event = objMap.writeValueAsString(message);
-            return creatPutEventRequestEntry(event, disponibilitaDocumentiEventBridge,oldDocumentState);
+            return createPutEventRequestEntry(event, disponibilitaDocumentiEventBridge,oldDocumentState);
         } catch (JsonProcessingException e) {
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
     }
 
-    private PutEventsRequestEntry creatPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge,String oldDocumentState){
+    private PutEventsRequestEntry createPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge, String oldDocumentState){
         return  PutEventsRequestEntry.builder()
                 .time(new Date().toInstant())
                 .source(GESTORE_DISPONIBILITA_EVENT_NAME)

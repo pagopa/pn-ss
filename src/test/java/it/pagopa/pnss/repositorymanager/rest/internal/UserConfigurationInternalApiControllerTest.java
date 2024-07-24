@@ -4,6 +4,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
@@ -38,7 +39,8 @@ public class UserConfigurationInternalApiControllerTest {
 	private static final String BASE_PATH = "/safestorage/internal/v1/userConfigurations";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{name}", BASE_PATH);
 	private static final String PARTITION_ID_ENTITY = "key";
-//	private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
+	private static final String PARTITION_ID_ENTITY_W_TAGS = "key2";
+	//	private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
 	private static final String PARTITION_ID_NO_EXISTENT = "name_bad";
 
 	private static UserConfiguration userConfigurationInput;
@@ -49,20 +51,39 @@ public class UserConfigurationInternalApiControllerTest {
 	private static void insertUserConfigurationEntity(String name) {
 		log.info("execute insertUserConfigurationEntity()");
 		var userConfigurationEntity = new UserConfigurationEntity();
+		switch (name){
+			case PARTITION_ID_ENTITY:
+				break;
+			case PARTITION_ID_ENTITY_W_TAGS:
+				userConfigurationEntity.setCanWriteTags(true);
+				userConfigurationEntity.setCanReadTags(true);
+				break;
+			default:
+				throw new IllegalArgumentException("Name not defined");
+		}
 		userConfigurationEntity.setName(name);
+
 		dynamoDbTable.putItem(builder -> builder.item(userConfigurationEntity));
 	}
 
+
 	@BeforeAll
-	public static void insertDefaultUserConfiguration(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-			@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+	public static void insertDefaultUserConfigurations(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
+													  @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
 		log.info("execute insertDefaultDocType()");
 		dynamoDbTable = dynamoDbEnhancedClient.table(
-//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME, 
+//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,
 				gestoreRepositoryDynamoDbTableName.anagraficaClientName(),
 				TableSchema.fromBean(UserConfigurationEntity.class));
-		insertUserConfigurationEntity(PARTITION_ID_ENTITY);
+				insertUserConfigurationEntity(PARTITION_ID_ENTITY);
+
+		dynamoDbTable = dynamoDbEnhancedClient.table(
+				gestoreRepositoryDynamoDbTableName.anagraficaClientName(),
+				TableSchema.fromBean(UserConfigurationEntity.class));
+		insertUserConfigurationEntity(PARTITION_ID_ENTITY_W_TAGS);
 	}
+
+
 
 	@BeforeEach
 	public void createUserConfiguration() {
@@ -80,6 +101,8 @@ public class UserConfigurationInternalApiControllerTest {
 		userConfigurationInput.setCanCreate(canCreate);
 		userConfigurationInput.setCanRead(canRead);
 		userConfigurationInput.setCanModifyStatus(canModifyStatus);
+		userConfigurationInput.setCanWriteTags(true);
+		userConfigurationInput.setCanReadTags(true);
 		userConfigurationInput.setSignatureInfo("mmm");
 		userConfigurationInput.setDestination(destination);
 		userConfigurationInput.setApiKey("apiKey");
@@ -94,11 +117,13 @@ public class UserConfigurationInternalApiControllerTest {
 		userConfigurationChanges = new UserConfigurationChanges();
 		userConfigurationChanges.setCanCreate(canCreate1);
 		userConfigurationChanges.setCanRead(canRead1);
+		userConfigurationChanges.setCanWriteTags(true);
+		userConfigurationChanges.setCanReadTags(true);
 		userConfigurationChanges.setCanModifyStatus(canModifyStatus1);
 	}
 
 	@Test
-	// codice test: ANSS.101.1
+		// codice test: ANSS.101.1
 	void postItem() {
 
 		EntityExchangeResult<UserConfigurationResponse> resultPreInsert = webTestClient.get()
@@ -117,7 +142,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.101.1
+		// codice test: ANSS.101.1
 	void postItemPartitionKeyDuplicated() {
 
 		EntityExchangeResult<UserConfigurationResponse> resultPreInsert = webTestClient.get()
@@ -138,7 +163,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.101.1
+		// codice test: ANSS.101.1
 	void postItemIncorrectParameter() {
 
 		userConfigurationInput.setName(null);
@@ -151,7 +176,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.100.1
+		// codice test: ANSS.100.1
 	void getItem() {
 
 		webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
@@ -161,7 +186,16 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.100.2
+	void getItemWithTags() {
+		EntityExchangeResult<UserConfigurationResponse> response = webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY_W_TAGS))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(UserConfigurationResponse.class).returnResult();
+
+		Assertions.assertEquals(userConfigurationInput.getCanReadTags(), Objects.requireNonNull(response.getResponseBody()).getUserConfiguration().getCanReadTags());
+		Assertions.assertEquals(userConfigurationInput.getCanWriteTags(), response.getResponseBody().getUserConfiguration().getCanWriteTags());
+	}
+
+	@Test
+		// codice test: ANSS.100.2
 	void getItemIncorrectParameter() {
 
 		webTestClient.get().uri(BASE_PATH).accept(APPLICATION_JSON).exchange().expectStatus()
@@ -171,7 +205,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.100.3
+		// codice test: ANSS.100.3
 	void getItemNoExistentKey() {
 
 		webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
@@ -181,7 +215,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.102.1
+		// codice test: ANSS.102.1
 	void patchItem() {
 
 		EntityExchangeResult<UserConfigurationResponse> documentInDb = webTestClient.get()
@@ -212,7 +246,45 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.102.2
+	void patchItemWithTags() {
+
+		EntityExchangeResult<UserConfigurationResponse> documentInDb = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(UserConfigurationResponse.class)
+				.returnResult();
+		log.info("\n Test 6 (patchItem) : userConfiguration before patch {}",
+				documentInDb.getResponseBody().getUserConfiguration());
+
+		log.info("\n Test 6 (patchItem) : userConfigurationChanges {}", userConfigurationChanges);
+
+		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
+				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(userConfigurationChanges)).exchange().expectStatus().isOk();
+
+		EntityExchangeResult<UserConfigurationResponse> userConfigurationUpdated = webTestClient.get()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(UserConfigurationResponse.class)
+				.returnResult();
+
+		log.info("\n Test 6 (patchItem) userConfigurationUpdated2 : {} \n",
+				Objects.requireNonNull(userConfigurationUpdated.getResponseBody()).getUserConfiguration());
+
+		Assertions.assertEquals(userConfigurationChanges.getCanCreate(),
+				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanCreate());
+		Assertions.assertEquals(userConfigurationChanges.getCanRead(),
+				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanRead());
+		Assertions.assertEquals(userConfigurationChanges.getCanModifyStatus(),
+				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanModifyStatus());
+		Assertions.assertEquals(userConfigurationChanges.getCanWriteTags(),
+				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanWriteTags());
+		Assertions.assertEquals(userConfigurationChanges.getCanReadTags(),
+				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanReadTags());
+
+		log.info("\n Test 6 (patchItem) passed \n");
+	}
+
+	@Test
+		// codice test: ANSS.102.2
 	void patchItemNoExistentKey() {
 
 		userConfigurationInput.setName(PARTITION_ID_NO_EXISTENT);
@@ -226,7 +298,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.102.3
+		// codice test: ANSS.102.3
 	void patchItemIncorrectParameter() {
 
 		webTestClient.patch().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
@@ -237,7 +309,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.103.1
+		// codice test: ANSS.103.1
 	void deleteItem() {
 
 		webTestClient.delete().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
@@ -247,7 +319,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.103.2
+		// codice test: ANSS.103.2
 	void deleteItemNoExistentKey() {
 
 		webTestClient.delete().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
@@ -257,7 +329,7 @@ public class UserConfigurationInternalApiControllerTest {
 	}
 
 	@Test
-	// codice test: ANSS.103.2
+		// codice test: ANSS.103.2
 	void deleteItemIncorrectParameter() {
 
 		webTestClient.delete().uri(BASE_PATH).accept(APPLICATION_JSON).exchange().expectStatus()

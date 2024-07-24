@@ -126,6 +126,12 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                        if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
                            entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
                        }
+                       if (userConfigurationChanges.getCanWriteTags() != null) {
+                           entityStored.setCanWriteTags(userConfigurationChanges.getCanWriteTags());
+                       }
+                       if (userConfigurationChanges.getCanReadTags() != null) {
+                           entityStored.setCanReadTags(userConfigurationChanges.getCanReadTags());
+                       }
                        return entityStored;
                    })
                    .zipWhen(userConfigurationUpdated -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(

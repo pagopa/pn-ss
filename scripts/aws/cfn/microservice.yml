@@ -137,6 +137,14 @@ Parameters:
     Type: String
     Description: 'ARN dello stream relativo alla tabella SS Scadenza Documenti'
 
+  PnSsTableNameTags:
+    Type: String
+    Description: 'Nome tabella conteniente i tags'
+
+  PnSsTableArnTags:
+    Type: String
+    Description: 'ARN tabella conteniente i tags'
+
   PnSsBucketName:
     Type: String
     Description: 'Nome del Bucket SS'
@@ -424,6 +432,10 @@ Parameters:
     Default: ''
     Description: URL to the file containing the list of fileKeys which s3 object doesn't need to be updated.
 
+  PnSsIndexingConfiguration:
+    Type: String
+    Description: 'Name of the parameter store containing the configuration for the indexing service'
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -531,6 +543,8 @@ Resources:
         ContainerEnvEntry48: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
         ContainerEnvEntry49: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
         ContainerEnvEntry50: !Sub 'PnSsIgnoredUpdateMetadataList=${PnSsIgnoredUpdateMetadataList}'
+        ContainerEnvEntry51: !Sub 'PnSsIndexingConfiguration=${PnSsIndexingConfiguration}'
+        ContainerEnvEntry52: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -578,6 +592,7 @@ Resources:
               - !Ref PnSsTableArnDocumenti
               - !Ref PnSsTableDocumentiStreamArn
               - !Ref PnSsTableArnScadenzaDocumenti
+              - !Ref PnSsTableArnTags
           - Sid: 'FullAccesStreamMetadataTable'
             Effect: Allow
             Action:
@@ -653,6 +668,12 @@ Resources:
               - 'events:DescribeEventBus'
             Resource:
               - !Ref PnSsEventBusArnExternalNotification
+          - Sid: 'ReadParameterStore'
+            Effect: Allow
+            Action:
+              - 'ssm:GetParameter'
+            Resource:
+              - '*'
 
   #####    Staging Bucket Events Rule    #####
   PnSsEventRuleStagingBucket:

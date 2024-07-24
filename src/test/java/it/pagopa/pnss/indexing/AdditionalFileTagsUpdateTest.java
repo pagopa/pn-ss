@@ -5,6 +5,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
@@ -668,5 +669,39 @@ class AdditionalFileTagsUpdateTest {
                                 hasProperty("resultDescription", containsStringIgnoringCase("not found in the indexing configuration")),
                                 hasProperty("fileKey", hasItem(containsString("documentKey"))))));
     }
+
+    @Test
+    void testMassiveRequestOkWithIndexingLimitError() {
+        Map<String, List<String>> delete = new HashMap<>();
+        delete.put("IUN", List.of("IUN1", "IUN2"));
+        String fileKey = "documentKey";
+        Tags tag = new Tags().fileKey(fileKey).DELETE(delete);
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(tag);
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.error(new PutTagsBadRequestException()));
+
+        webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
+        webTestClient.post()
+                .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
+                .bodyValue(tagsMassiveUpdateRequest)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(AdditionalFileTagsMassiveUpdateResponse.class)
+                .value(AdditionalFileTagsMassiveUpdateResponse::getErrors,
+                        Matchers.hasItem(allOf(
+                                hasProperty("resultCode", is("400.00")),
+                                hasProperty("resultDescription", containsStringIgnoringCase("Bad request during put tags operation")),
+                                hasProperty("fileKey", hasItem(containsString("documentKey"))))));
+    }
+
 
 }

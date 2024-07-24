@@ -18,6 +18,7 @@ import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
 import it.pagopa.pnss.indexing.model.SearchLogic;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
+import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import lombok.CustomLog;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
@@ -449,6 +450,8 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                 .handle((count, sink) -> {
                     if (count > indexingConfiguration.getIndexingLimits().getMaxMapValuesForSearch()) {
                         sink.error(new IndexingLimitException("MaxMapValuesForSearch", Math.toIntExact(count), indexingConfiguration.getIndexingLimits().getMaxMapValuesForSearch()));
+                    } else if (count == 0) {
+                        sink.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "No tag params provided. At least one tag key-value pair is required"));
                     } else sink.complete();
                 })
                 .thenMany(queryParamsFlux);

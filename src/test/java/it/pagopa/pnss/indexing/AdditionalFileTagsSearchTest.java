@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -59,8 +60,6 @@ class AdditionalFileTagsSearchTest {
     void beforeEach() {
         // Client with authorization to read tags
         when(userConfigurationClientCall.getUser(PN_CLIENT_AUTHORIZED)).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name(PN_CLIENT_AUTHORIZED).apiKey(PN_CLIENT_AUTHORIZED_API_KEY).canReadTags(true))));
-        // Client NOT authorized to read tags
-        when(userConfigurationClientCall.getUser(PN_CLIENT_NOT_AUTHORIZED)).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name(PN_CLIENT_NOT_AUTHORIZED).apiKey(PN_CLIENT_NOT_AUTHORIZED_API_KEY).canReadTags(false))));
     }
 
     private WebTestClient.ResponseSpec additionalFileTagsSearchCall(String logic, Boolean tags, String xPagopaSafestorageCxId, String xApiKey, Map<String, String> tagsToSearch) {
@@ -373,8 +372,11 @@ class AdditionalFileTagsSearchTest {
      * Operazione di search con un client non autorizzato in lettura.
      * Risultato atteso: 403 KO.
      */
-    @Test
-    void search_Forbidden_Ko() {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(booleans = {false})
+    void search_Forbidden_Ko(Boolean canReadTags) {
+        when(userConfigurationClientCall.getUser(PN_CLIENT_NOT_AUTHORIZED)).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name(PN_CLIENT_NOT_AUTHORIZED).apiKey(PN_CLIENT_NOT_AUTHORIZED_API_KEY).canReadTags(canReadTags))));
         additionalFileTagsSearchCall("and", false, PN_CLIENT_NOT_AUTHORIZED, PN_CLIENT_NOT_AUTHORIZED_API_KEY)
                 .expectStatus()
                 .isForbidden();

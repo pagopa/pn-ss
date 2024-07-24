@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -229,6 +230,25 @@ AdditionalFileTagsGetTest {
     @SneakyThrows
     void getItemWithClientNotValid() {
         when(userConfigurationClientCall.getUser(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE_NOT_EXIST)).thenReturn(Mono.error(new IdClientNotFoundException("Client not authorized.")));
+
+        webTestClient.get()
+                .uri(uriBuilder -> uriBuilder.path(GET_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT_TAGS))
+                .accept(APPLICATION_JSON)
+                .header("x-pagopa-safestorage-cx-id", X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE_NOT_EXIST)
+                .header("x-api-key", "pn-test_api_key")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.FORBIDDEN)
+                .expectBody();
+        log.info("\n Test 4 (getItemWithClientNotValid) passed \n");
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(booleans = {false})
+    @SneakyThrows
+    void getItemWithClientNotAuthorized(Boolean canReadTags) {
+        when(userConfigurationClientCall.getUser(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE_NOT_EXIST)).thenReturn(Mono.just(new UserConfigurationResponse()
+                .userConfiguration(new UserConfiguration().name(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE).apiKey("apiKey_value").canReadTags(canReadTags))));
 
         webTestClient.get()
                 .uri(uriBuilder -> uriBuilder.path(GET_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT_TAGS))

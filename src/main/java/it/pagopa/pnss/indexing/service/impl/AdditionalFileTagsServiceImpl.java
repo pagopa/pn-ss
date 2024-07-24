@@ -67,9 +67,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         return userConfigurationClientCall.getUser(clientId)
                 .retryWhen(gestoreRepositoryRetryStrategy)
                 .flatMap(userConfigurationResponse -> {
-                    boolean canReadTags = userConfigurationResponse.getUserConfiguration().getCanReadTags();
-
-                    if (canReadTags) {
+                    if (Boolean.TRUE.equals(userConfigurationResponse.getUserConfiguration().getCanReadTags())) {
                         return documentClientCall.getDocument(fileKey)
                                 .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
                                 .flatMap(documentResponse -> {
@@ -110,7 +108,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
 
         return getWriteTagsPermission(cxId)
                 .flatMap(authorizationGranted -> {
-                    if (authorizationGranted) {
+                    if (Boolean.TRUE.equals(authorizationGranted)) {
                         return postSingleTag(cxId, request, fileKey);
                     } else {
                         return Mono.error(new ClientNotAuthorizedException(cxId));
@@ -148,12 +146,11 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
 
     @Override
     public Mono<Boolean> getWriteTagsPermission(String cxId) {
-        return userConfigurationClientCall.getUser(cxId).map(user -> user.getUserConfiguration().getCanWriteTags())
-                .map(canWriteTags -> {
-                    if (!canWriteTags) {
-                        throw new ClientNotAuthorizedException(cxId);
-                    }
-                    return canWriteTags;
+        return userConfigurationClientCall.getUser(cxId)
+                .map(userConfigurationResponse -> {
+                    if (Boolean.TRUE.equals(userConfigurationResponse.getUserConfiguration().getCanWriteTags())) {
+                        return userConfigurationResponse.getUserConfiguration().getCanWriteTags();
+                    } else throw new ClientNotAuthorizedException(cxId);
                 });
     }
 
@@ -186,7 +183,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
 
         return getWriteTagsPermission(cxId)
                 .flatMap(authorizationGranted -> {
-                    if (authorizationGranted) {
+                    if (Boolean.TRUE.equals(authorizationGranted)) {
                         return handleMassiveUpdate(request, cxId);
                     } else {
                         return Mono.error(new ClientNotAuthorizedException(cxId));
@@ -357,9 +354,9 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         log.debug(INVOKING_METHOD, SEARCH_TAGS, Stream.of(xPagopaSafestorageCxId, logic, tags, queryParams).toList());
         var reducingFunction = getLogicFunction(logic);
         return userConfigurationClientCall.getUser(xPagopaSafestorageCxId).handle((userConfigurationResponse, sink) -> {
-                    if (Boolean.FALSE.equals(userConfigurationResponse.getUserConfiguration().getCanReadTags())) {
-                        sink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, String.format("Client: %s does not have privilege to read tags", xPagopaSafestorageCxId)));
-                    } else sink.complete();
+                    if (Boolean.TRUE.equals(userConfigurationResponse.getUserConfiguration().getCanReadTags())) {
+                        sink.complete();
+                    } else sink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, String.format("Client: %s does not have privilege to read tags", xPagopaSafestorageCxId)));
                 })
                 .thenMany(Flux.defer(() -> validateQueryParams(queryParams)))
                 .flatMap(this::getFileKeysList)

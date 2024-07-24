@@ -153,7 +153,7 @@ public class UriBuilderService {
                                     synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
                                             String.format("Client '%s' does not have privilege to create document type '%s'",
                                                     xPagopaSafestorageCxId, documentType)));
-                                }  else if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty() && !userConfiguration.getUserConfiguration().getCanWriteTags()) {
+                                }  else if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty() && !Boolean.TRUE.equals(userConfiguration.getUserConfiguration().getCanWriteTags())) {
                                     synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
                                             String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
                                 } else {

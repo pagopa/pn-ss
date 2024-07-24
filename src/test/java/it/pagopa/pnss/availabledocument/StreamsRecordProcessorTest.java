@@ -15,6 +15,10 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,12 +56,14 @@ class StreamsRecordProcessorTest {
         putAnagraficaClient(createClient());
     }
 
-    @Test
-    void testProcessRecordsWithoutPermissions()  {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(booleans = {false})
+    void testProcessRecordsWithoutPermissions(Boolean canReadTagsValue)  {
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
 
         UserConfiguration client = createClient();
-        client.setCanReadTags(false);
+        client.setCanReadTags(canReadTagsValue);
         putAnagraficaClient(client);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
@@ -210,14 +216,16 @@ class StreamsRecordProcessorTest {
     }
 
     private void putAnagraficaClient(UserConfiguration client) {
-        dynamoDbClient.putItem(request -> request.tableName("pn-SsAnagraficaClient")
-                .item(Map.of("name", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(client.getName()).build(),
-                        "canReadTags", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().bool(client.getCanReadTags()).build(),
-                        "canWriteTags", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().bool(client.getCanWriteTags()).build(),
-                        "canExecutePatch", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().bool(client.getCanExecutePatch()).build(),
-                        "apiKey", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(client.getApiKey()).build())));
-
+        var itemMap = new HashMap<>(Map.of("name", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(client.getName()).build(),
+                "canWriteTags", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().bool(client.getCanWriteTags()).build(),
+                "canExecutePatch", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().bool(client.getCanExecutePatch()).build(),
+                "apiKey", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(client.getApiKey()).build()));
+        if (client.getCanReadTags() != null) {
+            itemMap.put("canReadTags", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().bool(client.getCanReadTags()).build());
+        }
+        dynamoDbClient.putItem(request -> request.tableName("pn-SsAnagraficaClient").item(itemMap));
     }
+
     private static UserConfiguration createClient() {
         UserConfiguration client = new UserConfiguration();
         client.setName("pn-delivery");

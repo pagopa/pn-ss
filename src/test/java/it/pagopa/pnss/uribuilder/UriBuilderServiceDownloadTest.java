@@ -16,6 +16,9 @@ import lombok.CustomLog;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -118,27 +121,34 @@ class UriBuilderServiceDownloadTest {
     private static final DocumentResponse DOCUMENT_RESPONSE_TAGS = new DocumentResponse().document(new Document().documentKey("documentKey").tags(createTagsList()).documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
 
 
-    private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(String requestIdx, Boolean metadataOnly)
+    private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(String requestIdx, Boolean metadataOnly, String clientId, String apiKey, Boolean tags)
     {
         this.webClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         return this.webClient.get()
                 .uri(uriBuilder -> uriBuilder.path(urlDownload).queryParam("metadataOnly", metadataOnly)
+                        .queryParam("tags", tags)
                         //... building a URI
                         .build(requestIdx))
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
-                .header(xApiKey, X_API_KEY_VALUE)
+                .header(X_PAGOPA_SAFESTORAGE_CX_ID, clientId)
+                .header(xApiKey, apiKey)
                 .header(HttpHeaders.ACCEPT, "application/json")
                 .attribute("metadataOnly", metadataOnly);
     }
 
     private WebTestClient.ResponseSpec fileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
-        return callRequestHeadersSpec(requestIdx, metadataOnly)
+        return callRequestHeadersSpec(requestIdx, metadataOnly, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE, X_API_KEY_VALUE, false)
+                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
+                .exchange();
+    }
+
+    private WebTestClient.ResponseSpec fileDownloadTestCallWithClientId(String requestIdx, Boolean metadataOnly, String clientId, String apiKey) {
+        return callRequestHeadersSpec(requestIdx, metadataOnly, clientId, apiKey, true)
                 .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
                 .exchange();
     }
 
     private WebTestClient.ResponseSpec noTraceIdFileDownloadTestCall(String requestIdx, Boolean metadataOnly) {
-        return callRequestHeadersSpec(requestIdx, metadataOnly)
+        return callRequestHeadersSpec(requestIdx, metadataOnly, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE, X_API_KEY_VALUE, false)
                 .exchange();
     }
 
@@ -637,15 +647,21 @@ class UriBuilderServiceDownloadTest {
 
     }
 
-    @Test
-    void testCreateUriForDownloadFileTags_noPermessi_Ko() {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(booleans = {false})
+    void testCreateUriForDownloadFileTags_noPermessi_Ko(Boolean canReadTags) {
+        log.info("CanReadTags: " + canReadTags);
+        String docId = "documentKey";
+        String xPagopaSafestorageCxId = "client-not-authorized";
+        String xApiKey = "client-not-authorized_api_key";
 
         // Mock delle risposte delle chiamate interne
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
-        userConfiguration.setName("testXXXX");
-        userConfiguration.setApiKey("xxxx");
-        userConfiguration.setCanReadTags(false);
+        userConfiguration.setName(xPagopaSafestorageCxId);
+        userConfiguration.setApiKey(xApiKey);
+        userConfiguration.setCanReadTags(canReadTags);
         userConfiguration.setCanRead(Collections.singletonList(PN_AAR));
         userConfig.setUserConfiguration(userConfiguration);
 
@@ -654,11 +670,10 @@ class UriBuilderServiceDownloadTest {
         d.setDocumentState(TECHNICAL_STATUS_AVAILABLE);
 
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-        when(uriBuilderService.createUriForDownloadFile("documentKey", "testXXXX", "xxxxx", false, true))
-                .thenReturn(Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN)));
-        // Chiamata al metodo da testare
-        fileDownloadTestCall("documentKey", false).expectStatus().isForbidden();
+        mockGetDocument(d, docId);
 
+        // Chiamata al metodo da testare
+        fileDownloadTestCallWithClientId(docId, false, xPagopaSafestorageCxId, xApiKey).expectStatus().isForbidden();
     }
 
     private void mockGetDocument(DocumentInput d, String docId) {

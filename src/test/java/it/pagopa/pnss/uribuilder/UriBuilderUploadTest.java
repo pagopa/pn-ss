@@ -13,6 +13,9 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
 
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -290,6 +293,7 @@ class UriBuilderUploadTest {
             userConfiguration.setName(xPagoPaSafestorageCxIdValue);
             userConfiguration.setApiKey(xApiKeyValue);
             userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
+            userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
 
             Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
@@ -375,6 +379,7 @@ class UriBuilderUploadTest {
             userConfiguration.setName(xPagoPaSafestorageCxIdValue);
             userConfiguration.setApiKey(xApiKeyValue);
             userConfiguration.setCanCreate(List.of(PN_AAR));
+            userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
 
             Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
@@ -420,6 +425,7 @@ class UriBuilderUploadTest {
             userConfiguration.setName(xPagoPaSafestorageCxIdValue);
             userConfiguration.setApiKey(xApiKeyValue);
             userConfiguration.setCanCreate(List.of(PN_AAR));
+            userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
@@ -441,6 +447,7 @@ class UriBuilderUploadTest {
             userConfiguration.setName(xPagoPaSafestorageCxIdValue);
             userConfiguration.setApiKey(xApiKeyValue);
             userConfiguration.setCanCreate(List.of(PN_AAR));
+            userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
@@ -578,6 +585,28 @@ class UriBuilderUploadTest {
             when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new PutTagsBadRequestException()));
 
             fileUploadTestCall(fcr).expectStatus().isBadRequest();
+        }
+
+        @ParameterizedTest
+        @NullSource
+        @ValueSource(booleans = {false})
+        void createFileWithTags_PutTagsForbidden_Ko(Boolean canWriteTags) {
+            FileCreationRequest fcr = createFileCreationRequest();
+
+            UserConfigurationResponse userConfig = new UserConfigurationResponse();
+            UserConfiguration userConfiguration = new UserConfiguration();
+            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
+            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setCanCreate(List.of(PN_AAR));
+            userConfiguration.setCanWriteTags(canWriteTags);
+            userConfig.setUserConfiguration(userConfiguration);
+
+            when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
+            when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new PutTagsBadRequestException()));
+
+            fileUploadTestCall(fcr).expectStatus().isForbidden();
         }
 
         @Test

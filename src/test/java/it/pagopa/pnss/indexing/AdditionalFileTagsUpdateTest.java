@@ -12,6 +12,9 @@ import lombok.CustomLog;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -231,10 +234,12 @@ class AdditionalFileTagsUpdateTest {
      * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con aggiunta di tag da parte di un utente senza permessi
      * Risultato atteso: 403 FORBIDDEN
      */
-    @Test
-    void testSetForbidden() {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(booleans = {false})
+    void testSetForbidden(Boolean canWriteTags) {
         var userConfiguration =
-                new UserConfiguration().name(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE).apiKey(X_API_KEY_VALUE).canWriteTags(false);
+                new UserConfiguration().name(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE).apiKey(X_API_KEY_VALUE).canWriteTags(canWriteTags);
         var userConfigurationResponse = new UserConfigurationResponse().userConfiguration(userConfiguration);
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfigurationResponse));
 
@@ -406,11 +411,13 @@ class AdditionalFileTagsUpdateTest {
      * l'eliminazione di tag validi, ma con un client non autorizzato
      * Risultato atteso: 403 FORBIDDEN
      */
-    @Test
-    void testMassiveRequestUnauthorizedKo() {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(booleans = {false})
+    void testMassiveRequestUnauthorizedKo(Boolean canWriteTags) {
 
         var userConfiguration =
-                new UserConfiguration().name(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE).apiKey(X_API_KEY_VALUE).canWriteTags(false);
+                new UserConfiguration().name(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE).apiKey(X_API_KEY_VALUE).canWriteTags(canWriteTags);
         var userConfigurationResponse = new UserConfigurationResponse().userConfiguration(userConfiguration);
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfigurationResponse));
 

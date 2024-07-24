@@ -32,6 +32,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     public static final String INSERT_EVENT = "INSERT";
     public static final String MODIFY_EVENT = "MODIFY";
     public static final String REMOVE_EVENT = "REMOVE";
+    private final String CAN_READ_TAGS = "canReadTags";
     private Integer checkpointCounter;
     private final EventBridgeClient eventBridgeClient = EventBridgeClient.create();
     private boolean test = false;
@@ -141,12 +142,12 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     }
 
     private Mono<Boolean> getCanReadTags(String cxId) {
-        return Mono.fromCompletionStage(
-                dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
-                                .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
-                                .projectionExpression("canReadTags"))
-                        .thenApply(getItemResponse -> getItemResponse.item().get("canReadTags").bool())
-        );
+        return Mono.fromCompletionStage(dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
+                        .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
+                        .projectionExpression(CAN_READ_TAGS)))
+                .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
+                .map(getItemResponse -> getItemResponse.item().get(CAN_READ_TAGS).bool())
+                .defaultIfEmpty(false);
     }
 
 

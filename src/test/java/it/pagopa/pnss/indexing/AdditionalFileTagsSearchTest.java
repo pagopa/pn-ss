@@ -9,6 +9,7 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -390,6 +391,31 @@ class AdditionalFileTagsSearchTest {
             tags.put("key" + i, "value" + i);
         }
         additionalFileTagsSearchCall("and", false, PN_CLIENT_AUTHORIZED, PN_CLIENT_AUTHORIZED_API_KEY, tags)
+                .expectStatus()
+                .isBadRequest();
+    }
+
+
+    /**
+     * Ricerca di file senza fornire tag su cui effettuare la ricerca
+     * Risultato atteso: 400 BAD REQUEST
+     */
+    @ParameterizedTest
+    @NullAndEmptySource
+    void search_emptyTagParams_ko(Map<String, String> queryParams) {
+
+        //GIVEN
+        String iunValue = "ABCDEF";
+        String conservazioneValue = "OK";
+        String iunKeyValue = IUN + "~" + iunValue;
+        String conservazioneKeyValue = CONSERVAZIONE + "~" + conservazioneValue;
+
+        //WHEN
+        when(tagsClientCall.getTagsRelations(iunKeyValue)).thenReturn(Mono.just(new TagsRelationsResponse().tagsRelationsDto(new TagsRelationsDto().tagKeyValue(iunKeyValue).addFileKeysItem(FILE_KEY))));
+        when(tagsClientCall.getTagsRelations(conservazioneKeyValue)).thenReturn(Mono.just(new TagsRelationsResponse().tagsRelationsDto(new TagsRelationsDto().tagKeyValue(conservazioneKeyValue).addFileKeysItem(FILE_KEY))));
+
+        //THEN
+        additionalFileTagsSearchCall(null, false, PN_CLIENT_AUTHORIZED, PN_CLIENT_AUTHORIZED_API_KEY, queryParams)
                 .expectStatus()
                 .isBadRequest();
     }

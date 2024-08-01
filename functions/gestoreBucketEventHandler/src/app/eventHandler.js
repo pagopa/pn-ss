@@ -1,7 +1,7 @@
 "use strict";
 
 const http = require(process.env.PnSsGestoreRepositoryProtocol);
-const { S3Client, GetObjectCommand} = require("@aws-sdk/client-s3")
+const { S3Client, GetObjectCommand, HeadObjectCommand } = require("@aws-sdk/client-s3")
 const crypto = require("crypto");
 
 const HOSTNAME = process.env.PnSsHostname;
@@ -115,7 +115,13 @@ exports.handleEvent = async (event) => {
           jsonDocument.documentState = "deleted";
           break;
         case "ObjectRemoved:Delete":
-          jsonDocument.documentState = "deleted";
+          try {
+            await s3.send(new HeadObjectCommand(params));
+          } catch (error) {
+            if (error.name === "NotFound") {
+              jsonDocument.documentState = "deleted";
+            }
+          }
           break;
         default:
           return;

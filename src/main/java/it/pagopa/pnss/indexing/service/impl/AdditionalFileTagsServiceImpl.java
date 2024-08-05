@@ -314,7 +314,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
 
     private void validateMaxValuesPerTag(Map<String, List<String>> tags) throws RequestValidationException {
         if (tags != null) {
-            int maxValues = Math.toIntExact(indexingConfiguration.getIndexingLimits().getMaxValuesPerTagDocument());
+            int maxValues = Math.toIntExact(indexingConfiguration.getIndexingLimits().getMaxValuesPerTagPerRequest());
             for (Map.Entry<String, List<String>> entry : tags.entrySet()) {
                 if (entry.getValue().size() > maxValues) {
                     throw new RequestValidationException("Number of values for tag " + entry.getKey() + " exceeds maxValues limit");

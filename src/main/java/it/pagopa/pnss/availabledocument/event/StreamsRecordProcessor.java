@@ -15,12 +15,15 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.MDC;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
+import java.time.Duration;
 import java.util.Map;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
@@ -145,6 +148,10 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         return Mono.fromCompletionStage(dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
                         .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
                         .projectionExpression(CAN_READ_TAGS)))
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(3))
+                        .filter(DynamoDbException.class::isInstance)
+                        .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
+                        .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure()))
                 .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
                 .map(getItemResponse -> getItemResponse.item().get(CAN_READ_TAGS).bool())
                 .defaultIfEmpty(false);

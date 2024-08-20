@@ -436,6 +436,14 @@ Parameters:
     Type: String
     Description: 'Name of the parameter store containing the configuration for the indexing service'
 
+  SignAndTimemarkMaxThreadPoolSize:
+    Type: String
+    Description: 'Sign and timemark transformation max thread pool size'
+
+  RasterMaxThreadPoolSize:
+    Type: String
+    Description: 'Raster transformation max thread pool size'
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -546,6 +554,8 @@ Resources:
         ContainerEnvEntry51: !Sub 'PnSsIndexingConfiguration=${PnSsIndexingConfiguration}'
         ContainerEnvEntry52: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
         ContainerEnvEntry53: !Sub 'PdfRasterBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry54: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
+        ContainerEnvEntry55: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

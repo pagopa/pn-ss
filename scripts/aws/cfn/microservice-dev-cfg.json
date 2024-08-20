@@ -37,6 +37,8 @@
     "CpuValue": "1024",
     "MemoryAmount": "4GB",
     "PnSsIgnoredUpdateMetadataList": "s3://pn-runtime-environment-variables-eu-south-1-089813480515/pn-safe-storage/UpdateFileMetadataIgnore.list",
-    "PnSsIndexingConfiguration": "Pn-SS-IndexingConfiguration"
+    "PnSsIndexingConfiguration": "Pn-SS-IndexingConfiguration",
+    "SignAndTimemarkMaxThreadPoolSize": "50",
+    "RasterMaxThreadPoolSize": "50"
   }
 }

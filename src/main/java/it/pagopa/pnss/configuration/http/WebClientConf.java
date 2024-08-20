@@ -1,14 +1,13 @@
 package it.pagopa.pnss.configuration.http;
 
 import it.pagopa.pnss.common.configurationproperties.endpoint.internal.statemachine.StateMachineEndpointProperties;
-import org.slf4j.MDC;
+import it.pagopa.pnss.common.configurationproperties.endpoint.internal.pdfraster.PdfRasterEndpointProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.JettyClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
@@ -38,6 +37,11 @@ public class WebClientConf {
     @Bean
     public WebClient stateMachineWebClient(StateMachineEndpointProperties stateMachineEndpointProperties) {
         return defaultJsonWebClientBuilder().baseUrl(stateMachineEndpointProperties.containerBaseUrl()).build();
+    }
+
+    @Bean
+    public WebClient pdfRasterWebClient(PdfRasterEndpointProperties pdfRasterEndpointProperties) {
+        return defaultJsonWebClientBuilder().baseUrl(pdfRasterEndpointProperties.containerBaseUrl()).build();
     }
 
     @Bean

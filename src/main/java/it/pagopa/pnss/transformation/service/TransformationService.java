@@ -159,7 +159,8 @@ public class TransformationService {
         return s3Service.getObject(key, stagingBucketName)
                 .map(BytesWrapper::asByteArray)
                 .flatMap(pdfRasterCall::convertPdf)
-                .flatMap(convertedDocument -> s3Service.putObject(key, convertedDocument, document.getContentType(), bucketName.ssHotName()));
+                .flatMap(convertedDocument -> s3Service.putObject(key, convertedDocument, document.getContentType(), bucketName.ssHotName()))
+                .doFinally(signalType -> rasterSemaphore.release());
     }
 
     private Mono<Boolean> isSignatureNeeded(String key, int retry) {

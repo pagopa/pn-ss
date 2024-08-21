@@ -158,7 +158,7 @@ public class TransformationService {
         acquireSemaphore(rasterSemaphore);
         return s3Service.getObject(key, stagingBucketName)
                 .map(BytesWrapper::asByteArray)
-                .flatMap(pdfRasterCall::convertPdf)
+                .flatMap(fileBytes -> pdfRasterCall.convertPdf(fileBytes, key))
                 .flatMap(convertedDocument -> s3Service.putObject(key, convertedDocument, document.getContentType(), bucketName.ssHotName()))
                 .doFinally(signalType -> rasterSemaphore.release());
     }

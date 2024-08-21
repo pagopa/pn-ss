@@ -6,6 +6,8 @@ import lombok.CustomLog;
 import lombok.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.codec.multipart.Part;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -31,10 +33,15 @@ public class PdfRasterCallImpl implements PdfRasterCall {
         this.pdfRasterRetryStrategy = pdfRasterRetryStrategy;
     }
 
-    public Mono<byte[]> convertPdf(byte[] fileBytes) {
+    public Mono<byte[]> convertPdf(byte[] fileBytes, String fileKey) {
         log.logInvokingExternalService("pn-pdfraster", "convertPdf()");
         MultiValueMap<String, Object> multipartData = new LinkedMultiValueMap<>();
-        multipartData.add("file", new ByteArrayResource(fileBytes));
+        multipartData.add("file", new ByteArrayResource(fileBytes){
+            @Override
+            public String getFilename() {
+                return fileKey;
+            }
+        });
         return pdfRasterWebClient.post()
                 .uri(pdfRasterEndpointProperties.convertPdf())
                 .contentType(MediaType.MULTIPART_FORM_DATA)

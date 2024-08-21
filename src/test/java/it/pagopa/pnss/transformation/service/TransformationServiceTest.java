@@ -394,7 +394,7 @@ public class TransformationServiceTest {
         };
 
         mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.RASTER));
-        when(pdfRasterCall.convertPdf(any(byte[].class))).thenReturn(Mono.just(new byte[10]));
+        when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.just(new byte[10]));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
@@ -459,7 +459,7 @@ public class TransformationServiceTest {
         };
 
         mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.RASTER));
-        when(pdfRasterCall.convertPdf(any(byte[].class))).thenReturn(Mono.error(new RuntimeException("error")));
+        when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.error(new RuntimeException("error")));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();

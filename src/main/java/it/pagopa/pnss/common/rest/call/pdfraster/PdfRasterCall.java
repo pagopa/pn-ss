@@ -4,6 +4,6 @@ import reactor.core.publisher.Mono;
 
 public interface PdfRasterCall {
 
-    Mono<byte[]> convertPdf(byte[] fileBytes);
+    Mono<byte[]> convertPdf(byte[] fileBytes, String fileKey);
 
 }

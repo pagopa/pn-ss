@@ -4,8 +4,12 @@ import it.pagopa.pnss.common.configurationproperties.endpoint.internal.pdfraster
 import it.pagopa.pnss.configurationproperties.PdfRasterRetryStrategyProperties;
 import lombok.CustomLog;
 import lombok.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -29,10 +33,12 @@ public class PdfRasterCallImpl implements PdfRasterCall {
 
     public Mono<byte[]> convertPdf(byte[] fileBytes) {
         log.logInvokingExternalService("pn-pdfraster", "convertPdf()");
+        MultiValueMap<String, Object> multipartData = new LinkedMultiValueMap<>();
+        multipartData.add("file", new ByteArrayResource(fileBytes));
         return pdfRasterWebClient.post()
                 .uri(pdfRasterEndpointProperties.convertPdf())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
-                .bodyValue(fileBytes)
+                .body(BodyInserters.fromMultipartData(multipartData))
                 .retrieve()
                 .bodyToMono(byte[].class)
                 .retryWhen(pdfRasterRetryStrategy);

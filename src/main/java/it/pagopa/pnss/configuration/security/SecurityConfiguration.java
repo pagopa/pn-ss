@@ -57,12 +57,16 @@ public class SecurityConfiguration {
         String pagopaSafestorageCxId = headerValues.getFirst(xPagopaSafestorageCxId);
         String apiKey = headerValues.getFirst(xApiKey);
         if ((pagopaSafestorageCxId != null && !pagopaSafestorageCxId.isEmpty())) {
-            return userConfigurationClientCall.getUser(pagopaSafestorageCxId)//
-                    .onErrorResume(IdClientNotFoundException.class//
-                            , throwable -> Mono.error(new ResponseStatusException(FORBIDDEN, String.format("Invalid %s header", xPagopaSafestorageCxId))))//
+            return userConfigurationClientCall.getUser(pagopaSafestorageCxId)
+                    .onErrorResume(IdClientNotFoundException.class
+                            , throwable -> {
+                            	log.debug("IdClientNotFoundException {} - {}", pagopaSafestorageCxId, (apiKey == null ? "null" : apiKey));
+                            	return Mono.error(new ResponseStatusException(FORBIDDEN, String.format("Invalid %s header", xPagopaSafestorageCxId)));	
+                            })
                     .flatMap(userConfigurationResponse -> {
                         String testApiKey = (apiKey == null || apiKey.isEmpty()) ? "" : apiKey;
                         if (!testApiKey.isEmpty() && !userConfigurationResponse.getUserConfiguration().getApiKey().equals(testApiKey)) {
+                        	log.debug("apiKey not match {} - {} - {}", pagopaSafestorageCxId, (apiKey == null ? "null" : apiKey), testApiKey);
                             return Mono.error(new ResponseStatusException(FORBIDDEN, String.format("Invalid %s header", xApiKey)));
                         }
                         return Mono.just(new KeyAuthenticationToken(testApiKey, pagopaSafestorageCxId));

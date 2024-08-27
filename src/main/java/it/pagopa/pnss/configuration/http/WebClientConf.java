@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.JettyClientHttpConnector;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
@@ -22,7 +23,10 @@ public class WebClientConf {
     @Value("${pn.log.cx-id-header}")
     private String corrIdHeaderName;
 
-    public WebClientConf(JettyHttpClientConf jettyHttpClientConf) {
+	@Value("${spring.codec.max-in-memory-size}")
+	int PDFRastermaxInMemorySize; // 10MB
+
+	public WebClientConf(JettyHttpClientConf jettyHttpClientConf) {
         this.jettyHttpClientConf = jettyHttpClientConf;
     }
 
@@ -41,7 +45,10 @@ public class WebClientConf {
 
     @Bean
     public WebClient pdfRasterWebClient(PdfRasterEndpointProperties pdfRasterEndpointProperties) {
-        return defaultJsonWebClientBuilder().baseUrl(pdfRasterEndpointProperties.containerBaseUrl()).build();
+    	ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(PDFRastermaxInMemorySize))
+            .build();
+        return defaultJsonWebClientBuilder().exchangeStrategies(exchangeStrategies).baseUrl(pdfRasterEndpointProperties.containerBaseUrl()).build();
     }
 
     @Bean

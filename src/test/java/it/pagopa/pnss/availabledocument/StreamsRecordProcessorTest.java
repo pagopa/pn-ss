@@ -1,5 +1,6 @@
 package it.pagopa.pnss.availabledocument;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.StreamRecord;
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
@@ -16,9 +17,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.NullSource;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,14 +28,18 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static it.pagopa.pnss.availabledocument.event.ManageDynamoEvent.*;
 import static it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor.*;
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 @SpringBootTestWebEnv
@@ -53,7 +56,7 @@ class StreamsRecordProcessorTest {
     @BeforeEach
     void setUp() {
 
-        putAnagraficaClient(createClient());
+        putAnagraficaClient(createClient(true));
     }
 
     @ParameterizedTest
@@ -62,14 +65,14 @@ class StreamsRecordProcessorTest {
     void testProcessRecordsWithoutPermissions(Boolean canReadTagsValue)  {
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
 
-        UserConfiguration client = createClient();
+        UserConfiguration client = createClient(true);
         client.setCanReadTags(canReadTagsValue);
         putAnagraficaClient(client);
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
 
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED);
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED,true);
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
@@ -88,7 +91,7 @@ class StreamsRecordProcessorTest {
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
 
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED);
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED,true);
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
@@ -106,12 +109,52 @@ class StreamsRecordProcessorTest {
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
 
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT, AVAILABLE, BOOKED);
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT, AVAILABLE, BOOKED,true);
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
 
         Assertions.assertDoesNotThrow(() -> srp.processRecords(processRecordsInput));
+    }
+    @ParameterizedTest
+    @MethodSource("provideClientsAndTagsParameters")
+    void testProcessRecordsWithDifferentConditions(boolean clientAuthorized, boolean withTags, int expectedCount) {
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
+
+        UserConfiguration client = createClient(clientAuthorized);
+        putAnagraficaClient(client);
+
+        ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
+        List<Record> records = new ArrayList<>();
+
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED,withTags);
+
+
+        records.add(new RecordAdapter(recordDyanmo));
+        processRecordsInput.withRecords(records);
+        Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
+        StepVerifier.create(eventSendToBridge).expectNextCount(expectedCount).verifyComplete();
+    }
+    @Test
+    void testProcessRecordsWithDynamoDbError() {
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
+
+        ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
+        List<Record> records = new ArrayList<>();
+
+
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED,true);
+        StreamsRecordProcessor srpSpy = spy(srp);
+        doThrow(SdkClientException.class).when(srpSpy).getFromDynamo(anyString());
+        doCallRealMethod().when(srpSpy).getCanReadTags(anyString());
+        records.add(new RecordAdapter(recordDyanmo));
+        processRecordsInput.withRecords(records);
+        Flux<PutEventsRequestEntry> eventSendToBridge = srpSpy.findEventSendToBridge(processRecordsInput);
+
+        StepVerifier.create(eventSendToBridge)
+                .thenAwait(Duration.ofSeconds(3))
+                .expectTimeout(Duration.ofSeconds(2))
+                .verify();
     }
 
     @Test
@@ -121,7 +164,7 @@ class StreamsRecordProcessorTest {
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
 
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED);
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED,true);
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
@@ -136,7 +179,7 @@ class StreamsRecordProcessorTest {
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
 
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(INSERT_EVENT,AVAILABLE,BOOKED);
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(INSERT_EVENT,AVAILABLE,BOOKED,true);
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
@@ -151,7 +194,7 @@ class StreamsRecordProcessorTest {
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
 
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(REMOVE_EVENT,AVAILABLE,BOOKED);
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(REMOVE_EVENT,AVAILABLE,BOOKED,true);
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
@@ -166,7 +209,7 @@ class StreamsRecordProcessorTest {
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
 
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,AVAILABLE);
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,AVAILABLE,true);
 
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
@@ -175,16 +218,18 @@ class StreamsRecordProcessorTest {
     }
 
     @NotNull
-    private  com.amazonaws.services.dynamodbv2.model.Record createRecorDynamo(String eventName ,String documentStateNew,  String documentStateOld) {
+    private  com.amazonaws.services.dynamodbv2.model.Record createRecorDynamo(String eventName ,String documentStateNew,  String documentStateOld, boolean wTags) {
         com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = new com.amazonaws.services.dynamodbv2.model.Record();
         recordDyanmo.setEventName(eventName);
         StreamRecord dynamodbRecord = new StreamRecord();
         Map<String, AttributeValue> image = new HashMap<>();
-        Map<String,AttributeValue> tags = new HashMap<>();
-        tags.put("tag1", new AttributeValue().withL(new AttributeValue().withS("value1"),new AttributeValue().withS("value2")));
+
+            Map<String,AttributeValue> tags = new HashMap<>();
+        if(wTags){
+            tags.put("tag1", new AttributeValue().withL(new AttributeValue().withS("value1"),new AttributeValue().withS("value2")));
+            image.put(TAGS_KEY, createAttributeM().withM(tags));
+        }
         image.put(DOCUMENTKEY_KEY, createAttributeS("111"));
-
-
         image.put(DOCUMENTSTATE_KEY, createAttributeS(documentStateNew));
         image.put(DOCUMENTTYPE_KEY, createAttributeM());
         image.get(DOCUMENTTYPE_KEY).getM().put(TIPODOCUMENTO_KEY,createAttributeS(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS));
@@ -193,7 +238,6 @@ class StreamsRecordProcessorTest {
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));
         image.put(RETENTIONUNTIL_KEY, createAttributeS("80"));
         image.put(CLIENTSHORTCODE_KEY, createAttributeS("pn-delivery"));
-        image.put(TAGS_KEY, createAttributeM().withM(tags));
         dynamodbRecord.setNewImage(image);
 
         image = new HashMap<>();
@@ -206,7 +250,7 @@ class StreamsRecordProcessorTest {
         image.get(DOCUMENTTYPE_KEY).getM().put(CHECKSUM_KEY,createAttributeS("MD5"));
         image.put(RETENTIONUNTIL_KEY, createAttributeS("80"));
         image.put(CLIENTSHORTCODE_KEY, createAttributeS("pn-delivery"));
-        image.put(TAGS_KEY, createAttributeM().withM(tags));
+        if (wTags)  image.put(TAGS_KEY, createAttributeM().withM(tags));
 
         dynamodbRecord.setOldImage(image);
 
@@ -226,9 +270,10 @@ class StreamsRecordProcessorTest {
         dynamoDbClient.putItem(request -> request.tableName("pn-SsAnagraficaClient").item(itemMap));
     }
 
-    private static UserConfiguration createClient() {
+    private static UserConfiguration createClient(boolean authorized) {
         UserConfiguration client = new UserConfiguration();
-        client.setName("pn-delivery");
+        String clientName = authorized ? "pn-delivery" : "pn-delivery-unauthorized";
+        client.setName(clientName);
         client.setCanReadTags(true);
         client.setCanWriteTags(true);
         client.setCanExecutePatch(true);
@@ -254,7 +299,13 @@ class StreamsRecordProcessorTest {
 
     }
 
-
+    private static Stream<Arguments> provideClientsAndTagsParameters() {
+        return Stream.of(
+                Arguments.of(false, true, 1),  // testProcessRecordsWithClientNotInList
+                Arguments.of(true, false, 1),  // testProcessRecordsWithoutTags
+                Arguments.of(false, false, 0)  // testProcessRecordsWithoutTagsWithClientNotInList
+        );
+    }
 
     @NotNull
     private static AttributeValue createAttributeS(String sVAlue) {

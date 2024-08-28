@@ -19,12 +19,14 @@ import reactor.util.retry.Retry;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
@@ -35,7 +37,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     public static final String INSERT_EVENT = "INSERT";
     public static final String MODIFY_EVENT = "MODIFY";
     public static final String REMOVE_EVENT = "REMOVE";
-    private final String CAN_READ_TAGS = "canReadTags";
+    private static final String CAN_READ_TAGS = "canReadTags";
     private Integer checkpointCounter;
     private final EventBridgeClient eventBridgeClient = EventBridgeClient.create();
     private boolean test = false;
@@ -144,10 +146,9 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         }
     }
 
-    private Mono<Boolean> getCanReadTags(String cxId) {
-        return Mono.fromCompletionStage(dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
-                        .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
-                        .projectionExpression(CAN_READ_TAGS)))
+    public Mono<Boolean> getCanReadTags(String cxId) {
+        return Mono.defer(() -> Mono.fromCompletionStage(getFromDynamo(cxId)))
+                .onErrorResume(DynamoDbException.class, Mono::error)
                 .retryWhen(Retry.backoff(3, Duration.ofSeconds(3))
                         .filter(DynamoDbException.class::isInstance)
                         .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
@@ -155,6 +156,12 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
                 .map(getItemResponse -> getItemResponse.item().get(CAN_READ_TAGS).bool())
                 .defaultIfEmpty(false);
+    }
+
+    public CompletableFuture<GetItemResponse> getFromDynamo(String cxId){
+        return dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
+                .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
+                .projectionExpression(CAN_READ_TAGS));
     }
 
 

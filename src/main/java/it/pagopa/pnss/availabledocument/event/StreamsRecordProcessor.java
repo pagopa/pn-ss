@@ -1,5 +1,6 @@
 package it.pagopa.pnss.availabledocument.event;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
@@ -48,7 +49,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge, DynamoDbAsyncClient dynamoDbClient) {
         this.disponibilitaDocumentiEventBridge = disponibilitaDocumentiEventBridge;
-          this.dynamoDbClient = dynamoDbClient;
+        this.dynamoDbClient = dynamoDbClient;
     }
     public StreamsRecordProcessor( String disponibilitaDocumentiEventBridge,DynamoDbAsyncClient dynamoDbClient, boolean test) {
         this.disponibilitaDocumentiEventBridge = disponibilitaDocumentiEventBridge;
@@ -66,23 +67,23 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         MDC.clear();
         log.logStartingProcess(PROCESS_RECORDS);
         MDCUtils.addMDCToContextAndExecute(
-                findEventSendToBridge(processRecordsInput)
-                .buffer(10)
-                .map(putEventsRequestEntries -> {
+                        findEventSendToBridge(processRecordsInput)
+                                .buffer(10)
+                                .map(putEventsRequestEntries -> {
 
-                    PutEventsRequest eventsRequest = PutEventsRequest.builder()
-                            .entries(putEventsRequestEntries)
-                            .build();
+                                    PutEventsRequest eventsRequest = PutEventsRequest.builder()
+                                            .entries(putEventsRequestEntries)
+                                            .build();
 
-                    log.debug(CLIENT_METHOD_INVOCATION, "eventBridgeClient.putEvents()", eventsRequest);
-                    return eventBridgeClient.putEvents(eventsRequest);
-                })
-                .then()
-                .doOnError(e -> log.fatal("DBStream: Errore generico ", e))
-                .doOnSuccess(unused -> {
-                    log.logEndingProcess(PROCESS_RECORDS);
-                    setCheckpoint(processRecordsInput);
-                }))
+                                    log.debug(CLIENT_METHOD_INVOCATION, "eventBridgeClient.putEvents()", eventsRequest);
+                                    return eventBridgeClient.putEvents(eventsRequest);
+                                })
+                                .then()
+                                .doOnError(e -> log.fatal("DBStream: Errore generico ", e))
+                                .doOnSuccess(unused -> {
+                                    log.logEndingProcess(PROCESS_RECORDS);
+                                    setCheckpoint(processRecordsInput);
+                                }))
                 .subscribe();
     }
 
@@ -116,9 +117,9 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         try {
             if (!test) {
 
-                    log.info("Setting checkpoint on id {}", processRecordsInput.getRecords().get(processRecordsInput.getRecords().size() - 1));
+                log.info("Setting checkpoint on id {}", processRecordsInput.getRecords().get(processRecordsInput.getRecords().size() - 1));
 
-                    processRecordsInput.getCheckpointer().checkpoint();
+                processRecordsInput.getCheckpointer().checkpoint();
 
             }
         } catch (ShutdownException se) {
@@ -148,11 +149,10 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     public Mono<Boolean> getCanReadTags(String cxId) {
         return Mono.defer(() -> Mono.fromCompletionStage(getFromDynamo(cxId)))
-                .onErrorResume(DynamoDbException.class, Mono::error)
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(3))
-                        .filter(DynamoDbException.class::isInstance)
-                        .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
-                        .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure()))
+                .onErrorResume(throwable -> throwable instanceof  DynamoDbException || throwable instanceof SdkClientException, Mono::error)
+                .retryWhen(Retry.indefinitely()
+                        .filter(throwable -> throwable instanceof DynamoDbException || throwable instanceof SdkClientException)
+                        .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure())))
                 .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
                 .map(getItemResponse -> getItemResponse.item().get(CAN_READ_TAGS).bool())
                 .defaultIfEmpty(false);

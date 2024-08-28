@@ -26,6 +26,7 @@ import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -44,6 +45,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     private boolean test = false;
     private final String disponibilitaDocumentiEventBridge;
     DynamoDbAsyncClient dynamoDbClient;
+
 
 
 
@@ -97,16 +99,29 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))
                 .flatMap(streamRecord -> {
                     String cxId = streamRecord.getDynamodb().getNewImage().get("clientShortCode").getS();
-                    return getCanReadTags(cxId)
-                            .mapNotNull(canReadTags -> {
-                                ManageDynamoEvent mde = new ManageDynamoEvent();
-                                PutEventsRequestEntry putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
-                                        streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage(), canReadTags);
-                                if (putEventsRequestEntry != null) {
-                                    log.info("Event send to bridge {}", putEventsRequestEntry);
-                                }
-                                return putEventsRequestEntry;
-                            });
+                    boolean isListEmpty = getClientList() == null || getClientList().isEmpty();
+                    boolean isClientInList = !isListEmpty && isClientInList(cxId);
+                    boolean hasTags = streamRecord.getDynamodb().getNewImage().get("tags") != null && !streamRecord.getDynamodb().getNewImage().get("tags").getM().isEmpty();
+
+                    if (isClientInList || hasTags) {
+                        return getCanReadTags(cxId)
+                                .mapNotNull(canReadTags -> {
+                                    ManageDynamoEvent mde = new ManageDynamoEvent();
+                                    PutEventsRequestEntry putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
+                                            streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage(), canReadTags);
+                                    if (putEventsRequestEntry != null) {
+                                        log.info("Event send to bridge {}", putEventsRequestEntry);
+                                    }
+                                    return putEventsRequestEntry;
+                                });
+                    } else {
+                        if(!isClientInList)
+                            log.info("DBStream: Il client {} non è presente nella lista dei client autorizzati", cxId);
+                        if(!hasTags){
+                            log.info("DBStream: Il documento {} non ha tag", streamRecord.getDynamodb().getNewImage().get("documentKey").getS());
+                        }
+                        return Flux.empty();
+                    }
                 })
                 .doOnError(e -> log.fatal("DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> log.info("DBStream: Nessun evento da inviare a bridge"));
@@ -150,7 +165,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     public Mono<Boolean> getCanReadTags(String cxId) {
         return Mono.defer(() -> Mono.fromCompletionStage(getFromDynamo(cxId)))
                 .onErrorResume(throwable -> throwable instanceof  DynamoDbException || throwable instanceof SdkClientException, Mono::error)
-                .retryWhen(Retry.indefinitely()
+                .retryWhen(Retry.backoff(Long.MAX_VALUE, Duration.ofMillis(10)).jitter(0.5)
                         .filter(throwable -> throwable instanceof DynamoDbException || throwable instanceof SdkClientException)
                         .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure())))
                 .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
@@ -164,6 +179,14 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .projectionExpression(CAN_READ_TAGS));
     }
 
+    private boolean isClientInList(String cxId) {
+        List<String> clientList = getClientList();
+        return clientList != null && clientList.contains(cxId);
+    }
 
+    private List<String> getClientList() {
+        String clients= System.getProperty("pn.ss.safe-clients");
+        return clients != null ? List.of(clients.split(";")) : null;
+    }
 
 }

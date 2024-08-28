@@ -25,6 +25,7 @@ import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.io.IOException;
@@ -151,9 +152,9 @@ class StreamsRecordProcessorTest {
         processRecordsInput.withRecords(records);
         Flux<PutEventsRequestEntry> eventSendToBridge = srpSpy.findEventSendToBridge(processRecordsInput);
 
-        StepVerifier.create(eventSendToBridge)
-                .thenAwait(Duration.ofSeconds(3))
-                .expectTimeout(Duration.ofSeconds(2))
+        StepVerifier.withVirtualTime(() -> eventSendToBridge)
+                .thenAwait(Duration.ofSeconds(25))
+                .expectTimeout(Duration.ofSeconds(24))
                 .verify();
     }
 

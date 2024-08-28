@@ -152,7 +152,7 @@ class StreamsRecordProcessorTest {
         processRecordsInput.withRecords(records);
         Flux<PutEventsRequestEntry> eventSendToBridge = srpSpy.findEventSendToBridge(processRecordsInput);
 
-        StepVerifier.withVirtualTime(() -> eventSendToBridge)
+        StepVerifier.create(eventSendToBridge)
                 .thenAwait(Duration.ofSeconds(25))
                 .expectTimeout(Duration.ofSeconds(24))
                 .verify();

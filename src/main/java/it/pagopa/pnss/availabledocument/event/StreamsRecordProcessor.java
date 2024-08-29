@@ -149,8 +149,10 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     @Override
     public void shutdown(ShutdownInput shutdownInput) {
+        log.info("shutdown - Shutdown reason: {}", shutdownInput.getShutdownReason());
         if (shutdownInput.getShutdownReason() == ShutdownReason.TERMINATE) {
             try {
+                log.info("shutdown - Setting checkpoint on shutdown");
                 shutdownInput.getCheckpointer().checkpoint();
             } catch (ShutdownException se) {
                 log.info("shutdown - Encountered shutdown exception, skipping checkpoint: {} {}", se, se.getMessage());

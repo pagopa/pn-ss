@@ -25,6 +25,7 @@ import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 import software.amazon.awssdk.services.eventbridge.model.EventBridgeException;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
+import com.amazonaws.services.dynamodbv2.model.Record;
 
 import java.time.Duration;
 import java.util.List;
@@ -101,11 +102,12 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))
                 .flatMap(streamRecord -> {
                     String cxId = streamRecord.getDynamodb().getNewImage().get("clientShortCode").getS();
-                    boolean isListEmpty = getClientList() == null || getClientList().isEmpty();
-                    boolean isClientInList = !isListEmpty && isClientInList(cxId);
-                    boolean hasTags = streamRecord.getDynamodb().getNewImage().get("tags") != null && !streamRecord.getDynamodb().getNewImage().get("tags").getM().isEmpty();
+                    boolean hasTags = hasTags(streamRecord);
+                    boolean isClientInList = isClientInList(cxId);
+                    boolean isCheckDisabled = isCheckDisabled();
 
-                    if (isClientInList || hasTags) {
+
+                    if (((isClientInList || isCheckDisabled) && hasTags) || (!isClientInList && !isCheckDisabled)) {
                         return getCanReadTags(cxId)
                                 .mapNotNull(canReadTags -> {
                                     ManageDynamoEvent mde = new ManageDynamoEvent();
@@ -117,10 +119,8 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                                     return putEventsRequestEntry;
                                 });
                     } else {
-                        if(!isClientInList)
-                            log.info("DBStream: Il client {} non è presente nella lista dei client autorizzati", cxId);
-                        if(!hasTags){
-                            log.info("DBStream: Il documento {} non ha tag", streamRecord.getDynamodb().getNewImage().get("documentKey").getS());
+                        if (!hasTags) {
+                            log.info("DBStream: Nessun tag presente nel record");
                         }
                         return Flux.empty();
                     }
@@ -186,12 +186,26 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     private List<String> getClientList() {
         String clients= System.getProperty("pn.ss.safe-clients").strip();
+        if (clients == null || clients.isEmpty()) {
+            throw new IllegalArgumentException("pn.ss.safe-clients property is not set");
+        }
         return clients != null && !clients.isEmpty() ? List.of(clients.split(";")) : null;
     }
+
+    private boolean isCheckDisabled() {
+        List<String> clientList = getClientList();
+        return clientList != null && clientList.size() == 1 && "DISABLED".equals(clientList.get(0));
+    }
+
+
+    private boolean hasTags(Record inputRecord) {
+        return inputRecord.getDynamodb().getNewImage().get("tags") != null && !inputRecord.getDynamodb().getNewImage().get("tags").getM().isEmpty();
+    }
+
 
     private Retry indefiniteRetry() {
         return Retry.backoff(Long.MAX_VALUE, Duration.ofMillis(1000))
                 .filter(throwable -> throwable instanceof DynamoDbException || throwable instanceof SdkClientException || throwable instanceof EventBridgeException)
-                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure()+","+retrySignal.failure().getMessage()));
+                .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure()+","+retrySignal.failure().getMessage()));
     }
 }

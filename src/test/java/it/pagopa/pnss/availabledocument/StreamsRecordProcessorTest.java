@@ -55,7 +55,7 @@ class StreamsRecordProcessorTest {
 
     private static final String AUTHORIZED_CLIENT = "pn-delivery";
     private static final String UNAUTHORIZED_CLIENT = "pn-delivery-unauthorized";
-
+    private static final String CHECK_DISABLED = "DISABLED";
 
 
     @BeforeEach
@@ -143,8 +143,34 @@ class StreamsRecordProcessorTest {
 
     @ParameterizedTest
     @MethodSource("provideClientsAndTagsParametersWithClientsEmptyOrNull")
-    void testProcessRecordsWithEmptyClients(String clientName, boolean withTags, int expectedCount) {
-        System.setProperty("pn.ss.safe-clients","");
+    void testProcessRecordsWithEmptyClients(String clientName, boolean withTags, String clients) {
+        if(clients != null) {
+            System.setProperty("pn.ss.safe-clients", clients);
+        } else {
+            System.clearProperty("pn.ss.safe-clients");
+        }
+
+        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
+
+        UserConfiguration client = createClient(clientName);
+        putAnagraficaClient(client);
+
+        ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
+        List<Record> records = new ArrayList<>();
+
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED,withTags,clientName);
+
+
+        records.add(new RecordAdapter(recordDyanmo));
+        processRecordsInput.withRecords(records);
+        Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
+        StepVerifier.create(eventSendToBridge).expectError().verify();
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideClientsAndTagsParametersWithClientsDisabled")
+    void testProcessRecordsWithCheckDisabled(String clientName, boolean withTags, int expectedCount) {
+        System.setProperty("pn.ss.safe-clients",CHECK_DISABLED);
         StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
 
         UserConfiguration client = createClient(clientName);
@@ -329,19 +355,36 @@ class StreamsRecordProcessorTest {
 
     private static Stream<Arguments> provideClientsAndTagsParameters() {
         return Stream.of(
-                Arguments.of(UNAUTHORIZED_CLIENT, true, 1),  // testProcessRecordsWithClientNotInList
-                Arguments.of(AUTHORIZED_CLIENT, false, 1),  // testProcessRecordsWithoutTags
-                Arguments.of(UNAUTHORIZED_CLIENT, false, 0)  // testProcessRecordsWithoutTagsWithClientNotInList
+                Arguments.of(UNAUTHORIZED_CLIENT, true,1), // unauthorized client with tags returns 1 event
+                Arguments.of(UNAUTHORIZED_CLIENT, false,1), // unauthorized client without tags returns 1 event
+                Arguments.of(AUTHORIZED_CLIENT, true,1), // authorized client with tags returns 1 event
+                Arguments.of(AUTHORIZED_CLIENT, false,0) // authorized client without tags returns 0 events
+
+        );
+    }
+
+    public static Stream<Arguments> provideClientsAndTagsParametersWithClientsDisabled() {
+        return Stream.of(
+                Arguments.of(UNAUTHORIZED_CLIENT, true,1), // unauthorized client with tags returns 1 event
+                Arguments.of(UNAUTHORIZED_CLIENT, false,0), // unauthorized client without tags returns 0 events
+                Arguments.of(AUTHORIZED_CLIENT, true,1), // authorized client with tags returns 1 event
+                Arguments.of(AUTHORIZED_CLIENT, false,0) // authorized client without tags returns 0 events
         );
     }
 
     public static Stream<Arguments> provideClientsAndTagsParametersWithClientsEmptyOrNull() {
         return Stream.of(
-                Arguments.of(UNAUTHORIZED_CLIENT, true, 1),  // testProcessRecordsWithClientNotInListAndEmptyClients
-                Arguments.of(AUTHORIZED_CLIENT, false, 0),  // testProcessRecordsWithoutTagsAndEmptyClients
-                Arguments.of(UNAUTHORIZED_CLIENT, false, 0)  // testProcessRecordsWithoutTagsWithClientNotInListAndEmptyClients
+                Arguments.of(UNAUTHORIZED_CLIENT, true,""), // unauthorized client with tags throws exception
+                Arguments.of(UNAUTHORIZED_CLIENT, false,""), // unauthorized client without tags throws exception
+                Arguments.of(AUTHORIZED_CLIENT, true,""), // authorized client with tags throws exception
+                Arguments.of(AUTHORIZED_CLIENT, false,""), // authorized client without tags throws exception
+                Arguments.of(UNAUTHORIZED_CLIENT, true,null), // unauthorized client with tags throws exception
+                Arguments.of(UNAUTHORIZED_CLIENT, false,null), // unauthorized client without tags throws exception
+                Arguments.of(AUTHORIZED_CLIENT, true,null), // authorized client with tags throws exception
+                Arguments.of(AUTHORIZED_CLIENT, false,null) // authorized client without tags throws exception
         );
     }
+
 
     @NotNull
     private static AttributeValue createAttributeS(String sVAlue) {

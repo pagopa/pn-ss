@@ -22,6 +22,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
+import software.amazon.awssdk.services.eventbridge.model.EventBridgeException;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
@@ -80,6 +81,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                                     log.debug(CLIENT_METHOD_INVOCATION, "eventBridgeClient.putEvents()", eventsRequest);
                                     return eventBridgeClient.putEvents(eventsRequest);
                                 })
+                                .retryWhen(indefiniteRetry())
                                 .then()
                                 .doOnError(e -> log.fatal("DBStream: Errore generico ", e))
                                 .doOnSuccess(unused -> {
@@ -149,7 +151,6 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     @Override
     public void shutdown(ShutdownInput shutdownInput) {
-        log.info("shutdown - Shutdown reason: {}", shutdownInput.getShutdownReason());
         if (shutdownInput.getShutdownReason() == ShutdownReason.TERMINATE) {
             try {
                 log.info("shutdown - Setting checkpoint on shutdown");
@@ -166,10 +167,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     public Mono<Boolean> getCanReadTags(String cxId) {
         return Mono.defer(() -> Mono.fromCompletionStage(getFromDynamo(cxId)))
-                .onErrorResume(throwable -> throwable instanceof  DynamoDbException || throwable instanceof SdkClientException, Mono::error)
-                .retryWhen(Retry.backoff(Long.MAX_VALUE, Duration.ofMillis(10)).jitter(0.5)
-                        .filter(throwable -> throwable instanceof DynamoDbException || throwable instanceof SdkClientException)
-                        .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure())))
+                .retryWhen(indefiniteRetry())
                 .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
                 .map(getItemResponse -> getItemResponse.item().get(CAN_READ_TAGS).bool())
                 .defaultIfEmpty(false);
@@ -187,8 +185,13 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     }
 
     private List<String> getClientList() {
-        String clients= System.getProperty("pn.ss.safe-clients");
-        return clients != null ? List.of(clients.split(";")) : null;
+        String clients= System.getProperty("pn.ss.safe-clients").strip();
+        return clients != null && !clients.isEmpty() ? List.of(clients.split(";")) : null;
     }
 
+    private Retry indefiniteRetry() {
+        return Retry.backoff(Long.MAX_VALUE, Duration.ofMillis(1000))
+                .filter(throwable -> throwable instanceof DynamoDbException || throwable instanceof SdkClientException || throwable instanceof EventBridgeException)
+                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure()+","+retrySignal.failure().getMessage()));
+    }
 }

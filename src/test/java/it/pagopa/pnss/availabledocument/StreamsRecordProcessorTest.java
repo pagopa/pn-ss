@@ -143,7 +143,7 @@ class StreamsRecordProcessorTest {
 
     @ParameterizedTest
     @MethodSource("provideClientsAndTagsParametersWithClientsEmptyOrNull")
-    void testProcessRecordsWithEmptyClients(String clientName, boolean withTags, String clients) {
+    void testProcessRecordsWithEmptyOrNullClients(String clientName, boolean withTags, String clients) {
         if(clients != null) {
             System.setProperty("pn.ss.safe-clients", clients);
         } else {
@@ -164,7 +164,7 @@ class StreamsRecordProcessorTest {
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
         Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
-        StepVerifier.create(eventSendToBridge).expectError().verify();
+        StepVerifier.create(eventSendToBridge).expectError(IllegalArgumentException.class).verify();
     }
 
     @ParameterizedTest
@@ -326,7 +326,6 @@ class StreamsRecordProcessorTest {
 
     private static UserConfiguration createClient(String clientName) {
         UserConfiguration client = new UserConfiguration();
-       // String clientName = authorized ? "pn-delivery" : "pn-delivery-unauthorized";
         client.setName(clientName);
         client.setCanReadTags(true);
         client.setCanWriteTags(true);

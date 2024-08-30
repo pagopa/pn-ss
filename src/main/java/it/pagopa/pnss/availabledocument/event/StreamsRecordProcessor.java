@@ -119,9 +119,6 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                                     return putEventsRequestEntry;
                                 });
                     } else {
-                        if (!hasTags) {
-                            log.info("DBStream: Nessun tag presente nel record");
-                        }
                         return Flux.empty();
                     }
                 })
@@ -185,11 +182,11 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     }
 
     private List<String> getClientList() {
-        String clients= System.getProperty("pn.ss.safe-clients").strip();
+        String clients= System.getProperty("pn.ss.safe-clients");
         if (clients == null || clients.isEmpty()) {
             throw new IllegalArgumentException("pn.ss.safe-clients property is not set");
         }
-        return clients != null && !clients.isEmpty() ? List.of(clients.split(";")) : null;
+        return List.of(clients.strip().split(";"));
     }
 
     private boolean isCheckDisabled() {

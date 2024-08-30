@@ -500,6 +500,10 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
+    
+  ServiceEndpointToPdfRaster:
+    Type: String
+    Description: 'Endpoint FQDN of PDFRaster microservice'
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
@@ -557,7 +561,7 @@ Resources:
         ContainerEnvEntry50: !Sub 'PnSsIgnoredUpdateMetadataList=${PnSsIgnoredUpdateMetadataList}'
         ContainerEnvEntry51: !Sub 'PnSsIndexingConfiguration=${PnSsIndexingConfiguration}'
         ContainerEnvEntry52: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
-        ContainerEnvEntry53: !Sub 'PdfRasterBaseUrl=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry53: !Sub 'PdfRasterBaseUrl=http://${ServiceEndpointToPdfRaster}:8080'
         ContainerEnvEntry54: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
         ContainerEnvEntry55: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
         ContainerEnvEntry56: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'

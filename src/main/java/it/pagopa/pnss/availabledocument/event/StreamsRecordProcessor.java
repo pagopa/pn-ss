@@ -106,6 +106,9 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     boolean isClientInList = isClientInList(cxId);
                     boolean isCheckDisabled = isCheckDisabled();
 
+                    if(!hasTags){
+                        log.debug("DBStream: Nessun tag presente nel record");
+                    }
 
                     if (((isClientInList || isCheckDisabled) && hasTags) || (!isClientInList && !isCheckDisabled)) {
                         return getCanReadTags(cxId)

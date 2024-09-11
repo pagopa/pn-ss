@@ -103,31 +103,16 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .filter(RecordAdapter.class::isInstance)
                 .map(recordEvent -> ((RecordAdapter) recordEvent).getInternalObject())
                 .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))
-                .flatMap(streamRecord -> {
-                    String cxId = streamRecord.getDynamodb().getNewImage().get("clientShortCode").getS();
-                    boolean hasTags = hasTags(streamRecord);
-                    boolean isClientInList = isClientInList(cxId);
-                    boolean isCheckDisabled = isCheckDisabled();
-
-                    if(!hasTags){
-                        log.debug("DBStream: Nessun tag presente nel record");
-                    }
-
-                    if (((isClientInList || isCheckDisabled) && hasTags) || (!isClientInList && !isCheckDisabled)) {
-                        return getCanReadTags(cxId)
-                                .mapNotNull(canReadTags -> {
-                                    ManageDynamoEvent mde = new ManageDynamoEvent();
-                                    PutEventsRequestEntry putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
-                                            streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage(), canReadTags);
-                                    if (putEventsRequestEntry != null) {
-                                        log.info("Event send to bridge {}", putEventsRequestEntry);
-                                    }
-                                    return putEventsRequestEntry;
-                                });
-                    } else {
-                        return Flux.empty();
-                    }
-                })
+                .flatMap(streamRecord -> getCanReadTags(streamRecord)
+                        .mapNotNull(canReadTags -> {
+                            ManageDynamoEvent mde = new ManageDynamoEvent();
+                            PutEventsRequestEntry putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
+                                    streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage(), canReadTags);
+                            if (putEventsRequestEntry != null) {
+                                log.info("Event send to bridge {}", putEventsRequestEntry);
+                            }
+                            return putEventsRequestEntry;
+                        }))
                 .doOnError(e -> log.fatal("DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> log.info("DBStream: Nessun evento da inviare a bridge"));
     }
@@ -168,8 +153,19 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         }
     }
 
-    public Mono<Boolean> getCanReadTags(String cxId) {
-        return Mono.defer(() -> Mono.fromCompletionStage(getFromDynamo(cxId)))
+    public Mono<Boolean> getCanReadTags(Record streamRecord) {
+        String cxId = streamRecord.getDynamodb().getNewImage().get("clientShortCode").getS();
+        return Mono.fromSupplier(() -> {
+                    boolean hasTags = hasTags(streamRecord);
+                    boolean isClientInList = isClientInList(cxId);
+                    boolean isCheckDisabled = isCheckDisabled();
+                    if (!hasTags) {
+                        log.debug("DBStream: Nessun tag presente nel record");
+                    }
+                    return ((isClientInList || isCheckDisabled) && hasTags) || (!isClientInList && !isCheckDisabled);
+                })
+                .filter(Boolean::booleanValue)
+                .flatMap(unused -> Mono.fromCompletionStage(getFromDynamo(cxId)))
                 .retryWhen(indefiniteRetry())
                 .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
                 .map(getItemResponse -> getItemResponse.item().get(CAN_READ_TAGS).bool())

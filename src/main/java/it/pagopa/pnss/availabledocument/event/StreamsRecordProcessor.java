@@ -11,6 +11,7 @@ import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownInput;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
+import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.common.utils.SpringContext;
 import lombok.CustomLog;
 import org.jetbrains.annotations.NotNull;
@@ -33,6 +34,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
@@ -154,6 +156,9 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     }
 
     public Mono<Boolean> getCanReadTags(Record streamRecord) {
+        final String METHOD_NAME = "getCanReadTags()";
+        log.logStartingProcess(METHOD_NAME);
+        log.debug(LogUtils.INVOKING_METHOD, METHOD_NAME, Stream.of(streamRecord).toList());
         String cxId = streamRecord.getDynamodb().getNewImage().get("clientShortCode").getS();
         return Mono.fromSupplier(() -> {
                     boolean hasTags = hasTags(streamRecord);
@@ -169,10 +174,14 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .retryWhen(indefiniteRetry())
                 .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
                 .map(getItemResponse -> getItemResponse.item().get(CAN_READ_TAGS).bool())
-                .defaultIfEmpty(false);
+                .defaultIfEmpty(false)
+                .doOnError(e -> log.logEndingProcess(METHOD_NAME, false, e.getMessage()))
+                .doOnSuccess(result -> log.logEndingProcess(METHOD_NAME));
     }
 
     public CompletableFuture<GetItemResponse> getFromDynamo(String cxId){
+        final String METHOD_NAME = "getFromDynamo()";
+        log.debug(LogUtils.INVOKING_METHOD, METHOD_NAME, cxId);
         return dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
                 .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
                 .projectionExpression(CAN_READ_TAGS));

@@ -11,9 +11,11 @@ import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownInput;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
+import it.pagopa.pnss.common.utils.SpringContext;
 import lombok.CustomLog;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.MDC;
+import org.springframework.core.env.Environment;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -47,6 +49,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     private boolean test = false;
     private final String disponibilitaDocumentiEventBridge;
     DynamoDbAsyncClient dynamoDbClient;
+    Environment environment = SpringContext.getBean(Environment.class);
 
 
 
@@ -185,9 +188,9 @@ public class StreamsRecordProcessor implements IRecordProcessor {
     }
 
     private List<String> getClientList() {
-        String clients= System.getProperty("pn.ss.safe-clients");
+        String clients = environment.getProperty("pn.ss.safe-clients");
         if (clients == null || clients.isEmpty()) {
-            throw new IllegalArgumentException("pn.ss.safe-clients property is not set");
+            clients="";
         }
         return List.of(clients.strip().split(";"));
     }

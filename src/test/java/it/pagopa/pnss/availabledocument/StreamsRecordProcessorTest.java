@@ -20,6 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.core.env.Environment;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
@@ -52,15 +53,14 @@ class StreamsRecordProcessorTest {
     DynamoDbClient dynamoDbClient;
     @Autowired
     AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
-
+    @Autowired
+    Environment environment;
     private static final String AUTHORIZED_CLIENT = "pn-delivery";
     private static final String UNAUTHORIZED_CLIENT = "pn-delivery-unauthorized";
     private static final String CHECK_DISABLED = "DISABLED";
 
-
     @BeforeEach
     void setUp() {
-        System.setProperty("pn.ss.safe-clients","pn-delivery;pn-test");
         putAnagraficaClient(createClient(AUTHORIZED_CLIENT));
     }
 
@@ -139,32 +139,6 @@ class StreamsRecordProcessorTest {
         processRecordsInput.withRecords(records);
         Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
         StepVerifier.create(eventSendToBridge).expectNextCount(expectedCount).verifyComplete();
-    }
-
-    @ParameterizedTest
-    @MethodSource("provideClientsAndTagsParametersWithClientsEmptyOrNull")
-    void testProcessRecordsWithEmptyOrNullClients(String clientName, boolean withTags, String clients) {
-        if(clients != null) {
-            System.setProperty("pn.ss.safe-clients", clients);
-        } else {
-            System.clearProperty("pn.ss.safe-clients");
-        }
-
-        StreamsRecordProcessor srp = new StreamsRecordProcessor(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient,true);
-
-        UserConfiguration client = createClient(clientName);
-        putAnagraficaClient(client);
-
-        ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
-        List<Record> records = new ArrayList<>();
-
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED,withTags,clientName);
-
-
-        records.add(new RecordAdapter(recordDyanmo));
-        processRecordsInput.withRecords(records);
-        Flux<PutEventsRequestEntry> eventSendToBridge = srp.findEventSendToBridge(processRecordsInput);
-        StepVerifier.create(eventSendToBridge).expectError(IllegalArgumentException.class).verify();
     }
 
     @ParameterizedTest

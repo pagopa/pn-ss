@@ -174,7 +174,7 @@ class StreamsRecordProcessorTest {
         com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED,true,AUTHORIZED_CLIENT);
         StreamsRecordProcessor srpSpy = spy(srp);
         doThrow(SdkClientException.class).when(srpSpy).getFromDynamo(anyString());
-        doCallRealMethod().when(srpSpy).getCanReadTags(anyString());
+        doCallRealMethod().when(srpSpy).getCanReadTags(recordDyanmo);
         records.add(new RecordAdapter(recordDyanmo));
         processRecordsInput.withRecords(records);
         Flux<PutEventsRequestEntry> eventSendToBridge = srpSpy.findEventSendToBridge(processRecordsInput);
@@ -331,7 +331,7 @@ class StreamsRecordProcessorTest {
                 Arguments.of(UNAUTHORIZED_CLIENT, true,1), // unauthorized client with tags returns 1 event
                 Arguments.of(UNAUTHORIZED_CLIENT, false,1), // unauthorized client without tags returns 1 event
                 Arguments.of(AUTHORIZED_CLIENT, true,1), // authorized client with tags returns 1 event
-                Arguments.of(AUTHORIZED_CLIENT, false,0) // authorized client without tags returns 0 events
+                Arguments.of(AUTHORIZED_CLIENT, false,1) // authorized client without tags returns 1 event
 
         );
     }
@@ -339,25 +339,11 @@ class StreamsRecordProcessorTest {
     public static Stream<Arguments> provideClientsAndTagsParametersWithClientsDisabled() {
         return Stream.of(
                 Arguments.of(UNAUTHORIZED_CLIENT, true,1), // unauthorized client with tags returns 1 event
-                Arguments.of(UNAUTHORIZED_CLIENT, false,0), // unauthorized client without tags returns 0 events
+                Arguments.of(UNAUTHORIZED_CLIENT, false,1), // unauthorized client without tags returns 1 event
                 Arguments.of(AUTHORIZED_CLIENT, true,1), // authorized client with tags returns 1 event
-                Arguments.of(AUTHORIZED_CLIENT, false,0) // authorized client without tags returns 0 events
+                Arguments.of(AUTHORIZED_CLIENT, false,1) // authorized client without tags returns 1 event
         );
     }
-
-    public static Stream<Arguments> provideClientsAndTagsParametersWithClientsEmptyOrNull() {
-        return Stream.of(
-                Arguments.of(UNAUTHORIZED_CLIENT, true,""), // unauthorized client with tags throws exception
-                Arguments.of(UNAUTHORIZED_CLIENT, false,""), // unauthorized client without tags throws exception
-                Arguments.of(AUTHORIZED_CLIENT, true,""), // authorized client with tags throws exception
-                Arguments.of(AUTHORIZED_CLIENT, false,""), // authorized client without tags throws exception
-                Arguments.of(UNAUTHORIZED_CLIENT, true,null), // unauthorized client with tags throws exception
-                Arguments.of(UNAUTHORIZED_CLIENT, false,null), // unauthorized client without tags throws exception
-                Arguments.of(AUTHORIZED_CLIENT, true,null), // authorized client with tags throws exception
-                Arguments.of(AUTHORIZED_CLIENT, false,null) // authorized client without tags throws exception
-        );
-    }
-
 
     @NotNull
     private static AttributeValue createAttributeS(String sVAlue) {

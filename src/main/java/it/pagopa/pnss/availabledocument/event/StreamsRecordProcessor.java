@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import static it.pagopa.pnss.availabledocument.event.ManageDynamoEvent.DOCUMENTSTATE_KEY;
+import static it.pagopa.pnss.common.constant.Constant.AVAILABLE;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @CustomLog
@@ -105,6 +107,11 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .filter(RecordAdapter.class::isInstance)
                 .map(recordEvent -> ((RecordAdapter) recordEvent).getInternalObject())
                 .filter(streamRecord -> streamRecord.getEventName().equals(MODIFY_EVENT))
+                .filter(streamRecord -> {
+                    String oldDocumentState = streamRecord.getDynamodb().getOldImage().get(DOCUMENTSTATE_KEY).getS();
+                    String newDocumentState = streamRecord.getDynamodb().getNewImage().get(DOCUMENTSTATE_KEY).getS();
+                    return !oldDocumentState.equalsIgnoreCase(newDocumentState) && newDocumentState.equalsIgnoreCase(AVAILABLE);
+                })
                 .flatMap(streamRecord -> getCanReadTags(streamRecord)
                         .mapNotNull(canReadTags -> {
                             ManageDynamoEvent mde = new ManageDynamoEvent();

@@ -32,14 +32,7 @@ public class ManageDynamoEvent {
 
     public PutEventsRequestEntry manageItem(String disponibilitaDocumentiEventBridge, Map<String, AttributeValue> newImage,
                                             Map<String, AttributeValue> oldImage, Boolean canReadTags) {
-        String oldDocumentState = oldImage.get(DOCUMENTSTATE_KEY).getS();
-        String newDocumentState = newImage.get(DOCUMENTSTATE_KEY).getS();
-
-        if (!oldDocumentState.equalsIgnoreCase(newDocumentState) && newDocumentState.equalsIgnoreCase(AVAILABLE)){
-            return  createMessage(newImage, disponibilitaDocumentiEventBridge, oldDocumentState,canReadTags);
-        }
-
-        return null;
+        return createMessage(newImage, disponibilitaDocumentiEventBridge, oldImage.get(DOCUMENTSTATE_KEY).getS(), canReadTags);
     }
 
     public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState, Boolean canReadTags){

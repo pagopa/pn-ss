@@ -115,8 +115,10 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .flatMap(streamRecord -> getCanReadTags(streamRecord)
                         .mapNotNull(canReadTags -> {
                             ManageDynamoEvent mde = new ManageDynamoEvent();
-                            PutEventsRequestEntry putEventsRequestEntry = mde.manageItem(disponibilitaDocumentiEventBridge,
-                                    streamRecord.getDynamodb().getNewImage(), streamRecord.getDynamodb().getOldImage(), canReadTags);
+                            PutEventsRequestEntry putEventsRequestEntry = mde.createMessage(streamRecord.getDynamodb().getNewImage(),
+                                    disponibilitaDocumentiEventBridge,
+                                    streamRecord.getDynamodb().getOldImage().get(DOCUMENTSTATE_KEY).getS(),
+                                    canReadTags);
                             if (putEventsRequestEntry != null) {
                                 log.info("Event send to bridge {}", putEventsRequestEntry);
                             }

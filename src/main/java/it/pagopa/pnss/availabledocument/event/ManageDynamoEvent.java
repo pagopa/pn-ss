@@ -30,11 +30,6 @@ public class ManageDynamoEvent {
     public static final String CLIENTSHORTCODE_KEY = "clientShortCode";
     public static final String TAGS_KEY = "tags";
 
-    public PutEventsRequestEntry manageItem(String disponibilitaDocumentiEventBridge, Map<String, AttributeValue> newImage,
-                                            Map<String, AttributeValue> oldImage, Boolean canReadTags) {
-        return createMessage(newImage, disponibilitaDocumentiEventBridge, oldImage.get(DOCUMENTSTATE_KEY).getS(), canReadTags);
-    }
-
     public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState, Boolean canReadTags){
         String key = docEntity.get(DOCUMENTKEY_KEY).getS();
         MDC.put(MDC_CORR_ID_KEY, key);

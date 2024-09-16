@@ -1,6 +1,5 @@
 package it.pagopa.pnss.availabledocument;
 
-import com.amazonaws.SdkClientException;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.StreamRecord;
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
@@ -24,6 +23,7 @@ import org.springframework.core.env.Environment;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;

@@ -7,13 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.availabledocument.dto.NotificationMessage;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
 import lombok.CustomLog;
-import org.slf4j.MDC;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
 import java.util.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 
 @CustomLog
 public class ManageDynamoEvent {
@@ -32,7 +30,6 @@ public class ManageDynamoEvent {
 
     public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState, Boolean canReadTags){
         String key = docEntity.get(DOCUMENTKEY_KEY).getS();
-        MDC.put(MDC_CORR_ID_KEY, key);
         NotificationMessage message = new NotificationMessage();
 
         message.setKey(key);

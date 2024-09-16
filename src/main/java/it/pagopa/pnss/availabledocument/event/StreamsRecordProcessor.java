@@ -1,6 +1,5 @@
 package it.pagopa.pnss.availabledocument.event;
 
-import com.amazonaws.SdkClientException;
 import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordAdapter;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
@@ -20,6 +19,7 @@ import org.springframework.core.env.Environment;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import static it.pagopa.pnss.availabledocument.event.ManageDynamoEvent.DOCUMENTKEY_KEY;
 import static it.pagopa.pnss.availabledocument.event.ManageDynamoEvent.DOCUMENTSTATE_KEY;
 import static it.pagopa.pnss.common.constant.Constant.AVAILABLE;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
@@ -77,8 +78,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
         final String PROCESS_RECORDS = "processRecords()";
         MDC.clear();
         log.logStartingProcess(PROCESS_RECORDS);
-        MDCUtils.addMDCToContextAndExecute(
-                        findEventSendToBridge(processRecordsInput)
+        findEventSendToBridge(processRecordsInput)
                                 .buffer(10)
                                 .map(putEventsRequestEntries -> {
 
@@ -95,7 +95,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                                 .doOnSuccess(unused -> {
                                     log.logEndingProcess(PROCESS_RECORDS);
                                     setCheckpoint(processRecordsInput);
-                                }))
+                                })
                 .subscribe();
     }
 
@@ -112,18 +112,22 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     String newDocumentState = streamRecord.getDynamodb().getNewImage().get(DOCUMENTSTATE_KEY).getS();
                     return !oldDocumentState.equalsIgnoreCase(newDocumentState) && newDocumentState.equalsIgnoreCase(AVAILABLE);
                 })
-                .flatMap(streamRecord -> getCanReadTags(streamRecord)
-                        .mapNotNull(canReadTags -> {
-                            ManageDynamoEvent mde = new ManageDynamoEvent();
-                            PutEventsRequestEntry putEventsRequestEntry = mde.createMessage(streamRecord.getDynamodb().getNewImage(),
-                                    disponibilitaDocumentiEventBridge,
-                                    streamRecord.getDynamodb().getOldImage().get(DOCUMENTSTATE_KEY).getS(),
-                                    canReadTags);
-                            if (putEventsRequestEntry != null) {
-                                log.info("Event send to bridge {}", putEventsRequestEntry);
-                            }
-                            return putEventsRequestEntry;
-                        }))
+                .flatMap(streamRecord -> {
+                    var docEntity = streamRecord.getDynamodb().getNewImage();
+                    MDC.put(MDC_CORR_ID_KEY, docEntity.get(DOCUMENTKEY_KEY).getS());
+                    return MDCUtils.addMDCToContextAndExecute(getCanReadTags(streamRecord)
+                            .mapNotNull(canReadTags -> {
+                                ManageDynamoEvent mde = new ManageDynamoEvent();
+                                PutEventsRequestEntry putEventsRequestEntry = mde.createMessage(docEntity,
+                                        disponibilitaDocumentiEventBridge,
+                                        streamRecord.getDynamodb().getOldImage().get(DOCUMENTSTATE_KEY).getS(),
+                                        canReadTags);
+                                if (putEventsRequestEntry != null) {
+                                    log.info("Event send to bridge {}", putEventsRequestEntry);
+                                }
+                                return putEventsRequestEntry;
+                            }));
+                })
                 .doOnError(e -> log.fatal("DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> log.info("DBStream: Nessun evento da inviare a bridge"));
     }
@@ -166,7 +170,6 @@ public class StreamsRecordProcessor implements IRecordProcessor {
 
     public Mono<Boolean> getCanReadTags(Record streamRecord) {
         final String METHOD_NAME = "getCanReadTags()";
-        log.logStartingProcess(METHOD_NAME);
         log.debug(LogUtils.INVOKING_METHOD, METHOD_NAME, Stream.of(streamRecord).toList());
         String cxId = streamRecord.getDynamodb().getNewImage().get("clientShortCode").getS();
         return Mono.fromSupplier(() -> {
@@ -184,8 +187,8 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                 .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
                 .map(getItemResponse -> getItemResponse.item().get(CAN_READ_TAGS).bool())
                 .defaultIfEmpty(false)
-                .doOnError(e -> log.logEndingProcess(METHOD_NAME, false, e.getMessage()))
-                .doOnSuccess(result -> log.logEndingProcess(METHOD_NAME));
+                .doOnError(e -> log.debug(EXCEPTION_IN_PROCESS, METHOD_NAME, e))
+                .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, METHOD_NAME, result));
     }
 
     public CompletableFuture<GetItemResponse> getFromDynamo(String cxId){

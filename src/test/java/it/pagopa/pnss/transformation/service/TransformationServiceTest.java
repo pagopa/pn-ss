@@ -10,6 +10,7 @@ import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
 import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
+import it.pagopa.pnss.common.rest.call.pdfraster.PdfRasterCall;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -22,6 +23,7 @@ import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,6 +46,7 @@ import java.util.Map;
 import java.util.concurrent.Future;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -67,6 +70,8 @@ public class TransformationServiceTest {
     private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
     @SpyBean
     private SqsService sqsService;
+    @MockBean
+    private PdfRasterCall pdfRasterCall;
     @Value("${s3.queue.sign-queue-name}")
     private String signQueueName;
 
@@ -365,6 +370,103 @@ public class TransformationServiceTest {
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
     }
+
+    @Test
+    void newStagingBucketObjectCreatedEvent_PdfRaster_Ok() {
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
+
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+
+        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.RASTER));
+        when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.just(new byte[10]));
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
+        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(sqsService, never()).send(eq(signQueueName), any());
+    }
+
+    @Test
+    void newStagingBucketObjectCreatedEventRetryInHotBucket_PdfRaster_Ok() {
+
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
+
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        createdS3ObjectDto.setRetry(1);
+
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+
+        putObjectInBucket(FILE_KEY, bucketName.ssHotName(), new byte[10]);
+        mockGetDocument("application/pdf", AVAILABLE, List.of(DocumentType.TransformationsEnum.RASTER));
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
+        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(sqsService, never()).send(eq(signQueueName), any());
+    }
+
+    @Test
+    void newStagingBucketObjectCreatedEvent_PdfRaster_Ko() {
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
+
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+
+        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.RASTER));
+        when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.error(new RuntimeException("error")));
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
+        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(sqsService, times(1)).send(eq(signQueueName), any());
+    }
+
 
     void mockGetDocument(String contentType, String documentState, List<DocumentType.TransformationsEnum> transformations) {
         var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())))

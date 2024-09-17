@@ -283,7 +283,7 @@ Resources:
                 Value: 'PN_AAR'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsLegalFacts'
             ExpirationInDays: 3655
             Status: 'Enabled'
@@ -292,7 +292,7 @@ Resources:
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsLogsArchiveAudit5Y'
             ExpirationInDays: 1830
             Status: 'Enabled'
@@ -354,7 +354,7 @@ Resources:
                 Value: 'PN_AAR'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsAar_expiry'
             Status: 'Enabled'
             ExpirationInDays: 3655
@@ -368,7 +368,7 @@ Resources:
                 Value: 'PN_LEGAL_FACTS'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsLegalFacts_expiry'
             Status: 'Enabled'
             ExpirationInDays: 3655

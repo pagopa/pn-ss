@@ -465,6 +465,10 @@ Parameters:
     Type: Number
     Description: 'Numero di giorni di retention per i file di tipo PRELOADED'
 
+  PnSsSafeClients:
+    Type: String
+    Description: 'List of safe clients'
+
   JavaToolOptions:
     Type: String
     Description: 'System properties and parameters for the JVM'
@@ -561,10 +565,11 @@ Resources:
         ContainerEnvEntry50: !Sub 'PnSsIgnoredUpdateMetadataList=${PnSsIgnoredUpdateMetadataList}'
         ContainerEnvEntry51: !Sub 'PnSsIndexingConfiguration=${PnSsIndexingConfiguration}'
         ContainerEnvEntry52: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
-        ContainerEnvEntry53: !Sub 'PdfRasterBaseUrl=http://${ServiceEndpointToPdfRaster}:8080'
-        ContainerEnvEntry54: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
-        ContainerEnvEntry55: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
-        ContainerEnvEntry56: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
+        ContainerEnvEntry53: !Sub 'PnSsSafeClients=${PnSsSafeClients}'
+        ContainerEnvEntry54: !Sub 'PdfRasterBaseUrl=http://${ServiceEndpointToPdfRaster}:8080'
+        ContainerEnvEntry55: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
+        ContainerEnvEntry56: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
+        ContainerEnvEntry57: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

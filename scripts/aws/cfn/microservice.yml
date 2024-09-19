@@ -436,6 +436,18 @@ Parameters:
     Type: String
     Description: 'Name of the parameter store containing the configuration for the indexing service'
 
+  SpringCodecMaxInMemorySize:
+    Type: String
+    Description: 'Spring Codec Max Memory Size'
+
+  SignAndTimemarkMaxThreadPoolSize:
+    Type: String
+    Description: 'Sign and timemark transformation max thread pool size'
+
+  RasterMaxThreadPoolSize:
+    Type: String
+    Description: 'Raster transformation max thread pool size'
+
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -492,6 +504,10 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
+    
+  ServiceEndpointToPdfRaster:
+    Type: String
+    Description: 'Endpoint FQDN of PDFRaster microservice'
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
@@ -550,6 +566,10 @@ Resources:
         ContainerEnvEntry51: !Sub 'PnSsIndexingConfiguration=${PnSsIndexingConfiguration}'
         ContainerEnvEntry52: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
         ContainerEnvEntry53: !Sub 'PnSsSafeClients=${PnSsSafeClients}'
+        ContainerEnvEntry54: !Sub 'PdfRasterBaseUrl=http://${ServiceEndpointToPdfRaster}:8080'
+        ContainerEnvEntry55: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
+        ContainerEnvEntry56: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
+        ContainerEnvEntry57: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

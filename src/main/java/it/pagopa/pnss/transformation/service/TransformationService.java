@@ -13,6 +13,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.exception.IllegalTransformationException;
 import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
+import it.pagopa.pnss.common.rest.call.pdfraster.PdfRasterCall;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -24,9 +25,12 @@ import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -47,6 +51,9 @@ public class TransformationService {
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketName;
     private final SqsService sqsService;
+    private final PdfRasterCall pdfRasterCall;
+    private final Semaphore signAndTimemarkSemaphore;
+    private final Semaphore rasterSemaphore;
     @Value("${default.internal.x-api-key.value:#{null}}")
     private String defaultInternalApiKeyValue;
     @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
@@ -57,12 +64,21 @@ public class TransformationService {
     private static final int MAX_RETRIES = 3;
 
     public TransformationService(S3ServiceImpl s3Service,
-                                 PnSignProviderService pnSignService, DocumentClientCall documentClientCall, BucketName bucketName, SqsService sqsService) {
+                                 PnSignProviderService pnSignService,
+                                 DocumentClientCall documentClientCall,
+                                 BucketName bucketName,
+                                 SqsService sqsService,
+                                 PdfRasterCall pdfRasterCall,
+                                 @Value("${transformation.max-thread-pool-size.sign-and-timemark}") Integer signAndTimemarkMaxThreadPoolSize,
+                                 @Value("${transformation.max-thread-pool-size.raster}") Integer rasterMaxThreadPoolSize) {
         this.s3Service = s3Service;
         this.pnSignService = pnSignService;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
         this.sqsService = sqsService;
+        this.pdfRasterCall = pdfRasterCall;
+        this.signAndTimemarkSemaphore = new Semaphore(signAndTimemarkMaxThreadPoolSize);
+        this.rasterSemaphore = new Semaphore(rasterMaxThreadPoolSize);
     }
 
     @SqsListener(value = "${s3.queue.sign-queue-name}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
@@ -113,13 +129,38 @@ public class TransformationService {
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK);
-                })
+                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK) || transformations.contains(DocumentType.TransformationsEnum.RASTER);                })
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
-                .zipWhen(document -> signDocument(document, key, stagingBucketName, marcatura))
-                .flatMap(tuple -> s3Service.putObject(key, tuple.getT2().getSignedDocument(),  tuple.getT1().getContentType(), bucketName.ssHotName()))
+                .flatMap(document -> chooseTransformationType(document, key, stagingBucketName, marcatura))
                 .then(removeObjectFromStagingBucket(key, stagingBucketName));
+    }
+
+    private Mono<PutObjectResponse> chooseTransformationType(Document document, String key, String stagingBucketName, boolean marcatura) {
+        var transformations = document.getDocumentType().getTransformations();
+        if (transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)) {
+            return signAndTimemarkTransformation(document, key, stagingBucketName, marcatura);
+        } else if (transformations.contains(DocumentType.TransformationsEnum.RASTER)) {
+            return rasterTransformation(document, key, stagingBucketName);
+        } else return Mono.error(new IllegalTransformationException(key));
+    }
+
+    private Mono<PutObjectResponse> signAndTimemarkTransformation(Document document, String key, String stagingBucketName, boolean marcatura) {
+        log.debug(INVOKING_METHOD, SIGN_AND_TIMEMARK_TRANSFORMATION, Stream.of(document, key, stagingBucketName, marcatura).toList());
+        acquireSemaphore(signAndTimemarkSemaphore);
+        return signDocument(document, key, stagingBucketName, marcatura)
+                .flatMap(pnSignDocumentResponse -> s3Service.putObject(key, pnSignDocumentResponse.getSignedDocument(), document.getContentType(), bucketName.ssHotName()))
+                .doFinally(signalType -> signAndTimemarkSemaphore.release());
+    }
+
+    private Mono<PutObjectResponse> rasterTransformation(Document document, String key, String stagingBucketName) {
+        log.debug(INVOKING_METHOD, RASTER_TRANSFORMATION, Stream.of(document, key, stagingBucketName).toList());
+        acquireSemaphore(rasterSemaphore);
+        return s3Service.getObject(key, stagingBucketName)
+                .map(BytesWrapper::asByteArray)
+                .flatMap(fileBytes -> pdfRasterCall.convertPdf(fileBytes, key))
+                .flatMap(convertedDocument -> s3Service.putObject(key, convertedDocument, document.getContentType(), bucketName.ssHotName()))
+                .doFinally(signalType -> rasterSemaphore.release());
     }
 
     private Mono<Boolean> isSignatureNeeded(String key, int retry) {
@@ -153,4 +194,13 @@ public class TransformationService {
         var detailObject = createdS3ObjectDto.getCreationDetailObject();
         return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
     }
+
+    private void acquireSemaphore(Semaphore semaphore) {
+        try {
+            semaphore.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
 }

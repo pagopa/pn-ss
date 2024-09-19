@@ -437,6 +437,20 @@ Resources:
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
+          - Id: 'PnSsPaperAttachments_freeze'
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_freeze'
+                Value: 'PN_PAPER_ATTACHMENT'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 30
+          - Id: 'PnSsPaperAttachments_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 365
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_PAPER_ATTACHMENT'
       NotificationConfiguration:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'

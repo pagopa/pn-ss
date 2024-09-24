@@ -41,6 +41,6 @@
     "PnSsSafeClients": "pn-delivery;pn-delivery-push;pn-radd-alt;pn-service-desk",
     "SpringCodecMaxInMemorySize": "10000000",
     "SignAndTimemarkMaxThreadPoolSize": "50",
-    "RasterMaxThreadPoolSize": "50"
+    "RasterMaxThreadPoolSize": "4"
   }
 }

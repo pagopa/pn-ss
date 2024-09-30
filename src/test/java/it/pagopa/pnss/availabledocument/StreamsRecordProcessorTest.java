@@ -10,6 +10,7 @@ import it.pagopa.pnss.availabledocument.dto.NotificationMessage;
 import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
+import it.pagopa.pnss.testutils.annotation.SpringBootNewStartupWebTestEnv;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
@@ -43,7 +44,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
-@SpringBootTestWebEnv
+@SpringBootNewStartupWebTestEnv
 @AutoConfigureWebTestClient
 class StreamsRecordProcessorTest {
 

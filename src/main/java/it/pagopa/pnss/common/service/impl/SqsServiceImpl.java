@@ -2,13 +2,17 @@ package it.pagopa.pnss.common.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.common.exception.SqsClientException;
+import it.pagopa.pnss.common.model.pojo.SqsMessageWrapper;
 import it.pagopa.pnss.common.service.SqsService;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
+import software.amazon.awssdk.services.sqs.model.DeleteMessageResponse;
 import software.amazon.awssdk.services.sqs.model.GetQueueUrlResponse;
+import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 import static it.pagopa.pnss.common.utils.LogUtils.INSERTED_DATA_IN_SQS;
@@ -36,6 +40,16 @@ public class SqsServiceImpl implements SqsService {
                     return Mono.error(new SqsClientException(queueName));
                 })
                 .doOnSuccess(result -> log.info(INSERTED_DATA_IN_SQS, queueName));
+    }
+
+    @Override
+    public <T> Flux<SqsMessageWrapper<T>> getMessages(String queueName, Class<T> messageContentClass) {
+        return null;
+    }
+
+    @Override
+    public Mono<DeleteMessageResponse> deleteMessageFromQueue(Message message, String queueName) {
+        return null;
     }
 
     private Mono<String> getQueueUrlFromName(final String queueName) {

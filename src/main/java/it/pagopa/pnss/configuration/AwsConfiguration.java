@@ -237,66 +237,6 @@ public class AwsConfiguration {
         return new SimpleAsyncTaskExecutor(); // Or use another one of your liking
     }
 
-    // TODO: Rifare completamente questa parte riguardante la disponibilità documenti
-    @Bean
-
-    public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor) {
-        return args -> {
-            AWSCredentialsProvider awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
-            AmazonDynamoDB amazonDynamoDB =
-                    AmazonDynamoDBClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonCloudWatch cloudWatchClient =
-                    AmazonCloudWatchClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonDynamoDBStreams dynamoDBStreamsClient =
-                    AmazonDynamoDBStreamsClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
-            //Get task identifier
-
-
-
-            String taskId = getTaskId();
-            log.debug("Task ID: {}", taskId);
-            KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(dynamoEventStreamName.tableMetadata(),
-                                                                                           dynamoEventStreamName.documentName(),
-                                                                                           awsCredentialsProvider,
-                                                                                           taskId
-                                                                                                    )
-
-//            		.withMaxLeaseRenewalThreads(20)
-//            		.withMaxLeasesForWorker(5000)
-
-//                   Fix temporanea per non
-//                   fare andare in errore
-//                   EventBridge.
-//                   Questo stream Kinesis,
-//                   agganciato a
-//                   DynamoDbStreams,
-//                   notifica a EventBridge
-//                   determinati eventi
-//                   provenienti dalla
-//                   tabella documenti. Dato
-//                   che la pubblicazione su
-//                   EventBridge accetta massimo
-//                   10 elementi, il numero
-//                   di eventi Kinesis è
-//                   impostato anch'esso a 10
-            		.withMaxRecords(1000)
-            		.withIdleTimeBetweenReadsInMillis(1000)
-            		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
-
-            IRecordProcessorFactory recordProcessorFactory =
-                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient());
-            Worker worker = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory,
-                                                                             workerConfig,
-                                                                             adapterClient,
-                                                                             amazonDynamoDB,
-                                                                             cloudWatchClient);
-            if (testEventBridge == null) {
-                executor.execute(worker);
-            }
-        };
-    }
-
     private String getTaskId() {
 
         String ecsMetadataUri = System.getenv("ECS_CONTAINER_METADATA_URI_V4");

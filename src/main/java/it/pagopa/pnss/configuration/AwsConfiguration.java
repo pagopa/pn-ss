@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
-import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessorFactory;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;

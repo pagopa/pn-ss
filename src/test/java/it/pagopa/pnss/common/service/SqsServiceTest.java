@@ -16,8 +16,6 @@ import software.amazon.awssdk.services.sqs.model.DeleteMessageResponse;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
-import java.util.concurrent.Flow;
-
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @CustomLog
@@ -46,8 +44,8 @@ class SqsServiceTest {
     void testSendWrongQueueName() {
         CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
         log.info(signQueueName);
-        String signQueueName = "signQueueName";
-        StepVerifier.create(sqsService.send(signQueueName, createdS3ObjectDto))
+        String queueName = "signQueueName";
+        StepVerifier.create(sqsService.send(queueName, createdS3ObjectDto))
                 .expectError()
                 .verify();
     }

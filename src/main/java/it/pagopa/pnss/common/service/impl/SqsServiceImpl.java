@@ -6,7 +6,9 @@ import it.pagopa.pnss.common.exception.SqsClientException;
 import it.pagopa.pnss.common.model.pojo.SqsMessageWrapper;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.JsonUtils;
+import it.pagopa.pnss.configurationproperties.retry.SqsRetryStrategyProperties;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -30,16 +32,16 @@ public class SqsServiceImpl implements SqsService {
     private final ObjectMapper objectMapper;
     private final RetryBackoffSpec sqsRetryStrategy;
     private final JsonUtils jsonUtils;
+    @Value("${SqsQueueMaxMessages:#{1000}}")
     private Integer maxMessages;
 
-    public SqsServiceImpl(SqsAsyncClient sqsAsyncClient, ObjectMapper objectMapper, JsonUtils jsonUtils) {
+    public SqsServiceImpl(SqsAsyncClient sqsAsyncClient, ObjectMapper objectMapper, JsonUtils jsonUtils, SqsRetryStrategyProperties sqsRetryStrategyProperties) {
         this.sqsAsyncClient = sqsAsyncClient;
         this.objectMapper = objectMapper;
         this.jsonUtils = jsonUtils;
-        this.sqsRetryStrategy = Retry.backoff(3, Duration.ofMillis(100)) //TODO blue phase: check retry strategy
+        this.sqsRetryStrategy = Retry.backoff(sqsRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(sqsRetryStrategyProperties.minBackoff()))
                 .filter(SqsException.class::isInstance)
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
-        this.maxMessages = 10; //TODO blue phase: check max messages
     }
 
     @Override

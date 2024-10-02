@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static it.pagopa.pnss.availabledocument.event.ManageDynamoEvent.*;
+import static it.pagopa.pnss.common.utils.EventBridgeUtil.*;
 import static it.pagopa.pnss.availabledocument.event.StreamsRecordProcessor.*;
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.anyString;

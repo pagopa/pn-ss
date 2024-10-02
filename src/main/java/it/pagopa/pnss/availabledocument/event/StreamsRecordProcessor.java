@@ -10,8 +10,10 @@ import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownInput;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
+import it.pagopa.pnss.common.utils.EventBridgeUtil;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.common.utils.SpringContext;
+import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import lombok.CustomLog;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.MDC;
@@ -36,8 +38,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import static it.pagopa.pnss.availabledocument.event.ManageDynamoEvent.DOCUMENTKEY_KEY;
-import static it.pagopa.pnss.availabledocument.event.ManageDynamoEvent.DOCUMENTSTATE_KEY;
+import static it.pagopa.pnss.common.utils.EventBridgeUtil.DOCUMENTKEY_KEY;
+import static it.pagopa.pnss.common.utils.EventBridgeUtil.DOCUMENTSTATE_KEY;
 import static it.pagopa.pnss.common.constant.Constant.AVAILABLE;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
@@ -117,8 +119,8 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     MDC.put(MDC_CORR_ID_KEY, docEntity.get(DOCUMENTKEY_KEY).getS());
                     return MDCUtils.addMDCToContextAndExecute(getCanReadTags(streamRecord)
                             .mapNotNull(canReadTags -> {
-                                ManageDynamoEvent mde = new ManageDynamoEvent();
-                                PutEventsRequestEntry putEventsRequestEntry = mde.createMessage(docEntity,
+                                EventBridgeUtil mde = new EventBridgeUtil();
+                                PutEventsRequestEntry putEventsRequestEntry = mde.createMessage((DocumentEntity) docEntity,
                                         disponibilitaDocumentiEventBridge,
                                         streamRecord.getDynamodb().getOldImage().get(DOCUMENTSTATE_KEY).getS(),
                                         canReadTags);

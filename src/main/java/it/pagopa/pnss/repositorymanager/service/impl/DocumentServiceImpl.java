@@ -282,7 +282,7 @@ public class DocumentServiceImpl implements DocumentService {
                         DocumentStateDto documentStateDto = new DocumentStateDto();
                         documentStateDto.setDocumentEntity(documentEntity);
                         documentStateDto.setOldDocumentState(oldState.toString());
-                        sqsService.send(streamRecordProcessorQueueName.batchName(), documentStateDto);
+                        sqsService.send(streamRecordProcessorQueueName.sqsName(), documentStateDto);
                         return documentEntity;
                     })
                     .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentChanges));

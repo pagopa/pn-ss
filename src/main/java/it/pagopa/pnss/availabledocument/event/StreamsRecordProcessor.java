@@ -38,9 +38,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import static it.pagopa.pnss.common.utils.EventBridgeUtil.DOCUMENTKEY_KEY;
-import static it.pagopa.pnss.common.utils.EventBridgeUtil.DOCUMENTSTATE_KEY;
 import static it.pagopa.pnss.common.constant.Constant.AVAILABLE;
+import static it.pagopa.pnss.common.utils.EventBridgeUtil.*;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @CustomLog
@@ -119,8 +118,7 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                     MDC.put(MDC_CORR_ID_KEY, docEntity.get(DOCUMENTKEY_KEY).getS());
                     return MDCUtils.addMDCToContextAndExecute(getCanReadTags(streamRecord)
                             .mapNotNull(canReadTags -> {
-                                EventBridgeUtil mde = new EventBridgeUtil();
-                                PutEventsRequestEntry putEventsRequestEntry = mde.createMessage((DocumentEntity) docEntity,
+                                PutEventsRequestEntry putEventsRequestEntry = EventBridgeUtil.createMessage((DocumentEntity) docEntity,
                                         disponibilitaDocumentiEventBridge,
                                         streamRecord.getDynamodb().getOldImage().get(DOCUMENTSTATE_KEY).getS(),
                                         canReadTags);

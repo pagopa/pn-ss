@@ -4,36 +4,46 @@ package it.pagopa.pnss.common.service;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import lombok.CustomLog;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
+import software.amazon.awssdk.services.sqs.model.DeleteMessageResponse;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
+
+import java.util.concurrent.Flow;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @CustomLog
-public class SqsServiceTest {
+class SqsServiceTest {
     @Autowired
     SqsService sqsService;
     @Value("${s3.queue.sign-queue-name}")
     private String signQueueName;
+    @Autowired
+    private SqsAsyncClient sqsAsyncClient;
 
     @Test
-    public void testSendOk() {
+    void testSendOk() {
         CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
         log.info(signQueueName);
 
-       StepVerifier.create(sqsService.send(signQueueName, createdS3ObjectDto))
+        Mono<SendMessageResponse> sendMessageResponseMono = sqsService.send(signQueueName, createdS3ObjectDto);
+        StepVerifier.create(sendMessageResponseMono)
                .expectNextCount(1)
                 .verifyComplete();
+
+
     }
 
     @Test
-    public void testSendWrongQueueName() {
+    void testSendWrongQueueName() {
         CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
         log.info(signQueueName);
         String signQueueName = "signQueueName";
@@ -43,7 +53,7 @@ public class SqsServiceTest {
     }
 
     @Test
-    public void getMessages() {
+    void getMessages() {
         sendMessageToQueue().block();
 
         StepVerifier.create(sqsService.getMessages(signQueueName, CreatedS3ObjectDto.class))
@@ -52,15 +62,22 @@ public class SqsServiceTest {
     }
 
     @Test
-    public void deleteMessageFromQueue() {
-        SendMessageResponse sendMessageResponseMono = sendMessageToQueue().block();
+    void deleteMessageFromQueue() {
+        SendMessageResponse sendMessageResponse = sendMessageToQueue().block();
+        assert sendMessageResponse != null : "sendMessageResponse is null";
+        Message received = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
+        assert received != null : "received is null";
 
-        Message message = Message.builder().messageId(sendMessageResponseMono.messageId()).build();
+        Mono<DeleteMessageResponse> deleteMessageResponseMono = sqsService.deleteMessageFromQueue(received, signQueueName);
 
-        assert sendMessageResponseMono != null;
-        StepVerifier.create(sqsService.deleteMessageFromQueue(message, signQueueName))
+        StepVerifier.create(deleteMessageResponseMono)
                 .expectNextCount(1)
                 .verifyComplete();
+    }
+
+    @BeforeEach
+    void setup() {
+        sqsAsyncClient.purgeQueue(builder -> builder.queueUrl(signQueueName));
     }
 
     private Mono<SendMessageResponse> sendMessageToQueue() {

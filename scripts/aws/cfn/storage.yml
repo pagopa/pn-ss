@@ -522,6 +522,21 @@ Resources:
         QueueHasAlarm: 'false'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
+  PnSsQueueAvailabilityStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-availability-events-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        VisibilityTimeout: 300
+        QueueHasAlarm: 'false'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+
 ########### GESTORE BUCKET INVOKE QUEUE ###########
 # La coda PnSsQueueGestoreBucketInvoke è il target delle S3 notifications provenienti dal bucket principale #
 # visibility timeout docs https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html#events-sqs-queueconfig
@@ -827,6 +842,14 @@ Outputs:
   PnSsStagingBucketArn:
     Description: 'ARN Bucket SS Staging'
     Value: !GetAtt PnSsStagingBucket.Arn
+
+  PnSsQueueNameAvailability:
+    Description: 'Nome coda per notifiche disponibilità'
+    Value: !GetAtt PnSsQueueAvailabilityStack.Outputs.QueueName
+
+  PnSsQueueArnAvailability:
+    Description: 'ARN coda per notifiche disponibilità'
+    Value: !GetAtt PnSsQueueAvailabilityStack.Outputs.QueueARN
 
   PnSsQueueNameStagingBucket:
     Description: 'Nome coda per notifiche SS Staging Bucket'

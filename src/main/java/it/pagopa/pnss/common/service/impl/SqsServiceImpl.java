@@ -8,7 +8,6 @@ import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.JsonUtils;
 import it.pagopa.pnss.configurationproperties.retry.SqsRetryStrategyProperties;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -32,8 +31,6 @@ public class SqsServiceImpl implements SqsService {
     private final ObjectMapper objectMapper;
     private final RetryBackoffSpec sqsRetryStrategy;
     private final JsonUtils jsonUtils;
-    @Value("${SqsQueueMaxMessages:#{1000}}")
-    private Integer maxMessages;
 
     public SqsServiceImpl(SqsAsyncClient sqsAsyncClient, ObjectMapper objectMapper, JsonUtils jsonUtils, SqsRetryStrategyProperties sqsRetryStrategyProperties) {
         this.sqsAsyncClient = sqsAsyncClient;
@@ -60,7 +57,7 @@ public class SqsServiceImpl implements SqsService {
     }
 
     @Override
-    public <T> Flux<SqsMessageWrapper<T>> getMessages(String queueName, Class<T> messageContentClass) {
+    public <T> Flux<SqsMessageWrapper<T>> getMessages(String queueName, Class<T> messageContentClass, Integer maxMessages) {
         AtomicInteger actualMessages = new AtomicInteger();
         AtomicBoolean listIsEmpty = new AtomicBoolean();
         listIsEmpty.set(false);

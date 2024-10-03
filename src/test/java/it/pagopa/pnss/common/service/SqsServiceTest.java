@@ -26,6 +26,7 @@ class SqsServiceTest {
     private String signQueueName;
     @Autowired
     private SqsAsyncClient sqsAsyncClient;
+    private static final Integer MAX_MESSAGES = 10;
 
     @Test
     void testSendOk() {
@@ -54,7 +55,7 @@ class SqsServiceTest {
     void getMessages() {
         sendMessageToQueue().block();
 
-        StepVerifier.create(sqsService.getMessages(signQueueName, CreatedS3ObjectDto.class))
+        StepVerifier.create(sqsService.getMessages(signQueueName, CreatedS3ObjectDto.class, MAX_MESSAGES))
                 .expectNextCount(1)
                 .verifyComplete();
     }

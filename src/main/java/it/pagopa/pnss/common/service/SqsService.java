@@ -12,7 +12,7 @@ public interface SqsService {
 
     <T> Mono<SendMessageResponse> send(final String queueName, final T queuePayload) throws SqsClientException;
 
-    <T> Flux<SqsMessageWrapper<T>> getMessages(final String queueName, final Class<T> messageContentClass);
+    <T> Flux<SqsMessageWrapper<T>> getMessages(final String queueName, final Class<T> messageContentClass, final Integer maxMessages);
 
     Mono<DeleteMessageResponse> deleteMessageFromQueue(final Message message, final String queueName);
 }

@@ -277,13 +277,12 @@ public class DocumentServiceImpl implements DocumentService {
                        }
                    })
                    .flatMap(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
-                    .filter(documentEntity -> documentEntity.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) && !oldState.equals(documentEntity.getDocumentState()))
-                    .map(documentEntity -> {
+                    .filter(documentEntity -> documentEntity.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) && !oldState.get().equals(documentEntity.getDocumentState()))
+                    .flatMap(documentEntity -> {
                         DocumentStateDto documentStateDto = new DocumentStateDto();
                         documentStateDto.setDocumentEntity(documentEntity);
                         documentStateDto.setOldDocumentState(oldState.toString());
-                        sqsService.send(streamRecordProcessorQueueName.sqsName(), documentStateDto);
-                        return documentEntity;
+                        return sqsService.send(streamRecordProcessorQueueName.sqsName(), documentStateDto).thenReturn(docEntity);
                     })
                     .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentChanges));
     }

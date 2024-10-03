@@ -72,6 +72,9 @@ class StreamsRecordProcessorTest {
     SqsAsyncClient sqsAsyncClient;
     @Autowired
     StreamsRecordProcessor srp;
+    @Autowired
+    private  StreamRecordProcessorQueueName streamRecordProcessorQueueName;
+
     private static final String AUTHORIZED_CLIENT = "pn-delivery";
     private static final String UNAUTHORIZED_CLIENT = "pn-delivery-unauthorized";
     private static final String CHECK_DISABLED = "DISABLED";
@@ -80,11 +83,12 @@ class StreamsRecordProcessorTest {
     void setUp() {
         putAnagraficaClient(createClient(AUTHORIZED_CLIENT));
     }
-/*
+
     @ParameterizedTest
     @NullSource
     @ValueSource(booleans = {false})
     void testProcessRecordsWithoutPermissions(Boolean canReadTagsValue)  {
+        sendMessageToQueue().block();
 
         UserConfiguration client = createClient(AUTHORIZED_CLIENT);
         client.setCanReadTags(canReadTagsValue);
@@ -105,10 +109,11 @@ class StreamsRecordProcessorTest {
         System.out.println("response: "+eventSendToBridge);
     }
 
- */
-/*
+
+
     @Test
     void testProcessRecordsWithPermissions(){
+        sendMessageToQueue().block();
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -125,7 +130,7 @@ class StreamsRecordProcessorTest {
 
     }
 
- */
+
     @Test
     void testProcessRecordsOk() {
 
@@ -139,11 +144,11 @@ class StreamsRecordProcessorTest {
 
         Assertions.assertDoesNotThrow(srp::processRecords);
     }
-    /*
+
     @ParameterizedTest
     @MethodSource("provideClientsAndTagsParameters")
     void testProcessRecordsWithDifferentConditions(String clientName, boolean withTags, int expectedCount) {
-
+        sendMessageToQueue().block();
         UserConfiguration client = createClient(clientName);
         putAnagraficaClient(client);
 
@@ -159,11 +164,13 @@ class StreamsRecordProcessorTest {
         StepVerifier.create(eventSendToBridge).expectNextCount(expectedCount).verifyComplete();
     }
 
-     */
-/*
+
+
     @ParameterizedTest
     @MethodSource("provideClientsAndTagsParametersWithClientsDisabled")
     void testProcessRecordsWithCheckDisabled(String clientName, boolean withTags, int expectedCount) {
+        sendMessageToQueue().block();
+
         System.setProperty("pn.ss.safe-clients",CHECK_DISABLED);
 
         UserConfiguration client = createClient(clientName);
@@ -181,11 +188,12 @@ class StreamsRecordProcessorTest {
         StepVerifier.create(eventSendToBridge).expectNextCount(expectedCount).verifyComplete();
     }
 
- */
 
-/*
+
+
     @Test
     void testProcessRecordsWithDynamoDbError() {
+        sendMessageToQueue().block();
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -214,10 +222,11 @@ class StreamsRecordProcessorTest {
                 .verify();
     }
 
- */
-/*
+
+
     @Test
     void testSendMessageEventBridgeOk() {
+        sendMessageToQueue().block();
 
         ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
         List<Record> records = new ArrayList<>();
@@ -230,7 +239,7 @@ class StreamsRecordProcessorTest {
         StepVerifier.create(eventSendToBridge).expectNextCount(1).verifyComplete();
     }
 
- */
+
 
     @Test
     void testSendMessageEventBridgeInsert() {
@@ -380,21 +389,28 @@ class StreamsRecordProcessorTest {
         value.setS(sVAlue);
         return value;
     }
-/*
-    private static void sendSqsMessage() {
-        SqsMessageWrapper<DocumentStateDto> sqsMessageWrapper = new SqsMessageWrapper<>();
 
-    }
+
     @BeforeEach
     void setup() {
-        sqsAsyncClient.purgeQueue(builder -> builder.queueUrl(signQueueName));
+        sqsAsyncClient.purgeQueue(builder -> builder.queueUrl(streamRecordProcessorQueueName.sqsName()));
     }
 
     private Mono<SendMessageResponse> sendMessageToQueue() {
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        return sqsService.send(signQueueName, createdS3ObjectDto);
-
+        return sqsService.send(streamRecordProcessorQueueName.sqsName(), new DocumentStateDto(){{
+            setDocumentEntity(new DocumentEntity(){{
+                setDocumentKey("111");
+                setDocumentState("AVAILABLE");
+                setDocumentLogicalState("BOOKED");
+                setClientShortCode("pn-delivery");
+                setTags(Map.of("tag1", List.of("value1", "value2")));
+                setDocumentType(new DocTypeEntity(){{
+                    setTipoDocumento(DocTypesConstant.PN_NOTIFICATION_ATTACHMENTS);
+                    setChecksum("MD5");
+                }});
+            }});
+            setOldDocumentState("BOOKED");
+        }});
     }
-*/
-    }
+}
 

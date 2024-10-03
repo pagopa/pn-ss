@@ -54,7 +54,6 @@ public class StreamsRecordProcessor {
     private final StreamRecordProcessorQueueName streamRecordProcessorQueueName;
 
     private final RetryBackoffSpec sqsEnventHandlerRetryStrategy;
-    private final SqsEventHandlerRetryStrategyProperties sqsEventHandlerRetryStrategyProperties;
 
     @Value("${pn.ss.event-handler.max.messages}")
     private int maxMessages;
@@ -74,7 +73,6 @@ public class StreamsRecordProcessor {
         this.dynamoDbClient = dynamoDbClient;
         this.sqsService = sqsService;
         this.streamRecordProcessorQueueName = streamRecordProcessorQueueName;
-        this.sqsEventHandlerRetryStrategyProperties = sqsEventHandlerRetryStrategyProperties;
         this.sqsEnventHandlerRetryStrategy = Retry.backoff(sqsEventHandlerRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(sqsEventHandlerRetryStrategyProperties.minBackoff()))
                 .filter(throwable -> throwable instanceof DynamoDbException || throwable instanceof SdkClientException || throwable instanceof EventBridgeException)
                 .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure()+","+retrySignal.failure().getMessage()));

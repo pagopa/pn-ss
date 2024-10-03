@@ -487,6 +487,14 @@ Parameters:
     Type: Number
     Description: 'Max number of messages to be processed by the StreamsRecordProcessor'
 
+  PnSsSqsRetryStrategyMinBackoff:
+    Type: Number
+    Description: 'Min backoff time for SQS retry strategy'
+
+  PnSsSqsRetryStrategyMaxAttempts:
+    Type: Number
+    Description: 'Max number of attempts for SQS retry strategy'
+
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -564,6 +572,8 @@ Resources:
         ContainerEnvEntry53: !Sub 'PnSsSafeClients=${PnSsSafeClients}'
         ContainerEnvEntry54: !Sub 'PnSsQueueNameAvailability=${PnSsQueueNameAvailability}'
         ContainerEnvEntry55: !Sub 'PnSsEventHandlerMaxMessages=${PnSsEventHandlerMaxMessages}'
+        ContainerEnvEntry56: !Sub 'PnSsSqsRetryStrategyMinBackoff=${PnSsSqsRetryStrategyMinBackoff}'
+        ContainerEnvEntry57: !Sub 'PnSsSqsRetryStrategyMaxAttempts=${PnSsSqsRetryStrategyMaxAttempts}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

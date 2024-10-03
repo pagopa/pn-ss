@@ -72,11 +72,7 @@ public class StreamsRecordProcessor {
         MDC.clear();
         log.logStartingProcess(PROCESS_RECORDS);
 
-        Flux<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> eventsFlux = findEventSendToBridge()
-                .filter(Objects::nonNull)
-                .cache();
-
-        eventsFlux
+        findEventSendToBridge()
                 .buffer(10)
                 .map(tuple -> {
                     List<PutEventsRequestEntry> putEventsRequestEntries = tuple.stream()

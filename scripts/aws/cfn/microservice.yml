@@ -483,6 +483,10 @@ Parameters:
     Type: String
     Description: 'S3 prefix to upload lambda compiled package'
 
+  PnSsEventHandlerMaxMessages:
+    Type: Number
+    Description: 'Max number of messages to be processed by the StreamsRecordProcessor'
+
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -559,6 +563,7 @@ Resources:
         ContainerEnvEntry52: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
         ContainerEnvEntry53: !Sub 'PnSsSafeClients=${PnSsSafeClients}'
         ContainerEnvEntry54: !Sub 'PnSsQueueNameAvailability=${PnSsQueueNameAvailability}'
+        ContainerEnvEntry55: !Sub 'PnSsEventHandlerMaxMessages=${PnSsEventHandlerMaxMessages}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

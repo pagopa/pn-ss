@@ -56,6 +56,9 @@ public class StreamsRecordProcessor {
     private final RetryBackoffSpec sqsEnventHandlerRetryStrategy;
     private final SqsEventHandlerRetryStrategyProperties sqsEventHandlerRetryStrategyProperties;
 
+    @Value("${pn.ss.event-handler.max.messages}")
+    private int maxMessages;
+
 
     DynamoDbAsyncClient dynamoDbClient;
     @Value("${event.bridge.disponibilita-documenti-name}")
@@ -119,7 +122,7 @@ public class StreamsRecordProcessor {
     public Flux<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> findEventSendToBridge() {
         final String FIND_EVENT_SEND_TO_BRIDGE = "StreamRecordProcessor.findEventSendToBridge()";
         log.debug(INVOKING_METHOD, FIND_EVENT_SEND_TO_BRIDGE);
-        return sqsService.getMessages(streamRecordProcessorQueueName.sqsName(), DocumentStateDto.class, 10)
+        return sqsService.getMessages(streamRecordProcessorQueueName.sqsName(), DocumentStateDto.class, maxMessages)
                 .flatMap(recordEvent -> {
                     DocumentEntity docEntity = recordEvent.getMessageContent().getDocumentEntity();
                     MDC.put(MDC_CORR_ID_KEY, docEntity.getDocumentKey());

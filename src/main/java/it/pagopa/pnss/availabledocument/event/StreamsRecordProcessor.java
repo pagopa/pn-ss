@@ -7,6 +7,7 @@ import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.EventBridgeUtil;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.StreamRecordProcessorQueueName;
+import it.pagopa.pnss.configurationproperties.retry.SqsEventHandlerRetryStrategyProperties;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import lombok.CustomLog;
 import org.slf4j.MDC;
@@ -18,6 +19,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 import reactor.util.retry.Retry;
+import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -50,6 +52,11 @@ public class StreamsRecordProcessor {
     private final EventBridgeClient eventBridgeClient = EventBridgeClient.create();
     private final SqsService sqsService;
     private final StreamRecordProcessorQueueName streamRecordProcessorQueueName;
+
+    private final RetryBackoffSpec sqsEnventHandlerRetryStrategy;
+    private final SqsEventHandlerRetryStrategyProperties sqsEventHandlerRetryStrategyProperties;
+
+
     DynamoDbAsyncClient dynamoDbClient;
     @Value("${event.bridge.disponibilita-documenti-name}")
     private String disponibilitaDocumentiEventBridge;
@@ -59,11 +66,15 @@ public class StreamsRecordProcessor {
 
 
 
-    public StreamsRecordProcessor(DynamoDbAsyncClient dynamoDbClient, SqsService sqsService, StreamRecordProcessorQueueName streamRecordProcessorQueueName) {
+    public StreamsRecordProcessor(DynamoDbAsyncClient dynamoDbClient, SqsService sqsService, StreamRecordProcessorQueueName streamRecordProcessorQueueName, SqsEventHandlerRetryStrategyProperties sqsEventHandlerRetryStrategyProperties) {
 
         this.dynamoDbClient = dynamoDbClient;
         this.sqsService = sqsService;
         this.streamRecordProcessorQueueName = streamRecordProcessorQueueName;
+        this.sqsEventHandlerRetryStrategyProperties = sqsEventHandlerRetryStrategyProperties;
+        this.sqsEnventHandlerRetryStrategy = Retry.backoff(sqsEventHandlerRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(sqsEventHandlerRetryStrategyProperties.minBackoff()))
+                .filter(throwable -> throwable instanceof DynamoDbException || throwable instanceof SdkClientException || throwable instanceof EventBridgeException)
+                .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure()+","+retrySignal.failure().getMessage()));
     }
 
     @Scheduled(cron="${PnSsCronStreamsRecordProcessor ?:*/10 * * * * *}")
@@ -96,7 +107,7 @@ public class StreamsRecordProcessor {
                             .map(SqsMessageWrapper::getMessage)
                             .flatMap(message ->sqsService.deleteMessageFromQueue(message, streamRecordProcessorQueueName.sqsName()))
                 )
-                .retryWhen(indefiniteRetry())
+                .retryWhen(sqsEnventHandlerRetryStrategy)
                 .transform(pullFromFluxUntilIsEmpty())
                 .then()
                 .doOnError(e -> log.fatal("DBStream: Errore generico ", e))
@@ -144,7 +155,7 @@ public class StreamsRecordProcessor {
                 })
                 .filter(Boolean::booleanValue)
                 .flatMap(unused -> Mono.fromCompletionStage(getFromDynamo(cxId)))
-                .retryWhen(indefiniteRetry())
+                .retryWhen(sqsEnventHandlerRetryStrategy)
                 .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
                 .map(getItemResponse -> getItemResponse.item().get(CAN_READ_TAGS).bool())
                 .defaultIfEmpty(false)
@@ -183,9 +194,5 @@ public class StreamsRecordProcessor {
     }
 
 
-    private Retry indefiniteRetry() {
-        return Retry.backoff(Long.MAX_VALUE, Duration.ofMillis(1000))
-                .filter(throwable -> throwable instanceof DynamoDbException || throwable instanceof SdkClientException || throwable instanceof EventBridgeException)
-                .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure()+","+retrySignal.failure().getMessage()));
-    }
+
 }

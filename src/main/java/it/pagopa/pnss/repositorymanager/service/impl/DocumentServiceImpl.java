@@ -198,9 +198,9 @@ public class DocumentServiceImpl implements DocumentService {
                 })
                 .transform(checkIfFileToIgnoreExistsInS3())
                 .flatMap(documentEntityStored -> {
+                    // il vecchio stato viene considerato nella gestione della retentionUntil
+                    oldState.set(documentEntityStored.getDocumentState());
                     if (!StringUtils.isBlank(documentChanges.getDocumentState())) {
-                        // il vecchio stato viene considerato nella gestione della retentionUntil
-                        oldState.set(documentEntityStored.getDocumentState());
                         boolean statusFound = false;
                         documentEntityStored.setDocumentState(documentChanges.getDocumentState());
 

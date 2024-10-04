@@ -8,6 +8,7 @@ import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.JsonUtils;
 import it.pagopa.pnss.configurationproperties.retry.SqsRetryStrategyProperties;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -31,6 +32,8 @@ public class SqsServiceImpl implements SqsService {
     private final ObjectMapper objectMapper;
     private final RetryBackoffSpec sqsRetryStrategy;
     private final JsonUtils jsonUtils;
+
+
 
     public SqsServiceImpl(SqsAsyncClient sqsAsyncClient, ObjectMapper objectMapper, JsonUtils jsonUtils, SqsRetryStrategyProperties sqsRetryStrategyProperties) {
         this.sqsAsyncClient = sqsAsyncClient;

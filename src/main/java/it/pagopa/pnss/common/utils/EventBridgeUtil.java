@@ -36,7 +36,8 @@ public class EventBridgeUtil {
         message.setKey(key);
         message.setVersionId("01");
 
-        message.setDocumentType(documentEntity.getDocumentKey()!=null&&documentEntity.getDocumentType()!=null ? documentEntity.getDocumentType().toString():null);
+        message.setDocumentType(documentEntity.getDocumentType()!=null && documentEntity.getDocumentType().getTipoDocumento()!= null ?
+                documentEntity.getDocumentType().getTipoDocumento():null);
 
         message.setDocumentStatus(documentEntity.getDocumentLogicalState()!=null ? documentEntity.getDocumentLogicalState().toString():null);
         message.setContentType(documentEntity.getContentType()!=null ? documentEntity.getContentType().toString():null);

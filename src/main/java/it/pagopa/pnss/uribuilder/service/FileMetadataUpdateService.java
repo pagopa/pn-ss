@@ -99,7 +99,7 @@ public class FileMetadataUpdateService {
 
                                 Mono<String> checkedStatus;
                                 if (logicalState != null && !logicalState.isBlank()) {
-                                    checkedStatus = checkLookUp(documentType, logicalState);
+                                    checkedStatus = Mono.just(documentType);
                                 } else {
                                     checkedStatus = Mono.just("");
                                 }

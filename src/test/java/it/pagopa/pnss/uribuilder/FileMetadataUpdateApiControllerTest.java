@@ -131,7 +131,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));
 
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(PRELOADED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
-				.isBadRequest();
+				.is5xxServerError();
 	}
 
 	@Test

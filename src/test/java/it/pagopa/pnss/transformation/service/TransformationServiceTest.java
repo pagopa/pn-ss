@@ -45,10 +45,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -450,7 +448,6 @@ public class TransformationServiceTest {
     }
 
     void mockSignCalls() {
-        SignReturnV2 signReturnV2 = new SignReturnV2();
         PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
         pnSignDocumentResponse.setSignedDocument(new byte[10]);
 
@@ -493,11 +490,6 @@ public class TransformationServiceTest {
         s3TestClient.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(key).build());
     }
 
-    private Mono<SendMessageResponse> sendMessageToQueue() {
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        return sqsService.send(signQueueName, createdS3ObjectDto);
-
-    }
     private Mono<SendMessageResponse> sendMessageToQueue(CreatedS3ObjectDto createdS3ObjectDto) {
         return sqsService.send(signQueueName, createdS3ObjectDto);
 

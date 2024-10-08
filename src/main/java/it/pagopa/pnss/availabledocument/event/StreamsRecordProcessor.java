@@ -102,7 +102,6 @@ public class StreamsRecordProcessor {
                             .map(Tuple2::getT1)
                             .toList();
                 })
-                //
                 .flatMap(wrappers ->
                      Flux.fromIterable(wrappers)
                             .map(SqsMessageWrapper::getMessage)

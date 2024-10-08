@@ -49,6 +49,9 @@ import org.springframework.context.annotation.PropertySource;
 // TRANSFORMATION
 @PropertySource("classpath:transformation/transformation.properties")
 
+// CLOUDWATCH
+@PropertySource("classpath:cloudwatch/cloudwatch.properties")
+
 public class TemplateApplication {
 
     public static void main(String[] args) {

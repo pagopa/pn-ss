@@ -416,6 +416,10 @@ Parameters:
     Type: String
     Description: 'Parameter used to define minimum backoff between attempts'
 
+  PnSsSignAndTimemarkMetricsSchema:
+    Type: String
+    Description: 'Name of the AWS parameter that contains the schema for the metrics of the sign and timemark service'
+
   CpuValue:
     Type: Number
     Default: 1024
@@ -504,7 +508,7 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
-    
+
   ServiceEndpointToPdfRaster:
     Type: String
     Description: 'Endpoint FQDN of PDFRaster microservice'
@@ -570,6 +574,7 @@ Resources:
         ContainerEnvEntry55: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
         ContainerEnvEntry56: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
         ContainerEnvEntry57: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
+        ContainerEnvEntry58: !Sub 'PnSsSignAndTimemarkMetricsSchema=${PnSsSignAndTimemarkMetricsSchema}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -1213,9 +1218,9 @@ Resources:
       SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn
 
   ######## Scadenza Documenti Lambda Handler  #########
-  
-  
-  
+
+
+
   PnSsScadenzaDocumentiLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1317,8 +1322,8 @@ Resources:
         S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventHandler.zip"
       Layers:
         - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
-        
-        
+
+
   PnSsQueuePolicyScadenzaDocumentiDynamoStreamDLQ:
     Type: AWS::SQS::QueuePolicy
     Properties:

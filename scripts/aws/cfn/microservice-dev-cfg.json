@@ -42,6 +42,7 @@
     "PnSsSqsRetryStrategyMaxAttempts": "3",
     "PnSsSqsRetryStrategyMinBackoff": "3",
     "PnSsEventHandlerMaxMessages": "10",
+    "PnSsTransformationServiceMaxMessages": "10",
     "SpringCodecMaxInMemorySize": "10000000",
     "SignAndTimemarkMaxThreadPoolSize": "50",
     "RasterMaxThreadPoolSize": "4"

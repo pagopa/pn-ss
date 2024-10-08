@@ -14,7 +14,6 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcess
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
-import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,8 +25,6 @@ import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -54,18 +51,13 @@ import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
+import software.amazon.awssdk.services.ssm.SsmAsyncClient;
+import software.amazon.awssdk.services.ssm.SsmAsyncClientBuilder;
 import java.net.URI;
-import java.net.URL;
 import java.util.List;
 
 @Configuration
@@ -102,6 +94,9 @@ public class AwsConfiguration {
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
 
+    @Value("${test.aws.ssm.endpoint:#{null}}")
+    private String testAwsSsmEndpoint;
+
     private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
 
@@ -110,7 +105,6 @@ public class AwsConfiguration {
         this.awsConfigurationProperties = awsConfigurationProperties;
         this.dynamoEventStreamName = dynamoEventStreamName;
         this.availabelDocumentEventBridgeName = availabelDocumentEventBridgeName;
-
     }
 
     //  <-- spring-cloud-starter-aws-messaging -->
@@ -213,6 +207,19 @@ public class AwsConfiguration {
     }
 
     @Bean
+    public SsmAsyncClient ssmAsyncClient() {
+        SsmAsyncClientBuilder ssmClient = SsmAsyncClient.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            ssmClient.endpointOverride(URI.create(testAwsSsmEndpoint));
+        }
+
+        return ssmClient.build();
+    }
+
+    @Bean
     public S3Presigner s3Presigner()
     {
         S3Presigner.Builder builder = S3Presigner.builder()
@@ -278,7 +285,7 @@ public class AwsConfiguration {
             		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
 
             IRecordProcessorFactory recordProcessorFactory =
-                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());
+                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient());
             Worker worker = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory,
                                                                              workerConfig,
                                                                              adapterClient,

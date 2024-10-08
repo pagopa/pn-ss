@@ -14,12 +14,20 @@ public class LogUtils {
     //LABELS
     public static final String ENDING_PROCESS_WITH_ERROR = "Ending '{}' Process with error = '{}' - '{}'";
     public static final String INVOKING_METHOD = "Invoking operation '{}' with args: '{}'";
+    public static final String INVOKING_METHOD_WITHOUT_ARGS = "Invoking operation '{}'";
     public static final String SUCCESSFUL_OPERATION_LABEL = "Successful operation: '{}' = '{}'";
+    public static final String SUCCESSFUL_OPERATION_LABEL_NO_ARGS = "Successful operation: '{}'";
+    public static final String EXCEPTION_IN_PROCESS = "Exception in '{}'";
     public static final String INVOKING_INTERNAL_SERVICE = "Invoking internal service '{}' '{}'. Waiting Sync response.";
     public static final String CLIENT_METHOD_INVOCATION = "Client method '{}' - args: '{}'";
     public static final String CLIENT_METHOD_RETURN = "Return client method: {} = {}";
     public static final String CLIENT_METHOD_RETURN_WITH_ERROR = "Return client method '{}' with error: {} - {}";
+    public static final String INITIALIZING = "Initializing '{}'";
+    public static final String EXCEPTION_DURING_INITIALIZATION = "Exception during '{}' initialization";
     public static final String ARG = " - '{}'";
+
+    //DOWNLOAD
+    public static final String DOWNLOAD_FILE = "DownloadCall.downloadFile()";
 
     //URI BUILDER
     public static final String CREATE_URI_FOR_DOWNLOAD_FILE = "UriBuilderService.createUriForDownloadFile()";
@@ -35,7 +43,10 @@ public class LogUtils {
     //UPDATE METADATA
     public static final String UPDATE_FILE_METADATA = "updateFileMetadata()";
     public static final String UPDATE_METADATA = "FileMetadataUpdateService.updateMetadata()";
-
+    public static final String IGNORED_UPDATE_METADATA_CONFIG = "IgnoredUpdateMetadataConfig";
+    public static final String PARSE_IGNORED_UPDATE_METADATA_LIST = "IgnoredUpdateMetadataConfig.parseIgnoredUpdateMetadataList()";
+    public static final String REFRESH_IGNORED_UPDATE_METADATA_LIST = "IgnoredUpdateMetadataConfig.refreshIgnoredUpdateMetadataList()";
+    public static final String REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED = "refreshIgnoredUpdateMetadataListScheduled()";
     public static final String MISSING_CONTENT_TYPE = "ContentType is missing";
     public static final String MISSING_DOCUMENT_TYPE = "Document type is missing";
     public static final String MISSING_TRACE_ID = "XTraceId is missing";
@@ -86,6 +97,8 @@ public class LogUtils {
     public static final String NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER = "newStagingBucketObjectCreatedListener()";
     public static final String NEW_STAGING_BUCKET_OBJECT_CREATED = "TransformationService.newStagingBucketObjectCreated()";
     public static final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
+    public static final String SIGN_AND_TIMEMARK_TRANSFORMATION = "TransformationService.signAndTimemarkTransformation()";
+    public static final String RASTER_TRANSFORMATION = "TransformationService.rasterTransformation()";
     public static final String CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET = "TransformationService.changeFromStagingBucketToHotBucket()";
 
     //RETENTION SERVICE
@@ -103,6 +116,23 @@ public class LogUtils {
 
     //RETRY
     public static final String RETRY_ATTEMPT = "Retry attempt number '{}' caused by : {}";
+
+    //INDEXING
+    public static final String INDEXING_CONFIGURATION = "IndexingConfiguration";
+    public static final String GET_TAGS_RELATIONS_OP = "getTagsRelations";
+    public static final String GET_TAGS_DOCUMENT = "getTagsDocument";
+    public static final String GET_TAGS_RELATIONS = "TagsService.getTagsRelations()";
+    public static final String PUT_TAGS = "TagsService.putTags()";
+    public static final String UPDATE_TAGS = "TagsService.updateTags()";
+    public static final String SET_TAG = "TagsService.setTag()";
+    public static final String DELETE_TAG = "TagsService.deleteTag()";
+    public static final String UPDATE_RELATIONS = "TagsService.updateRelations()";
+    public static final String PUT_TAGS_OP = "putTags";
+    public static final String POST_TAG_DOCUMENT = "postTagsDocument";
+    public static final String ADDITIONAL_FILE_TAGS_SEARCH = "additionalFileTagsSearch";
+    public static final String SEARCH_TAGS = "AdditionalFileTagsService.searchTags()";
+    public static final String VALIDATE_QUERY_PARAMS = "AdditionalFileTagsService.validateQueryParams()";
+    public static final String MASSIVE_POST_TAG_DOCUMENT = "massivePostTagDocument";
 
 
 }

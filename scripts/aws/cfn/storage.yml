@@ -74,11 +74,11 @@ Parameters:
     Type: String
     Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
     Default: 'MARKER'
-    AllowedValues: [MARKER, COMPLETE]
+    AllowedValues: [MARKER]
 
 Conditions:
   IsDevEnv: !Equals [ !Ref EnvType, 'dev']
-  DocumentsCompleteDeletion: !Equals [ !Ref PnSsDocumentDeletionMode, 'COMPLETE']
+##  DocumentsCompleteDeletion: !Equals [ !Ref PnSsDocumentDeletionMode, 'COMPLETE']
 
 
 Resources:
@@ -179,6 +179,23 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
+  PnSsTableTags:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: 'pn-SsTags'
+      AttributeDefinitions:
+        - AttributeName: 'tagKeyValue'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'tagKeyValue'
+          KeyType: 'HASH'
+      BillingMode: 'PAY_PER_REQUEST'
+      TableClass: 'STANDARD'
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
   PnSsKmsBucket:
     Type: 'AWS::KMS::Key'
     Properties:
@@ -229,19 +246,19 @@ Resources:
             Id: 'CORSRuleSafeStorage'
       LifecycleConfiguration:
         Rules:
-          - !If
-            - DocumentsCompleteDeletion
-            - Id: 'PnSsExpiredObjectDeleteMarker'
-              Status: 'Enabled'
-              ExpiredObjectDeleteMarker: true
-            - !Ref "AWS::NoValue"
-          - !If
-            - DocumentsCompleteDeletion
-            - Id: 'PnSsNoncurrentVersionExpiration'
-              Status: 'Enabled'
-              NoncurrentVersionExpiration:
-                NoncurrentDays: 1
-            - !Ref "AWS::NoValue"
+##          - !If
+##            - DocumentsCompleteDeletion
+##            - Id: 'PnSsExpiredObjectDeleteMarker'
+##              Status: 'Enabled'
+##              ExpiredObjectDeleteMarker: true
+##            - !Ref "AWS::NoValue"
+##          - !If
+##            - DocumentsCompleteDeletion
+##            - Id: 'PnSsNoncurrentVersionExpiration'
+##              Status: 'Enabled'
+##              NoncurrentVersionExpiration:
+##                NoncurrentDays: 1
+##            - !Ref "AWS::NoValue"
           - Id: 'PnSsAbortIncompleteMultipartUpload'
             AbortIncompleteMultipartUpload:
                 DaysAfterInitiation: 1
@@ -266,7 +283,7 @@ Resources:
                 Value: 'PN_AAR'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsLegalFacts'
             ExpirationInDays: 3655
             Status: 'Enabled'
@@ -275,7 +292,7 @@ Resources:
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsLogsArchiveAudit5Y'
             ExpirationInDays: 1830
             Status: 'Enabled'
@@ -337,7 +354,7 @@ Resources:
                 Value: 'PN_AAR'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsAar_expiry'
             Status: 'Enabled'
             ExpirationInDays: 3655
@@ -351,7 +368,7 @@ Resources:
                 Value: 'PN_LEGAL_FACTS'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsLegalFacts_expiry'
             Status: 'Enabled'
             ExpirationInDays: 3655
@@ -420,6 +437,20 @@ Resources:
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
+          - Id: 'PnSsPaperAttachments_freeze'
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_freeze'
+                Value: 'PN_PAPER_ATTACHMENT'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 30
+          - Id: 'PnSsPaperAttachments_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 365
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_PAPER_ATTACHMENT'
       NotificationConfiguration:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
@@ -782,6 +813,14 @@ Outputs:
   PnSsTableScadenzaDocumentiStreamArn:
     Description: 'Nome tabella SS Scadenza Documenti'
     Value: !GetAtt PnSsTableScadenzaDocumenti.StreamArn
+
+  PnSsTableNameTags:
+    Description: 'Nome tabella contenente le fileKey associate ad una coppia chiave-valore di un tag'
+    Value: !Ref PnSsTableTags
+
+  PnSsTableArnTags:
+    Description: 'ARN tabella conteniente i tags'
+    Value: !GetAtt PnSsTableTags.Arn
 
   PnSsDocumentDeletionMode:
     Description: 'Modalità cancellazione da tabella scadenzaDocumenti'

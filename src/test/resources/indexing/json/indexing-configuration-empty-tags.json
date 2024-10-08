@@ -1,0 +1,14 @@
+{
+  "globals": [],
+  "locals": [],
+  "limits": {
+    "MaxTagsPerRequest": 50,
+    "MaxOperationsOnTagsPerRequest": 50,
+    "MaxFileKeys": 1000,
+    "MaxMapValuesForSearch": 10,
+    "MaxFileKeysUpdateMassivePerRequest": 100,
+    "MaxTagsPerDocument": 40,
+    "MaxValuesPerTagDocument": 1000,
+    "MaxValuesPerTagPerRequest": 100
+  }
+}

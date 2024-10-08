@@ -60,6 +60,8 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.SsmClientBuilder;
 
+import software.amazon.awssdk.services.ssm.SsmAsyncClient;
+import software.amazon.awssdk.services.ssm.SsmAsyncClientBuilder;
 import java.net.URI;
 import java.util.List;
 
@@ -111,7 +113,6 @@ public class AwsConfiguration {
         this.awsConfigurationProperties = awsConfigurationProperties;
         this.dynamoEventStreamName = dynamoEventStreamName;
         this.availabelDocumentEventBridgeName = availabelDocumentEventBridgeName;
-
     }
 
     //  <-- spring-cloud-starter-aws-messaging -->
@@ -214,6 +215,19 @@ public class AwsConfiguration {
     }
 
     @Bean
+    public SsmAsyncClient ssmAsyncClient() {
+        SsmAsyncClientBuilder ssmClient = SsmAsyncClient.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            ssmClient.endpointOverride(URI.create(testAwsSsmEndpoint));
+        }
+
+        return ssmClient.build();
+    }
+
+    @Bean
     public S3Presigner s3Presigner()
     {
         S3Presigner.Builder builder = S3Presigner.builder()
@@ -302,7 +316,7 @@ public class AwsConfiguration {
             		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
 
             IRecordProcessorFactory recordProcessorFactory =
-                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());
+                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName(), dynamoDbAsyncClient());
             Worker worker = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory,
                                                                              workerConfig,
                                                                              adapterClient,

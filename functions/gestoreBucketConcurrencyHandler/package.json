@@ -1,0 +1,25 @@
+{
+  "name": "gestorebucketconcurrencyhandler",
+  "version": "1.0.0",
+  "description": "event handler for gestore bucket concurrency handler",
+  "main": "index.js",
+  "scripts": {
+    "test-build": "npm run-script test && npm run-script coverage && npm run-script sonar && npm run-script build",
+    "build": "npm prune --production && rm -f ./function.zip && zip -r ./function.zip . -x './src/test/*' -x '*.md' -x '*.env'  -x './coverage/*' -x './.nyc_output/*' -x './.scannerwork/*'",
+    "test": "nyc --reporter=html --reporter=text mocha './src/test/**/*.test.js' --recursive --timeout=3000 --exit -r dotenv/config",
+    "coverage": "nyc report --reporter=lcov",
+    "sonar": "node sonarqube-scanner.js -Dsonar.login=${SONAR_TOKEN}"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@aws-sdk/client-lambda": "^3.577.0",
+    "aws-sdk-client-mock": "^4.0.0",
+    "chai": "^4.3.6",
+    "lambda-tester": "^4.0.1",
+    "mocha": "^9.2.2",
+    "nyc": "^15.1.0",
+    "proxyquire": "^2.1.3",
+    "sonarqube-scanner": "^3.3.0"
+  }
+}

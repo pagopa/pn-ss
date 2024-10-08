@@ -52,10 +52,6 @@ public class JettyHttpClientConf {
                     }
                     log.debug("Start {} request to {}", theRequest.getMethod(), theRequest.getURI());
                 })
-                .onRequestContent((theRequest, content) -> {
-                    MDCUtils.enrichWithMDC(request, mdcContextMap);
-                    log.debug("Request body --> {}", decodeContent(content));
-                })
                 .onResponseContent((theResponse, content) -> {
                     MDCUtils.enrichWithMDC(request, mdcContextMap);
                     if (CONTENT_TYPE_OF_RESPONSE_BODY_TO_LOG.contains(theResponse.getHeaders().get(CONTENT_TYPE))) {

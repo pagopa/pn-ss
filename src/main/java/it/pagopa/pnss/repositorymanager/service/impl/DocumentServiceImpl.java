@@ -1,7 +1,6 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
@@ -11,6 +10,7 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
+import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -25,29 +25,25 @@ import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.utils.StringUtils;
-import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.Tag;
 import software.amazon.awssdk.services.s3.model.Tagging;
 
-import java.lang.reflect.ParameterizedType;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
 
 
 @Service
@@ -64,14 +60,17 @@ public class DocumentServiceImpl implements DocumentService {
     private final S3Service s3Service;
     @Autowired
     RepositoryManagerDynamoTableName managerDynamoTableName;
+    private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
                                RetentionService retentionService, AwsConfigurationProperties awsConfigurationProperties,
-                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service) {
+                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service,
+                               IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler) {
         this.docTypesService = docTypesService;
         this.callMacchinaStati = callMacchinaStati;
         this.s3Service = s3Service;
+        this.ignoredUpdateMetadataHandler = ignoredUpdateMetadataHandler;
         this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
                                                                                   TableSchema.fromBean(DocumentEntity.class)));
         this.objectMapper = objectMapper;
@@ -183,7 +182,6 @@ public class DocumentServiceImpl implements DocumentService {
 
     private Mono<DocumentEntity> executePatch(DocumentEntity docEntity, DocumentChanges documentChanges, AtomicReference<String> oldState, String documentKey, String authPagopaSafestorageCxId, String authApiKey) {
         final String PATCH_DOCUMENT = "DocumentService.patchDocument()";
-
         return Mono.just(docEntity).flatMap(documentEntity ->
                 {
                     if (!StringUtils.isBlank(documentChanges.getDocumentState())) {
@@ -197,6 +195,7 @@ public class DocumentServiceImpl implements DocumentService {
                         return Mono.just(documentEntity);
                     }
                 })
+                .transform(checkIfFileToIgnoreExistsInS3())
                 .flatMap(documentEntityStored -> {
                     if (!StringUtils.isBlank(documentChanges.getDocumentState())) {
                         // il vecchio stato viene considerato nella gestione della retentionUntil
@@ -238,7 +237,7 @@ public class DocumentServiceImpl implements DocumentService {
                                 documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))) {
 
                     String storageType;
-                    if (documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
+                    if (!ignoredUpdateMetadataHandler.isToIgnore(documentKey) && documentEntityStored.getDocumentType() != null && documentEntityStored.getDocumentType().getStatuses() != null) {
                         if (documentEntityStored.getDocumentType()
                                 .getStatuses()
                                 .containsKey(documentEntityStored.getDocumentLogicalState())) {
@@ -261,9 +260,10 @@ public class DocumentServiceImpl implements DocumentService {
             })
             .flatMap(documentEntityStored -> {
 
-                if (!StringUtils.isBlank(documentChanges.getRetentionUntil()) || (documentChanges.getDocumentState() != null && (
-                        documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
-                                documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED)))) {
+                if (!ignoredUpdateMetadataHandler.isToIgnore(documentKey) &&
+                        (!StringUtils.isBlank(documentChanges.getRetentionUntil()) || (documentChanges.getDocumentState() != null &&
+                                (documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
+                                documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))))) {
 
 		                   return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
 		                           authApiKey,
@@ -277,6 +277,24 @@ public class DocumentServiceImpl implements DocumentService {
                    })
                    .flatMap(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
                    .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentChanges));
+    }
+
+    //Related to the IgnoredUpdateMetadataHandler. It checks if the file to ignore exists in S3.
+    //If it does exist, removes it from the list of file keys to ignore.
+    private Function<Mono<DocumentEntity>, Mono<DocumentEntity>> checkIfFileToIgnoreExistsInS3() {
+        return tMono -> tMono.flatMap(documentEntity -> {
+            String documentKey = documentEntity.getDocumentKey();
+            boolean isToIgnore = ignoredUpdateMetadataHandler.isToIgnore(documentKey);
+            if (isToIgnore) {
+                return s3Service.headObject(documentKey, bucketName.ssHotName()).onErrorResume(NoSuchKeyException.class, throwable -> {
+                    log.debug("File with key '{}' is to ignore", documentKey);
+                    return Mono.empty();
+                }).doOnNext(headObjectResponse -> {
+                    log.warn("File to ignore with key '{}' exists in S3 bucket.", documentKey);
+                    ignoredUpdateMetadataHandler.removeFileKey(documentKey);
+                }).thenReturn(documentEntity);
+            } else return Mono.just(documentEntity);
+        });
     }
 
     @Override

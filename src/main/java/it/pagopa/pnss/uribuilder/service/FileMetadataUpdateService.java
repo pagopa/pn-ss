@@ -12,7 +12,9 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
+import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
 import it.pagopa.pnss.common.utils.LogUtils;
+import it.pagopa.pnss.configuration.IgnoredUpdateMetadataConfig;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -48,8 +50,12 @@ public class FileMetadataUpdateService {
     private final S3Service s3Service;
     private final BucketName bucketName;
     private final ScadenzaDocumentiClientCall scadenzaDocumentiClientCall;
+    private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
 
-    public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall, DocTypesClientCall docTypesClientCall, RetryBackoffSpec gestoreRepositoryRetryStrategy, S3Service s3Service, BucketName bucketName, ScadenzaDocumentiClientCall scadenzaDocumentiClientCall) {
+    public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
+                                     DocTypesClientCall docTypesClientCall, RetryBackoffSpec gestoreRepositoryRetryStrategy,
+                                     S3Service s3Service, BucketName bucketName, ScadenzaDocumentiClientCall scadenzaDocumentiClientCall,
+                                     IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler) {
         this.userConfigClientCall = userConfigurationClientCall;
         this.docClientCall = documentClientCall;
         this.docTypesClientCall = docTypesClientCall;
@@ -57,6 +63,7 @@ public class FileMetadataUpdateService {
         this.s3Service = s3Service;
         this.bucketName = bucketName;
         this.scadenzaDocumentiClientCall = scadenzaDocumentiClientCall;
+        this.ignoredUpdateMetadataHandler = ignoredUpdateMetadataHandler;
     }
 
     public Mono<OperationResultCodeResponse> updateMetadata(String fileKey, String xPagopaSafestorageCxId, UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {
@@ -121,10 +128,10 @@ public class FileMetadataUpdateService {
                         }
 
                         if (StringUtils.isEmpty(technicalStatus)) {
-                            log.debug("{} : Technical status not found " +
+                            log.debug("{} : Logical status not found " +
                                       "for document key {}", UPDATE_METADATA, fileKey);
                             return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                                          "Technical status not found for document key : " + fileKey));
+                                                                          "Logical status not found for document key : " + fileKey));
                         }
 
                     }
@@ -139,7 +146,7 @@ public class FileMetadataUpdateService {
                 .flatMap(documentChanges ->  docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                         .retryWhen(gestoreRepositoryRetryStrategy)
                         .flatMap(documentResponsePatch -> {
-                            if (retentionUntil != null) {
+                            if (retentionUntil != null && !ignoredUpdateMetadataHandler.isToIgnore(fileKey)) {
                                 return updateS3ObjectTags(fileKey, documentResponsePatch.getDocument().getDocumentState(), documentResponsePatch.getDocument().getDocumentType())
                                         .flatMap(putObjectTaggingResponse -> scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput()
                                                 .documentKey(fileKey)

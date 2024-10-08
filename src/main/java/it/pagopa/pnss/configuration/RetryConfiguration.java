@@ -6,6 +6,7 @@ import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.configurationproperties.DynamoRetryStrategyProperties;
 import it.pagopa.pnss.configurationproperties.GestoreRepositoryRetryStrategyProperties;
+import it.pagopa.pnss.configurationproperties.PdfRasterRetryStrategyProperties;
 import it.pagopa.pnss.configurationproperties.retry.S3RetryStrategyProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,8 @@ public class RetryConfiguration {
     private GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties;
     @Autowired
     private S3RetryStrategyProperties s3RetryStrategyProperties;
+    @Autowired
+    private PdfRasterRetryStrategyProperties pdfRasterRetryStrategyProperties;
 
     private final Predicate<Throwable> isNotFound = throwable -> (throwable instanceof DocumentKeyNotPresentException) || (throwable instanceof IdClientNotFoundException)  || (throwable instanceof DocumentTypeNotPresentException);
 
@@ -57,6 +60,13 @@ public class RetryConfiguration {
         return Retry.backoff(s3RetryStrategyProperties.maxAttempts(), Duration.ofSeconds(s3RetryStrategyProperties.minBackoff()))
                 .filter(S3Exception.class::isInstance)
                 .filter(Predicate.not(NoSuchKeyException.class::isInstance))
+                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
+                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
+    }
+
+    @Bean
+    RetryBackoffSpec pdfRasterRetryStrategy() {
+        return Retry.backoff(pdfRasterRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(pdfRasterRetryStrategyProperties.minBackoff()))
                 .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }

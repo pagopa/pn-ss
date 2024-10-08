@@ -9,6 +9,7 @@ public final class QueueNameConstant {
     }
 
     public static final String SIGN_QUEUE_NAME = "dgs-bing-ss-PnSsQueueStagingBucket-Pja8ntKQxYrs";
-    public static final List<String> ALL_QUEUE_NAME_LIST = List.of(SIGN_QUEUE_NAME);
+    public static final String AVAILABILITY_QUEUE_NAME = "Pn-Ss-Availability-Queue";
+    public static final List<String> ALL_QUEUE_NAME_LIST = List.of(SIGN_QUEUE_NAME, AVAILABILITY_QUEUE_NAME);
 
 }

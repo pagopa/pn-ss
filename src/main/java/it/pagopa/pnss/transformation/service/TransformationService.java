@@ -129,7 +129,11 @@ public class TransformationService {
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK) || transformations.contains(DocumentType.TransformationsEnum.RASTER);                })
+
+                    return  transformations.contains(DocumentType.TransformationsEnum.SIGN) ||
+                            transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK) ||
+                            transformations.contains(DocumentType.TransformationsEnum.RASTER);
+                })
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
                 .flatMap(document -> chooseTransformationType(document, key, stagingBucketName))

@@ -62,7 +62,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     @Override
     public Mono<AdditionalFileTagsDto> getDocumentTags(String fileKey, String clientId) {
         final String GET_DOCUMENT = "AdditionalFileTagsService.getDocumentTags()";
-        log.debug(INVOKING_METHOD, GET_DOCUMENT, fileKey);
+        log.debug(INVOKING_METHOD, GET_DOCUMENT, Stream.of(fileKey, clientId).toList());
 
         return userConfigurationClientCall.getUser(clientId)
                 .retryWhen(gestoreRepositoryRetryStrategy)
@@ -104,7 +104,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     @Override
     public Mono<AdditionalFileTagsUpdateResponse> postTags(String cxId, AdditionalFileTagsUpdateRequest request, String fileKey) {
         final String POST_TAG = "AdditionalFileTagsService.postTags()";
-        log.debug(INVOKING_METHOD, POST_TAG, fileKey);
+        log.debug(INVOKING_METHOD, POST_TAG, Stream.of(cxId, request, fileKey).toList());
 
         return getWriteTagsPermission(cxId)
                 .flatMap(authorizationGranted -> {
@@ -117,6 +117,8 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     }
 
     private Mono<AdditionalFileTagsUpdateResponse> postSingleTag(String cxId, AdditionalFileTagsUpdateRequest request, String fileKey) {
+        final String POST_SINGLE_TAG = "AdditionalFileTagsService.postSingleTag()";
+        log.debug(INVOKING_METHOD, POST_SINGLE_TAG, Stream.of(cxId, request, fileKey).toList());
         return requestValidation(request, cxId)
                 .flatMap(tagsChanges ->
                         tagsClientCall.putTags(fileKey, tagsChanges)
@@ -156,6 +158,8 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
 
     @Override
     public Mono<TagsChanges> requestValidation(AdditionalFileTagsUpdateRequest request, String cxId) {
+        final String REQUEST_VALIDATION = "AdditionalFileTagsService.requestValidation()";
+        log.debug(INVOKING_METHOD, REQUEST_VALIDATION, Stream.of(request, cxId).toList());
         return Mono.create(sink -> {
             TagsChanges tagsChanges = new TagsChanges();
             Map<String, List<String>> tagsToSet = new HashMap<>();
@@ -179,7 +183,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     @Override
     public Mono<AdditionalFileTagsMassiveUpdateResponse> postMassiveTags(AdditionalFileTagsMassiveUpdateRequest request, String cxId) {
         final String POST_MASSIVE_TAG = "AdditionalFileTagsService.postMassiveTags()";
-        log.debug(LogUtils.INVOKING_METHOD, POST_MASSIVE_TAG);
+        log.debug(LogUtils.INVOKING_METHOD, POST_MASSIVE_TAG, Stream.of(request, cxId).toList());
 
         return getWriteTagsPermission(cxId)
                 .flatMap(authorizationGranted -> {
@@ -204,7 +208,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         MDC.put(MDC_CORR_ID_KEY, fileKey);
 
         final String PROCESS_SINGLE_REQUEST = "AdditionalFileTagsService.processSingleRequest()";
-        log.debug(INVOKING_METHOD, PROCESS_SINGLE_REQUEST);
+        log.debug(INVOKING_METHOD, PROCESS_SINGLE_REQUEST, Stream.of(cxId, toSet, toDelete, fileKey).toList());
         AdditionalFileTagsUpdateRequest singleRequest = new AdditionalFileTagsUpdateRequest()
                 .SET(toSet)
                 .DELETE(toDelete);
@@ -218,7 +222,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
 
     private ErrorDetail createErrorDetail(String fileKey, Throwable throwable, String errorCode) {
         return new ErrorDetail()
-                .fileKey(List.of(fileKey))
+                .fileKey(new ArrayList<>(List.of(fileKey)))
                 .resultDescription(throwable.getMessage())
                 .resultCode(errorCode);
     }

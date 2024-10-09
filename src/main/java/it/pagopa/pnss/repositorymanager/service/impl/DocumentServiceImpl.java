@@ -178,11 +178,13 @@ public class DocumentServiceImpl implements DocumentService {
                     }
                     return executePatch(documentEntity, documentChanges, oldState, documentKey, authPagopaSafestorageCxId, authApiKey);
                 })
-                .map(documentEntity -> objectMapper.convertValue(documentEntity, Document.class));
+                .map(documentEntity -> objectMapper.convertValue(documentEntity, Document.class))
+                .doOnSuccess(documentEntity -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentEntity));
     }
 
     private Mono<DocumentEntity> executePatch(DocumentEntity docEntity, DocumentChanges documentChanges, AtomicReference<String> oldState, String documentKey, String authPagopaSafestorageCxId, String authApiKey) {
-        final String PATCH_DOCUMENT = "DocumentService.patchDocument()";
+        final String EXECUTE_PATCH = "DocumentService.executePatch()";
+        log.debug(LogUtils.INVOKING_METHOD, EXECUTE_PATCH, Stream.of(docEntity, documentChanges, oldState, documentKey, authPagopaSafestorageCxId).toList());
         return Mono.just(docEntity).flatMap(documentEntity ->
                 {
                     if (!StringUtils.isBlank(documentChanges.getDocumentState())) {
@@ -277,14 +279,16 @@ public class DocumentServiceImpl implements DocumentService {
                        }
                    })
                    .flatMap(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
-                    .filter(documentEntity -> documentEntity.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) && !oldState.get().equals(documentEntity.getDocumentState()))
                     .flatMap(documentEntity -> {
+                     String oldStateStr = oldState.get();
+                     if (documentEntity.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) && !oldStateStr.equals(documentEntity.getDocumentState())) {
                         DocumentStateDto documentStateDto = new DocumentStateDto();
                         documentStateDto.setDocumentEntity(documentEntity);
-                        documentStateDto.setOldDocumentState(oldState.toString());
+                        documentStateDto.setOldDocumentState(oldStateStr);
                         return sqsService.send(streamRecordProcessorQueueName.sqsName(), documentStateDto).thenReturn(docEntity);
+                     } else return Mono.just(documentEntity);
                     })
-                    .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentChanges));
+                .doOnSuccess(documentEntity -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, EXECUTE_PATCH, documentEntity));
     }
 
     //Related to the IgnoredUpdateMetadataHandler. It checks if the file to ignore exists in S3.

@@ -507,6 +507,10 @@ Parameters:
     Type: Number
     Description: 'Max number of attempts for SQS retry strategy'
 
+  PnSsTransformationServiceMaxMessages:
+    Type: Number
+    Description: 'Max number of messages to be processed by the TransformationService'
+
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -594,6 +598,7 @@ Resources:
         ContainerEnvEntry59: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
         ContainerEnvEntry60: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
         ContainerEnvEntry61: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
+        ContainerEnvEntry62: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

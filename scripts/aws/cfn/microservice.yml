@@ -266,6 +266,14 @@ Parameters:
     Type: String
     Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
 
+  PnSsQueueNameAvailability:
+    Type: String
+    Description: 'Nome coda per notifiche disponibilità'
+
+  PnSsQueueArnAvailability:
+    Type: String
+    Description: 'ARN coda per notifiche disponibilità'
+
 #### Parametri presenti nel file json di configurazione  ###
 
   PnSsUriBuilderstayHotTime:
@@ -487,6 +495,18 @@ Parameters:
     Type: String
     Description: 'S3 prefix to upload lambda compiled package'
 
+  PnSsEventHandlerMaxMessages:
+    Type: Number
+    Description: 'Max number of messages to be processed by the StreamsRecordProcessor'
+
+  PnSsSqsRetryStrategyMinBackoff:
+    Type: Number
+    Description: 'Min backoff time for SQS retry strategy'
+
+  PnSsSqsRetryStrategyMaxAttempts:
+    Type: Number
+    Description: 'Max number of attempts for SQS retry strategy'
+
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -566,10 +586,14 @@ Resources:
         ContainerEnvEntry51: !Sub 'PnSsIndexingConfiguration=${PnSsIndexingConfiguration}'
         ContainerEnvEntry52: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
         ContainerEnvEntry53: !Sub 'PnSsSafeClients=${PnSsSafeClients}'
-        ContainerEnvEntry54: !Sub 'PdfRasterBaseUrl=http://${ServiceEndpointToPdfRaster}:8080'
-        ContainerEnvEntry55: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
-        ContainerEnvEntry56: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
-        ContainerEnvEntry57: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
+        ContainerEnvEntry54: !Sub 'PnSsQueueNameAvailability=${PnSsQueueNameAvailability}'
+        ContainerEnvEntry55: !Sub 'PnSsEventHandlerMaxMessages=${PnSsEventHandlerMaxMessages}'
+        ContainerEnvEntry56: !Sub 'PnSsSqsRetryStrategyMinBackoff=${PnSsSqsRetryStrategyMinBackoff}'
+        ContainerEnvEntry57: !Sub 'PnSsSqsRetryStrategyMaxAttempts=${PnSsSqsRetryStrategyMaxAttempts}'
+        ContainerEnvEntry58: !Sub 'PdfRasterBaseUrl=http://${ServiceEndpointToPdfRaster}:8080'
+        ContainerEnvEntry59: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
+        ContainerEnvEntry60: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
+        ContainerEnvEntry61: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -671,6 +695,7 @@ Resources:
               - 'sqs:SendMessage'
             Resource:
               - !Ref PnSsQueueArnStagingBucket
+              - !Ref PnSsQueueArnAvailability
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -851,6 +876,7 @@ Resources:
           !Join
           - ','
           - - !Ref PnSsQueueArnStagingBucket
+            - !Ref PnSsQueueArnAvailability
             - !Ref PnSsQueueArnGestoreBucketInvoke
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
             - !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus

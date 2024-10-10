@@ -3,12 +3,12 @@ package it.pagopa.pnss.transformation.service;
 import com.namirial.sign.library.service.PnSignServiceImpl;
 import io.awspring.cloud.messaging.listener.Acknowledgment;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
+import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.ArubaSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
 import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
 import it.pagopa.pnss.common.rest.call.pdfraster.PdfRasterCall;
 import it.pagopa.pnss.common.service.SqsService;
@@ -23,10 +23,10 @@ import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,7 +37,8 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -46,7 +47,6 @@ import java.util.Map;
 import java.util.concurrent.Future;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -139,9 +139,10 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verify(sqsService, times(1)).send(eq(signQueueName), any(CreatedS3ObjectDto.class));
     }
+
 
     @Test
     void newStagingBucketObjectMaxRetriesExceeded() {
@@ -171,7 +172,7 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectError(InvalidStatusTransformationException.class).verify();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verify(sqsService, times(0)).send(eq(signQueueName), any(CreatedS3ObjectDto.class));
     }
 
@@ -202,7 +203,7 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verify(sqsService, times(1)).send(eq(signQueueName), any(CreatedS3ObjectDto.class));
     }
 
@@ -266,7 +267,7 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verifyArubaProviderSignCalls(contentType);
     }
 
@@ -300,7 +301,7 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verifyNamirialProviderSignCalls(contentType);
     }
 
@@ -334,11 +335,12 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
     }
 
-    @Test
-    void newStagingBucketObjectCreatedEventRetryInHotBucketOk() {
+    @ParameterizedTest
+    @EnumSource(value = DocumentType.TransformationsEnum.class, names = {"SIGN", "SIGN_AND_TIMEMARK"})
+    void newStagingBucketObjectCreatedEventRetryInHotBucketOk(DocumentType.TransformationsEnum transformation) {
 
         S3Object s3Object = new S3Object();
         s3Object.setKey(FILE_KEY);
@@ -363,12 +365,12 @@ public class TransformationServiceTest {
         };
 
         putObjectInBucket(FILE_KEY, bucketName.ssHotName(), new byte[10]);
-        mockGetDocument("application/pdf", AVAILABLE, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        mockGetDocument("application/pdf", AVAILABLE, List.of(transformation));
         mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
     }
 
     @Test
@@ -398,7 +400,7 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verify(sqsService, never()).send(eq(signQueueName), any());
     }
 
@@ -432,7 +434,7 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verify(sqsService, never()).send(eq(signQueueName), any());
     }
 
@@ -463,7 +465,7 @@ public class TransformationServiceTest {
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
         StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verify(sqsService, times(1)).send(eq(signQueueName), any());
     }
 

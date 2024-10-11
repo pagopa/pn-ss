@@ -62,6 +62,8 @@ public class TransformationService {
     private String defaultInternalClientIdValue;
     @Value("${s3.queue.sign-queue-name}")
     private String signQueueName;
+    @Value("${pn.ss.transformation-service.dummy.delay:250}")
+    private Long dummyDelay;
     // Numero massimo di retry. Due step: 1) firma del documento e inserimento nel bucket 2) delete del file dal bucket di staging, piu' un retry aggiuntivo di sicurezza
     private static final int MAX_RETRIES = 3;
 
@@ -173,7 +175,7 @@ public class TransformationService {
         return s3Service.getObject(key,stagingBucketName)
                 .map(BytesWrapper::asByteArray)
                 .flatMap(filebytes -> s3Service.putObject(key,filebytes,document.getContentType(),bucketName.ssHotName()))
-                .delayElement(Duration.ofMillis(250), Schedulers.boundedElastic());
+                .delayElement(Duration.ofMillis(dummyDelay), Schedulers.boundedElastic());
     }
 
     private Mono<Boolean> isSignatureNeeded(String key, int retry) {

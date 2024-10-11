@@ -47,6 +47,6 @@
     "SignAndTimemarkMaxThreadPoolSize": "50",
     "RasterMaxThreadPoolSize": "4",
     "PnSsTaskExecutionPoolMaxSize": "512",
-    "PnSsTaskExecutionPoolCoreSize": "50"
+    "PnSsTaskExecutionPoolCoreSize": "8"
   }
 }

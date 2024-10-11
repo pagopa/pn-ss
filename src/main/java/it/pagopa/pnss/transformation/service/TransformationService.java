@@ -20,6 +20,7 @@ import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import lombok.CustomLog;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
+import java.time.Duration;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -112,7 +114,7 @@ public class TransformationService {
                 })
                 .then()
                 .doOnSuccess( s3ObjectDto -> acknowledgment.acknowledge())
-                .doOnError(throwable -> !(throwable instanceof InvalidStatusTransformationException || throwable instanceof IllegalTransformationException), throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()))
+                .doOnError(throwable -> !(throwable instanceof InvalidStatusTransformationException || throwable instanceof IllegalTransformationException || throwable instanceof NotImplementedException), throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()))
                 .onErrorResume(throwable -> newStagingBucketObject.getRetry() <= MAX_RETRIES, throwable -> {
                     newStagingBucketObject.setRetry(newStagingBucketObject.getRetry() + 1);
                     return sqsService.send(signQueueName, newStagingBucketObject).then(Mono.fromRunnable(acknowledgment::acknowledge));
@@ -129,7 +131,7 @@ public class TransformationService {
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK) || transformations.contains(DocumentType.TransformationsEnum.RASTER);                })
+                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK) || transformations.contains(DocumentType.TransformationsEnum.RASTER) || transformations.contains(DocumentType.TransformationsEnum.DUMMY);})
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
                 .flatMap(document -> chooseTransformationType(document, key, stagingBucketName, marcatura))
@@ -142,7 +144,10 @@ public class TransformationService {
             return signAndTimemarkTransformation(document, key, stagingBucketName, marcatura);
         } else if (transformations.contains(DocumentType.TransformationsEnum.RASTER)) {
             return rasterTransformation(document, key, stagingBucketName);
-        } else return Mono.error(new IllegalTransformationException(key));
+        } else if (transformations.contains(DocumentType.TransformationsEnum.DUMMY)) {
+            return dummyTransformation(document,key,stagingBucketName);
+        }
+        else return Mono.error(new IllegalTransformationException(key));
     }
 
     private Mono<PutObjectResponse> signAndTimemarkTransformation(Document document, String key, String stagingBucketName, boolean marcatura) {
@@ -161,6 +166,10 @@ public class TransformationService {
                 .flatMap(fileBytes -> pdfRasterCall.convertPdf(fileBytes, key))
                 .flatMap(convertedDocument -> s3Service.putObject(key, convertedDocument, document.getContentType(), bucketName.ssHotName()))
                 .doFinally(signalType -> rasterSemaphore.release());
+    }
+
+    private Mono<PutObjectResponse> dummyTransformation(Document document, String key, String stagingBucketName) {
+        throw new NotImplementedException();
     }
 
     private Mono<Boolean> isSignatureNeeded(String key, int retry) {

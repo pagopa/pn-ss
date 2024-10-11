@@ -18,7 +18,6 @@ import it.pagopa.pnss.transformation.model.dto.BucketOriginDetail;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.model.dto.CreationDetail;
 import it.pagopa.pnss.transformation.model.dto.S3Object;
-import it.pagopa.pnss.transformation.wsdl.SignReturnV2;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -38,6 +37,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
+import software.amazon.awssdk.services.sqs.model.DeleteMessageResponse;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
@@ -52,7 +52,7 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTestWebEnv
 @CustomLog
-public class TransformationServiceTest {
+class TransformationServiceTest {
 
     @SpyBean
     private TransformationService transformationService;
@@ -132,7 +132,7 @@ public class TransformationServiceTest {
         mockGetDocument("application/pdf", BOOKED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
         verify(sqsService, times(2)).send(eq(signQueueName), any(CreatedS3ObjectDto.class));
         verify(sqsService, times(1)).deleteMessageFromQueue(eq(message), anyString());
@@ -187,7 +187,7 @@ public class TransformationServiceTest {
         mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.NONE));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
         verify(sqsService, times(2)).send(eq(signQueueName), any(CreatedS3ObjectDto.class));
     }
@@ -217,7 +217,7 @@ public class TransformationServiceTest {
         when(arubaSignProviderService.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.error(new ArubaSignException()));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(sqsService, times(2)).send(eq(signQueueName), any(CreatedS3ObjectDto.class));
     }
 
@@ -246,7 +246,7 @@ public class TransformationServiceTest {
         mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
         verifyArubaProviderSignCalls(contentType);
     }
@@ -277,7 +277,7 @@ public class TransformationServiceTest {
         mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
         verifyNamirialProviderSignCalls(contentType);
     }
@@ -309,7 +309,7 @@ public class TransformationServiceTest {
         mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
     }
 
@@ -340,7 +340,7 @@ public class TransformationServiceTest {
         mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
     }
 
@@ -367,7 +367,7 @@ public class TransformationServiceTest {
         when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.just(new byte[10]));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
         verify(sqsService, times(1)).send(eq(signQueueName), any());
     }
@@ -399,7 +399,7 @@ public class TransformationServiceTest {
         mockGetDocument("application/pdf", AVAILABLE, List.of(DocumentType.TransformationsEnum.RASTER));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
         verify(sqsService, times(1)).send(eq(signQueueName), any());
     }
@@ -427,7 +427,7 @@ public class TransformationServiceTest {
         when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.error(new RuntimeException("error")));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
         verify(sqsService, times(2)).send(eq(signQueueName), any());
     }

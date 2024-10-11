@@ -29,6 +29,7 @@ import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.sqs.model.DeleteMessageResponse;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
@@ -101,7 +102,7 @@ public class TransformationService {
 
     }
 
-    public Mono<Void> newStagingBucketObjectCreatedEvent(SqsMessageWrapper<CreatedS3ObjectDto> newStagingBucketObjectWrapper) {
+    public Mono<DeleteMessageResponse> newStagingBucketObjectCreatedEvent(SqsMessageWrapper<CreatedS3ObjectDto> newStagingBucketObjectWrapper) {
 
         log.debug(LogUtils.INVOKING_METHOD, NEW_STAGING_BUCKET_OBJECT_CREATED, newStagingBucketObjectWrapper.getMessageContent());
 
@@ -133,7 +134,7 @@ public class TransformationService {
                             .then(sqsService.deleteMessageFromQueue(newStagingBucketObjectWrapper.getMessage(), signQueueName))
                             .doOnSuccess(response -> log.debug("Message with key '{}' was deleted", fileKeyReference.get()))
                             .doOnError(throwable1 -> log.error("An error occurred during deletion of message with key '{}' -> {}", fileKeyReference.get(), throwable1.getMessage()));
-                }).then();
+                });
     }
 
     public Mono<DeleteObjectResponse> objectTransformation(String key, String stagingBucketName, int retry, Boolean marcatura) {

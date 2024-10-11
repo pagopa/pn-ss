@@ -622,7 +622,6 @@ Resources:
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         LogAlarmStrategyV1: !Ref LogAlarmStrategy
         EcsLogGroup: !Ref EcsLogGroup
-        LoadBalancingAlgorithm: round_robin
         AutoscalingThreshold: !Ref AutoscalingThreshold
         AutoscalingStrategy: REST-API
         MinTasksNumber: !Ref MinTasksNumber

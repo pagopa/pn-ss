@@ -95,11 +95,10 @@ public class TransformationService {
                             MDC.put(MDC_CORR_ID_KEY, fileKey);
                             return MDCUtils.addMDCToContextAndExecute(newStagingBucketObjectCreatedEvent(sqsMessageWrapper));
                         })
-                        .transform(pullFromFluxUntilIsEmpty()).then()
+                        .transform(pullFromFluxUntilIsEmpty())
                         .doOnError(e -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER, false, e.getMessage()))
-                        .doOnSuccess(unused -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER))
-                        .subscribe();
-
+                        .doOnComplete(() -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER))
+                        .blockLast();
     }
 
     public Mono<DeleteMessageResponse> newStagingBucketObjectCreatedEvent(SqsMessageWrapper<CreatedS3ObjectDto> newStagingBucketObjectWrapper) {

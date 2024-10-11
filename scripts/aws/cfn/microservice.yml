@@ -406,14 +406,17 @@ Parameters:
   PnSsTaskExecutionPoolMaxSize:
     Type: String
     Description: 'SpringBoot configuration Task Execution Max Pool Size'
+    Default: 0
 
   PnSsTaskExecutionPoolCoreSize:
     Type: String
     Description: 'SpringBoot configuration Task Execution Pool Core Size'
+    Default: 0
 
   PnSsTaskExecutionPoolQueueCapacity:
     Type: String
     Description: 'SpringBoot configuration Task Execution Pool Queue Capacity'
+    Default: 0
 
   PnSsDocumentDeletionMode:
     Type: String

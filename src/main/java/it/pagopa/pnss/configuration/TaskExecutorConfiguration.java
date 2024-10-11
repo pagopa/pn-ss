@@ -4,7 +4,6 @@ import it.pagopa.pnss.configurationproperties.TaskExecutorConfigurationPropertie
 import lombok.CustomLog;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
@@ -31,15 +30,15 @@ public class TaskExecutorConfiguration {
      * @return the task executor
      */
     @Bean
-    TaskExecutor taskExecutor() {
+    ThreadPoolTaskExecutor taskExecutor() {
         ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
-        if (taskExecutorConfigurationProperties.coreSize() != null) {
+        if (taskExecutorConfigurationProperties.coreSize() != 0) {
             taskExecutor.setCorePoolSize(taskExecutorConfigurationProperties.coreSize());
         }
-        if (taskExecutorConfigurationProperties.maxSize() != null) {
+        if (taskExecutorConfigurationProperties.maxSize() != 0) {
             taskExecutor.setMaxPoolSize(taskExecutorConfigurationProperties.maxSize());
         }
-        if (taskExecutorConfigurationProperties.queueCapacity() != null) {
+        if (taskExecutorConfigurationProperties.queueCapacity() != 0) {
             taskExecutor.setQueueCapacity(taskExecutorConfigurationProperties.queueCapacity());
         }
         taskExecutor.afterPropertiesSet();

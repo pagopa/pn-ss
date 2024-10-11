@@ -32,13 +32,13 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageResponse;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.AVAILABLE;
 import static it.pagopa.pnss.common.constant.Constant.STAGED;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
-import static it.pagopa.pnss.common.utils.ReactorUtils.pullFromFluxUntilIsEmpty;
 import static it.pagopa.pnss.common.utils.SqsUtils.logIncomingMessage;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
@@ -89,13 +89,18 @@ public class TransformationService {
     void newStagingBucketObjectCreatedListener() {
         MDC.clear();
         log.logStartingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER);
-        sqsService.getMessages(signQueueName, CreatedS3ObjectDto.class, maxMessages)
+        AtomicBoolean hasMessages = new AtomicBoolean();
+        hasMessages.set(true);
+        Mono.defer(() -> sqsService.getMessages(signQueueName, CreatedS3ObjectDto.class, maxMessages)
+                        .doOnNext(messageWrapper -> logIncomingMessage(signQueueName,  messageWrapper.getMessageContent()))
                         .flatMap(sqsMessageWrapper -> {
                             String fileKey = isKeyPresent(sqsMessageWrapper.getMessageContent()) ? sqsMessageWrapper.getMessageContent().getCreationDetailObject().getObject().getKey() : "null";
                             MDC.put(MDC_CORR_ID_KEY, fileKey);
                             return MDCUtils.addMDCToContextAndExecute(newStagingBucketObjectCreatedEvent(sqsMessageWrapper));
                         })
-                        .transform(pullFromFluxUntilIsEmpty())
+                        .collectList())
+                        .doOnNext(list -> hasMessages.set(!list.isEmpty()))
+                        .repeat(hasMessages::get)
                         .doOnError(e -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER, false, e.getMessage()))
                         .doOnComplete(() -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER))
                         .blockLast();
@@ -107,7 +112,6 @@ public class TransformationService {
 
         AtomicReference<String> fileKeyReference = new AtomicReference<>("");
         return Mono.fromCallable(() -> {
-                    logIncomingMessage(signQueueName,  newStagingBucketObjectWrapper.getMessageContent());
                     return  newStagingBucketObjectWrapper;
                 })
                 .filter(wrapper-> isKeyPresent(wrapper.getMessageContent()))

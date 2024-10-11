@@ -405,8 +405,15 @@ Parameters:
 
   PnSsTaskExecutionPoolMaxSize:
     Type: String
-    Description: 'SpringBoot configuration Task Execution Max Pool Siza'
-    Default: '512'
+    Description: 'SpringBoot configuration Task Execution Max Pool Size'
+
+  PnSsTaskExecutionPoolCoreSize:
+    Type: String
+    Description: 'SpringBoot configuration Task Execution Pool Core Size'
+
+  PnSsTaskExecutionPoolQueueCapacity:
+    Type: String
+    Description: 'SpringBoot configuration Task Execution Pool Queue Capacity'
 
   PnSsDocumentDeletionMode:
     Type: String
@@ -599,6 +606,8 @@ Resources:
         ContainerEnvEntry60: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
         ContainerEnvEntry61: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
         ContainerEnvEntry62: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
+        ContainerEnvEntry63: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
+        ContainerEnvEntry64: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

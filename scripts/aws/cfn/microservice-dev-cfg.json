@@ -46,7 +46,8 @@
     "SpringCodecMaxInMemorySize": "10000000",
     "SignAndTimemarkMaxThreadPoolSize": "50",
     "RasterMaxThreadPoolSize": "4",
-    "PnSsTaskExecutionPoolMaxSize": "512",
-    "PnSsTaskExecutionPoolCoreSize": "50"
+    "PnSsTaskExecutionPoolMaxSize": "2048",
+    "PnSsTaskExecutionPoolCoreSize": "8",
+    "PnSsTaskExecutionPoolQueueCapacity": "4096" 
   }
 }

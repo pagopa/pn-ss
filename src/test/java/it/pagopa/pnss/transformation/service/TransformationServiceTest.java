@@ -10,7 +10,6 @@ import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pn.library.sign.exception.aruba.ArubaSignException;
 import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
-import it.pagopa.pnss.common.exception.SqsClientException;
 import it.pagopa.pnss.common.rest.call.pdfraster.PdfRasterCall;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -24,7 +23,6 @@ import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -47,7 +45,6 @@ import java.util.Map;
 import java.util.concurrent.Future;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -527,7 +524,9 @@ public class TransformationServiceTest {
 
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
 
-        StepVerifier.create(testMono).expectNoEvent(Duration.ofMillis(249))
+        StepVerifier.create(testMono)
+                .expectSubscription()
+                .expectNoEvent(Duration.ofMillis(248))
                 .thenAwait(Duration.ofMillis(2))
                 .verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());

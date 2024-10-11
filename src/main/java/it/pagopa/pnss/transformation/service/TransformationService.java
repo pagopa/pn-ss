@@ -20,12 +20,12 @@ import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import lombok.CustomLog;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
@@ -114,7 +114,7 @@ public class TransformationService {
                 })
                 .then()
                 .doOnSuccess( s3ObjectDto -> acknowledgment.acknowledge())
-                .doOnError(throwable -> !(throwable instanceof InvalidStatusTransformationException || throwable instanceof IllegalTransformationException || throwable instanceof NotImplementedException), throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()))
+                .doOnError(throwable -> !(throwable instanceof InvalidStatusTransformationException || throwable instanceof IllegalTransformationException), throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()))
                 .onErrorResume(throwable -> newStagingBucketObject.getRetry() <= MAX_RETRIES, throwable -> {
                     newStagingBucketObject.setRetry(newStagingBucketObject.getRetry() + 1);
                     return sqsService.send(signQueueName, newStagingBucketObject).then(Mono.fromRunnable(acknowledgment::acknowledge));
@@ -169,7 +169,11 @@ public class TransformationService {
     }
 
     private Mono<PutObjectResponse> dummyTransformation(Document document, String key, String stagingBucketName) {
-        throw new NotImplementedException();
+        log.debug(INVOKING_METHOD, "dummy transformation", Stream.of(document, key, stagingBucketName).toList());
+        return s3Service.getObject(key,stagingBucketName)
+                .map(BytesWrapper::asByteArray)
+                .flatMap(filebytes -> s3Service.putObject(key,filebytes,document.getContentType(),bucketName.ssHotName()))
+                .delayElement(Duration.ofMillis(250), Schedulers.boundedElastic());
     }
 
     private Mono<Boolean> isSignatureNeeded(String key, int retry) {

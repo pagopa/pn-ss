@@ -29,17 +29,20 @@ import static it.pagopa.pnss.common.utils.LogUtils.RETRY_ATTEMPT;
 @Slf4j
 public class RetryConfiguration {
 
-    @Autowired
-    private DynamoRetryStrategyProperties dynamoRetryStrategyProperties;
-    @Autowired
-    private GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties;
-    @Autowired
-    private S3RetryStrategyProperties s3RetryStrategyProperties;
-    @Autowired
-    private StateMachineRetryStrategyProperties smRetryStrategyProperties;
-    @Autowired
-    private PdfRasterRetryStrategyProperties pdfRasterRetryStrategyProperties;
 
+    private final DynamoRetryStrategyProperties dynamoRetryStrategyProperties;
+    private final GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties;
+    private final S3RetryStrategyProperties s3RetryStrategyProperties;
+    private final PdfRasterRetryStrategyProperties pdfRasterRetryStrategyProperties;
+
+
+    @Autowired
+    public RetryConfiguration(DynamoRetryStrategyProperties dynamoRetryStrategyProperties, GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties, S3RetryStrategyProperties s3RetryStrategyProperties, PdfRasterRetryStrategyProperties pdfRasterRetryStrategyProperties) {
+        this.dynamoRetryStrategyProperties = dynamoRetryStrategyProperties;
+        this.gestoreRepositoryRetryStrategyProperties = gestoreRepositoryRetryStrategyProperties;
+        this.s3RetryStrategyProperties = s3RetryStrategyProperties;
+        this.pdfRasterRetryStrategyProperties = pdfRasterRetryStrategyProperties;
+    }
     private final Predicate<Throwable> isNotFound = throwable -> (throwable instanceof DocumentKeyNotPresentException) || (throwable instanceof IdClientNotFoundException)  || (throwable instanceof DocumentTypeNotPresentException);
 
     @Bean
@@ -68,8 +71,9 @@ public class RetryConfiguration {
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }
 
+
     @Bean
-    RetryBackoffSpec smRetryStrategy() {
+    RetryBackoffSpec smRetryStrategy(StateMachineRetryStrategyProperties smRetryStrategyProperties) {
         return Retry.backoff(smRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(smRetryStrategyProperties.minBackoff()))
                 .filter(StateMachineServiceException.class::isInstance)
                 .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure().getCause()))

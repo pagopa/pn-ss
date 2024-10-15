@@ -18,10 +18,13 @@ import static it.pagopa.pnss.common.utils.LogUtils.INSERTING_DATA_IN_SQS;
 @CustomLog
 public class SqsServiceImpl implements SqsService {
 
-    @Autowired
-    private SqsAsyncClient sqsAsyncClient;
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final SqsAsyncClient sqsAsyncClient;
+    private final ObjectMapper objectMapper;
+
+    public SqsServiceImpl(SqsAsyncClient sqsAsyncClient, ObjectMapper objectMapper) {
+        this.sqsAsyncClient = sqsAsyncClient;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public <T> Mono<SendMessageResponse> send(String queueName, T queuePayload) throws SqsClientException {

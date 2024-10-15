@@ -112,7 +112,7 @@ public class StreamsRecordProcessor {
                 .then()
                 .doOnError(e -> log.fatal("DBStream: Errore generico ", e))
                 .doOnSuccess(unused -> log.logEndingProcess(PROCESS_RECORDS))
-                .subscribe();
+                .block();
     }
 
 

@@ -7,7 +7,6 @@ import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.*;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -33,7 +32,6 @@ import static it.pagopa.pnss.common.utils.LogUtils.*;
  * The class handles a scheduled task to periodically update this list.
  */
 @CustomLog
-@EnableScheduling
 @Configuration
 @ConditionalOnExpression("T(org.apache.commons.lang3.StringUtils).isNotEmpty('${pn.ss.ignored.update.metadata.list}')")
 public class IgnoredUpdateMetadataConfig {

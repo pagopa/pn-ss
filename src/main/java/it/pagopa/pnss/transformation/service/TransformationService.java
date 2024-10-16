@@ -125,6 +125,7 @@ public class TransformationService {
                     fileKeyReference.set(fileKey);
                     return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), wrapper.getMessageContent().getRetry(), true);
                 })
+                .doOnError(throwable -> log.debug(EXCEPTION_IN_PROCESS + ": {}", NEW_STAGING_BUCKET_OBJECT_CREATED, throwable.getMessage(), throwable))
                 .flatMap(transformationResponse ->
                         sqsService.deleteMessageFromQueue(newStagingBucketObjectWrapper.getMessage(), signQueueName)
                                 .doOnSuccess(response -> log.debug("Message with key '{}' was deleted", fileKeyReference.get()))
@@ -135,8 +136,8 @@ public class TransformationService {
                     newStagingBucketObjectWrapper.getMessageContent().setRetry(newStagingBucketObjectWrapper.getMessageContent().getRetry() + 1);
                     return sqsService.send(signQueueName, newStagingBucketObjectWrapper.getMessageContent())
                             .then(sqsService.deleteMessageFromQueue(newStagingBucketObjectWrapper.getMessage(), signQueueName))
-                            .doOnSuccess(response -> log.debug("Message with key '{}' was deleted", fileKeyReference.get()))
-                            .doOnError(throwable1 -> log.error("An error occurred during deletion of message with key '{}' -> {}", fileKeyReference.get(), throwable1.getMessage()));
+                            .doOnSuccess(response -> log.debug("Retry - Message with key '{}' was deleted", fileKeyReference.get()))
+                            .doOnError(throwable1 -> log.error("Retry - An error occurred during deletion of message with key '{}' -> {}", fileKeyReference.get(), throwable1.getMessage()));
                 });
     }
 
@@ -154,7 +155,9 @@ public class TransformationService {
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
                 .flatMap(document -> chooseTransformationType(document, key, stagingBucketName, marcatura))
-                .then(removeObjectFromStagingBucket(key, stagingBucketName));
+                .then(removeObjectFromStagingBucket(key, stagingBucketName))
+                .doOnSuccess(response -> log.debug(SUCCESSFUL_OPERATION_LABEL, OBJECT_TRANSFORMATION, response))
+                .doOnError(throwable -> log.debug(EXCEPTION_IN_PROCESS + ": {}", OBJECT_TRANSFORMATION, throwable.getMessage(), throwable));
     }
 
     private Mono<PutObjectResponse> chooseTransformationType(Document document, String key, String stagingBucketName, boolean marcatura) {
@@ -181,6 +184,7 @@ public class TransformationService {
                 .map(BytesWrapper::asByteArray)
                 .flatMap(fileBytes -> pdfRasterCall.convertPdf(fileBytes, key))
                 .flatMap(convertedDocument -> s3Service.putObject(key, convertedDocument, document.getContentType(), bucketName.ssHotName()))
+                .doOnError(throwable -> log.debug(EXCEPTION_IN_PROCESS + ": {}", RASTER_TRANSFORMATION, throwable.getMessage(), throwable))
                 .doFinally(signalType -> rasterSemaphore.release());
     }
 

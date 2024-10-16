@@ -28,6 +28,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
@@ -40,7 +41,6 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
-import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.*;
@@ -49,7 +49,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.function.Predicate;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
@@ -98,6 +97,7 @@ public class UriBuilderService {
     private final AdditionalFileTagsService additionalFileTagsService;
     private final S3Presigner s3Presigner;
     private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
+    private final ThreadPoolTaskExecutor taskExecutor;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
     private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private static final String SEPARATORE = "~";
@@ -108,7 +108,7 @@ public class UriBuilderService {
     RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService, RetryBackoffSpec gestoreRepositoryRetryStrategy, IndexingConfiguration indexingConfiguration) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService, RetryBackoffSpec gestoreRepositoryRetryStrategy, ThreadPoolTaskExecutor taskExecutor, IndexingConfiguration indexingConfiguration) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
@@ -119,6 +119,7 @@ public class UriBuilderService {
         this.getFileWithPatchConfiguration= GetFilePatchConfiguration.valueOf(getFileWithPatchConfigValue);
         this.additionalFileTagsService = additionalFileTagsService;
         this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
+        this.taskExecutor = taskExecutor;
         this.indexingConfiguration = indexingConfiguration;
     }
 
@@ -134,6 +135,9 @@ public class UriBuilderService {
                                                              String checksumValue, String xTraceIdValue) {
 
         log.debug(LogUtils.INVOKING_METHOD, CREATE_URI_FOR_UPLOAD_FILE, Stream.of(xPagopaSafestorageCxId, request, checksumValue, xTraceIdValue).toList());
+        log.debug("TaskExecutor settings: maxPoolSize: {}, corePoolSize: {}, queueCapacity: {}", taskExecutor.getMaxPoolSize(), taskExecutor.getCorePoolSize(), taskExecutor.getQueueCapacity());
+        log.debug("TaskExecutor threads info: activeCount: {}, queueSize: {}, poolSize: {}", taskExecutor.getActiveCount(), taskExecutor.getQueueSize(), taskExecutor.getPoolSize());
+
         var contentType = request.getContentType();
         var documentType = request.getDocumentType();
 

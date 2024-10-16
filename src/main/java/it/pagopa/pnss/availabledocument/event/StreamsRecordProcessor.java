@@ -102,7 +102,6 @@ public class StreamsRecordProcessor {
                             .map(Tuple2::getT1)
                             .toList();
                 })
-                //
                 .flatMap(wrappers ->
                      Flux.fromIterable(wrappers)
                             .map(SqsMessageWrapper::getMessage)
@@ -113,7 +112,7 @@ public class StreamsRecordProcessor {
                 .then()
                 .doOnError(e -> log.fatal("DBStream: Errore generico ", e))
                 .doOnSuccess(unused -> log.logEndingProcess(PROCESS_RECORDS))
-                .subscribe();
+                .block();
     }
 
 

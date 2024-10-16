@@ -216,8 +216,7 @@ class StreamsRecordProcessorTest {
         Flux<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> eventSendToBridge = srpSpy.findEventSendToBridge();
 
         StepVerifier.create(eventSendToBridge)
-                .thenAwait(Duration.ofSeconds(25))
-                .expectTimeout(Duration.ofSeconds(24))
+                .expectError(IllegalStateException.class)
                 .verify();
     }
 

@@ -74,7 +74,8 @@ public class TransformationServiceTest {
     private PdfRasterCall pdfRasterCall;
     @Value("${s3.queue.sign-queue-name}")
     private String signQueueName;
-
+    @Value("${pn.ss.transformation-service.dummy.delay}")
+    private Integer dummyDelay;
     private final String FILE_KEY = "FILE_KEY";
     private static final String PROVIDER_SWITCH = "providerSwitch";
     private static final String ARUBA_PROVIDER = "1970-01-01T00:00:00Z;aruba";
@@ -115,18 +116,7 @@ public class TransformationServiceTest {
     @Test
     void newStagingBucketObjectCreatedInvalidStatus() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -146,18 +136,7 @@ public class TransformationServiceTest {
     @Test
     void newStagingBucketObjectMaxRetriesExceeded() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         createdS3ObjectDto.setRetry(4);
         Acknowledgment acknowledgment = new Acknowledgment() {
@@ -178,18 +157,7 @@ public class TransformationServiceTest {
     @Test
     void newStagingBucketObjectCreatedInvalidTransformation() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -209,18 +177,7 @@ public class TransformationServiceTest {
     @Test
     void newStagingBucketObjectCreatedEventArubaKo() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -241,18 +198,7 @@ public class TransformationServiceTest {
     @ValueSource(strings = {"application/pdf", "application/xml", "other"})
     void newStagingBucketObjectCreatedEvent_ArubaProvider_Ok(String contentType) {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -274,18 +220,7 @@ public class TransformationServiceTest {
     @ValueSource(strings = {"application/pdf", "application/xml", "other"})
     void newStagingBucketObjectCreatedEvent_NamirialProvider_Ok(String contentType) {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -307,18 +242,7 @@ public class TransformationServiceTest {
     @Test
     void newStagingBucketObjectCreatedEventRetryNotInHotBucketOk() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         createdS3ObjectDto.setRetry(1);
 
@@ -340,18 +264,7 @@ public class TransformationServiceTest {
     @Test
     void newStagingBucketObjectCreatedEventRetryInHotBucketOk() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         createdS3ObjectDto.setRetry(1);
 
@@ -373,18 +286,7 @@ public class TransformationServiceTest {
 
     @Test
     void newStagingBucketObjectCreatedEvent_PdfRaster_Ok() {
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -404,19 +306,7 @@ public class TransformationServiceTest {
 
     @Test
     void newStagingBucketObjectCreatedEventRetryInHotBucket_PdfRaster_Ok() {
-
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         createdS3ObjectDto.setRetry(1);
 
@@ -438,18 +328,7 @@ public class TransformationServiceTest {
 
     @Test
     void newStagingBucketObjectCreatedEvent_PdfRaster_Ko() {
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -469,18 +348,7 @@ public class TransformationServiceTest {
 
     @Test
     void newStagingBucketObjectCreatedEvent_Dummy_Ok(){
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -500,18 +368,7 @@ public class TransformationServiceTest {
 
     @Test
     void newStagingBucketObjectCreatedEvent_Dummy_Delay(){
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -526,27 +383,47 @@ public class TransformationServiceTest {
 
         StepVerifier.create(testMono)
                 .expectSubscription()
-                .expectNoEvent(Duration.ofMillis(248))
+                .expectNoEvent(Duration.ofMillis(dummyDelay))
                 .thenAwait(Duration.ofMillis(2))
                 .verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(s3Service,times(1)).putObject(anyString(),any(),anyString(),anyString());
+        verify(s3Service,times(1)).deleteObject(anyString(),anyString());
         verify(sqsService, never()).send(eq(signQueueName), any());
     }
 
     @Test
+    void newStagingBucketObjectCreatedEvent_Dummy_Delay_at_zero(){
+        Integer originalDummy= (Integer) ReflectionTestUtils.getField(transformationService,"dummyDelay");
+        ReflectionTestUtils.setField(transformationService,"dummyDelay",0);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
+
+        Acknowledgment acknowledgment = new Acknowledgment() {
+            @Override
+            public Future<?> acknowledge() {
+                return null;
+            }
+        };
+
+        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
+
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+
+        StepVerifier.create(testMono)
+                .expectSubscription()
+                .thenAwait(Duration.ofMillis(2))
+                .verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(s3Service,times(1)).putObject(anyString(),any(),anyString(),anyString());
+        verify(s3Service,times(1)).deleteObject(anyString(),anyString());
+        verify(sqsService, never()).send(eq(signQueueName), any());
+        ReflectionTestUtils.setField(transformationService,"dummyDelay",originalDummy);
+    }
+
+
+    @Test
     void newStagingBucketObjectCreatedEvent_Dummy_s3_Ko(){
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         Acknowledgment acknowledgment = new Acknowledgment() {
             @Override
@@ -623,6 +500,23 @@ public class TransformationServiceTest {
 
     private void deleteObjectInBucket(String key, String bucketName) {
         s3TestClient.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(key).build());
+    }
+
+
+    private CreatedS3ObjectDto getCreatedS3ObjectDto() {
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
+
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        return createdS3ObjectDto;
     }
 
 }

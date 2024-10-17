@@ -25,13 +25,11 @@ import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
-import java.time.Duration;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -63,7 +61,7 @@ public class TransformationService {
     @Value("${s3.queue.sign-queue-name}")
     private String signQueueName;
     @Value("${pn.ss.transformation-service.dummy.delay:250}")
-    private Long dummyDelay;
+    private Integer dummyDelay;
     // Numero massimo di retry. Due step: 1) firma del documento e inserimento nel bucket 2) delete del file dal bucket di staging, piu' un retry aggiuntivo di sicurezza
     private static final int MAX_RETRIES = 3;
 
@@ -174,8 +172,11 @@ public class TransformationService {
         log.debug(INVOKING_METHOD, "dummy transformation", Stream.of(document, key, stagingBucketName).toList());
         return s3Service.getObject(key,stagingBucketName)
                 .map(BytesWrapper::asByteArray)
-                .flatMap(filebytes -> s3Service.putObject(key,filebytes,document.getContentType(),bucketName.ssHotName()))
-                .delayElement(Duration.ofMillis(dummyDelay), Schedulers.boundedElastic());
+                .map(byteArray -> {
+                    waitDelay();
+                    return byteArray;
+                })
+                .flatMap(filebytes -> s3Service.putObject(key, filebytes, document.getContentType(), bucketName.ssHotName()));
     }
 
     private Mono<Boolean> isSignatureNeeded(String key, int retry) {
@@ -213,6 +214,14 @@ public class TransformationService {
     private void acquireSemaphore(Semaphore semaphore) {
         try {
             semaphore.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void waitDelay() {
+        try {
+            Thread.sleep(dummyDelay);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

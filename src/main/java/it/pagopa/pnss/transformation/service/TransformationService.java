@@ -30,6 +30,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
+import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -131,7 +132,9 @@ public class TransformationService {
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK) || transformations.contains(DocumentType.TransformationsEnum.RASTER) || transformations.contains(DocumentType.TransformationsEnum.DUMMY);})
+                    return transformations.stream()
+                            .anyMatch(transformation -> Arrays.asList(DocumentType.TransformationsEnum.values()).contains(transformation));
+                })
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
                 .flatMap(document -> chooseTransformationType(document, key, stagingBucketName, marcatura))

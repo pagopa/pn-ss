@@ -62,11 +62,11 @@ public class CloudWatchMetricPublisherConfiguration {
      * @return the metric publisher by namespace
      */
     public CloudWatchMetricPublisher getMetricPublisherByNamespace(String namespace) {
-        try {
-            return cloudWatchMetricPublishers.get(namespace);
-        } catch (NullPointerException e) {
+        CloudWatchMetricPublisher publisher = cloudWatchMetricPublishers.get(namespace);
+        if (publisher == null) {
             throw new CloudWatchResourceNotFoundException.MetricPublisherNotFoundException(namespace);
         }
+        return publisher;
     }
 
     /**
@@ -76,11 +76,11 @@ public class CloudWatchMetricPublisherConfiguration {
      * @return the sdk metric by name
      */
     public SdkMetric<?> getSdkMetricByName(String metricName) {
-        try {
-            return sdkMetrics.get(metricName);
-        } catch (NullPointerException e) {
+        SdkMetric<?> sdkMetric = sdkMetrics.get(metricName);
+        if (sdkMetric == null) {
             throw new CloudWatchResourceNotFoundException.SdkMetricNotFoundException(metricName);
         }
+        return sdkMetric;
     }
 
     /**

@@ -55,7 +55,7 @@ public class PnSignProviderService implements PnSignService {
     public Mono<PnSignDocumentResponse> signPdfDocument(byte[] fileBytes, Boolean timestamping) {
         log.debug(INVOKING_METHOD, PN_SIGN_PDF_DOCUMENT, timestamping);
         PnSignService provider = getProvider(pnSignServiceConfigurationProperties.getProviderSwitch());
-        return cloudWatchMetricsService.executeAndPublishResponseTime(provider.signPdfDocument(fileBytes, timestamping), getMetricNamespace(provider), PADES)
+        return cloudWatchMetricsService.executeAndPublishResponseTime(provider.signPdfDocument(fileBytes, timestamping), getMetricNamespace(provider), PADES.getValue())
                 .retryWhen(pnSignRetryStrategy)
                 .doOnSuccess(result -> log.info(SUCCESSFUL_OPERATION_LABEL, PN_SIGN_PDF_DOCUMENT, result));
     }
@@ -64,7 +64,7 @@ public class PnSignProviderService implements PnSignService {
     public Mono<PnSignDocumentResponse> signXmlDocument(byte[] fileBytes, Boolean timestamping)  {
         log.debug(INVOKING_METHOD, PN_SIGN_XML_DOCUMENT, timestamping);
         PnSignService provider = getProvider(pnSignServiceConfigurationProperties.getProviderSwitch());
-        return cloudWatchMetricsService.executeAndPublishResponseTime(provider.signXmlDocument(fileBytes, timestamping), getMetricNamespace(provider), XADES)
+        return cloudWatchMetricsService.executeAndPublishResponseTime(provider.signXmlDocument(fileBytes, timestamping), getMetricNamespace(provider), XADES.getValue())
                 .retryWhen(pnSignRetryStrategy)
                 .doOnSuccess(result -> log.info(SUCCESSFUL_OPERATION_LABEL, PN_SIGN_XML_DOCUMENT, result));
     }
@@ -73,7 +73,7 @@ public class PnSignProviderService implements PnSignService {
     public Mono<PnSignDocumentResponse> pkcs7Signature(byte[] fileBytes, Boolean timestamping)  {
         log.debug(INVOKING_METHOD, PN_PKCS_7_SIGNATURE, timestamping);
         PnSignService provider = getProvider(pnSignServiceConfigurationProperties.getProviderSwitch());
-        return cloudWatchMetricsService.executeAndPublishResponseTime(provider.pkcs7Signature(fileBytes, timestamping), getMetricNamespace(provider), CADES)
+        return cloudWatchMetricsService.executeAndPublishResponseTime(provider.pkcs7Signature(fileBytes, timestamping), getMetricNamespace(provider), CADES.getValue())
                 .retryWhen(pnSignRetryStrategy)
                 .doOnSuccess(result -> log.info(SUCCESSFUL_OPERATION_LABEL, PN_PKCS_7_SIGNATURE, result));
     }

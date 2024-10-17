@@ -1,6 +1,7 @@
 package it.pagopa.pnss.common.service.impl;
 
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
+import it.pagopa.pn.library.sign.pojo.SignatureType;
 import it.pagopa.pnss.common.exception.CloudWatchResourceNotFoundException;
 import it.pagopa.pnss.configuration.cloudwatch.CloudWatchMetricPublisherConfiguration;
 import it.pagopa.pnss.configuration.cloudwatch.MetricsDimensionConfiguration;
@@ -10,11 +11,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.metrics.MetricCollector;
 import software.amazon.awssdk.metrics.SdkMetric;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
-
 import java.util.stream.Stream;
 
-import static it.pagopa.pn.library.sign.pojo.SignatureType.*;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 /**
@@ -28,7 +26,6 @@ public class CloudWatchMetricsService {
 
     private final CloudWatchMetricPublisherConfiguration cloudWatchMetricPublisherConfiguration;
     private final MetricsDimensionConfiguration metricsDimensionConfiguration;
-    private final CloudWatchAsyncClient cloudWatchAsyncClient;
     @Value("${pn.sign.cloudwatch.metric.dimension.file-size-range}")
     private String fileSizeRangeDimensionName;
     @Value("${pn.sign.cloudwatch.metric.response-time.pades}")
@@ -43,12 +40,10 @@ public class CloudWatchMetricsService {
      *
      * @param cloudWatchMetricPublisherConfiguration Configuration for the CloudWatchMetricPublisher.
      * @param metricsDimensionConfiguration          Configuration for the metrics dimensions.
-     * @param cloudWatchAsyncClient                  The CloudWatchAsyncClient to use for publishing metrics.
      */
-    public CloudWatchMetricsService(CloudWatchMetricPublisherConfiguration cloudWatchMetricPublisherConfiguration, MetricsDimensionConfiguration metricsDimensionConfiguration, CloudWatchAsyncClient cloudWatchAsyncClient) {
+    public CloudWatchMetricsService(CloudWatchMetricPublisherConfiguration cloudWatchMetricPublisherConfiguration, MetricsDimensionConfiguration metricsDimensionConfiguration) {
         this.cloudWatchMetricPublisherConfiguration = cloudWatchMetricPublisherConfiguration;
         this.metricsDimensionConfiguration = metricsDimensionConfiguration;
-        this.cloudWatchAsyncClient = cloudWatchAsyncClient;
     }
 
     /**
@@ -95,7 +90,7 @@ public class CloudWatchMetricsService {
                     //So no dimension can be defined for the given file size.
                     if (throwable instanceof CloudWatchResourceNotFoundException.DimensionNotFound) {
                         log.warn(throwable.getMessage(), throwable);
-                    } else log.error(EXCEPTION_IN_PROCESS, PUBLISH_RESPONSE_TIME, throwable, throwable.getMessage());
+                    } else log.error(EXCEPTION_IN_PROCESS + ": {}", PUBLISH_RESPONSE_TIME, throwable.getMessage(), throwable);
                     return Mono.empty();
                 }).then();
     }
@@ -107,11 +102,10 @@ public class CloudWatchMetricsService {
      * @return the metric name
      */
     private String getMetricNameBySignType(String signType) {
-        return switch (signType) {
+        return switch (SignatureType.valueOf(signType)) {
             case CADES -> signCadesReadResponseTimeMetric;
             case PADES -> signPadesReadResponseTimeMetric;
             case XADES -> signXadesReadResponseTimeMetric;
-            default -> throw new IllegalArgumentException("Invalid sign type");
         };
     }
 

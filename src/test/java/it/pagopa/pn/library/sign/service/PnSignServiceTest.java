@@ -62,7 +62,7 @@ class PnSignServiceTest {
 
         verify(arubaSignProviderService, times(1)).signPdfDocument(fileBytes, true);
         verify(namirialSignProviderService, never()).signPdfDocument(any(), anyBoolean());
-        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(arubaNamespace), eq(PADES), anyLong(), anyLong());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(arubaNamespace), eq(PADES.getValue()), anyLong(), anyLong());
     }
 
     @Test
@@ -91,7 +91,7 @@ class PnSignServiceTest {
 
         verify(arubaSignProviderService, times(1)).signXmlDocument(fileBytes, true);
         verify(namirialSignProviderService, never()).signXmlDocument(any(), anyBoolean());
-        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(arubaNamespace), eq(XADES), anyLong(), anyLong());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(arubaNamespace), eq(XADES.getValue()), anyLong(), anyLong());
     }
 
     @Test
@@ -119,7 +119,7 @@ class PnSignServiceTest {
 
         verify(arubaSignProviderService, times(1)).pkcs7Signature(fileBytes, true);
         verify(namirialSignProviderService, never()).pkcs7Signature(any(), anyBoolean());
-        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(arubaNamespace), eq(CADES), anyLong(), anyLong());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(arubaNamespace), eq(CADES.getValue()), anyLong(), anyLong());
     }
 
     @Test
@@ -148,7 +148,7 @@ class PnSignServiceTest {
 
         verify(namirialSignProviderService, times(1)).signPdfDocument(fileBytes, true);
         verify(arubaSignProviderService, never()).signPdfDocument(any(), anyBoolean());
-        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(namirialNamespace), eq(PADES), anyLong(), anyLong());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(namirialNamespace), eq(PADES.getValue()), anyLong(), anyLong());
     }
 
     @Test
@@ -191,7 +191,7 @@ class PnSignServiceTest {
 
         verify(namirialSignProviderService, times(1)).signXmlDocument(fileBytes, true);
         verify(arubaSignProviderService, never()).signXmlDocument(any(), anyBoolean());
-        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(namirialNamespace), eq(XADES), anyLong(), anyLong());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(namirialNamespace), eq(XADES.getValue()), anyLong(), anyLong());
     }
 
     @Test
@@ -234,7 +234,7 @@ class PnSignServiceTest {
 
         verify(namirialSignProviderService, times(1)).pkcs7Signature(fileBytes, true);
         verify(arubaSignProviderService, never()).pkcs7Signature(any(), anyBoolean());
-        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(namirialNamespace), eq(CADES), anyLong(), anyLong());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(namirialNamespace), eq(CADES.getValue()), anyLong(), anyLong());
     }
 
     @Test

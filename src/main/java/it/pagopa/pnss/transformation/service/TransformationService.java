@@ -15,6 +15,7 @@ import it.pagopa.pnss.common.exception.IllegalTransformationException;
 import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
 import it.pagopa.pnss.common.rest.call.pdfraster.PdfRasterCall;
 import it.pagopa.pnss.common.service.SqsService;
+import it.pagopa.pnss.common.utils.CompareUtils;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
@@ -132,8 +133,7 @@ public class TransformationService {
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return transformations.stream()
-                            .anyMatch(transformation -> Arrays.asList(DocumentType.TransformationsEnum.values()).contains(transformation));
+                    return CompareUtils.enumContainsAny(DocumentType.TransformationsEnum.class,transformations);
                 })
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))

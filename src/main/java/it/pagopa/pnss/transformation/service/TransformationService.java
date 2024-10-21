@@ -92,7 +92,7 @@ public class TransformationService {
                     var detailObject = createdS3ObjectDto.getCreationDetailObject();
                     var fileKey = detailObject.getObject().getKey();
                     fileKeyReference.set(fileKey);
-                    return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), newStagingBucketObject.getRetry(), true);
+                    return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), newStagingBucketObject.getRetry());
                 })
                 .then()
                 .doOnSuccess( s3ObjectDto -> acknowledgment.acknowledge())
@@ -103,8 +103,8 @@ public class TransformationService {
                 });
     }
 
-    public Mono<DeleteObjectResponse> objectTransformation(String key, String stagingBucketName, int retry, Boolean marcatura) {
-        log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName, marcatura).toList());
+    public Mono<DeleteObjectResponse> objectTransformation(String key, String stagingBucketName, int retry) {
+        log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName).toList());
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
                 .filter(document -> document.getDocumentState().equalsIgnoreCase(STAGED) || document.getDocumentState().equalsIgnoreCase(AVAILABLE))
@@ -113,13 +113,22 @@ public class TransformationService {
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK);
+                    return !transformations.isEmpty();
                 })
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
-                .zipWhen(document -> signDocument(document, key, stagingBucketName, marcatura))
+                .zipWhen(document -> chooseTransformationType(document, key, stagingBucketName))
                 .flatMap(tuple -> s3Service.putObject(key, tuple.getT2().getSignedDocument(),  tuple.getT1().getContentType(), bucketName.ssHotName()))
                 .then(removeObjectFromStagingBucket(key, stagingBucketName));
+    }
+
+    private Mono<PnSignDocumentResponse> chooseTransformationType(Document document, String key, String stagingBucketName) {
+        var transformations = document.getDocumentType().getTransformations();
+        if (transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)) {
+            return signDocument(document, key, stagingBucketName, true);
+        } else if (transformations.contains(DocumentType.TransformationsEnum.SIGN)) {
+            return signDocument(document, key, stagingBucketName, false);
+        } else return Mono.error(new IllegalTransformationException(key));
     }
 
     private Mono<Boolean> isSignatureNeeded(String key, int retry) {

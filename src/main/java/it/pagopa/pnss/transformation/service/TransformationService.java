@@ -141,8 +141,8 @@ public class TransformationService {
                 });
     }
 
-    public Mono<DeleteObjectResponse> objectTransformation(String key, String stagingBucketName, int retry, Boolean marcatura) {
-        log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName, marcatura).toList());
+    public Mono<DeleteObjectResponse> objectTransformation(String key, String stagingBucketName, int retry) {
+        log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName).toList());
         return documentClientCall.getDocument(key)
                 .map(DocumentResponse::getDocument)
                 .filter(document -> document.getDocumentState().equalsIgnoreCase(STAGED) || document.getDocumentState().equalsIgnoreCase(AVAILABLE))
@@ -151,19 +151,22 @@ public class TransformationService {
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK) || transformations.contains(DocumentType.TransformationsEnum.RASTER);                })
+                    return !transformations.isEmpty();
+                })
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
-                .flatMap(document -> chooseTransformationType(document, key, stagingBucketName, marcatura))
+                .flatMap(document -> chooseTransformationType(document, key, stagingBucketName))
                 .then(removeObjectFromStagingBucket(key, stagingBucketName))
                 .doOnSuccess(response -> log.debug(SUCCESSFUL_OPERATION_LABEL, OBJECT_TRANSFORMATION, response))
                 .doOnError(throwable -> log.debug(EXCEPTION_IN_PROCESS + ": {}", OBJECT_TRANSFORMATION, throwable.getMessage(), throwable));
     }
 
-    private Mono<PutObjectResponse> chooseTransformationType(Document document, String key, String stagingBucketName, boolean marcatura) {
+    private Mono<PutObjectResponse> chooseTransformationType(Document document, String key, String stagingBucketName) {
         var transformations = document.getDocumentType().getTransformations();
         if (transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)) {
-            return signAndTimemarkTransformation(document, key, stagingBucketName, marcatura);
+            return signAndTimemarkTransformation(document, key, stagingBucketName, true);
+        } else if (transformations.contains(DocumentType.TransformationsEnum.SIGN)) {
+            return signAndTimemarkTransformation(document, key, stagingBucketName, false);
         } else if (transformations.contains(DocumentType.TransformationsEnum.RASTER)) {
             return rasterTransformation(document, key, stagingBucketName);
         } else return Mono.error(new IllegalTransformationException(key));

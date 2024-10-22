@@ -127,7 +127,7 @@ public class StreamsRecordProcessor {
                             .mapNotNull(canReadTags -> {
                                 PutEventsRequestEntry putEventsRequestEntry = EventBridgeUtil.createMessage(docEntity,
                                         disponibilitaDocumentiEventBridge,
-                                        docEntity.getDocumentState(),
+                                        recordEvent.getMessageContent().getOldDocumentState(),
                                         canReadTags);
                                 if (putEventsRequestEntry != null) {
                                     log.info("Event send to bridge {}", putEventsRequestEntry);

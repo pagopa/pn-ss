@@ -266,14 +266,6 @@ Parameters:
     Type: String
     Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
 
-  PnSsQueueNameAvailability:
-    Type: String
-    Description: 'Nome coda per notifiche disponibilità'
-
-  PnSsQueueArnAvailability:
-    Type: String
-    Description: 'ARN coda per notifiche disponibilità'
-
 #### Parametri presenti nel file json di configurazione  ###
 
   PnSsUriBuilderstayHotTime:
@@ -424,10 +416,6 @@ Parameters:
     Type: String
     Description: 'Parameter used to define minimum backoff between attempts'
 
-  PnSsSignAndTimemarkMetricsSchema:
-    Type: String
-    Description: 'Name of the AWS parameter that contains the schema for the metrics of the sign and timemark service'
-
   CpuValue:
     Type: Number
     Default: 1024
@@ -499,18 +487,6 @@ Parameters:
     Type: String
     Description: 'S3 prefix to upload lambda compiled package'
 
-  PnSsEventHandlerMaxMessages:
-    Type: Number
-    Description: 'Max number of messages to be processed by the StreamsRecordProcessor'
-
-  PnSsSqsRetryStrategyMinBackoff:
-    Type: Number
-    Description: 'Min backoff time for SQS retry strategy'
-
-  PnSsSqsRetryStrategyMaxAttempts:
-    Type: Number
-    Description: 'Max number of attempts for SQS retry strategy'
-
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -528,7 +504,7 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
-
+    
   ServiceEndpointToPdfRaster:
     Type: String
     Description: 'Endpoint FQDN of PDFRaster microservice'
@@ -700,7 +676,6 @@ Resources:
               - 'sqs:SendMessage'
             Resource:
               - !Ref PnSsQueueArnStagingBucket
-              - !Ref PnSsQueueArnAvailability
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -881,7 +856,6 @@ Resources:
           !Join
           - ','
           - - !Ref PnSsQueueArnStagingBucket
-            - !Ref PnSsQueueArnAvailability
             - !Ref PnSsQueueArnGestoreBucketInvoke
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
             - !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus

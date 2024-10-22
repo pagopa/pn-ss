@@ -123,7 +123,7 @@ public class TransformationService {
                     CreationDetail detailObject = wrapper.getMessageContent().getCreationDetailObject();
                     String fileKey = detailObject.getObject().getKey();
                     fileKeyReference.set(fileKey);
-                    return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), wrapper.getMessageContent().getRetry(), true);
+                    return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), wrapper.getMessageContent().getRetry());
                 })
                 .doOnError(throwable -> log.debug(EXCEPTION_IN_PROCESS + ": {}", NEW_STAGING_BUCKET_OBJECT_CREATED, throwable.getMessage(), throwable))
                 .flatMap(transformationResponse ->

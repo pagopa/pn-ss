@@ -77,7 +77,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                           .header(xApiKey, authApiKey)
                           .bodyValue(document)
                           .retrieve()
-                          .onStatus(BAD_REQUEST::equals, clientResponse -> clientResponse.bodyToMono(DocumentResponse.class)
+                          .onStatus(status -> status.equals(BAD_REQUEST) || status.equals(GONE), clientResponse -> clientResponse.bodyToMono(DocumentResponse.class)
                                   .map(documentResponse -> new PatchDocumentException(documentResponse.getError().getDescription(), HttpStatus.valueOf(documentResponse.getError().getCode())))
                                   .flatMap(Mono::error))
                          .onStatus(NOT_FOUND::equals,

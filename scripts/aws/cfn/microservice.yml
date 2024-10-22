@@ -266,14 +266,6 @@ Parameters:
     Type: String
     Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
 
-  PnSsQueueNameAvailability:
-    Type: String
-    Description: 'Nome coda per notifiche disponibilità'
-
-  PnSsQueueArnAvailability:
-    Type: String
-    Description: 'ARN coda per notifiche disponibilità'
-
 #### Parametri presenti nel file json di configurazione  ###
 
   PnSsUriBuilderstayHotTime:
@@ -495,18 +487,6 @@ Parameters:
     Type: String
     Description: 'S3 prefix to upload lambda compiled package'
 
-  PnSsEventHandlerMaxMessages:
-    Type: Number
-    Description: 'Max number of messages to be processed by the StreamsRecordProcessor'
-
-  PnSsSqsRetryStrategyMinBackoff:
-    Type: Number
-    Description: 'Min backoff time for SQS retry strategy'
-
-  PnSsSqsRetryStrategyMaxAttempts:
-    Type: Number
-    Description: 'Max number of attempts for SQS retry strategy'
-
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -594,6 +574,7 @@ Resources:
         ContainerEnvEntry59: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
         ContainerEnvEntry60: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
         ContainerEnvEntry61: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
+        ContainerEnvEntry62: !Sub 'PnSsSignAndTimemarkMetricsSchema=${PnSsSignAndTimemarkMetricsSchema}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -695,7 +676,6 @@ Resources:
               - 'sqs:SendMessage'
             Resource:
               - !Ref PnSsQueueArnStagingBucket
-              - !Ref PnSsQueueArnAvailability
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -876,7 +856,6 @@ Resources:
           !Join
           - ','
           - - !Ref PnSsQueueArnStagingBucket
-            - !Ref PnSsQueueArnAvailability
             - !Ref PnSsQueueArnGestoreBucketInvoke
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
             - !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
@@ -1239,9 +1218,9 @@ Resources:
       SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn
 
   ######## Scadenza Documenti Lambda Handler  #########
-  
-  
-  
+
+
+
   PnSsScadenzaDocumentiLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1343,8 +1322,8 @@ Resources:
         S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventHandler.zip"
       Layers:
         - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
-        
-        
+
+
   PnSsQueuePolicyScadenzaDocumentiDynamoStreamDLQ:
     Type: AWS::SQS::QueuePolicy
     Properties:

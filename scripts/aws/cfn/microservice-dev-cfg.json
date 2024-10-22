@@ -41,6 +41,9 @@
     "PnSsSafeClients": "pn-delivery;pn-delivery-push;pn-radd-alt;pn-service-desk",
     "PnSsSqsRetryStrategyMaxAttempts": "3",
     "PnSsSqsRetryStrategyMinBackoff": "3",
-    "PnSsEventHandlerMaxMessages": "10"
+    "PnSsEventHandlerMaxMessages": "10",
+    "SpringCodecMaxInMemorySize": "10000000",
+    "SignAndTimemarkMaxThreadPoolSize": "50",
+    "RasterMaxThreadPoolSize": "4"
   }
 }

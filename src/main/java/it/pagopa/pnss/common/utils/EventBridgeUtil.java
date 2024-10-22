@@ -1,11 +1,12 @@
 
-package it.pagopa.pnss.availabledocument.event;
+package it.pagopa.pnss.common.utils;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.availabledocument.dto.NotificationMessage;
 import it.pagopa.pnss.common.exception.PutEventsRequestEntryException;
+import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import lombok.CustomLog;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
@@ -14,7 +15,7 @@ import java.util.*;
 import static it.pagopa.pnss.common.constant.Constant.*;
 
 @CustomLog
-public class ManageDynamoEvent {
+public class EventBridgeUtil {
 
 
     public static final String DOCUMENTSTATE_KEY = "documentState";
@@ -28,34 +29,26 @@ public class ManageDynamoEvent {
     public static final String CLIENTSHORTCODE_KEY = "clientShortCode";
     public static final String TAGS_KEY = "tags";
 
-    public PutEventsRequestEntry createMessage(Map<String, AttributeValue> docEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState, Boolean canReadTags){
-        String key = docEntity.get(DOCUMENTKEY_KEY).getS();
+    public static PutEventsRequestEntry createMessage(DocumentEntity documentEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState, Boolean canReadTags){
+        String key = documentEntity.getDocumentKey();
         NotificationMessage message = new NotificationMessage();
 
         message.setKey(key);
         message.setVersionId("01");
 
-        message.setDocumentType(docEntity.get(DOCUMENTTYPE_KEY).getM()!=null && docEntity.get(DOCUMENTTYPE_KEY).getM().get(TIPODOCUMENTO_KEY)!=null ?
-                docEntity.get(DOCUMENTTYPE_KEY).getM().get(TIPODOCUMENTO_KEY).getS():null);
+        message.setDocumentType(documentEntity.getDocumentType()!=null && documentEntity.getDocumentType().getTipoDocumento()!= null ?
+                documentEntity.getDocumentType().getTipoDocumento():null);
 
-        message.setDocumentStatus(docEntity.get(DOCUMENTLOGICALSTATE_KEY)!=null ? docEntity.get(DOCUMENTLOGICALSTATE_KEY).getS():null);
-        message.setContentType(docEntity.get(CONTENTTYPE_KEY)!=null ? docEntity.get(CONTENTTYPE_KEY).getS():null);
+        message.setDocumentStatus(documentEntity.getDocumentLogicalState()!=null ? documentEntity.getDocumentLogicalState().toString():null);
+        message.setContentType(documentEntity.getContentType()!=null ? documentEntity.getContentType().toString():null);
 
-        message.setChecksum(docEntity.get(CHECKSUM_KEY)!=null ? docEntity.get(CHECKSUM_KEY).getS(): null);
+        message.setChecksum(documentEntity.getCheckSum()!=null ? documentEntity.getCheckSum().toString():null);
 
-        message.setRetentionUntil(docEntity.get(RETENTIONUNTIL_KEY)!=null ? docEntity.get(RETENTIONUNTIL_KEY).getS(): null);
-        message.setClientShortCode(docEntity.get(CLIENTSHORTCODE_KEY)!=null ? docEntity.get(CLIENTSHORTCODE_KEY).getS(): null);
+        message.setRetentionUntil(documentEntity.getRetentionUntil()!=null ? documentEntity.getRetentionUntil().toString():null);
+        message.setClientShortCode(documentEntity.getClientShortCode()!=null ? documentEntity.getClientShortCode().toString():null);
 
-        if (docEntity.get(TAGS_KEY) != null && canReadTags) {
-            Map<String, AttributeValue> tagsMap = docEntity.get(TAGS_KEY).getM();
-            Map<String, List<String>> tags = new HashMap<>();
-            for (Map.Entry<String, AttributeValue> entry : tagsMap.entrySet()) {
-                List<String> tagValues = new ArrayList<>();
-                for (AttributeValue value : entry.getValue().getL()) {
-                    tagValues.add(value.getS());
-                }
-                tags.put(entry.getKey(), tagValues);
-            }
+        if (documentEntity.getTags() != null && canReadTags) {
+            Map<String, List<String>> tags =documentEntity.getTags();
             message.setTags(tags);
         }
 
@@ -69,7 +62,7 @@ public class ManageDynamoEvent {
         }
     }
 
-    private PutEventsRequestEntry createPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge, String oldDocumentState){
+    private static PutEventsRequestEntry createPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge, String oldDocumentState){
         return  PutEventsRequestEntry.builder()
                 .time(new Date().toInstant())
                 .source(GESTORE_DISPONIBILITA_EVENT_NAME)

@@ -488,7 +488,8 @@ log.info("documentInputTags {}", documentInputTags);
 				.accept(APPLICATION_JSON)
 				.contentType(APPLICATION_JSON)
 				.body(BodyInserters.fromValue(docChanges))
-				.exchange().expectStatus().isOk();
+				.exchange().expectStatus().isOk()
+				.expectBody(DocumentResponse.class);
 
 		log.info("\n Test 6 (patchItem) passed \n");
 	}

@@ -266,6 +266,14 @@ Parameters:
     Type: String
     Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
 
+  PnSsQueueNameAvailability:
+    Type: String
+    Description: 'Nome coda per notifiche disponibilità'
+
+  PnSsQueueArnAvailability:
+    Type: String
+    Description: 'ARN coda per notifiche disponibilità'
+
 #### Parametri presenti nel file json di configurazione  ###
 
   PnSsUriBuilderstayHotTime:
@@ -397,8 +405,18 @@ Parameters:
 
   PnSsTaskExecutionPoolMaxSize:
     Type: String
-    Description: 'SpringBoot configuration Task Execution Max Pool Siza'
-    Default: '512'
+    Description: 'SpringBoot configuration Task Execution Max Pool Size'
+    Default: 0
+
+  PnSsTaskExecutionPoolCoreSize:
+    Type: String
+    Description: 'SpringBoot configuration Task Execution Pool Core Size'
+    Default: 0
+
+  PnSsTaskExecutionPoolQueueCapacity:
+    Type: String
+    Description: 'SpringBoot configuration Task Execution Pool Queue Capacity'
+    Default: 0
 
   PnSsDocumentDeletionMode:
     Type: String
@@ -487,6 +505,22 @@ Parameters:
     Type: String
     Description: 'S3 prefix to upload lambda compiled package'
 
+  PnSsEventHandlerMaxMessages:
+    Type: Number
+    Description: 'Max number of messages to be processed by the StreamsRecordProcessor'
+
+  PnSsSqsRetryStrategyMinBackoff:
+    Type: Number
+    Description: 'Min backoff time for SQS retry strategy'
+
+  PnSsSqsRetryStrategyMaxAttempts:
+    Type: Number
+    Description: 'Max number of attempts for SQS retry strategy'
+
+  PnSsTransformationServiceMaxMessages:
+    Type: Number
+    Description: 'Max number of messages to be processed by the TransformationService'
+
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -566,10 +600,17 @@ Resources:
         ContainerEnvEntry51: !Sub 'PnSsIndexingConfiguration=${PnSsIndexingConfiguration}'
         ContainerEnvEntry52: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
         ContainerEnvEntry53: !Sub 'PnSsSafeClients=${PnSsSafeClients}'
-        ContainerEnvEntry54: !Sub 'PdfRasterBaseUrl=http://${ServiceEndpointToPdfRaster}:8080'
-        ContainerEnvEntry55: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
-        ContainerEnvEntry56: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
-        ContainerEnvEntry57: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
+        ContainerEnvEntry54: !Sub 'PnSsQueueNameAvailability=${PnSsQueueNameAvailability}'
+        ContainerEnvEntry55: !Sub 'PnSsEventHandlerMaxMessages=${PnSsEventHandlerMaxMessages}'
+        ContainerEnvEntry56: !Sub 'PnSsSqsRetryStrategyMinBackoff=${PnSsSqsRetryStrategyMinBackoff}'
+        ContainerEnvEntry57: !Sub 'PnSsSqsRetryStrategyMaxAttempts=${PnSsSqsRetryStrategyMaxAttempts}'
+        ContainerEnvEntry58: !Sub 'PdfRasterBaseUrl=http://${ServiceEndpointToPdfRaster}:8080'
+        ContainerEnvEntry59: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
+        ContainerEnvEntry60: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
+        ContainerEnvEntry61: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
+        ContainerEnvEntry62: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
+        ContainerEnvEntry63: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
+        ContainerEnvEntry64: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -581,7 +622,6 @@ Resources:
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         LogAlarmStrategyV1: !Ref LogAlarmStrategy
         EcsLogGroup: !Ref EcsLogGroup
-        LoadBalancingAlgorithm: round_robin
         AutoscalingThreshold: !Ref AutoscalingThreshold
         AutoscalingStrategy: REST-API
         MinTasksNumber: !Ref MinTasksNumber
@@ -671,6 +711,7 @@ Resources:
               - 'sqs:SendMessage'
             Resource:
               - !Ref PnSsQueueArnStagingBucket
+              - !Ref PnSsQueueArnAvailability
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -851,6 +892,7 @@ Resources:
           !Join
           - ','
           - - !Ref PnSsQueueArnStagingBucket
+            - !Ref PnSsQueueArnAvailability
             - !Ref PnSsQueueArnGestoreBucketInvoke
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
             - !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus

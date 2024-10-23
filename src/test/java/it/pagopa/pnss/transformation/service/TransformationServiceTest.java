@@ -71,6 +71,8 @@ class TransformationServiceTest {
     private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
     @SpyBean
     private SqsService sqsService;
+    @SpyBean
+    private S3Service s3Service;
     @MockBean
     private PdfRasterCall pdfRasterCall;
     @Value("${s3.queue.sign-queue-name}")
@@ -78,6 +80,8 @@ class TransformationServiceTest {
     @Autowired
     private SqsAsyncClient sqsAsyncClient;
 
+    @Value("${pn.ss.transformation-service.dummy.delay}")
+    private Integer dummyDelay;
     private final String FILE_KEY = "FILE_KEY";
     private static final String PROVIDER_SWITCH = "providerSwitch";
     private static final String ARUBA_PROVIDER = "1970-01-01T00:00:00Z;aruba";
@@ -113,18 +117,7 @@ class TransformationServiceTest {
     @Test
     void newStagingBucketObjectCreatedInvalidStatus() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         sendMessageToQueue(createdS3ObjectDto).block();
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
@@ -142,18 +135,7 @@ class TransformationServiceTest {
     @Test
     void newStagingBucketObjectMaxRetriesExceeded() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         createdS3ObjectDto.setRetry(4);
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(null, createdS3ObjectDto);
@@ -168,18 +150,7 @@ class TransformationServiceTest {
     @Test
     void newStagingBucketObjectCreatedInvalidTransformation() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         sendMessageToQueue(createdS3ObjectDto).block();
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
@@ -196,18 +167,7 @@ class TransformationServiceTest {
     @Test
     void newStagingBucketObjectCreatedEventArubaKo() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         sendMessageToQueue(createdS3ObjectDto).block();
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
@@ -226,18 +186,7 @@ class TransformationServiceTest {
     @ValueSource(strings = {"application/pdf", "application/xml", "other"})
     void newStagingBucketObjectCreatedEvent_ArubaProvider_Ok(String contentType) {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         sendMessageToQueue(createdS3ObjectDto).block();
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
@@ -256,18 +205,7 @@ class TransformationServiceTest {
     @ValueSource(strings = {"application/pdf", "application/xml", "other"})
     void newStagingBucketObjectCreatedEvent_NamirialProvider_Ok(String contentType) {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         sendMessageToQueue(createdS3ObjectDto).block();
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
@@ -286,18 +224,7 @@ class TransformationServiceTest {
     @Test
     void newStagingBucketObjectCreatedEventRetryNotInHotBucketOk() {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         createdS3ObjectDto.setRetry(1);
 
@@ -318,18 +245,7 @@ class TransformationServiceTest {
     @EnumSource(value = DocumentType.TransformationsEnum.class, names = {"SIGN", "SIGN_AND_TIMEMARK"})
     void newStagingBucketObjectCreatedEventRetryInHotBucketOk(DocumentType.TransformationsEnum transformation) {
 
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         createdS3ObjectDto.setRetry(1);
 
@@ -348,18 +264,7 @@ class TransformationServiceTest {
 
     @Test
     void newStagingBucketObjectCreatedEvent_PdfRaster_Ok() {
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         sendMessageToQueue(createdS3ObjectDto).block();
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
@@ -376,19 +281,7 @@ class TransformationServiceTest {
 
     @Test
     void newStagingBucketObjectCreatedEventRetryInHotBucket_PdfRaster_Ok() {
-
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         createdS3ObjectDto.setRetry(1);
 
@@ -408,18 +301,7 @@ class TransformationServiceTest {
 
     @Test
     void newStagingBucketObjectCreatedEvent_PdfRaster_Ko() {
-        S3Object s3Object = new S3Object();
-        s3Object.setKey(FILE_KEY);
-
-        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
-        bucketOriginDetail.setName(bucketName.ssStageName());
-
-        CreationDetail creationDetail = new CreationDetail();
-        creationDetail.setObject(s3Object);
-        creationDetail.setBucketOriginDetail(bucketOriginDetail);
-
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
-        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
         sendMessageToQueue(createdS3ObjectDto).block();
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
@@ -429,6 +311,93 @@ class TransformationServiceTest {
         when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.error(new RuntimeException("error")));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
+        verify(sqsService, times(2)).send(eq(signQueueName), any());
+    }
+
+    @Test
+    void newStagingBucketObjectCreatedEvent_Dummy_Ok(){
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
+
+        sendMessageToQueue(createdS3ObjectDto).block();
+        Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
+        SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
+
+        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
+
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
+
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
+        verify(sqsService, times(1)).send(eq(signQueueName), any());
+    }
+
+    @Test
+    void newStagingBucketObjectCreatedEvent_Dummy_Delay(){
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
+
+        sendMessageToQueue(createdS3ObjectDto).block();
+        Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
+        SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
+
+        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
+
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
+
+        StepVerifier.create(testMono)
+                .expectSubscription()
+                .expectNoEvent(Duration.ofMillis(dummyDelay))
+                .thenAwait(Duration.ofMillis(2))
+                .expectNextMatches(DeleteMessageResponse.class::isInstance)
+                .verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
+        verify(s3Service,times(1)).putObject(anyString(),any(),anyString(),anyString());
+        verify(s3Service,times(1)).deleteObject(anyString(),anyString());
+        verify(sqsService, times(1)).send(eq(signQueueName), any());
+    }
+
+    @Test
+    void newStagingBucketObjectCreatedEvent_Dummy_Delay_at_zero(){
+        Integer originalDummy= (Integer) ReflectionTestUtils.getField(transformationService,"dummyDelay");
+        ReflectionTestUtils.setField(transformationService,"dummyDelay",0);
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
+
+        sendMessageToQueue(createdS3ObjectDto).block();
+        Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
+        SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
+
+        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
+
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
+
+        StepVerifier.create(testMono)
+                .expectSubscription()
+                .thenAwait(Duration.ofMillis(2))
+                .expectNextMatches(DeleteMessageResponse.class::isInstance)
+                .verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
+        verify(s3Service,times(1)).putObject(anyString(),any(),anyString(),anyString());
+        verify(s3Service,times(1)).deleteObject(anyString(),anyString());
+        verify(sqsService, times(1)).send(eq(signQueueName), any());
+        ReflectionTestUtils.setField(transformationService,"dummyDelay",originalDummy);
+    }
+
+
+    @Test
+    void newStagingBucketObjectCreatedEvent_Dummy_s3_Ko(){
+        CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
+
+        sendMessageToQueue(createdS3ObjectDto).block();
+        Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
+        SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
+
+        when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.error(new RuntimeException("error")));
+
+        when(s3Service.putObject(anyString(),any(),anyString(),anyString())).thenReturn(Mono.error(new RuntimeException("error")));
+        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
+
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
         StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
         verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verify(sqsService, times(2)).send(eq(signQueueName), any());
@@ -490,6 +459,23 @@ class TransformationServiceTest {
 
     private void deleteObjectInBucket(String key, String bucketName) {
         s3TestClient.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(key).build());
+    }
+
+
+    private CreatedS3ObjectDto getCreatedS3ObjectDto() {
+        S3Object s3Object = new S3Object();
+        s3Object.setKey(FILE_KEY);
+
+        BucketOriginDetail bucketOriginDetail = new BucketOriginDetail();
+        bucketOriginDetail.setName(bucketName.ssStageName());
+
+        CreationDetail creationDetail = new CreationDetail();
+        creationDetail.setObject(s3Object);
+        creationDetail.setBucketOriginDetail(bucketOriginDetail);
+
+        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        createdS3ObjectDto.setCreationDetailObject(creationDetail);
+        return createdS3ObjectDto;
     }
 
     private Mono<SendMessageResponse> sendMessageToQueue(CreatedS3ObjectDto createdS3ObjectDto) {

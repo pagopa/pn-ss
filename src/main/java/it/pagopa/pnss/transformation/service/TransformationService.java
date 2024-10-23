@@ -13,6 +13,7 @@ import it.pagopa.pnss.common.exception.InvalidStatusTransformationException;
 import it.pagopa.pnss.common.model.pojo.SqsMessageWrapper;
 import it.pagopa.pnss.common.rest.call.pdfraster.PdfRasterCall;
 import it.pagopa.pnss.common.service.SqsService;
+import it.pagopa.pnss.common.utils.CompareUtils;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
@@ -31,6 +32,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageResponse;
 
+import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -64,6 +66,8 @@ public class TransformationService {
     private String signQueueName;
     @Value("${pn.ss.transformation-service.max.messages}")
     private int maxMessages;
+    @Value("${pn.ss.transformation-service.dummy.delay:250}")
+    private Integer dummyDelay;
     // Numero massimo di retry. Due step: 1) firma del documento e inserimento nel bucket 2) delete del file dal bucket di staging, piu' un retry aggiuntivo di sicurezza
     private static final int MAX_RETRIES = 3;
 
@@ -151,7 +155,7 @@ public class TransformationService {
                 .filter(document -> {
                     var transformations = document.getDocumentType().getTransformations();
                     log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return !transformations.isEmpty();
+                    return CompareUtils.enumContainsAny(DocumentType.TransformationsEnum.class,transformations);
                 })
                 .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
@@ -169,7 +173,10 @@ public class TransformationService {
             return signAndTimemarkTransformation(document, key, stagingBucketName, false);
         } else if (transformations.contains(DocumentType.TransformationsEnum.RASTER)) {
             return rasterTransformation(document, key, stagingBucketName);
-        } else return Mono.error(new IllegalTransformationException(key));
+        } else if (transformations.contains(DocumentType.TransformationsEnum.DUMMY)) {
+            return dummyTransformation(document,key,stagingBucketName);
+        }
+        else return Mono.error(new IllegalTransformationException(key));
     }
 
     private Mono<PutObjectResponse> signAndTimemarkTransformation(Document document, String key, String stagingBucketName, boolean marcatura) {
@@ -189,6 +196,17 @@ public class TransformationService {
                 .flatMap(convertedDocument -> s3Service.putObject(key, convertedDocument, document.getContentType(), bucketName.ssHotName()))
                 .doOnError(throwable -> log.debug(EXCEPTION_IN_PROCESS + ": {}", RASTER_TRANSFORMATION, throwable.getMessage(), throwable))
                 .doFinally(signalType -> rasterSemaphore.release());
+    }
+
+    private Mono<PutObjectResponse> dummyTransformation(Document document, String key, String stagingBucketName) {
+        log.debug(INVOKING_METHOD, "dummy transformation", Stream.of(document, key, stagingBucketName).toList());
+        return s3Service.getObject(key,stagingBucketName)
+                .map(BytesWrapper::asByteArray)
+                .map(byteArray -> {
+                    waitDelay();
+                    return byteArray;
+                })
+                .flatMap(filebytes -> s3Service.putObject(key, filebytes, document.getContentType(), bucketName.ssHotName()));
     }
 
     private Mono<Boolean> isSignatureNeeded(String key, int retry) {
@@ -226,6 +244,14 @@ public class TransformationService {
     private void acquireSemaphore(Semaphore semaphore) {
         try {
             semaphore.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void waitDelay() {
+        try {
+            Thread.sleep(dummyDelay);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

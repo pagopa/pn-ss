@@ -320,46 +320,41 @@ class TransformationServiceTest {
     void newStagingBucketObjectCreatedEvent_Dummy_Ok(){
         CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
-        Acknowledgment acknowledgment = new Acknowledgment() {
-            @Override
-            public Future<?> acknowledge() {
-                return null;
-            }
-        };
+        sendMessageToQueue(createdS3ObjectDto).block();
+        Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
+        SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
         mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
 
-        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
-        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
-        verify(sqsService, never()).send(eq(signQueueName), any());
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
+        verify(sqsService, times(1)).send(eq(signQueueName), any());
     }
 
     @Test
     void newStagingBucketObjectCreatedEvent_Dummy_Delay(){
         CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
-        Acknowledgment acknowledgment = new Acknowledgment() {
-            @Override
-            public Future<?> acknowledge() {
-                return null;
-            }
-        };
+        sendMessageToQueue(createdS3ObjectDto).block();
+        Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
+        SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
         mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
 
-        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
         StepVerifier.create(testMono)
                 .expectSubscription()
                 .expectNoEvent(Duration.ofMillis(dummyDelay))
                 .thenAwait(Duration.ofMillis(2))
+                .expectNextMatches(DeleteMessageResponse.class::isInstance)
                 .verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verify(s3Service,times(1)).putObject(anyString(),any(),anyString(),anyString());
         verify(s3Service,times(1)).deleteObject(anyString(),anyString());
-        verify(sqsService, never()).send(eq(signQueueName), any());
+        verify(sqsService, times(1)).send(eq(signQueueName), any());
     }
 
     @Test
@@ -368,25 +363,23 @@ class TransformationServiceTest {
         ReflectionTestUtils.setField(transformationService,"dummyDelay",0);
         CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
-        Acknowledgment acknowledgment = new Acknowledgment() {
-            @Override
-            public Future<?> acknowledge() {
-                return null;
-            }
-        };
+        sendMessageToQueue(createdS3ObjectDto).block();
+        Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
+        SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
         mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
 
-        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
         StepVerifier.create(testMono)
                 .expectSubscription()
                 .thenAwait(Duration.ofMillis(2))
+                .expectNextMatches(DeleteMessageResponse.class::isInstance)
                 .verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
         verify(s3Service,times(1)).putObject(anyString(),any(),anyString(),anyString());
         verify(s3Service,times(1)).deleteObject(anyString(),anyString());
-        verify(sqsService, never()).send(eq(signQueueName), any());
+        verify(sqsService, times(1)).send(eq(signQueueName), any());
         ReflectionTestUtils.setField(transformationService,"dummyDelay",originalDummy);
     }
 
@@ -395,22 +388,19 @@ class TransformationServiceTest {
     void newStagingBucketObjectCreatedEvent_Dummy_s3_Ko(){
         CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
-        Acknowledgment acknowledgment = new Acknowledgment() {
-            @Override
-            public Future<?> acknowledge() {
-                return null;
-            }
-        };
+        sendMessageToQueue(createdS3ObjectDto).block();
+        Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
+        SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
         when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.error(new RuntimeException("error")));
 
         when(s3Service.putObject(anyString(),any(),anyString(),anyString())).thenReturn(Mono.error(new RuntimeException("error")));
         mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
 
-        var testMono = transformationService.newStagingBucketObjectCreatedEvent(createdS3ObjectDto, acknowledgment);
-        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
-        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt(), anyBoolean());
-        verify(sqsService, times(1)).send(eq(signQueueName), any());
+        var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
+        StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
+        verify(transformationService, times(1)).objectTransformation(anyString(), anyString(), anyInt());
+        verify(sqsService, times(2)).send(eq(signQueueName), any());
     }
 
 

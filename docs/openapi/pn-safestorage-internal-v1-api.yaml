@@ -753,7 +753,7 @@ components:
           type: array
           items:
             type: string
-            enum: ['NONE', 'SIGN_AND_TIMEMARK', 'RASTER', 'DUMMY']
+            enum: ['NONE', 'SIGN', 'SIGN_AND_TIMEMARK', 'RASTER', 'DUMMY']
         timeStamped:
           type: string
           enum: [ 'NONE', 'STANDARD' ]

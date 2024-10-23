@@ -29,8 +29,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.handler.annotation.support.PayloadMethodArgumentResolver;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -230,10 +228,6 @@ public class AwsConfiguration {
         }
 
         return builder.build();
-    }
-    @Bean
-    public TaskExecutor taskExecutor() {
-        return new SimpleAsyncTaskExecutor(); // Or use another one of your liking
     }
 
     private String getTaskId() {

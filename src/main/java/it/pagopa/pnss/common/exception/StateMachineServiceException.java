@@ -21,3 +21,4 @@ public class StateMachineServiceException extends RuntimeException {
     }
 
 }
+

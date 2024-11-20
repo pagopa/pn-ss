@@ -14,9 +14,7 @@ import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.configuration.IgnoredUpdateMetadataConfig;
 import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.CustomLog;
@@ -25,9 +23,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SynchronousSink;
+import reactor.util.function.Tuple2;
 import reactor.util.retry.RetryBackoffSpec;
 
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.stream.Stream;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
@@ -75,147 +76,124 @@ public class FileMetadataUpdateService {
         return docClientCall.getDocument(fileKey)
                 .retryWhen(gestoreRepositoryRetryStrategy)
                 .flatMap(documentResponse -> Mono.zipDelayError(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
-                .handle(((objects, synchronousSink) -> {
-
-                    var userConfiguration = objects.getT1().getUserConfiguration();
-                    var document = objects.getT2().getDocument();
-                    var tipoDocumento = document.getDocumentType().getTipoDocumento();
-
-                    log.logChecking(USER_CONFIGURATION);
-                    if (userConfiguration == null || userConfiguration.getCanModifyStatus() == null || !userConfiguration.getCanModifyStatus().contains(tipoDocumento)) {
-                        String errorMsg = String.format("Client '%s' not has privilege for change document type '%s'",
-                                xPagopaSafestorageCxId,
-                                tipoDocumento);
-                        log.logCheckingOutcome(USER_CONFIGURATION, false, errorMsg);
-                        synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, errorMsg));
-                    } else {
-                        log.logCheckingOutcome(USER_CONFIGURATION, true);
-                        synchronousSink.next(document);
-                    }
-                }))
-                            .flatMap(object -> {
-                                Document document = (Document) object;
-                                String documentType = document.getDocumentType().getTipoDocumento();
-
-                                Mono<String> checkedStatus;
-                                if (logicalState != null && !logicalState.isBlank()) {
-                                    checkedStatus = checkLookUp(documentType, logicalState);
-                                } else {
-                                    checkedStatus = Mono.just("");
-                                }
-                                return Mono.zipDelayError(Mono.just(document),  checkedStatus);
-                            }).flatMap(objects -> {
-
-                    Document document = objects.getT1();
-                    DocumentType documentType = document.getDocumentType();
-                    String technicalStatus = objects.getT2();
-                    DocumentChanges documentChanges = new DocumentChanges();
-
-                    boolean isStatusPresent = false;
-
-                    if (request.getStatus() != null && !StringUtils.isBlank(request.getStatus())) {
-                        if (documentType.getStatuses() != null) {
-                            isStatusPresent = documentType.getStatuses().containsKey(logicalState);
-                        }
-                        if (!isStatusPresent) {
-                            log.debug("{} : Status '{}' not found for document" + " key {}",
-                                      UPDATE_METADATA,
-                                      request.getStatus(),
-                                      fileKey);
-                            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                                          "Status not found for document key : " + fileKey));
-                        }
-
-                        if (StringUtils.isEmpty(technicalStatus)) {
-                            log.debug("{} : Logical status not found " +
-                                      "for document key {}", UPDATE_METADATA, fileKey);
-                            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                                          "Logical status not found for document key : " + fileKey));
-                        }
-
-                    }
-                    documentChanges.setDocumentState(technicalStatus);
-
-                    if (retentionUntil != null) {
-                        documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
-                    }
-
-                    return Mono.just(documentChanges);
-                })
-                .flatMap(documentChanges ->  docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
+                .handle(((objects, synchronousSink) -> validateDocumentModificationPrivileges(xPagopaSafestorageCxId, objects, synchronousSink)))
+                .flatMap(object -> validateAndPairDocumentStatus((Document) object, logicalState))
+                .flatMap(objects -> getDocumentChangesMono(fileKey, request, objects, logicalState, retentionUntil))
+                .flatMap(documentChanges -> docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                         .retryWhen(gestoreRepositoryRetryStrategy)
+                        .flatMap(documentResponsePatch -> handleRetentionAndTags(fileKey, documentResponsePatch, retentionUntil))
                         .flatMap(documentResponsePatch -> {
-                            if (retentionUntil != null && !ignoredUpdateMetadataHandler.isToIgnore(fileKey)) {
-                                return updateS3ObjectTags(fileKey, documentResponsePatch.getDocument().getDocumentState(), documentResponsePatch.getDocument().getDocumentType())
-                                        .flatMap(putObjectTaggingResponse -> scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput()
-                                                .documentKey(fileKey)
-                                                .retentionUntil(retentionUntil.toInstant().getEpochSecond())))
-                                        .thenReturn(documentResponsePatch);
-                            }
-                            return Mono.just(documentResponsePatch);
-                        })
-                        .flatMap(documentResponsePatch -> {
-                    OperationResultCodeResponse resp = new OperationResultCodeResponse();
-                    resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
-                    resp.setResultDescription(ResultCodeWithDescription.OK.getDescription());
-                    return Mono.just(resp);
-                }))
+                            OperationResultCodeResponse resp = new OperationResultCodeResponse();
+                            resp.setResultCode(ResultCodeWithDescription.OK.getResultCode());
+                            resp.setResultDescription(ResultCodeWithDescription.OK.getDescription());
+                            return Mono.just(resp);
+                        }))
+                .onErrorResume(this::handleExceptions)
+                .doOnSuccess(operationResultCodeResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, UPDATE_METADATA, operationResultCodeResponse));
+    }
 
-                            .onErrorResume(PatchDocumentException.class, e -> {
-                                log.debug(
-                                        "{} : rilevata una PatchDocumentException : " +
-										"errore = {}",
-                                        UPDATE_METADATA,
-                                        e.getMessage(),
-                                        e);
-                                return Mono.error(new ResponseStatusException(e.getStatusCode(), e.getMessage()));
-                            })
-                            .onErrorResume(ScadenzaDocumentiCallException.class, e -> {
-                                log.debug(
-                                        "{} : rilevata una ScadenzaDocumentiCallException : " +
-                                                "errore = {}",
-                                        UPDATE_METADATA,
-                                        e.getMessage(),
-                                        e);
-                                return Mono.error(new ResponseStatusException(HttpStatus.valueOf(e.getCode()), e.getMessage()));
-                            })
-                            .onErrorResume(NoSuchKeyException.class, e -> {
-                                log.debug(
-                                        "{} : rilevata una NoSuchKeyException" +
-                                                " : errore" +
-                                                " = " + "{}",
-                                        UPDATE_METADATA,
-                                        e.getMessage(),
-                                        e);
-                                return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
-                            })
-                            .onErrorResume(DocumentKeyNotPresentException.class, e -> {
-                                log.debug(
-                                        "{} : rilevata una DocumentKeyNotPresentException" +
-										" : errore" +
-                                        " = " + "{}",
-                                        UPDATE_METADATA,
-                                        e.getMessage(),
-                                        e);
-                                return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
-                            })
+    private static Mono<DocumentChanges> getDocumentChangesMono(String fileKey, UpdateFileMetadataRequest request, Tuple2<Document, String> objects, String logicalState, Date retentionUntil) {
+        Document document = objects.getT1();
+        DocumentType documentType = document.getDocumentType();
+        String technicalStatus = objects.getT2();
+        DocumentChanges documentChanges = new DocumentChanges();
 
-                            .onErrorResume(InvalidNextStatusException.class, e -> {
-                                log.debug(
-                                        "{} : rilevata una InvalidNextStatusException : " +
-										"errore" +
-                                        " = " + "{}",
-                                        UPDATE_METADATA,
-                                        e.getMessage(),
-                                        e);
-                                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage()));
-                            })
+        boolean isStatusPresent = false;
 
-                            .onErrorResume(e -> {
-                                log.error("{} : errore generico = {}", UPDATE_METADATA, e.getMessage(), e);
-                                return Mono.error(e);
-                            })
-                            .doOnSuccess(operationResultCodeResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, UPDATE_METADATA, operationResultCodeResponse));
+        if (request.getStatus() != null && !StringUtils.isBlank(request.getStatus())) {
+            if (documentType.getStatuses() != null) {
+                isStatusPresent = documentType.getStatuses().containsKey(logicalState);
+            }
+            if (!isStatusPresent) {
+                log.debug("{} : Status '{}' not found for document" + " key {}",
+                          UPDATE_METADATA,
+                          request.getStatus(),
+                        fileKey);
+                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Status not found for document key : " + fileKey));
+            }
+
+            if (StringUtils.isEmpty(technicalStatus)) {
+                log.debug("{} : Logical status not found " +
+                          "for document key {}", UPDATE_METADATA, fileKey);
+                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Logical status not found for document key : " + fileKey));
+            }
+
+        }
+        documentChanges.setDocumentState(technicalStatus);
+
+        if (retentionUntil != null) {
+            documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
+        }
+
+        return Mono.just(documentChanges);
+    }
+
+    private Mono<Tuple2<Document, String>> validateAndPairDocumentStatus(Document object, String logicalState) {
+        String documentType = object.getDocumentType().getTipoDocumento();
+        Mono<String> checkedStatus;
+
+        if (logicalState != null && !logicalState.isBlank()) {
+            checkedStatus = checkLookUp(documentType, logicalState);
+        } else {
+            checkedStatus = Mono.just("");
+        }
+        return Mono.zipDelayError(Mono.just(object), checkedStatus);
+    }
+
+    private Mono<DocumentResponse> handleRetentionAndTags(String fileKey, DocumentResponse documentResponsePatch, Date retentionUntil) {
+        if (retentionUntil != null && !ignoredUpdateMetadataHandler.isToIgnore(fileKey)) {
+            return updateS3ObjectTags(fileKey, documentResponsePatch.getDocument().getDocumentState(), documentResponsePatch.getDocument().getDocumentType())
+                    .flatMap(putObjectTaggingResponse -> scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput()
+                            .documentKey(fileKey)
+                            .retentionUntil(retentionUntil.toInstant().getEpochSecond())))
+                    .thenReturn(documentResponsePatch);
+        }
+        return Mono.just(documentResponsePatch);
+    }
+
+    private Mono<OperationResultCodeResponse> handleExceptions(Throwable e) {
+        if (e instanceof PatchDocumentException ex) {
+            log.debug("{} : rilevata una PatchDocumentException : errore = {}", UPDATE_METADATA, ex.getMessage(), ex);
+            return Mono.error(new ResponseStatusException(ex.getStatusCode(), ex.getMessage()));
+        }
+        if (e instanceof ScadenzaDocumentiCallException ex) {
+            log.debug("{} : rilevata una ScadenzaDocumentiCallException : errore = {}", UPDATE_METADATA, ex.getMessage(), ex);
+            return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ex.getCode()), ex.getMessage()));
+        }
+        if (e instanceof NoSuchKeyException ex) {
+            log.debug("{} : rilevata una NoSuchKeyException : errore = {}", UPDATE_METADATA, ex.getMessage(), ex);
+            return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
+        }
+        if (e instanceof DocumentKeyNotPresentException ex){
+            log.debug("{} : rilevata una DocumentKeyNotPresentException : errore = {}", UPDATE_METADATA, ex.getMessage(), ex);
+            return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage()));
+        }
+        if (e instanceof InvalidNextStatusException ex) {
+            log.debug("{} : rilevata una InvalidNextStatusException : errore = {}", UPDATE_METADATA, ex.getMessage(), ex);
+            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage()));
+        }
+        log.error("{} : errore generico = {}", UPDATE_METADATA, e.getMessage(), e);
+        return Mono.error(e);
+    }
+
+    private static void validateDocumentModificationPrivileges(String xPagopaSafestorageCxId, Tuple2<UserConfigurationResponse, DocumentResponse> objects, SynchronousSink<Object> synchronousSink) {
+        var userConfiguration = objects.getT1().getUserConfiguration();
+        var document = objects.getT2().getDocument();
+        var tipoDocumento = document.getDocumentType().getTipoDocumento();
+
+        log.logChecking(USER_CONFIGURATION);
+        if (userConfiguration == null || userConfiguration.getCanModifyStatus() == null || !userConfiguration.getCanModifyStatus().contains(tipoDocumento)) {
+            String errorMsg = String.format("Client '%s' not has privilege for change document type '%s'",
+                    xPagopaSafestorageCxId,
+                    tipoDocumento);
+            log.logCheckingOutcome(USER_CONFIGURATION, false, errorMsg);
+            synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, errorMsg));
+        } else {
+            log.logCheckingOutcome(USER_CONFIGURATION, true);
+            synchronousSink.next(document);
+        }
     }
 
     private Mono<String> checkLookUp(String documentType, String logicalState) {

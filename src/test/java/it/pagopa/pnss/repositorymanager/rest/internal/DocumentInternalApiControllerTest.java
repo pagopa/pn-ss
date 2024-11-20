@@ -10,11 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
@@ -24,7 +20,6 @@ import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
 import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
-import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
@@ -73,8 +68,6 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 	private S3Client s3TestClient;
 	@SpyBean
 	private S3Service s3Service;
-	@SpyBean
-	private DocumentService documentService;
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
@@ -125,27 +118,14 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		return tags;
 	}
 
-	private static void insertDocumentEntity(String documentKey) {
+	private static void insertDocumentEntity() {
 		log.info("execute insertDocumentEntity()");
 
-		List<String> allowedStatusTransitions1 = new ArrayList<>();
-		allowedStatusTransitions1.add("AVAILABLE");
-
-		CurrentStatusEntity currentStatus1 = new CurrentStatusEntity();
-		currentStatus1.setStorage(DOCTYPE_ID_LEGAL_FACTS);
-		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
-		currentStatus1.setTechnicalState("SAVED");
-
-		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
-		statuses1.put("SAVED", currentStatus1);
-
-		DocTypeEntity docTypeEntity = new DocTypeEntity();
-		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
-		docTypeEntity.setStatuses(statuses1);
+		DocTypeEntity docTypeEntity = getDocTypeEntity();
 		log.info("execute insertDocumentEntity() : docTypeEntity : {}", docTypeEntity);
 
 		var documentEntity = new DocumentEntity();
-		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentKey(DocumentInternalApiControllerTest.PARTITION_ID_ENTITY);
 		documentEntity.setDocumentType(docTypeEntity);
 		documentEntity.setContentLenght(new BigDecimal(50));
 		documentEntity.setLastStatusChangeTimestamp(OffsetDateTime.now());
@@ -154,9 +134,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		dynamoDbTable.putItem(builder -> builder.item(documentEntity));
 	}
 
-	private static void insertDocumentEntityWithTags(String documentKey) {
-		log.info("execute insertDocumentEntity()");
-
+	private static DocTypeEntity getDocTypeEntity() {
 		List<String> allowedStatusTransitions1 = new ArrayList<>();
 		allowedStatusTransitions1.add("AVAILABLE");
 
@@ -171,6 +149,13 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		DocTypeEntity docTypeEntity = new DocTypeEntity();
 		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
 		docTypeEntity.setStatuses(statuses1);
+		return docTypeEntity;
+	}
+
+	private static void insertDocumentEntityWithTags(String documentKey) {
+		log.info("execute insertDocumentEntity()");
+
+		DocTypeEntity docTypeEntity = getDocTypeEntity();
 		log.info("execute insertDocumentEntityTags() : docTypeEntity : {}", docTypeEntity);
 
 		var documentEntity = new DocumentEntity();
@@ -195,7 +180,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		dynamoDbTable = dynamoDbEnhancedClient.table(
 //    			DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
 				gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
-		insertDocumentEntity(PARTITION_ID_ENTITY);
+		insertDocumentEntity();
 		insertDocumentEntityWithTags(PARTITION_ID_ENTITY_TAGS);
 		insertDocumentEntityWithTags(PARTITION_ID_DEFAULT_TAGS_DELETE);
 	}
@@ -211,24 +196,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 	public DocumentInput createDocument() {
 		log.info("execute createDocument()");
 
-		List<String> allowedStatusTransitions1 = new ArrayList<>();
-		allowedStatusTransitions1.add("AVAILABLE");
-
-		CurrentStatus currentStatus1 = new CurrentStatus();
-		currentStatus1.setStorage(DOCTYPE_ID_LEGAL_FACTS);
-		currentStatus1.setAllowedStatusTransitions(allowedStatusTransitions1);
-
-		Map<String, CurrentStatus> statuses1 = new HashMap<>();
-		statuses1.put("PRELOADED", currentStatus1);
-
-		DocumentType docTypes = new DocumentType();
-		docTypes.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
-		docTypes.setChecksum(DocumentType.ChecksumEnum.SHA256);
-		docTypes.setInitialStatus("SAVED");
-		docTypes.setStatuses(statuses1);
-		docTypes.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
-		docTypes.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
-		docTypes.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
+		DocumentType docTypes = getDocumentType();
 		log.info("execute createDocument() : docType : {}", docTypes);
 
 		documentInput = new DocumentInput();
@@ -240,7 +208,6 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		documentInput.setDocumentType(DOCTYPE_ID_LEGAL_FACTS);
 		documentInput.setContentLenght(new BigDecimal(100));
 
-
 		log.info("execute createDocument() : documentInput : {}", documentInput);
 
 		documentChanges = new DocumentChanges();
@@ -249,9 +216,8 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 
 		return documentInput;
 	}
-	public DocumentInput createDocumentWithTags() {
-		log.info("execute createDocument()");
 
+	private static DocumentType getDocumentType() {
 		List<String> allowedStatusTransitions1 = new ArrayList<>();
 		allowedStatusTransitions1.add("AVAILABLE");
 
@@ -270,8 +236,14 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		docTypes.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
 		docTypes.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
 		docTypes.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
-		log.info("execute createDocument() : docType : {}", docTypes);
+		return docTypes;
+	}
 
+	public DocumentInput createDocumentWithTags() {
+		log.info("execute createDocument()");
+
+		DocumentType docTypes = getDocumentType();
+		log.info("execute createDocument() : docType : {}", docTypes);
 
 		documentInputTags = new DocumentInput();
 		documentInputTags.setDocumentKey(PARTITION_ID_DEFAULT_TAGS);
@@ -302,8 +274,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 
 		log.info("\n Test 1 (postItem) resultPreInsert {} \n", resultPreInsert);
 
-		if (resultPreInsert == null || resultPreInsert.getResponseBody() == null
-				|| resultPreInsert.getResponseBody().getDocument() == null) {
+		if (resultPreInsert.getResponseBody() == null || resultPreInsert.getResponseBody().getDocument() == null) {
 			webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
 					.body(BodyInserters.fromValue(documentInput)).exchange().expectStatus().isOk();
 		}
@@ -321,8 +292,7 @@ log.info("documentInputTags {}", documentInputTags);
 
 		log.info("\n Test 1 (postItem) resultPreInsert {} \n", resultPreInsert);
 
-		if (resultPreInsert == null || resultPreInsert.getResponseBody() == null
-				|| resultPreInsert.getResponseBody().getDocument() == null) {
+		if (resultPreInsert.getResponseBody() == null || resultPreInsert.getResponseBody().getDocument() == null) {
 			webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
 					.body(BodyInserters.fromValue(documentInputTags)).exchange().expectStatus().isOk();
 		}
@@ -340,8 +310,7 @@ log.info("documentInputTags {}", documentInputTags);
 
 		log.info("\n Test 2 (postItemPartitionKeyDuplicated) resultPreInsert {} \n", resultPreInsert);
 
-		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null
-				&& resultPreInsert.getResponseBody().getDocument() != null) {
+		if (resultPreInsert.getResponseBody() != null && resultPreInsert.getResponseBody().getDocument() != null) {
 
 			webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
 					.body(BodyInserters.fromValue(documentInput)).exchange().expectStatus()
@@ -363,8 +332,7 @@ log.info("documentInputTags {}", documentInputTags);
 
 		log.info("\n Test 2 (postItemPartitionKeyDuplicated) resultPreInsert {} \n", resultPreInsert);
 
-		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null
-				&& resultPreInsert.getResponseBody().getDocument() != null) {
+		if (resultPreInsert.getResponseBody() != null && resultPreInsert.getResponseBody().getDocument() != null) {
 
 			webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
 					.body(BodyInserters.fromValue(documentInputTags)).exchange().expectStatus()
@@ -440,25 +408,7 @@ log.info("documentInputTags {}", documentInputTags);
 
 		String documentKey = "docKeyExecutePatch";
 
-		List<String> allowedStatusTransitions = new ArrayList<>();
-		allowedStatusTransitions.add("ATTACHED");
-
-		CurrentStatusEntity currentStatusAttached = new CurrentStatusEntity();
-		currentStatusAttached.setStorage("PN_NOTIFIED_DOCUMENTS");
-		currentStatusAttached.setTechnicalState(ATTACHED);
-
-		CurrentStatusEntity currentStatusPreloaded = new CurrentStatusEntity();
-		currentStatusPreloaded.setStorage("PN_TEMPORARY_DOCUMENT");
-		currentStatusPreloaded.setAllowedStatusTransitions(allowedStatusTransitions);
-		currentStatusPreloaded.setTechnicalState(AVAILABLE);
-
-		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
-		statuses1.put("ATTACHED", currentStatusAttached);
-		statuses1.put("PRELOADED", currentStatusPreloaded);
-
-		DocTypeEntity docTypeEntity = new DocTypeEntity();
-		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
-		docTypeEntity.setStatuses(statuses1);
+		DocTypeEntity docTypeEntity = getTypeEntity();
 
 		var documentEntity = new DocumentEntity();
 		documentEntity.setDocumentKey(documentKey);
@@ -474,7 +424,7 @@ log.info("documentInputTags {}", documentInputTags);
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(ATTACHED);
 		docChanges.setContentLenght(new BigDecimal(60));
-		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
 
 		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
 		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
@@ -493,13 +443,8 @@ log.info("documentInputTags {}", documentInputTags);
 
 		log.info("\n Test 6 (patchItem) passed \n");
 	}
-	@Test
-	void patchItemWithTags() {
 
-		log.warn("DocumentInternalApiControllerTest.patchItemWithTags() : START");
-
-		String documentKey = "docKeyExecutePatchTags";
-
+	private static DocTypeEntity getTypeEntity() {
 		List<String> allowedStatusTransitions = new ArrayList<>();
 		allowedStatusTransitions.add("ATTACHED");
 
@@ -519,6 +464,17 @@ log.info("documentInputTags {}", documentInputTags);
 		DocTypeEntity docTypeEntity = new DocTypeEntity();
 		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
 		docTypeEntity.setStatuses(statuses1);
+		return docTypeEntity;
+	}
+
+	@Test
+	void patchItemWithTags() {
+
+		log.warn("DocumentInternalApiControllerTest.patchItemWithTags() : START");
+
+		String documentKey = "docKeyExecutePatchTags";
+
+		DocTypeEntity docTypeEntity = getTypeEntity();
 
 		var documentEntity = new DocumentEntity();
 		documentEntity.setDocumentKey(documentKey);
@@ -535,7 +491,7 @@ log.info("documentInputTags {}", documentInputTags);
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(ATTACHED);
 		docChanges.setContentLenght(new BigDecimal(60));
-		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
 
 		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
 		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
@@ -562,25 +518,7 @@ log.info("documentInputTags {}", documentInputTags);
 		//The fileKey is in ignored-update-metadata.csv file
 		String documentKey = "fileKeyToIgnoreUpdateMetadata";
 
-		List<String> allowedStatusTransitions = new ArrayList<>();
-		allowedStatusTransitions.add("ATTACHED");
-
-		CurrentStatusEntity currentStatusAttached = new CurrentStatusEntity();
-		currentStatusAttached.setStorage("PN_NOTIFIED_DOCUMENTS");
-		currentStatusAttached.setTechnicalState(ATTACHED);
-
-		CurrentStatusEntity currentStatusPreloaded = new CurrentStatusEntity();
-		currentStatusPreloaded.setStorage("PN_TEMPORARY_DOCUMENT");
-		currentStatusPreloaded.setAllowedStatusTransitions(allowedStatusTransitions);
-		currentStatusPreloaded.setTechnicalState(AVAILABLE);
-
-		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
-		statuses1.put("ATTACHED", currentStatusAttached);
-		statuses1.put("PRELOADED", currentStatusPreloaded);
-
-		DocTypeEntity docTypeEntity = new DocTypeEntity();
-		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
-		docTypeEntity.setStatuses(statuses1);
+		DocTypeEntity docTypeEntity = getTypeEntity();
 
 		var documentEntity = new DocumentEntity();
 		documentEntity.setDocumentKey(documentKey);
@@ -594,7 +532,7 @@ log.info("documentInputTags {}", documentInputTags);
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(ATTACHED);
 		docChanges.setContentLenght(new BigDecimal(60));
-		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
 
 		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
 		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
@@ -625,25 +563,7 @@ log.info("documentInputTags {}", documentInputTags);
 		//The fileKey is in ignored-update-metadata.csv file
 		String documentKey = "fileKeyToIgnoreUpdateMetadata3";
 
-		List<String> allowedStatusTransitions = new ArrayList<>();
-		allowedStatusTransitions.add("ATTACHED");
-
-		CurrentStatusEntity currentStatusAttached = new CurrentStatusEntity();
-		currentStatusAttached.setStorage("PN_NOTIFIED_DOCUMENTS");
-		currentStatusAttached.setTechnicalState(ATTACHED);
-
-		CurrentStatusEntity currentStatusPreloaded = new CurrentStatusEntity();
-		currentStatusPreloaded.setStorage("PN_TEMPORARY_DOCUMENT");
-		currentStatusPreloaded.setAllowedStatusTransitions(allowedStatusTransitions);
-		currentStatusPreloaded.setTechnicalState(AVAILABLE);
-
-		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
-		statuses1.put("ATTACHED", currentStatusAttached);
-		statuses1.put("PRELOADED", currentStatusPreloaded);
-
-		DocTypeEntity docTypeEntity = new DocTypeEntity();
-		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
-		docTypeEntity.setStatuses(statuses1);
+		DocTypeEntity docTypeEntity = getTypeEntity();
 
 		var documentEntity = new DocumentEntity();
 		documentEntity.setDocumentKey(documentKey);
@@ -659,7 +579,7 @@ log.info("documentInputTags {}", documentInputTags);
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(ATTACHED);
 		docChanges.setContentLenght(new BigDecimal(60));
-		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
 
 		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
 		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
@@ -690,25 +610,7 @@ log.info("documentInputTags {}", documentInputTags);
 		//The fileKey is in ignored-update-metadata.csv file
 		String documentKey = "fileKeyToIgnoreUpdateMetadata2";
 
-		List<String> allowedStatusTransitions = new ArrayList<>();
-		allowedStatusTransitions.add("ATTACHED");
-
-		CurrentStatusEntity currentStatusAttached = new CurrentStatusEntity();
-		currentStatusAttached.setStorage("PN_NOTIFIED_DOCUMENTS");
-		currentStatusAttached.setTechnicalState(ATTACHED);
-
-		CurrentStatusEntity currentStatusPreloaded = new CurrentStatusEntity();
-		currentStatusPreloaded.setStorage("PN_TEMPORARY_DOCUMENT");
-		currentStatusPreloaded.setAllowedStatusTransitions(allowedStatusTransitions);
-		currentStatusPreloaded.setTechnicalState(AVAILABLE);
-
-		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
-		statuses1.put("ATTACHED", currentStatusAttached);
-		statuses1.put("PRELOADED", currentStatusPreloaded);
-
-		DocTypeEntity docTypeEntity = new DocTypeEntity();
-		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
-		docTypeEntity.setStatuses(statuses1);
+		DocTypeEntity docTypeEntity = getTypeEntity();
 
 		var documentEntity = new DocumentEntity();
 		documentEntity.setDocumentKey(documentKey);
@@ -723,7 +625,7 @@ log.info("documentInputTags {}", documentInputTags);
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(ATTACHED);
 		docChanges.setContentLenght(new BigDecimal(60));
-		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
 
 		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
 		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
@@ -756,25 +658,7 @@ log.info("documentInputTags {}", documentInputTags);
 		//The fileKey is in ignored-update-metadata.csv file
 		String documentKey = "fileKeyToIgnoreUpdateMetadata2Tags";
 
-		List<String> allowedStatusTransitions = new ArrayList<>();
-		allowedStatusTransitions.add("ATTACHED");
-
-		CurrentStatusEntity currentStatusAttached = new CurrentStatusEntity();
-		currentStatusAttached.setStorage("PN_NOTIFIED_DOCUMENTS");
-		currentStatusAttached.setTechnicalState(ATTACHED);
-
-		CurrentStatusEntity currentStatusPreloaded = new CurrentStatusEntity();
-		currentStatusPreloaded.setStorage("PN_TEMPORARY_DOCUMENT");
-		currentStatusPreloaded.setAllowedStatusTransitions(allowedStatusTransitions);
-		currentStatusPreloaded.setTechnicalState(AVAILABLE);
-
-		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
-		statuses1.put("ATTACHED", currentStatusAttached);
-		statuses1.put("PRELOADED", currentStatusPreloaded);
-
-		DocTypeEntity docTypeEntity = new DocTypeEntity();
-		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
-		docTypeEntity.setStatuses(statuses1);
+		DocTypeEntity docTypeEntity = getTypeEntity();
 
 		var documentEntity = new DocumentEntity();
 		documentEntity.setDocumentKey(documentKey);
@@ -790,7 +674,7 @@ log.info("documentInputTags {}", documentInputTags);
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(ATTACHED);
 		docChanges.setContentLenght(new BigDecimal(60));
-		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
 
 		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
 		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
@@ -845,7 +729,7 @@ log.info("documentInputTags {}", documentInputTags);
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(AVAILABLE);
 		docChanges.setContentLenght(new BigDecimal(60));
-		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minus(10, ChronoUnit.MINUTES));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
 
 		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_ENTITY))
 				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON).body(BodyInserters.fromValue(docChanges))
@@ -867,13 +751,13 @@ log.info("documentInputTags {}", documentInputTags);
 
 	@Test
 	// codice test: DCSS.102.3
-	void patchItemIncorretcParameters() {
+	void patchItemIncorrectParameters() {
 
 		webTestClient.patch().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
 				.body(BodyInserters.fromValue(documentInput)).exchange().expectStatus()
 				.isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
 
-		log.info("\n Test 8 (patchItemIncorretcParameters) passed \n");
+		log.info("\n Test 8 (patchItemIncorrectParameters) passed \n");
 
 	}
 
@@ -922,7 +806,7 @@ log.info("documentInputTags {}", documentInputTags);
     }
 
 	private void addFileToBucket(String fileName, String bucketName) {
-		byte[] fileBytes = readPdfDocoument();
+		byte[] fileBytes = readPdfDocument();
 		PutObjectRequest request = PutObjectRequest.builder()
 				.bucket(bucketName)
 				.key(fileName)
@@ -930,17 +814,19 @@ log.info("documentInputTags {}", documentInputTags);
 		s3TestClient.putObject(request, RequestBody.fromBytes(fileBytes));
 	}
 
-    private byte[] readPdfDocoument() {
+    private byte[] readPdfDocument() {
         byte[] byteArray=null;
         try {
-            InputStream is =  getClass().getResourceAsStream("/PDF_PROVA.pdf");
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            ByteArrayOutputStream buffer;
+            try (InputStream is = getClass().getResourceAsStream("/PDF_PROVA.pdf")) {
+                buffer = new ByteArrayOutputStream();
 
-            int nRead;
-            byte[] data = new byte[16384];
+                int nRead;
+                byte[] data = new byte[16384];
 
-            while ((nRead = is.read(data, 0, data.length)) != -1) {
-                buffer.write(data, 0, nRead);
+                while ((nRead = Objects.requireNonNull(is).read(data, 0, data.length)) != -1) {
+                    buffer.write(data, 0, nRead);
+                }
             }
 
             byteArray = buffer.toByteArray();

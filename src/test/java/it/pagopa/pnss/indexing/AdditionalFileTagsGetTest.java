@@ -2,19 +2,14 @@ package it.pagopa.pnss.indexing;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.DocumentClientCall;
-import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
-import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeAll;
@@ -27,14 +22,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.services.s3.S3Client;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -56,30 +49,19 @@ AdditionalFileTagsGetTest {
     @Value("${header.x-api-key:#{null}}")
     private String xApiKey;
     @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
-    private String X_PAGOPA_SAFESTORAGE_CX_ID;
+    private String xPagopaSafestorageCxId;
     @Value("${test.aws.s3.endpoint:#{null}}")
     String testAwsS3Endpoint;
 
     @Autowired
     private WebTestClient webTestClient;
-    @Autowired
-    private BucketName bucketName;
-    @Autowired
-    private S3Client s3TestClient;
-    @SpyBean
-    private S3Service s3Service;
-    @SpyBean
-    private AdditionalFileTagsService additionalFileTagsService;
     private static final String GET_PATH_WITH_PARAM = "/safe-storage/v1/files/{fileKey}/tags";
     @MockBean
     private UserConfigurationClientCall userConfigurationClientCall;
     @MockBean
-    private TagsClientCall tagsClientCall;
-    @MockBean
     private DocumentClientCall documentClientCall;
 
     private static DynamoDbTable<DocumentEntity> dynamoDbTable;
-    private static DynamoDbTable<UserConfigurationEntity> dynamoDbTableUserConfig;
     private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_NOTIFICATION_ATTACHMENTS";
     private static final String PARTITION_ID_ENTITY_TAGS = "documentKeyEntDocTags";
     private static final String PARTITION_ID_NO_EXISTENT = "documentKeyEntTagsNotExist";
@@ -169,7 +151,7 @@ AdditionalFileTagsGetTest {
         var response = webTestClient.get()
                 .uri(uriBuilder -> uriBuilder.path(GET_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT_TAGS))
                 .accept(APPLICATION_JSON)
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, "apiKey_value")
                 .exchange()
                 .expectStatus().isOk()
@@ -195,7 +177,7 @@ AdditionalFileTagsGetTest {
         var response = webTestClient.get()
                 .uri(uriBuilder -> uriBuilder.path(GET_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT_TAGS))
                 .accept(APPLICATION_JSON)
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, "apiKey_value")
                 .exchange()
                 .expectStatus().isOk()
@@ -216,7 +198,7 @@ AdditionalFileTagsGetTest {
 
         webTestClient.get().uri(uriBuilder -> uriBuilder.path(GET_PATH_WITH_PARAM).build(PARTITION_ID_NO_EXISTENT))
                 .accept(APPLICATION_JSON)
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, "apiKey_value")
                 .exchange()
                 .expectStatus()

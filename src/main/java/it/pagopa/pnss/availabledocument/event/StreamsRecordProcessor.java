@@ -62,7 +62,7 @@ public class StreamsRecordProcessor {
     DynamoDbAsyncClient dynamoDbClient;
     @Value("${event.bridge.disponibilita-documenti-name}")
     private String disponibilitaDocumentiEventBridge;
-    @Value("$(pn.ss.safe-clients)")
+    @Value("${pn.ss.safe-clients}")
     private String safeClients;
 
 

@@ -108,9 +108,8 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
                                                                                                          Mono<AdditionalFileTagsMassiveUpdateRequest> additionalFileTagsMassiveUpdateRequest,
                                                                                                          final ServerWebExchange exchange) {
         log.logStartingProcess(MASSIVE_POST_TAG_DOCUMENT);
-        return additionalFileTagsMassiveUpdateRequest.flatMap(request -> additionalFileTagsService.postMassiveTags(request, xPagopaSafestorageCxId).map(response -> {
-                    return ResponseEntity.ok().body(response);
-                })).doOnSuccess(result -> log.logEndingProcess(MASSIVE_POST_TAG_DOCUMENT))
+        return additionalFileTagsMassiveUpdateRequest.flatMap(request -> additionalFileTagsService.postMassiveTags(request, xPagopaSafestorageCxId).map(response -> ResponseEntity.ok().body(response)))
+            .doOnSuccess(result -> log.logEndingProcess(MASSIVE_POST_TAG_DOCUMENT))
                 .doOnError(throwable -> log.logEndingProcess(MASSIVE_POST_TAG_DOCUMENT, false, throwable.getMessage()));
     }
 

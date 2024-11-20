@@ -4,7 +4,6 @@ import it.pagopa.pnss.common.client.dto.LifecycleRuleDTO;
 import it.pagopa.pnss.repositorymanager.service.impl.StorageConfigurationsServiceImpl;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +12,6 @@ import reactor.test.StepVerifier;
 import software.amazon.awssdk.services.s3.model.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.anyString;

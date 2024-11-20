@@ -1,6 +1,5 @@
 package it.pagopa.pnss.repositorymanager.service;
 
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.CurrentStatus;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;

@@ -32,7 +32,6 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageResponse;
 
-import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -58,10 +57,6 @@ public class TransformationService {
     private final PdfRasterCall pdfRasterCall;
     private final Semaphore signAndTimemarkSemaphore;
     private final Semaphore rasterSemaphore;
-    @Value("${default.internal.x-api-key.value:#{null}}")
-    private String defaultInternalApiKeyValue;
-    @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
-    private String defaultInternalClientIdValue;
     @Value("${s3.queue.sign-queue-name}")
     private String signQueueName;
     @Value("${pn.ss.transformation-service.max.messages}")
@@ -115,9 +110,7 @@ public class TransformationService {
         log.debug(LogUtils.INVOKING_METHOD, NEW_STAGING_BUCKET_OBJECT_CREATED, newStagingBucketObjectWrapper.getMessageContent());
 
         AtomicReference<String> fileKeyReference = new AtomicReference<>("");
-        return Mono.fromCallable(() -> {
-                    return  newStagingBucketObjectWrapper;
-                })
+        return Mono.fromCallable(() -> newStagingBucketObjectWrapper)
                 .filter(wrapper-> isKeyPresent(wrapper.getMessageContent()))
                 .doOnDiscard(SqsMessageWrapper.class, wrapper -> {
                     CreatedS3ObjectDto newStagingBucketObject = (CreatedS3ObjectDto) wrapper.getMessageContent();

@@ -27,7 +27,6 @@ import org.springframework.context.annotation.Import;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
-import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
@@ -40,7 +39,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
-import software.amazon.awssdk.services.s3.S3Client;
 
 @TestConfiguration
 @CustomLog
@@ -54,16 +52,11 @@ public class LocalStackTestConfig {
     private DynamoDbEnhancedClient dynamoDbEnhancedClient;
 
     @Autowired
-    private S3Client s3Client;
-
-    @Autowired
     private DynamoDbWaiter dynamoDbWaiter;
 
     @Autowired
     private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
 
-    @Autowired
-    private BucketName bucketName;
 
 
     static LocalStackContainer localStackContainer = new LocalStackContainer(DockerImageName.parse(DEFAULT_LOCAL_STACK_TAG)).withServices(
@@ -145,16 +138,6 @@ public class LocalStackTestConfig {
 
     private static void setNamirialCredentials(){
         System.setProperty("namirial.server.apikey", "namirial-api-key");
-    }
-
-    private static String getIdentityTimemarkCredentials() {
-        try {
-            return new JSONObject().put("user", "user1")
-                    .put("password", "password1")
-                    .toString();
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private void createTable(final String tableName, final Class<?> entityClass) {

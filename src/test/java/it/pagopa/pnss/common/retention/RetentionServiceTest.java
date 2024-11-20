@@ -33,7 +33,7 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
-public class RetentionServiceTest {
+class RetentionServiceTest {
 
     @Autowired
     private RetentionServiceImpl retentionService;
@@ -61,7 +61,7 @@ public class RetentionServiceTest {
         dtc.setName("PN_NOTIFICATION_ATTACHMENTS");
 
         DocumentTypeConfigurationStatuses documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatuses();
-        documentTypeConfigurationStatuses.setStorage("AVAILABLE");//TODO: guardare nel codice a cosa si riferisca il setStorage
+        documentTypeConfigurationStatuses.setStorage("AVAILABLE");
         dtc.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
 
         StorageConfiguration sc = new StorageConfiguration();
@@ -190,7 +190,7 @@ public class RetentionServiceTest {
         dtc.setName("PN_NOTIFICATION_ATTACHMENTS");
 
         DocumentTypeConfigurationStatuses documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatuses();
-        documentTypeConfigurationStatuses.setStorage("AVAILABLE");//TODO: guardare nel codice a cosa si riferisca il setStorage
+        documentTypeConfigurationStatuses.setStorage("AVAILABLE");
         dtc.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
 
         StorageConfiguration sc = new StorageConfiguration();

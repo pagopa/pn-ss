@@ -64,7 +64,6 @@ class SqsServiceTest {
     void deleteMessageFromQueue() {
         SendMessageResponse sendMessageResponse = sendMessageToQueue().block();
         assert sendMessageResponse != null : "sendMessageResponse is null";
-        //Message received = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
         Message received = sqsService.getMessages(signQueueName, CreatedS3ObjectDto.class, MAX_MESSAGES).filter(sqsMessageWrapper -> sqsMessageWrapper.getMessage().messageId().equals(sendMessageResponse.messageId())).blockFirst().getMessage();
         assert received != null : "received is null";
 

@@ -77,7 +77,7 @@ public class FileMetadataUpdateService {
                 .retryWhen(gestoreRepositoryRetryStrategy)
                 .flatMap(documentResponse -> Mono.zipDelayError(userConfigClientCall.getUser(xPagopaSafestorageCxId), Mono.just(documentResponse)))
                 .handle(((objects, synchronousSink) -> validateDocumentModificationPrivileges(xPagopaSafestorageCxId, objects, synchronousSink)))
-                .flatMap(object -> validateAndPairDocumentStatus((Document) object, logicalState))
+                .flatMap(object -> validateAndPairDocumentStatus(object, logicalState))
                 .flatMap(objects -> getDocumentChangesMono(fileKey, request, objects, logicalState, retentionUntil))
                 .flatMap(documentChanges -> docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                         .retryWhen(gestoreRepositoryRetryStrategy)
@@ -130,8 +130,9 @@ public class FileMetadataUpdateService {
         return Mono.just(documentChanges);
     }
 
-    private Mono<Tuple2<Document, String>> validateAndPairDocumentStatus(Document object, String logicalState) {
-        String documentType = object.getDocumentType().getTipoDocumento();
+    private Mono<Tuple2<Document, String>> validateAndPairDocumentStatus(Object object, String logicalState) {
+        Document documentObject = (Document) object;
+        String documentType =  documentObject.getDocumentType().getTipoDocumento();
         Mono<String> checkedStatus;
 
         if (logicalState != null && !logicalState.isBlank()) {
@@ -139,7 +140,7 @@ public class FileMetadataUpdateService {
         } else {
             checkedStatus = Mono.just("");
         }
-        return Mono.zipDelayError(Mono.just(object), checkedStatus);
+        return Mono.zipDelayError(Mono.just(documentObject), checkedStatus);
     }
 
     private Mono<DocumentResponse> handleRetentionAndTags(String fileKey, DocumentResponse documentResponsePatch, Date retentionUntil) {

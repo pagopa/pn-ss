@@ -96,38 +96,36 @@ public class RetentionServiceImpl implements RetentionService {
     }
 
     protected Mono<Integer> getRetentionPeriodInDays(String documentKey, String documentState, String documentType,
-                                                   String authPagopaSafestorageCxId, String authApiKey)
+                                                     String authPagopaSafestorageCxId, String authApiKey)
             throws RetentionException {
 
         validateInput(documentKey, documentState, documentType);
 
         return configurationApiCall.getDocumentsConfigs(authPagopaSafestorageCxId, authApiKey)
                 .retryWhen(gestoreRepositoryRetryStrategy)
-                .<Integer>handle((response, sink) -> {
+                .map(response -> {
 
-            DocumentTypeConfiguration dtcToRefer = null;
-            for (DocumentTypeConfiguration dtc : response.getDocumentsTypes()) {
-                if (dtc.getName().equalsIgnoreCase(documentType)) {
-                    dtcToRefer = dtc;
-                }
-            }
-            if (dtcToRefer == null) {
-                sink.error(new RetentionException(String.format(
-                        "DocumentTypeConfiguration not found for Document Type '%s' not found for Key '%s'",
-                        documentType,
-                        documentKey)));
-                return;
-            }
+                    DocumentTypeConfiguration dtcToRefer = null;
+                    for (DocumentTypeConfiguration dtc : response.getDocumentsTypes()) {
+                        if (dtc.getName().equalsIgnoreCase(documentType)) {
+                            dtcToRefer = dtc;
+                        }
+                    }
+                    if (dtcToRefer == null) {
+                        throw new RetentionException(String.format(
+                                "DocumentTypeConfiguration not found for Document Type '%s' not found for Key '%s'",
+                                documentType,
+                                documentKey));
+                    }
 
-            for (StorageConfiguration sc : response.getStorageConfigurations()) {
-                if (sc.getName().equals(dtcToRefer.getStatuses().get(documentState).getStorage())) {
-                    var retentionPeriod = sc.getRetentionPeriod();
-                    sink.next(getRetentionPeriodInDays(retentionPeriod));
-                    return;
-                }
-            }
-                    sink.error(new RetentionException(String.format("Storage Configuration not found for Key '%s'", documentKey)));
-        }).doOnError(e -> log.error("getDefaultRetention() : errore : {}", e.getMessage(), e));
+                    for (StorageConfiguration sc : response.getStorageConfigurations()) {
+                        if (sc.getName().equals(dtcToRefer.getStatuses().get(documentState).getStorage())) {
+                            var retentionPeriod = sc.getRetentionPeriod();
+                            return getRetentionPeriodInDays(retentionPeriod);
+                        }
+                    }
+                    throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", documentKey));
+                }).doOnError(e -> log.error("getDefaultRetention() : errore : {}", e.getMessage(), e));
 
     }
 

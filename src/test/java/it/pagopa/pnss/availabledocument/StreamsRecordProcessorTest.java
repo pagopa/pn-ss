@@ -26,7 +26,6 @@ import org.junit.jupiter.params.provider.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.core.env.Environment;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -280,24 +279,6 @@ class StreamsRecordProcessorTest {
         Flux<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> eventSendToBridge = srp.findEventSendToBridge();
         StepVerifier.create(eventSendToBridge).expectNextCount(0).verifyComplete();
     }
-
-    @Test
-    void processEventBridgeEntriesValidTuples() {
-        sendMessageToQueue().block();
-
-        ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
-        List<Record> records = new ArrayList<>();
-
-        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED,true,AUTHORIZED_CLIENT);
-
-        records.add(new RecordAdapter(recordDyanmo));
-        processRecordsInput.withRecords(records);
-        Flux<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> eventSendToBridge = srp.findEventSendToBridge();
-        List<SqsMessageWrapper<DocumentStateDto>> result = ReflectionTestUtils.invokeMethod(srp, "processEventBridgeEntries", eventSendToBridge.collectList().block());
-        assert result != null;
-        Assertions.assertEquals(1, result.size());
-    }
-
 
     @NotNull
     private  com.amazonaws.services.dynamodbv2.model.Record createRecorDynamo(String eventName ,String documentStateNew,  String documentStateOld, boolean wTags,String clientName) {

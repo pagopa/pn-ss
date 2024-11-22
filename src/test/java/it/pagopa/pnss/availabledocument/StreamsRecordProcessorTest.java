@@ -26,16 +26,19 @@ import org.junit.jupiter.params.provider.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.core.env.Environment;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
+import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 import java.io.IOException;
@@ -280,6 +283,22 @@ class StreamsRecordProcessorTest {
         StepVerifier.create(eventSendToBridge).expectNextCount(0).verifyComplete();
     }
 
+    @ParameterizedTest
+    @MethodSource("provideTuples")
+    void processEventBridgeEntriesValidTuples(List<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> tuples) {
+        List<SqsMessageWrapper<DocumentStateDto>> result = ReflectionTestUtils.invokeMethod(srp, "processEventBridgeEntries", tuples);
+        assert result != null;
+        Assertions.assertEquals(tuples.size(), result.size());
+    }
+
+
+    private static Stream<Arguments> provideTuples() {
+        return Stream.of(
+                Arguments.of(List.of(Tuples.of(new SqsMessageWrapper<>(Message.builder().build(),Message.builder().build()), PutEventsRequestEntry.builder().build()))),
+                Arguments.of(List.of(Tuples.of(new SqsMessageWrapper<>(Message.builder().build(),Message.builder().build()), PutEventsRequestEntry.builder().build()), Tuples.of(new SqsMessageWrapper<>(Message.builder().build(),Message.builder().build()), PutEventsRequestEntry.builder().build())))
+        );
+    }
+
     @NotNull
     private  com.amazonaws.services.dynamodbv2.model.Record createRecorDynamo(String eventName ,String documentStateNew,  String documentStateOld, boolean wTags,String clientName) {
         com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = new com.amazonaws.services.dynamodbv2.model.Record();
@@ -409,5 +428,7 @@ class StreamsRecordProcessorTest {
             setOldDocumentState("BOOKED");
         }});
     }
+
+
 }
 

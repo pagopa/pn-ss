@@ -32,13 +32,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
-import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 import java.io.IOException;
@@ -283,21 +281,23 @@ class StreamsRecordProcessorTest {
         StepVerifier.create(eventSendToBridge).expectNextCount(0).verifyComplete();
     }
 
-    @ParameterizedTest
-    @MethodSource("provideTuples")
-    void processEventBridgeEntriesValidTuples(List<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> tuples) {
-        List<SqsMessageWrapper<DocumentStateDto>> result = ReflectionTestUtils.invokeMethod(srp, "processEventBridgeEntries", tuples);
+    @Test
+    void processEventBridgeEntriesValidTuples() {
+        sendMessageToQueue().block();
+
+        ProcessRecordsInput processRecordsInput = new ProcessRecordsInput();
+        List<Record> records = new ArrayList<>();
+
+        com.amazonaws.services.dynamodbv2.model.Record recordDyanmo = createRecorDynamo(MODIFY_EVENT,AVAILABLE,BOOKED,true,AUTHORIZED_CLIENT);
+
+        records.add(new RecordAdapter(recordDyanmo));
+        processRecordsInput.withRecords(records);
+        Flux<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> eventSendToBridge = srp.findEventSendToBridge();
+        List<SqsMessageWrapper<DocumentStateDto>> result = ReflectionTestUtils.invokeMethod(srp, "processEventBridgeEntries", eventSendToBridge.collectList().block());
         assert result != null;
-        Assertions.assertEquals(tuples.size(), result.size());
+        Assertions.assertEquals(1, result.size());
     }
 
-
-    private static Stream<Arguments> provideTuples() {
-        return Stream.of(
-                Arguments.of(List.of(Tuples.of(new SqsMessageWrapper<>(Message.builder().build(),Message.builder().build()), PutEventsRequestEntry.builder().build()))),
-                Arguments.of(List.of(Tuples.of(new SqsMessageWrapper<>(Message.builder().build(),Message.builder().build()), PutEventsRequestEntry.builder().build()), Tuples.of(new SqsMessageWrapper<>(Message.builder().build(),Message.builder().build()), PutEventsRequestEntry.builder().build())))
-        );
-    }
 
     @NotNull
     private  com.amazonaws.services.dynamodbv2.model.Record createRecorDynamo(String eventName ,String documentStateNew,  String documentStateOld, boolean wTags,String clientName) {

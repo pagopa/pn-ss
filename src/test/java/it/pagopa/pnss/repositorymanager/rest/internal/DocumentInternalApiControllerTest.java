@@ -9,30 +9,44 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.time.DateTimeException;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.stream.Stream;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
+import it.pagopa.pnss.common.client.exception.RetentionException;
+import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
+import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
+import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -47,6 +61,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -92,6 +107,8 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 	private RetentionService retentionService;
 	@MockBean
 	private UserConfigurationClientCall userConfigurationClientCall;
+	@Autowired
+	private DocumentInternalApiController documentInternalApiController;
 
 
 	private static Map<String, List<String>> createTagsList(){
@@ -641,7 +658,6 @@ log.info("documentInputTags {}", documentInputTags);
 				.body(BodyInserters.fromValue(docChanges))
 				.exchange().expectStatus().isOk();
 
-		//verify(s3Service, times(2)).headObject(anyString(), anyString());
 		verify(s3Service, times(1)).putObjectTagging(anyString(), anyString(), any());
 		verify(retentionService, times(1)).setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString());
 
@@ -839,5 +855,40 @@ log.info("documentInputTags {}", documentInputTags);
         return byteArray;
 
     }
+
+
+	@ParameterizedTest
+	@MethodSource("provideThrowable")
+	void testGetResponse(Map.Entry<Throwable, HttpStatus> entry) {
+		Throwable throwable = entry.getKey();
+		HttpStatus expectedStatus = entry.getValue();
+
+		Mono<ResponseEntity<DocumentResponse>> responseMono =
+				ReflectionTestUtils.invokeMethod(documentInternalApiController, "getResponse", null, throwable);
+
+		Assertions.assertNotNull(responseMono);
+		ResponseEntity<DocumentResponse> response = responseMono.block();
+		Assertions.assertNotNull(response);
+		Assertions.assertEquals(expectedStatus, response.getStatusCode());
+		Assertions.assertNotNull(response.getBody());
+		Assertions.assertNotNull(response.getBody().getError());
+	}
+
+	private static Stream<Map.Entry<Throwable, HttpStatus>> provideThrowable() {
+		Map<Throwable, HttpStatus> throwableStatusMap = Map.of(
+				new ItemAlreadyPresent(""), HttpStatus.CONFLICT,
+				new DocumentKeyNotPresentException(""), HttpStatus.NOT_FOUND,
+				new RepositoryManagerException(), HttpStatus.BAD_REQUEST,
+				new IllegalDocumentStateException(""), HttpStatus.BAD_REQUEST,
+				new DocumentTypeNotPresentException(""), HttpStatus.BAD_REQUEST,
+				new InvalidNextStatusException("", ""), HttpStatus.BAD_REQUEST,
+				NoSuchKeyException.builder().build(), HttpStatus.BAD_REQUEST,
+				new RetentionException(""), HttpStatus.BAD_REQUEST,
+				new DateTimeException(""), HttpStatus.INTERNAL_SERVER_ERROR,
+				new RuntimeException(""), HttpStatus.INTERNAL_SERVER_ERROR
+		);
+
+		return throwableStatusMap.entrySet().stream();
+	}
 
 }

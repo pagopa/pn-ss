@@ -5,6 +5,7 @@ import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentInput;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.constant.*;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.model.dto.DocumentStateDto;
@@ -27,6 +28,7 @@ import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.tika.utils.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -129,21 +131,23 @@ public class DocumentServiceImpl implements DocumentService {
                    })
                    .switchIfEmpty(Mono.just(documentInput))
                    .flatMap(o -> docTypesService.getDocType(key))
-                   .flatMap(o -> {
-                       resp.setDocumentType(o);
-                       resp.setDocumentKey(documentInput.getDocumentKey());
-                       resp.setDocumentState(documentInput.getDocumentState());
-                       resp.setCheckSum(documentInput.getCheckSum());
-                       resp.setRetentionUntil(documentInput.getRetentionUntil());
-                       resp.setContentLenght(documentInput.getContentLenght());
-                       resp.setContentType(documentInput.getContentType());
-                       resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
-                       resp.setClientShortCode(documentInput.getClientShortCode());
-                       DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
-                       return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(documentEntityInput)));
-                   })
+                   .flatMap(o -> convertAndStoreDocumentEntity(documentInput, o, resp))
                       .doOnSuccess(unused -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, INSERT_DOCUMENT, resp))
                       .thenReturn(resp);
+    }
+
+    private @NotNull Mono<Void> convertAndStoreDocumentEntity(DocumentInput documentInput, DocumentType o, Document resp) {
+        resp.setDocumentType(o);
+        resp.setDocumentKey(documentInput.getDocumentKey());
+        resp.setDocumentState(documentInput.getDocumentState());
+        resp.setCheckSum(documentInput.getCheckSum());
+        resp.setRetentionUntil(documentInput.getRetentionUntil());
+        resp.setContentLenght(documentInput.getContentLenght());
+        resp.setContentType(documentInput.getContentType());
+        resp.setDocumentLogicalState(documentInput.getDocumentLogicalState());
+        resp.setClientShortCode(documentInput.getClientShortCode());
+        DocumentEntity documentEntityInput = objectMapper.convertValue(resp, DocumentEntity.class);
+        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.putItem(builder -> builder.item(documentEntityInput)));
     }
 
     @Override

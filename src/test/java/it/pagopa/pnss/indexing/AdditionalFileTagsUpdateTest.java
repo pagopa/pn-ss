@@ -1,12 +1,10 @@
 package it.pagopa.pnss.indexing;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
-import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
-import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
 import org.hamcrest.Matchers;
@@ -19,10 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.testcontainers.shaded.org.hamcrest.core.AllOf;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -46,11 +42,9 @@ class AdditionalFileTagsUpdateTest {
     private String xApiKey;
 
     @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
-    private String X_PAGOPA_SAFESTORAGE_CX_ID;
+    private String xPagopaSafestorageCxId;
     @Autowired
     private WebTestClient webTestClient;
-    @SpyBean
-    private AdditionalFileTagsService additionalFileTagsService;
     private static final String PATH_WITH_PARAM = "/safe-storage/v1/files/{fileKey}/tags";
     private static final String PATH_NO_PARAM = "/safe-storage/v1/files/tags";
     @MockBean
@@ -67,7 +61,7 @@ class AdditionalFileTagsUpdateTest {
 
         return webTestClient.post()
                 .uri(uriBuilder -> uriBuilder.path(PATH_WITH_PARAM).queryParam("documentKey", documentKey).build(documentKey))
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
                 .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                 .bodyValue(additionalFileTagsUpdateRequest)
@@ -80,7 +74,7 @@ class AdditionalFileTagsUpdateTest {
 
         return webTestClient.post()
                 .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
                 .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                 .bodyValue(additionalFileTagsMassiveUpdateRequest)
@@ -300,7 +294,6 @@ class AdditionalFileTagsUpdateTest {
         Map<String, List<String>> set = new HashMap<>();
         set.put("IUN", List.of("XXXFEF3RFD", "CHDGDTFENM"));
         var tag = new AdditionalFileTagsUpdateRequest().SET(set);
-        var tagsDto = new TagsDto().tags(set);
 
         when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.error(new DocumentKeyNotPresentException("NOTFOUND")));
 
@@ -320,8 +313,7 @@ class AdditionalFileTagsUpdateTest {
         set.put("IUN", List.of("XXXFEF3RFD"));
         set.put("Conservazione", List.of("2030-12-12"));
         delete.put("DataNotifica", List.of("2024-07-18"));
-        String fileKey = key;
-        return new Tags().fileKey(fileKey).SET(set).DELETE(delete);
+        return new Tags().fileKey(key).SET(set).DELETE(delete);
 
     }
 
@@ -462,7 +454,7 @@ class AdditionalFileTagsUpdateTest {
         webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         webTestClient.post()
                     .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
-                    .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                    .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                     .header(xApiKey, X_API_KEY_VALUE)
                     .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                     .bodyValue(tagsMassiveUpdateRequest)
@@ -502,7 +494,7 @@ class AdditionalFileTagsUpdateTest {
         webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         webTestClient.post()
                 .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
                 .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                 .bodyValue(tagsMassiveUpdateRequest)
@@ -545,7 +537,7 @@ class AdditionalFileTagsUpdateTest {
         webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         webTestClient.post()
                 .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
                 .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                 .bodyValue(tagsMassiveUpdateRequest)
@@ -584,7 +576,7 @@ class AdditionalFileTagsUpdateTest {
         webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         webTestClient.post()
                 .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
                 .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                 .bodyValue(tagsMassiveUpdateRequest)
@@ -623,7 +615,7 @@ class AdditionalFileTagsUpdateTest {
         webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         webTestClient.post()
                 .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
                 .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                 .bodyValue(tagsMassiveUpdateRequest)
@@ -662,7 +654,7 @@ class AdditionalFileTagsUpdateTest {
         webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         webTestClient.post()
                 .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
                 .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                 .bodyValue(tagsMassiveUpdateRequest)
@@ -687,15 +679,12 @@ class AdditionalFileTagsUpdateTest {
         tagsList.add(tag);
         AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
 
-        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
-        var tagResponse = new TagsResponse().tagsDto(tagsDto);
-
         when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.error(new PutTagsBadRequestException()));
 
         webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
         webTestClient.post()
                 .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
                 .header(xApiKey, X_API_KEY_VALUE)
                 .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                 .bodyValue(tagsMassiveUpdateRequest)

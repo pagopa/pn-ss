@@ -9,7 +9,6 @@ import it.pagopa.pnss.configurationproperties.GestoreRepositoryRetryStrategyProp
 import it.pagopa.pnss.configurationproperties.PdfRasterRetryStrategyProperties;
 import it.pagopa.pnss.configurationproperties.retry.S3RetryStrategyProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import reactor.util.retry.Retry;
@@ -27,16 +26,19 @@ import static it.pagopa.pnss.common.utils.LogUtils.RETRY_ATTEMPT;
 @Slf4j
 public class RetryConfiguration {
 
-    @Autowired
-    private DynamoRetryStrategyProperties dynamoRetryStrategyProperties;
-    @Autowired
-    private GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties;
-    @Autowired
-    private S3RetryStrategyProperties s3RetryStrategyProperties;
-    @Autowired
-    private PdfRasterRetryStrategyProperties pdfRasterRetryStrategyProperties;
+    private final DynamoRetryStrategyProperties dynamoRetryStrategyProperties;
+    private final GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties;
+    private final S3RetryStrategyProperties s3RetryStrategyProperties;
+    private final PdfRasterRetryStrategyProperties pdfRasterRetryStrategyProperties;
 
-    private final Predicate<Throwable> isNotFound = throwable -> (throwable instanceof DocumentKeyNotPresentException) || (throwable instanceof IdClientNotFoundException)  || (throwable instanceof DocumentTypeNotPresentException);
+    private static final Predicate<Throwable> isNotFound = throwable -> (throwable instanceof DocumentKeyNotPresentException) || (throwable instanceof IdClientNotFoundException)  || (throwable instanceof DocumentTypeNotPresentException);
+
+    public RetryConfiguration(DynamoRetryStrategyProperties dynamoRetryStrategyProperties, GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties, S3RetryStrategyProperties s3RetryStrategyProperties, PdfRasterRetryStrategyProperties pdfRasterRetryStrategyProperties) {
+        this.dynamoRetryStrategyProperties = dynamoRetryStrategyProperties;
+        this.gestoreRepositoryRetryStrategyProperties = gestoreRepositoryRetryStrategyProperties;
+        this.s3RetryStrategyProperties = s3RetryStrategyProperties;
+        this.pdfRasterRetryStrategyProperties = pdfRasterRetryStrategyProperties;
+    }
 
     @Bean
     RetryBackoffSpec dynamoRetryStrategy() {

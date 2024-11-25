@@ -1,6 +1,5 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsDto;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
@@ -20,7 +19,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,13 +41,8 @@ class TagsInternalApiControllerTest {
     String testAwsS3Endpoint;
     @Autowired
     private WebTestClient webTestClient;
-    private static TagsDto tagsDto;
     private static DynamoDbTable<TagsRelationsEntity> tagsEntityDynamoDbAsyncTable;
     private static DynamoDbTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
-    @Autowired
-    private DynamoDbAsyncClient dynamoDbAsyncClient;
-    @Autowired
-    private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
     private static final String PUT_TAGS_PATH = "/safestorage/internal/v1/documents/{documentKey}/tags";
 
 
@@ -68,12 +61,6 @@ class TagsInternalApiControllerTest {
         private static final String BASE_PATH_WITH_PARAM = String.format("%s/tags/{tagKeyValue}", BASE_PATH);
         private static final String TAG_KEY_DEFAULT = "tagKeyTest";
         private static final String TAG_KEY_DEFAULT_NOT_EXIST = "tagKeyNotExist";
-
-        @BeforeEach
-        public void insertDefaultTag() {
-
-        }
-
 
         private static void insertTagEntity() {
             log.info("execute insertTagsEntity()");
@@ -471,7 +458,7 @@ class TagsInternalApiControllerTest {
             void putTags_Delete_Singlevalue_Indexed_Ok() {
                 String tagValue = "OK";
                 // Setup
-                tagsService.putTags(PARTITION_ID, new TagsChanges().SET(Map.of(CONSERVAZIONE, List.of(tagValue))));
+                tagsService.putTags(PARTITION_ID, new TagsChanges().SET(Map.of(CONSERVAZIONE, List.of(tagValue)))).block();
 
                 // Delete
                 Map<String, List<String>> deleteTags = Map.of(CONSERVAZIONE, List.of(tagValue));

@@ -6,7 +6,6 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocument
 import it.pagopa.pnss.common.client.ScadenzaDocumentiClientCall;
 import it.pagopa.pnss.common.client.exception.ScadenzaDocumentiCallException;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,10 +16,13 @@ import reactor.core.publisher.Mono;
 @CustomLog
 public class ScadenzaDocumentiClientCallImpl implements ScadenzaDocumentiClientCall {
 
-    @Autowired
-    private WebClient ssWebClient;
+    private final WebClient ssWebClient;
     @Value("${gestore.repository.anagrafica.internal.scadenza.documenti.post}")
     private String scadenzaDocumentiEndpointPost;
+
+    public ScadenzaDocumentiClientCallImpl(WebClient ssWebClient) {
+        this.ssWebClient = ssWebClient;
+    }
 
     @Override
     public Mono<ScadenzaDocumentiResponse> insertOrUpdateScadenzaDocumenti(ScadenzaDocumentiInput scadenzaDocumentiInput) {

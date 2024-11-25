@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -27,7 +26,7 @@ public class ScadenzaDocumentiInternalApiControllerTest {
     @Autowired
     private WebTestClient webTestClient;
     @Value("${gestore.repository.anagrafica.internal.scadenza.documenti.post}")
-    private String BASE_PATH;
+    private String basePath;
     private static final String DOCUMENT_KEY = "documentKey";
     private static final long SECONDS_TO_ADD = 31536000;
 
@@ -44,7 +43,7 @@ public class ScadenzaDocumentiInternalApiControllerTest {
     @Test
     void insertOrUpdateScadenzaDocumentiTestOk() {
         webTestClient.post()
-                .uri(BASE_PATH)
+                .uri(basePath)
                 .bodyValue(new ScadenzaDocumentiInput().documentKey(DOCUMENT_KEY).retentionUntil(Instant.EPOCH.plusSeconds(SECONDS_TO_ADD).getEpochSecond()))
                 .exchange()
                 .expectStatus().isOk()
@@ -55,7 +54,7 @@ public class ScadenzaDocumentiInternalApiControllerTest {
     @Test
     void insertOrUpdateScadenzaDocumentiIfAlreadyExistsTestOk() {
         webTestClient.post()
-                .uri(BASE_PATH)
+                .uri(basePath)
                 .bodyValue(new ScadenzaDocumentiInput().documentKey(DOCUMENT_KEY).retentionUntil(Instant.EPOCH.plusSeconds(SECONDS_TO_ADD).getEpochSecond()))
                 .exchange()
                 .expectStatus().isOk()
@@ -67,7 +66,7 @@ public class ScadenzaDocumentiInternalApiControllerTest {
     @Test
     void insertOrUpdateWithDateBeforeTestKo() {
         webTestClient.post()
-                .uri(BASE_PATH)
+                .uri(basePath)
                 .bodyValue(new ScadenzaDocumentiInput().documentKey(DOCUMENT_KEY).retentionUntil(Instant.EPOCH.minusSeconds(SECONDS_TO_ADD).getEpochSecond()))
                 .exchange()
                 .expectStatus().isBadRequest()
@@ -80,7 +79,7 @@ public class ScadenzaDocumentiInternalApiControllerTest {
     @Test
     void insertOrUpdateWithEmptyInputIsKo() {
         webTestClient.post()
-                .uri(BASE_PATH)
+                .uri(basePath)
                 .bodyValue(new ScadenzaDocumentiInput())
                 .exchange()
                 .expectStatus().isBadRequest()

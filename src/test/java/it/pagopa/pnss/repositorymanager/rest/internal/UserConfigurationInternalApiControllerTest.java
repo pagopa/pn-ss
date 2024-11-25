@@ -40,7 +40,6 @@ public class UserConfigurationInternalApiControllerTest {
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{name}", BASE_PATH);
 	private static final String PARTITION_ID_ENTITY = "key";
 	private static final String PARTITION_ID_ENTITY_W_TAGS = "key2";
-	//	private static final String PARTITION_ID_DEFAULT = PARTITION_ID_ENTITY;
 	private static final String PARTITION_ID_NO_EXISTENT = "name_bad";
 
 	private static UserConfiguration userConfigurationInput;
@@ -72,11 +71,9 @@ public class UserConfigurationInternalApiControllerTest {
 													  @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
 		log.info("execute insertDefaultDocType()");
 		dynamoDbTable = dynamoDbEnhancedClient.table(
-//        		DynamoTableNameConstant.ANAGRAFICA_CLIENT_TABLE_NAME,
 				gestoreRepositoryDynamoDbTableName.anagraficaClientName(),
 				TableSchema.fromBean(UserConfigurationEntity.class));
 				insertUserConfigurationEntity(PARTITION_ID_ENTITY);
-
 		dynamoDbTable = dynamoDbEnhancedClient.table(
 				gestoreRepositoryDynamoDbTableName.anagraficaClientName(),
 				TableSchema.fromBean(UserConfigurationEntity.class));
@@ -132,8 +129,7 @@ public class UserConfigurationInternalApiControllerTest {
 
 		log.info("\n Test 1 (postItem) resultPreInsert {} \n", resultPreInsert);
 
-		if (resultPreInsert == null || resultPreInsert.getResponseBody() == null
-				|| resultPreInsert.getResponseBody().getUserConfiguration() == null) {
+		if (resultPreInsert.getResponseBody() == null || resultPreInsert.getResponseBody().getUserConfiguration() == null) {
 			webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
 					.body(BodyInserters.fromValue(userConfigurationInput)).exchange().expectStatus().isOk();
 		}
@@ -151,8 +147,7 @@ public class UserConfigurationInternalApiControllerTest {
 
 		log.info("\n Test 2 (postItemPartitionKeyDuplicated) resultPreInsert {} \n", resultPreInsert);
 
-		if (resultPreInsert != null && resultPreInsert.getResponseBody() != null
-				&& resultPreInsert.getResponseBody().getUserConfiguration() != null) {
+		if (resultPreInsert.getResponseBody() != null && resultPreInsert.getResponseBody().getUserConfiguration() != null) {
 			webTestClient.post().uri(BASE_PATH).accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
 					.body(BodyInserters.fromValue(userConfigurationInput)).exchange().expectStatus()
 					.isEqualTo(HttpStatus.CONFLICT);
@@ -223,7 +218,7 @@ public class UserConfigurationInternalApiControllerTest {
 				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(UserConfigurationResponse.class)
 				.returnResult();
 		log.info("\n Test 6 (patchItem) : userConfiguration before patch {}",
-				documentInDb.getResponseBody().getUserConfiguration());
+				Objects.requireNonNull(documentInDb.getResponseBody()).getUserConfiguration());
 
 		log.info("\n Test 6 (patchItem) : userConfigurationChanges {}", userConfigurationChanges);
 
@@ -237,7 +232,7 @@ public class UserConfigurationInternalApiControllerTest {
 				.returnResult();
 
 		log.info("\n Test 6 (patchItem) userConfigurationUpdated2 : {} \n",
-				userConfigurationUpdated.getResponseBody().getUserConfiguration());
+				Objects.requireNonNull(userConfigurationUpdated.getResponseBody()).getUserConfiguration());
 
 		Assertions.assertEquals(userConfigurationChanges.getCanCreate(),
 				userConfigurationUpdated.getResponseBody().getUserConfiguration().getCanCreate());
@@ -253,7 +248,7 @@ public class UserConfigurationInternalApiControllerTest {
 				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(UserConfigurationResponse.class)
 				.returnResult();
 		log.info("\n Test 6 (patchItem) : userConfiguration before patch {}",
-				documentInDb.getResponseBody().getUserConfiguration());
+				Objects.requireNonNull(documentInDb.getResponseBody()).getUserConfiguration());
 
 		log.info("\n Test 6 (patchItem) : userConfigurationChanges {}", userConfigurationChanges);
 

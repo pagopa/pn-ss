@@ -16,7 +16,6 @@ class ArubaSignProviderServiceImplTest {
     private static final byte[] byteFile = "Stringa di prova".getBytes();
     private static final boolean marcatura = true;
 
-    //Controllare come mockare ArubaSignService ritornando un Future per scrivere i casi di test Ok
     @Test
     void signPdfDocumentKo(){
 
@@ -27,7 +26,6 @@ class ArubaSignProviderServiceImplTest {
 
     @Test
     void pkcs7signV2Ko(){
-        byte[] pdfFile = "Stringa di prova".getBytes();
         boolean marcatura = true;
 
         var testMono = arubaSignProviderServiceCall.pkcs7Signature(byteFile, marcatura);
@@ -37,7 +35,6 @@ class ArubaSignProviderServiceImplTest {
 
     @Test
     void xmlSignatureKo(){
-        byte[] pdfFile = "Stringa di prova".getBytes();
         boolean marcatura = true;
 
         var testMono = arubaSignProviderServiceCall.signXmlDocument(byteFile, marcatura);

@@ -24,7 +24,7 @@ public class WebClientConf {
     private String corrIdHeaderName;
 
 	@Value("${spring.codec.max-in-memory-size}")
-	int PDFRastermaxInMemorySize; // 10MB
+	int pdfRasterMaxInMemorySize; // 10MB
 
 	public WebClientConf(JettyHttpClientConf jettyHttpClientConf) {
         this.jettyHttpClientConf = jettyHttpClientConf;
@@ -46,7 +46,7 @@ public class WebClientConf {
     @Bean
     public WebClient pdfRasterWebClient(PdfRasterEndpointProperties pdfRasterEndpointProperties) {
     	ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
-            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(PDFRastermaxInMemorySize))
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(pdfRasterMaxInMemorySize))
             .build();
         return defaultJsonWebClientBuilder().exchangeStrategies(exchangeStrategies).baseUrl(pdfRasterEndpointProperties.containerBaseUrl()).build();
     }

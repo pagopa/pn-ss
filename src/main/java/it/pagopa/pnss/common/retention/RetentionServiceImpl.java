@@ -11,8 +11,6 @@ import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -32,8 +30,7 @@ import static it.pagopa.pnss.common.utils.LogUtils.*;
 @CustomLog
 public class RetentionServiceImpl implements RetentionService {
 
-    @Autowired
-    private S3Service s3Service;
+    private final S3Service s3Service;
     @Value("${default.internal.x-api-key.value:#{null}}")
     private String defaultInteralApiKeyValue;
 
@@ -57,10 +54,11 @@ public class RetentionServiceImpl implements RetentionService {
     private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.systemDefault());
     private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
 
-    public RetentionServiceImpl(ConfigurationApiCall configurationApiCall, BucketName bucketName, RetryBackoffSpec gestoreRepositoryRetryStrategy, RetryBackoffSpec s3RetryStrategy) {
+    public RetentionServiceImpl(ConfigurationApiCall configurationApiCall, BucketName bucketName, RetryBackoffSpec gestoreRepositoryRetryStrategy,S3Service s3Service) {
         this.configurationApiCall = configurationApiCall;
         this.bucketName = bucketName;
         this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
+        this.s3Service = s3Service;
     }
 
     /*
@@ -98,42 +96,46 @@ public class RetentionServiceImpl implements RetentionService {
     }
 
     protected Mono<Integer> getRetentionPeriodInDays(String documentKey, String documentState, String documentType,
-                                                   String authPagopaSafestorageCxId, String authApiKey)
+                                                     String authPagopaSafestorageCxId, String authApiKey)
             throws RetentionException {
 
+        validateInput(documentKey, documentState, documentType);
+
+        return configurationApiCall.getDocumentsConfigs(authPagopaSafestorageCxId, authApiKey)
+                .retryWhen(gestoreRepositoryRetryStrategy)
+                .map(response -> {
+
+                    DocumentTypeConfiguration dtcToRefer = null;
+                    for (DocumentTypeConfiguration dtc : response.getDocumentsTypes()) {
+                        if (dtc.getName().equalsIgnoreCase(documentType)) {
+                            dtcToRefer = dtc;
+                        }
+                    }
+                    if (dtcToRefer == null) {
+                        throw new RetentionException(String.format(
+                                "DocumentTypeConfiguration not found for Document Type '%s' not found for Key '%s'",
+                                documentType,
+                                documentKey));
+                    }
+
+                    for (StorageConfiguration sc : response.getStorageConfigurations()) {
+                        if (sc.getName().equals(dtcToRefer.getStatuses().get(documentState).getStorage())) {
+                            var retentionPeriod = sc.getRetentionPeriod();
+                            return getRetentionPeriodInDays(retentionPeriod);
+                        }
+                    }
+                    throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", documentKey));
+                }).doOnError(e -> log.error("getDefaultRetention() : errore : {}", e.getMessage(), e));
+
+    }
+
+    private static void validateInput(String documentKey, String documentState, String documentType) {
         if (documentState == null || documentState.isBlank()) {
             throw new RetentionException(String.format("Document State not present for Key '%s'", documentKey));
         }
         if (documentType == null || documentType.isBlank()) {
             throw new RetentionException(String.format("Document Type not present for Key '%s'", documentKey));
         }
-
-        return configurationApiCall.getDocumentsConfigs(authPagopaSafestorageCxId, authApiKey)
-                .retryWhen(gestoreRepositoryRetryStrategy)
-                .map(response -> {
-
-            DocumentTypeConfiguration dtcToRefer = null;
-            for (DocumentTypeConfiguration dtc : response.getDocumentsTypes()) {
-                if (dtc.getName().equalsIgnoreCase(documentType)) {
-                    dtcToRefer = dtc;
-                }
-            }
-            if (dtcToRefer == null) {
-                throw new RetentionException(String.format(
-                        "DocumentTypeConfiguration not found for Document Type '%s' not found for Key '%s'",
-                        documentType,
-                        documentKey));
-            }
-
-            for (StorageConfiguration sc : response.getStorageConfigurations()) {
-                if (sc.getName().equals(dtcToRefer.getStatuses().get(documentState).getStorage())) {
-                    var retentionPeriod = sc.getRetentionPeriod();
-                    return getRetentionPeriodInDays(retentionPeriod);
-                }
-            }
-            throw new RetentionException(String.format("Storage Configuration not found for Key '%s'", documentKey));
-        }).doOnError(e -> log.error("getDefaultRetention() : errore : {}", e.getMessage(), e));
-
     }
 
     protected Instant getRetainUntilDate(Instant dataCreazione, Integer retentionPeriod) throws RetentionException {

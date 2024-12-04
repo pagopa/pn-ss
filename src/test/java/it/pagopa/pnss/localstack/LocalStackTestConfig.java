@@ -34,6 +34,12 @@ public class LocalStackTestConfig {
     static {
         localStack.start();
 
+        System.setProperty("test.aws.region", localStack.getRegion());
+
+//      <-- Override spring-cloud-starter-aws-messaging endpoints for testing -->
+        System.setProperty("cloud.aws.sqs.endpoint", String.valueOf(localStack.getEndpointOverride(SQS)));
+
+//      <-- Override AWS services endpoint variables for testing -->
         System.setProperty("test.aws.sqs.endpoint", String.valueOf(localStack.getEndpointOverride(SQS)));
         System.setProperty("test.aws.dynamodb.endpoint", String.valueOf(localStack.getEndpointOverride(DYNAMODB)));
         System.setProperty("test.aws.sns.endpoint", String.valueOf(localStack.getEndpointOverride(SNS)));

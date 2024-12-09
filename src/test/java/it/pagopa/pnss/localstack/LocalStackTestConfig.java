@@ -12,6 +12,7 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
+import java.nio.file.Paths;
 import java.time.Duration;
 
 @TestConfiguration
@@ -25,6 +26,8 @@ public class LocalStackTestConfig {
                             "/docker-entrypoint-initaws.d/make-storages.sh", BindMode.READ_ONLY)
                     .withClasspathResourceMapping("testcontainers/credentials",
                             "/root/.aws/credentials", BindMode.READ_ONLY)
+                    .withFileSystemBind(Paths.get("functions").toAbsolutePath().toString(),
+                            "/tmp/pn-ss/lambda_import", BindMode.READ_ONLY)
                     .withEnv("AWS_DEFAULT_REGION", "eu-central-1")
                     .withNetworkAliases("localstack")
                     .withNetwork(Network.builder().build())

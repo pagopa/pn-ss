@@ -265,10 +265,9 @@ get_functions(){
   for fun in "$LAMBDA_FUNCTIONS_PATH"/*; do
     if [ -d "$fun" ]; then
       fun_name=$(basename "$fun")
-      if ! verify_fun_directory "$fun_name"; then
-        return 1
+      if verify_fun_directory "$fun_name"; then
+        lambdas+=("$fun_name")
       fi
-      lambdas+=("$fun_name")
       log "Found Lambda $fun_name, added to deploy list"
     fi
   done

@@ -6,7 +6,7 @@ start_time=$(date +%s)
 
 ## CONFIGURATION ##
 VERBOSE=true
-AWS_REGION="eu-central-1"
+AWS_REGION="eu-south-1"
 LOCALSTACK_ENDPOINT="http://localhost:4566"
 SQS_ENDPOINT=$LOCALSTACK_ENDPOINT
 DYNAMODB_ENDPOINT=$LOCALSTACK_ENDPOINT
@@ -16,8 +16,20 @@ LAMBDA_FUNCTIONS_PATH="/tmp/pn-ss/lambda_import" # LAMBDA
 TMP_PATH="/tmp/pn-ss/lambda_functions" # LAMBDA
 
 ## DEFINITIONS ##
-S3_BUCKETS=("pn-ss-storage-safestorage" "pn-ss-storage-safestorage-staging")
-SQS_QUEUES=("dgs-bing-ss-PnSsQueueStagingBucket-Pja8ntKQxYrs" "Pn-Ss-Availability-Queue")
+S3_BUCKETS=(
+            "pn-ss-storage-safestorage"
+            "pn-ss-storage-safestorage-staging"
+            "pn-runtime-environment-variables"
+            )
+
+FILES_TO_BUCKETS=(
+  "UpdateFileMetadataIgnore.list:pn-runtime-environment-variables/pn-safe-storage"
+)
+
+SQS_QUEUES=(
+  "dgs-bing-ss-PnSsQueueStagingBucket-Pja8ntKQxYrs"
+  "Pn-Ss-Availability-Queue"
+          )
 
 DYNAMODB_TABLES=(
   "pn-SsAnagraficaClient:name"
@@ -25,7 +37,8 @@ DYNAMODB_TABLES=(
   "pn-SsDocumenti:documentKey"
   "pn-SsScadenzaDocumenti:documentKey"
   "pn-SsTags:tagKeyValue"
-)
+              )
+
 LIFECYCLE_RULE='{
                   "Rules": [
                     {
@@ -43,6 +56,7 @@ LIFECYCLE_RULE='{
                     }
                   ]
                 }'
+
 OBJECT_LOCK_CONFIG='{
                       "ObjectLockEnabled": "Enabled",
                       "Rule": {
@@ -52,6 +66,7 @@ OBJECT_LOCK_CONFIG='{
                         }
                       }
                     }'
+
 SSM_CONFIG='{
       "globals": [
         {
@@ -104,6 +119,7 @@ SSM_CONFIG='{
       }
     }'
 
+
 # VARIABLES #
 declare -A zips
 lambdas=()
@@ -141,13 +157,15 @@ create_table() {
 
   log "Creating table:  Name: $table_name , PK: $pk"
 
-  if ! aws dynamodb describe-table --table-name "$table_name" --endpoint-url "$DYNAMODB_ENDPOINT" ; then
-    if ! aws dynamodb create-table \
-      --table-name "$table_name" \
-      --attribute-definitions AttributeName="$pk",AttributeType=S \
-      --key-schema AttributeName="$pk",KeyType=HASH \
-      --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
-      --endpoint-url "$DYNAMODB_ENDPOINT" ; then
+  if ! aws dynamodb describe-table --table-name "$table_name" \
+                                   --endpoint-url "$DYNAMODB_ENDPOINT" \
+                                   --region $AWS_REGION ; then
+    if ! aws dynamodb create-table --table-name "$table_name" \
+                                   --attribute-definitions AttributeName="$pk",AttributeType=S \
+                                   --key-schema AttributeName="$pk",KeyType=HASH \
+                                   --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
+                                   --region $AWS_REGION \
+                                   --endpoint-url "$DYNAMODB_ENDPOINT" ; then
       log "Failed to create DynamoDB table: $table_name"
       return 1
     else
@@ -162,18 +180,71 @@ create_table() {
 create_bucket(){
   local bucket=$1
   log "Creating bucket: $bucket"
-  aws s3api create-bucket --bucket "$bucket" --region "$AWS_REGION"  --endpoint-url "$S3_ENDPOINT" --create-bucket-configuration LocationConstraint="$AWS_REGION" --object-lock-enabled-for-bucket && \
-  aws s3api put-object-lock-configuration --bucket "$bucket" --object-lock-configuration "$OBJECT_LOCK_CONFIG"  --endpoint-url "$S3_ENDPOINT" && \
-  aws s3api put-bucket-lifecycle-configuration --bucket "$bucket" --lifecycle-configuration "$LIFECYCLE_RULE"  --endpoint-url "$S3_ENDPOINT" && \
+  aws s3api create-bucket --bucket "$bucket" \
+                          --region "$AWS_REGION"  \
+                          --endpoint-url "$S3_ENDPOINT" \
+                          --create-bucket-configuration LocationConstraint="$AWS_REGION" \
+                          --object-lock-enabled-for-bucket && \
+  aws s3api put-object-lock-configuration --bucket "$bucket" \
+                                          --object-lock-configuration "$OBJECT_LOCK_CONFIG"  \
+                                          --region "$AWS_REGION"  \
+                                          --endpoint-url "$S3_ENDPOINT" && \
+  aws s3api put-bucket-lifecycle-configuration --bucket "$bucket" \
+                                               --region "$AWS_REGION"  \
+                                               --lifecycle-configuration "$LIFECYCLE_RULE"  \
+                                               --endpoint-url "$S3_ENDPOINT" && \
   log "Created and configured bucket: $bucket" || \
   { log "Failed to create bucket: $bucket" ; return 1; }
+}
+
+load_to_s3(){
+  local file=$1
+  local bucket_with_path=$2
+
+  local bucket=$(echo "$bucket_with_path" | cut -d'/' -f1)
+  local s3_path=$(echo "$bucket_with_path" | cut -d'/' -f2-)
+  local s3_key="$s3_path/$(basename "$file")"
+
+  if [ ! -f "$file" ]; then
+    silent log "Creating file: $file"
+    touch "$file"
+  fi
+
+  log "Uploading file: $file to s3://$bucket/$s3_key"
+  aws s3 cp "$file" "s3://$bucket/$s3_key" --region "$AWS_REGION" --endpoint-url "$S3_ENDPOINT" && \
+  log "Uploaded file: $file to s3://$bucket/$s3_key" || \
+  { log "Failed to upload file: $file to s3://$bucket/$s3_key"; return 1; }
+
+  # Verify file
+  aws s3api head-object --bucket "$bucket" --key "$s3_key" --region "$AWS_REGION" --endpoint-url "$S3_ENDPOINT" || \
+  { log "Failed to verify file: $file in s3://$bucket/$s3_key"; return 1; }
+
+  # Delete file
+  rm -f "$file"
+}
+
+
+load_files_to_buckets(){
+  log "### Loading Files to S3 Buckets ###"
+  local pids=()
+
+  for entry in "${FILES_TO_BUCKETS[@]}"; do
+    IFS=: read -r file bucket <<< "$entry"
+    load_to_s3 "$file" "$bucket" &
+    pids+=($!)
+  done
+
+  wait_for_pids pids "Failed to load files to buckets"
+  return "$?"
 }
 
 create_queue(){
   local queue=$1
   log "Creating queue: $queue"
 
-  aws sqs create-queue --queue-name "$queue" --endpoint-url "$SQS_ENDPOINT" && \
+  aws sqs create-queue --queue-name "$queue" \
+                       --region "$AWS_REGION"  \
+                       --endpoint-url "$SQS_ENDPOINT" && \
   log "Created queue: $queue" || \
   { log "Failed to create queue: $queue"; return 1; }
 }
@@ -224,24 +295,31 @@ initialize_dynamo() {
 
 initialize_sm(){
   log "### Initializing SecretsManager ###"
-  silent aws secretsmanager create-secret --name "Pn-SS-SignAndTimemark" --endpoint-url $DYNAMODB_ENDPOINT --region "$AWS_REGION"  --secret-string '{
-      "aruba.sign.delegated.domain": "demoprod",
-      "aruba.sign.delegated.password": "password11",
-      "aruba.sign.delegated.user": "delegato",
-      "aruba.sign.otp.pwd": "dsign",
-      "aruba.sign.type.otp.auth": "demoprod",
-      "aruba.sign.user": "titolare_aut",
-      "aruba.timemark.user": "user1",
-      "aruba.timemark.password": "password1"
-    }' && \
-  log "SecretsManager: Created secret Pn-SS-SignAndTimemark" || \
+    local secret_name=$1
+    local secret_value=$2
+    echo "Creating secret: $secret_name"
+    echo "Secret value: $secret_value"
+
+   silent aws secretsmanager create-secret \
+      --region "$AWS_REGION" \
+      --endpoint-url "$LOCALSTACK_ENDPOINT" \
+      --name "$secret_name" && \
+   silent aws secretsmanager put-secret-value \
+      --region "$AWS_REGION" \
+      --endpoint-url "$LOCALSTACK_ENDPOINT" \
+      --secret-id "$secret_name" \
+      --secret-string "$secret_value" || \
   { log "Failed to create secret: Pn-SS-SignAndTimemark"; return 1; }
 }
 
 initialize_ssm(){
   log "### Initializing SSM Parameters ###"
     indexingConfig=$SSM_CONFIG
-    silent aws ssm put-parameter --name "Pn-SS-IndexingConfiguration" --type "String" --value "$indexingConfig" --endpoint-url $SSM_ENDPOINT && \
+    silent aws ssm put-parameter --name "Pn-SS-IndexingConfiguration" \
+                                 --type "String" \
+                                 --value "$indexingConfig" \
+                                 --region $AWS_REGION \
+                                 --endpoint-url $SSM_ENDPOINT && \
     log "Created SSM parameter: Pn-SS-IndexingConfiguration" || \
     { log "Failed to create SSM parameter: Pn-SS-IndexingConfiguration"; return 1; }
 }
@@ -367,19 +445,33 @@ main(){
   local lambdas_pid=$!
 
   ( create_buckets && \
+      load_files_to_buckets && \
       create_queues && \
       initialize_dynamo && \
-      initialize_sm && \
+      initialize_sm 'Pn-SS-SignAndTimemark' '{
+                                              "aruba.sign.delegated.domain": "demoprod",
+                                              "aruba.sign.delegated.password": "password11",
+                                              "aruba.sign.delegated.user": "delegato",
+                                              "aruba.sign.otp.pwd": "dsign",
+                                              "aruba.sign.type.otp.auth": "demoprod",
+                                              "aruba.sign.user": "titolare_aut",
+                                              "aruba.timemark.user": "user1",
+                                              "aruba.timemark.password": "password1"
+                                            }' && \
       initialize_ssm ) & \
   local infra_pid=$!
 
   local exit_code=0
 
+  wait $infra_pid || \
+  { log "Error initializing infrastructure"; exit_code=1; }
+
+  echo "Initialization complete"
+
   wait $lambdas_pid || \
   { log "Error deploying Lambdas"; exit_code=1; }
 
-  wait $infra_pid || \
-  { log "Error initializing infrastructure"; exit_code=1; }
+
 
   local end_time=$(date +%s)
 
@@ -392,5 +484,4 @@ main(){
 
 ## EXECUTION ##
 main
-echo "Initialization complete"
 #cleanup

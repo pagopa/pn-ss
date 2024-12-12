@@ -465,18 +465,14 @@ main(){
                                             }' && \
       initialize_ssm ) & \
   local infra_pid=$!
-
   local exit_code=0
 
   wait $infra_pid || \
   { log "Error initializing infrastructure"; exit_code=1; }
-
   echo "Initialization complete"
 
   wait $lambdas_pid || \
   { log "Error deploying Lambdas"; exit_code=1; }
-
-
 
   local end_time=$(date +%s)
 

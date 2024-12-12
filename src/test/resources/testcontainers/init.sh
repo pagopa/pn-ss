@@ -211,12 +211,16 @@ load_to_s3(){
   fi
 
   log "Uploading file: $file to s3://$bucket/$s3_key"
-  aws s3 cp "$file" "s3://$bucket/$s3_key" --region "$AWS_REGION" --endpoint-url "$S3_ENDPOINT" && \
+  aws s3 cp "$file" "s3://$bucket/$s3_key" --region "$AWS_REGION" \
+                                           --endpoint-url "$S3_ENDPOINT" && \
   log "Uploaded file: $file to s3://$bucket/$s3_key" || \
   { log "Failed to upload file: $file to s3://$bucket/$s3_key"; return 1; }
 
   # Verify file
-  aws s3api head-object --bucket "$bucket" --key "$s3_key" --region "$AWS_REGION" --endpoint-url "$S3_ENDPOINT" || \
+  aws s3api head-object --bucket "$bucket" \
+                        --key "$s3_key" \
+                        --region "$AWS_REGION" \
+                        --endpoint-url "$S3_ENDPOINT" || \
   { log "Failed to verify file: $file in s3://$bucket/$s3_key"; return 1; }
 
   # Delete file
@@ -254,7 +258,8 @@ create_buckets(){
   local pids=()
 
   for bucket in "${S3_BUCKETS[@]}"; do
-    if ! aws s3api head-bucket --bucket "$bucket" ; then
+    if ! aws s3api head-bucket --bucket "$bucket" \
+                               --endpoint-url $LOCALSTACK_ENDPOINT; then
         silent create_bucket $bucket &
         pids+=($!)
     else

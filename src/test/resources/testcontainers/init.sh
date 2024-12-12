@@ -12,8 +12,8 @@ SQS_ENDPOINT=$LOCALSTACK_ENDPOINT
 DYNAMODB_ENDPOINT=$LOCALSTACK_ENDPOINT
 S3_ENDPOINT=$LOCALSTACK_ENDPOINT
 SSM_ENDPOINT=$LOCALSTACK_ENDPOINT
-LAMBDA_FUNCTIONS_PATH="/tmp/pn-ss/lambda_import" # LAMBDA
-TMP_PATH="/tmp/pn-ss/lambda_functions" # LAMBDA
+#LAMBDA_FUNCTIONS_PATH="/tmp/pn-ss/lambda_import" # LAMBDA
+#TMP_PATH="/tmp/pn-ss/lambda_functions" # LAMBDA
 
 ## DEFINITIONS ##
 S3_BUCKETS=(
@@ -446,8 +446,8 @@ cleanup() {
 main(){
   log "### Initializing LocalStack Services ###"
 
-  deploy_lambdas & \
-  local lambdas_pid=$!
+  #deploy_lambdas & \
+  #local lambdas_pid=$!
 
   ( create_buckets && \
       load_files_to_buckets && \
@@ -471,8 +471,8 @@ main(){
   { log "Error initializing infrastructure"; exit_code=1; }
   echo "Initialization complete"
 
-  wait $lambdas_pid || \
-  { log "Error deploying Lambdas"; exit_code=1; }
+  #wait $lambdas_pid || \
+  #{ log "Error deploying Lambdas"; exit_code=1; }
 
   local end_time=$(date +%s)
 

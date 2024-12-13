@@ -5,15 +5,14 @@ set -e
 start_time=$(date +%s)
 
 ## CONFIGURATION ##
-VERBOSE=true
+VERBOSE=false
 AWS_REGION="eu-south-1"
 LOCALSTACK_ENDPOINT="http://localhost:4566"
 SQS_ENDPOINT=$LOCALSTACK_ENDPOINT
 DYNAMODB_ENDPOINT=$LOCALSTACK_ENDPOINT
 S3_ENDPOINT=$LOCALSTACK_ENDPOINT
 SSM_ENDPOINT=$LOCALSTACK_ENDPOINT
-#LAMBDA_FUNCTIONS_PATH="/tmp/pn-ss/lambda_import" # LAMBDA
-#TMP_PATH="/tmp/pn-ss/lambda_functions" # LAMBDA
+
 
 ## DEFINITIONS ##
 S3_BUCKETS=(
@@ -122,7 +121,6 @@ SSM_CONFIG='{
 
 # VARIABLES #
 declare -A zips
-lambdas=()
 
 
 ## LOGGING FUNCTIONS ##
@@ -205,19 +203,27 @@ load_to_s3(){
   local s3_path=$(echo "$bucket_with_path" | cut -d'/' -f2-)
   local s3_key="$s3_path/$(basename "$file")"
 
+  if silent aws s3api head-object --bucket "$bucket" \
+                           --key "$s3_key" \
+                           --region "$AWS_REGION" \
+                           --endpoint-url "$S3_ENDPOINT"; then
+    log "File already exists: $file; Skipping upload"
+    return 0
+  fi
+
   if [ ! -f "$file" ]; then
-    silent log "Creating file: $file"
+    log "File does not exist, creating empty file: $file"
     touch "$file"
   fi
 
-  log "Uploading file: $file to s3://$bucket/$s3_key"
-  aws s3 cp "$file" "s3://$bucket/$s3_key" --region "$AWS_REGION" \
+  log "Uploading file: $file"
+  silent aws s3 cp "$file" "s3://$bucket/$s3_key" --region "$AWS_REGION" \
                                            --endpoint-url "$S3_ENDPOINT" && \
-  log "Uploaded file: $file to s3://$bucket/$s3_key" || \
+  log "Uploaded file: $file" || \
   { log "Failed to upload file: $file to s3://$bucket/$s3_key"; return 1; }
 
   # Verify file
-  aws s3api head-object --bucket "$bucket" \
+  silent aws s3api head-object --bucket "$bucket" \
                         --key "$s3_key" \
                         --region "$AWS_REGION" \
                         --endpoint-url "$S3_ENDPOINT" || \
@@ -258,9 +264,9 @@ create_buckets(){
   local pids=()
 
   for bucket in "${S3_BUCKETS[@]}"; do
-    if ! aws s3api head-bucket --bucket "$bucket" \
+    if ! silent aws s3api head-bucket --bucket "$bucket" \
                                --endpoint-url $LOCALSTACK_ENDPOINT; then
-        silent create_bucket $bucket &
+        { silent create_bucket $bucket && log "Created bucket: $bucket"; } &
         pids+=($!)
     else
       log "Bucket already exists: $bucket"
@@ -303,7 +309,7 @@ initialize_sm(){
     local secret_name=$1
     local secret_value=$2
     echo "Creating secret: $secret_name"
-    echo "Secret value: $secret_value"
+    silent echo "Secret value: $secret_value"
 
    silent aws secretsmanager create-secret \
       --region "$AWS_REGION" \
@@ -329,112 +335,8 @@ initialize_ssm(){
     { log "Failed to create SSM parameter: Pn-SS-IndexingConfiguration"; return 1; }
 }
 
-# lambdas-FUNCTIONS #
 
-verify_fun_directory(){
-  local fun=$1
-  local expected=("index.js" "package.json")
-  local fun_path="$LAMBDA_FUNCTIONS_PATH/$fun"
-  for file in "${expected[@]}"; do
-    if [ ! -f "$fun_path/$file" ]; then
-      log "Error: $fun_path/$file not found, not a valid Lambda"
-      return 1
-    fi
-  done
-}
 
-get_functions(){
-  log "Getting Lambda Functions from $LAMBDA_FUNCTIONS_PATH"
-  for fun in "$LAMBDA_FUNCTIONS_PATH"/*; do
-    if [ -d "$fun" ]; then
-      fun_name=$(basename "$fun")
-      if verify_fun_directory "$fun_name"; then
-        lambdas+=("$fun_name")
-      fi
-      log "Found Lambda $fun_name, added to deploy list"
-    fi
-  done
-}
-
-copy_directory_to_tmp() {
-  local fun=$1
-  log "Copying Directory $LAMBDA_FUNCTIONS_PATH/$fun to $TMP_PATH"
-  mkdir -p "$TMP_PATH"
-  if ! ( silent cp -r "$LAMBDA_FUNCTIONS_PATH/$fun" "$TMP_PATH" ); then
-    log "Error copying directory"
-    return 1
-  fi
-}
-
-install_dependencies() {
-  local fun=$1
-  log "Installing npm dependencies for $fun"
-  local fun_path="$TMP_PATH/$fun"
-
-  if [ ! -d "$fun_path/node_modules" ]; then
-    if ! (silent npm install --prefix "$fun_path"); then
-      log "Error installing dependencies"
-      return 1
-    fi
-  else
-    log "Dependencies already installed"
-  fi
-}
-
-zip_lambda() {
-  local fun=$1
-  log "Zipping Lambda $fun"
-  local fun_path="$TMP_PATH/$fun"
-  local zip_path="$TMP_PATH/$fun.zip"
-
-  if ! (silent zip -r "$zip_path" "$fun_path"); then
-    log "Error zipping Lambda $fun"
-    return 1
-  fi
-
-  zips["$fun"]="$zip_path"
-  log "Lambda $fun zipped at $zip_path"
-}
-
-deploy_lambda(){
-  local fun=$1
-  local zip=${zips[$fun]}
-  local fun_name=$(basename "$zip" .zip)
-  log "Deploying  Lambda $fun_name"
-
-  silent aws lambda create-function \
-        --function-name "$fun_name" \
-        --runtime nodejs14.x \
-        --handler index.handler \
-        --role "arn:aws:iam::111122223333:role/service-role/$fun_name" \
-        --zip-file fileb://"$zip" \
-        --endpoint-url "$LOCALSTACK_ENDPOINT" \
-        --region "$AWS_REGION" || \
-        { log "Error creating Lambda $fun"; return 1; }
-}
-
-full_lambda_deploy(){
-  local fun=$1
-  copy_directory_to_tmp $fun && \
-  install_dependencies $fun && \
-  zip_lambda $fun && \
-  deploy_lambda $fun || \
-  { log "Error deploying Lambda $fun"; return 1;}
-}
-
-deploy_lambdas() {
-  get_functions
-  log "Deploying Lambdas"
-  local pids=()
-  for fun in "${lambdas[@]}"; do
-    log "Deploying Lambda $fun"
-    full_lambda_deploy $fun & \
-    pids+=($!)
-  done
-
-  wait_for_pids pids "Failed to deploy Lambdas"
-  return "$?"
-}
 
 cleanup() {
   log "Cleaning up"
@@ -445,9 +347,6 @@ cleanup() {
 ## MAIN ##
 main(){
   log "### Initializing LocalStack Services ###"
-
-  #deploy_lambdas & \
-  #local lambdas_pid=$!
 
   ( create_buckets && \
       load_files_to_buckets && \
@@ -471,15 +370,13 @@ main(){
   { log "Error initializing infrastructure"; exit_code=1; }
   echo "Initialization complete"
 
-  #wait $lambdas_pid || \
-  #{ log "Error deploying Lambdas"; exit_code=1; }
-
   local end_time=$(date +%s)
 
   if [ "$exit_code" -eq 0 ]; then
     log "LocalStack Initialization Succeeded in $(($end_time - $start_time)) seconds"
   else
     log "LocalStack Initialization Failed in $(($end_time - $start_time)) seconds"
+    return 1
   fi
 }
 

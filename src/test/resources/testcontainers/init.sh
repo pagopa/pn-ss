@@ -119,10 +119,6 @@ SSM_CONFIG='{
     }'
 
 
-# VARIABLES #
-declare -A zips
-
-
 ## LOGGING FUNCTIONS ##
 log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 

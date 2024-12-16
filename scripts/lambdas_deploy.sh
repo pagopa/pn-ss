@@ -1,4 +1,4 @@
-VERBOSE=false
+VERBOSE=true
 LAMBDA_FUNCTIONS_PATH=$1 # LAMBDA
 AWS_REGION=$2 # LAMBDA
 LOCALSTACK_ENDPOINT="http://localhost:4566"
@@ -77,7 +77,6 @@ install_dependencies() {
   local fun_path="$TMP_PATH/$fun"
 
   if [ ! -d "$fun_path/node_modules" ]; then
-    cd "$fun_path"
     log "Installing dependencies for $fun in $fun_path"
     if ! (silent npm install --prefix "$fun_path"); then
       log "Error installing dependencies"
@@ -148,7 +147,7 @@ cleanup() {
   log "Cleaning up"
   if [ -d "$TMP_PATH" ]; then
     log "Removing temporary directory $TMP_PATH"
-    silent rm -rfv "$TMP_PATH"
+    silent rm -rf "$TMP_PATH"
   fi
   log "Cleanup complete"
 }

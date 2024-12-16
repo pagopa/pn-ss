@@ -8,6 +8,7 @@ PROFILE=local
 ACCESS_KEY=TEST
 SECRET_KEY=TEST
 curr_dir=$(pwd)
+cli_pager=$(aws configure get cli_pager)
 
 INIT_SCRIPT=../src/test/resources/testcontainers/init.sh
 LAMBDAS_DEPLOY_SCRIPT=./lambdas_deploy.sh
@@ -41,7 +42,7 @@ build_run(){
   echo "### Initialization failed ###"
   return 1
   fi
-  cd "$curr_dir"
+  cd "$curr_dir" || return 1
 }
 
 init_localstack_env(){
@@ -61,6 +62,7 @@ init_localstack_env(){
 
 main(){
   echo "### Starting pn-ss ###"
+  aws configure set cli_pager ""
   local start_time=$(date +%s)
   verify_localstack && \
   init_localstack_env && \
@@ -69,6 +71,7 @@ main(){
   echo "### pn-ss started ###"
   local end_time=$(date +%s)
   echo "### Time taken: $((end_time - start_time)) seconds ###"
+  aws configure set cli_pager "$cli_pager"
 }
 
 

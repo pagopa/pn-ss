@@ -8,10 +8,6 @@ start_time=$(date +%s)
 VERBOSE=false
 AWS_REGION="eu-south-1"
 LOCALSTACK_ENDPOINT="http://localhost:4566"
-SQS_ENDPOINT=$LOCALSTACK_ENDPOINT
-DYNAMODB_ENDPOINT=$LOCALSTACK_ENDPOINT
-S3_ENDPOINT=$LOCALSTACK_ENDPOINT
-SSM_ENDPOINT=$LOCALSTACK_ENDPOINT
 
 
 ## DEFINITIONS ##
@@ -27,6 +23,7 @@ FILES_TO_BUCKETS=(
 
 SQS_QUEUES=(
   "dgs-bing-ss-PnSsQueueStagingBucket-Pja8ntKQxYrs"
+  "Pn-Ss-Availability-Queue"
   "pn-ss-staging-bucket-events-queue"
   "pn-ss-availability-events-queue"
   "pn-ss-main-bucket-events-queue"
@@ -157,15 +154,15 @@ create_table() {
 
   log "Creating table:  Name: $table_name , PK: $pk"
 
-  if ! aws dynamodb describe-table --table-name "$table_name" \
-                                   --endpoint-url "$DYNAMODB_ENDPOINT" \
+  if ! silent aws dynamodb describe-table --table-name "$table_name" \
+                                   --endpoint-url "$LOCALSTACK_ENDPOINT" \
                                    --region $AWS_REGION ; then
-    if ! aws dynamodb create-table --table-name "$table_name" \
+    if ! silent aws dynamodb create-table --table-name "$table_name" \
                                    --attribute-definitions AttributeName="$pk",AttributeType=S \
                                    --key-schema AttributeName="$pk",KeyType=HASH \
                                    --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
                                    --region $AWS_REGION \
-                                   --endpoint-url "$DYNAMODB_ENDPOINT" ; then
+                                   --endpoint-url "$LOCALSTACK_ENDPOINT" ; then
       log "Failed to create DynamoDB table: $table_name"
       return 1
     else
@@ -174,25 +171,32 @@ create_table() {
   else
     log "Table already exists: $table_name"
   fi
-  log "DynamoDB table $table_name initialized"
 }
 
 create_bucket(){
   local bucket=$1
+
+  if silent aws s3api head-bucket --bucket "$bucket" \
+                           --region "$AWS_REGION" \
+                           --endpoint-url "$LOCALSTACK_ENDPOINT"; then
+    log "Bucket already exists: $bucket"
+    return 0
+  fi
+
   log "Creating bucket: $bucket"
-  aws s3api create-bucket --bucket "$bucket" \
+  silent aws s3api create-bucket --bucket "$bucket" \
                           --region "$AWS_REGION"  \
-                          --endpoint-url "$S3_ENDPOINT" \
+                          --endpoint-url "$LOCALSTACK_ENDPOINT" \
                           --create-bucket-configuration LocationConstraint="$AWS_REGION" \
                           --object-lock-enabled-for-bucket && \
-  aws s3api put-object-lock-configuration --bucket "$bucket" \
+  silent aws s3api put-object-lock-configuration --bucket "$bucket" \
                                           --object-lock-configuration "$OBJECT_LOCK_CONFIG"  \
                                           --region "$AWS_REGION"  \
-                                          --endpoint-url "$S3_ENDPOINT" && \
-  aws s3api put-bucket-lifecycle-configuration --bucket "$bucket" \
+                                          --endpoint-url "$LOCALSTACK_ENDPOINT" && \
+  silent aws s3api put-bucket-lifecycle-configuration --bucket "$bucket" \
                                                --region "$AWS_REGION"  \
                                                --lifecycle-configuration "$LIFECYCLE_RULE"  \
-                                               --endpoint-url "$S3_ENDPOINT" && \
+                                               --endpoint-url "$LOCALSTACK_ENDPOINT" && \
   log "Created and configured bucket: $bucket" || \
   { log "Failed to create bucket: $bucket" ; return 1; }
 }
@@ -208,7 +212,7 @@ load_to_s3(){
   if silent aws s3api head-object --bucket "$bucket" \
                            --key "$s3_key" \
                            --region "$AWS_REGION" \
-                           --endpoint-url "$S3_ENDPOINT"; then
+                           --endpoint-url "$LOCALSTACK_ENDPOINT"; then
     log "File already exists: $file; Skipping upload"
     return 0
   fi
@@ -220,7 +224,7 @@ load_to_s3(){
 
   log "Uploading file: $file"
   silent aws s3 cp "$file" "s3://$bucket/$s3_key" --region "$AWS_REGION" \
-                                           --endpoint-url "$S3_ENDPOINT" && \
+                                           --endpoint-url "$LOCALSTACK_ENDPOINT" && \
   log "Uploaded file: $file" || \
   { log "Failed to upload file: $file to s3://$bucket/$s3_key"; return 1; }
 
@@ -228,7 +232,7 @@ load_to_s3(){
   silent aws s3api head-object --bucket "$bucket" \
                         --key "$s3_key" \
                         --region "$AWS_REGION" \
-                        --endpoint-url "$S3_ENDPOINT" || \
+                        --endpoint-url "$LOCALSTACK_ENDPOINT" || \
   { log "Failed to verify file: $file in s3://$bucket/$s3_key"; return 1; }
 
   # Delete file
@@ -254,9 +258,16 @@ create_queue(){
   local queue=$1
   log "Creating queue: $queue"
 
+  if silent aws sqs get-queue-url --queue-name "$queue" \
+                                  --region "$AWS_REGION"  \
+                                  --endpoint-url "$LOCALSTACK_ENDPOINT"; then
+    log "Queue already exists: $queue"
+    return 0
+  fi
+
   silent aws sqs create-queue --queue-name "$queue" \
                        --region "$AWS_REGION"  \
-                       --endpoint-url "$SQS_ENDPOINT" && \
+                       --endpoint-url "$LOCALSTACK_ENDPOINT" && \
   log "Created queue: $queue" || \
   { log "Failed to create queue: $queue"; return 1; }
 }
@@ -266,13 +277,9 @@ create_buckets(){
   local pids=()
 
   for bucket in "${S3_BUCKETS[@]}"; do
-    if ! silent aws s3api head-bucket --bucket "$bucket" \
-                               --endpoint-url $LOCALSTACK_ENDPOINT; then
-        { silent create_bucket $bucket && log "Created bucket: $bucket"; } &
-        pids+=($!)
-    else
-      log "Bucket already exists: $bucket"
-    fi
+    log "Creating bucket: $bucket" && \
+    create_bucket $bucket &
+    pids+=($!)
   done
 
   wait_for_pids pids "Failed to create bucket"
@@ -298,7 +305,7 @@ initialize_dynamo() {
 
   for entry in "${DYNAMODB_TABLES[@]}"; do
     IFS=: read -r table_name pk <<< "$entry"
-    silent create_table "$table_name" "$pk" &
+    create_table "$table_name" "$pk" &
     pids+=($!)
   done
 
@@ -310,8 +317,16 @@ initialize_sm(){
   log "### Initializing SecretsManager ###"
     local secret_name=$1
     local secret_value=$2
-    echo "Creating secret: $secret_name"
+    log "Creating secret: $secret_name"
     silent echo "Secret value: $secret_value"
+
+    if silent aws secretsmanager get-secret-value \
+      --region "$AWS_REGION" \
+      --endpoint-url "$LOCALSTACK_ENDPOINT" \
+      --secret-id "$secret_name"; then
+      log "Secret already exists: $secret_name"
+      return 0
+    fi
 
    silent aws secretsmanager create-secret \
       --region "$AWS_REGION" \
@@ -327,18 +342,23 @@ initialize_sm(){
 
 initialize_ssm(){
   log "### Initializing SSM Parameters ###"
-    indexingConfig=$SSM_CONFIG
-    silent aws ssm put-parameter --name "Pn-SS-IndexingConfiguration" \
-                                 --type "String" \
-                                 --value "$indexingConfig" \
-                                 --region $AWS_REGION \
-                                 --endpoint-url $SSM_ENDPOINT && \
-    log "Created SSM parameter: Pn-SS-IndexingConfiguration" || \
-    { log "Failed to create SSM parameter: Pn-SS-IndexingConfiguration"; return 1; }
+
+  if silent aws ssm get-parameter --name "Pn-SS-IndexingConfiguration" \
+                                   --region $AWS_REGION \
+                                   --endpoint-url $LOCALSTACK_ENDPOINT; then
+    log "SSM parameter already exists: Pn-SS-IndexingConfiguration" && return 0
+  fi
+
+  indexingConfig=$SSM_CONFIG
+
+  silent aws ssm put-parameter --name "Pn-SS-IndexingConfiguration" \
+                               --type "String" \
+                               --value "$indexingConfig" \
+                               --region $AWS_REGION \
+                               --endpoint-url $LOCALSTACK_ENDPOINT && \
+  log "Created SSM parameter: Pn-SS-IndexingConfiguration" || \
+  { log "Failed to create SSM parameter: Pn-SS-IndexingConfiguration"; return 1; }
 }
-
-
-
 
 cleanup() {
   log "Cleaning up"

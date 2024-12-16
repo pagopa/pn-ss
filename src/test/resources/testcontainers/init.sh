@@ -27,7 +27,13 @@ FILES_TO_BUCKETS=(
 
 SQS_QUEUES=(
   "dgs-bing-ss-PnSsQueueStagingBucket-Pja8ntKQxYrs"
-  "Pn-Ss-Availability-Queue"
+  "pn-ss-staging-bucket-events-queue"
+  "pn-ss-availability-events-queue"
+  "pn-ss-main-bucket-events-queue"
+  "pn-ss-gestore-bucket-invocation-errors-queue"
+  "pn-ss-external-notification-DEV-queue"
+  "pn-ss-forward-events-pncoreeventbus-DLQueue"
+  "pn-ss-scadenza-documenti-dynamoDBStreamDLQ-queue"
           )
 
 DYNAMODB_TABLES=(
@@ -248,7 +254,7 @@ create_queue(){
   local queue=$1
   log "Creating queue: $queue"
 
-  aws sqs create-queue --queue-name "$queue" \
+  silent aws sqs create-queue --queue-name "$queue" \
                        --region "$AWS_REGION"  \
                        --endpoint-url "$SQS_ENDPOINT" && \
   log "Created queue: $queue" || \
@@ -278,7 +284,7 @@ create_queues(){
   local pids=()
 
   for queue in "${SQS_QUEUES[@]}"; do
-    silent create_queue $queue &
+    create_queue $queue &
     pids+=($!)
   done
 
@@ -287,7 +293,7 @@ create_queues(){
 }
 
 initialize_dynamo() {
-  log "Initializing DynamoDB tables"
+  log "### Initializing DynamoDB tables ###"
   local pids=()
 
   for entry in "${DYNAMODB_TABLES[@]}"; do

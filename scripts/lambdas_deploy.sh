@@ -1,4 +1,4 @@
-VERBOSE=true
+VERBOSE=false
 LAMBDA_FUNCTIONS_PATH=$1 # LAMBDA
 AWS_REGION=$2 # LAMBDA
 LOCALSTACK_ENDPOINT="http://localhost:4566"
@@ -73,18 +73,22 @@ copy_directory_to_tmp() {
 
 install_dependencies() {
   local fun=$1
-  log "Installing npm dependencies for $fun"
+  log "Installing npm dependencies for $fun at $TMP_PATH/$fun"
   local fun_path="$TMP_PATH/$fun"
+  curr_dir=$(pwd)
 
   if [ ! -d "$fun_path/node_modules" ]; then
-    log "Installing dependencies for $fun in $fun_path"
-    if ! (silent npm install --prefix "$fun_path"); then
+    cd "$fun_path" || { log "Error accessing directory $fun_path"; return 1; }
+    log "Installing dependencies for $fun in $(pwd)"
+    if ! ( silent npm install ); then
       log "Error installing dependencies"
       return 1
     fi
   else
     log "Dependencies already installed"
   fi
+  cd $curr_dir || { log "Error accessing directory $fun_path"; return 1; }
+
 }
 
 zip_lambda() {
@@ -94,11 +98,16 @@ zip_lambda() {
 
   log "Zipping Lambda $fun in $fun_path"
 
-  if ! (silent zip -r "$zip_path" "$fun_path"); then
+  curr_dir=$(pwd)
+  cd "$fun_path" || { log "Error accessing directory $fun_path"; return 1; }
+
+  if ! (silent zip -r ../"$fun.zip" ./*); then
     log "Error zipping Lambda $fun"
+    cd "$curr_dir" || { log "Error accessing directory $fun_path"; return 1; }
     return 1
   fi
 
+  cd "$curr_dir" ||  { log "Error accessing directory $fun_path"; return 1; }
   zips["$fun"]="$zip_path"
   log "Lambda $fun zipped at $zip_path"
 }
@@ -131,7 +140,7 @@ full_lambda_deploy(){
 
 deploy_lambdas() {
   get_functions
-  log "Deploying Lambdas"
+  log "### Deploying Lambdas ###"
   local pids=()
   for fun in "${lambdas[@]}"; do
     log "Deploying Lambda $fun"
@@ -147,7 +156,7 @@ cleanup() {
   log "Cleaning up"
   if [ -d "$TMP_PATH" ]; then
     log "Removing temporary directory $TMP_PATH"
-    silent rm -rf "$TMP_PATH"
+    silent rm -rfv "$TMP_PATH"
   fi
   log "Cleanup complete"
 }
@@ -159,7 +168,7 @@ main() {
   deploy_lambdas && \
   log "Lambdas deployed successfully" || \
   { log "Error deploying Lambdas"; exit_code=1; }
-  cleanup
+  cleanup &
   local end_time=$(date +%s)
   log "Lambdas deploy Execution time: $((end_time - start_time)) seconds"
   return "$exit_code"

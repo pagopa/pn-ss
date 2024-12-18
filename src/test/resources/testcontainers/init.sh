@@ -11,6 +11,8 @@ LOCALSTACK_ENDPOINT="http://localhost:4566"
 
 
 ## DEFINITIONS ##
+NOTIFICATIONS_BUS_NAME="Pn-Ss-Notifications-Bus"
+
 S3_BUCKETS=(
             "pn-ss-storage-safestorage"
             "pn-ss-storage-safestorage-staging"
@@ -272,6 +274,66 @@ create_queue(){
   { log "Failed to create queue: $queue"; return 1; }
 }
 
+create_event_bus()
+{
+  local event_bus_name=$1
+
+  silent aws events describe-event-bus \
+    --region "$AWS_REGION" \
+    --endpoint-url "$LOCALSTACK_ENDPOINT" \
+    --name $event_bus_name && \
+    log "Event bus already exists: $event_bus_name" && \
+    return 0
+
+  aws events create-event-bus \
+    --region "$AWS_REGION" \
+    --endpoint-url "$LOCALSTACK_ENDPOINT" \
+    --name $event_bus_name
+    log "Event bus created: $event_bus_name" || \
+  { log "Failed to create event bus: $event_bus_name"; return 1; }
+}
+
+create_eventbridge_rule() {
+   local event_name=$1
+   local event_pattern=$2
+   aws events put-rule \
+    --endpoint-url="$LOCALSTACK_ENDPOINT" \
+    --region "$AWS_REGION" \
+    --name $event_name \
+    --event-bus-name "$NOTIFICATIONS_BUS_NAME" \
+    --event-pattern "$event_pattern" \
+    --state "ENABLED"
+    log "Event rule created: $event_name" || \
+  { log "Failed to create event rule: $event_name"; return 1; }
+}
+
+put_sqs_as_rule_target() {
+  local queue_name=$1
+  local rule_name=$2
+  echo "Putting queue $queue_name as target for rule $rule_name"
+
+  queue_url=$(aws sqs get-queue-url --region $AWS_REGION --endpoint-url $LOCALSTACK_ENDPOINT --queue-name $queue_name --query "QueueUrl" --output text | tr -d '\r')
+
+  if [[ $? -eq 0 ]]; then
+    echo "Queue URL: $queue_url"
+    queue_arn=$(aws sqs get-queue-attributes --region "$AWS_REGION" --endpoint-url "$LOCALSTACK_ENDPOINT" --queue-url "$queue_url" --attribute-names "QueueArn" --query "Attributes.QueueArn" --output text | tr -d '\r')
+    if [[ $? -eq 0 ]]; then
+      echo "Queue ARN: $queue_arn"
+    else
+      echo "Failed to get ARN for queue: $queue_name"
+    fi
+  else
+    echo "Failed to get URL for queue: $queue_name"
+  fi
+
+  aws events put-targets \
+    --region "$AWS_REGION" \
+    --endpoint-url "$LOCALSTACK_ENDPOINT" \
+    --event-bus-name "$NOTIFICATIONS_BUS_NAME" \
+    --rule "$rule_name" \
+    --targets "Id=${queue_name}-target,Arn=${queue_arn}"
+}
+
 create_buckets(){
   log "### Initializing S3 Buckets ###"
   local pids=()
@@ -360,6 +422,39 @@ initialize_ssm(){
   { log "Failed to create SSM parameter: Pn-SS-IndexingConfiguration"; return 1; }
 }
 
+initialize_event_bridge() {
+    log "Initializing EventBridge"
+    local pids=()
+    # Creating the Event Bus
+    create_event_bus $NOTIFICATIONS_BUS_NAME || return 1
+
+    # Creating EventBridge Rules
+    create_eventbridge_rule "PnSsEventRuleExternalNotifications" '{
+        "source": ["GESTORE DISPONIBILITA"]
+    }' &
+    pids+=($!)
+
+    create_eventbridge_rule "PnSsEventRuleStagingBucket" '{
+        "source": ["aws.s3"],
+        "detail-type": ["Object Created"],
+        "detail": {
+            "bucket": {
+                "name": ["pn-ss-storage-safestorage-staging"]
+            }
+        }
+    }' &
+    pids+=($!)
+
+    # Attaching SQS queues as targets to rules
+    put_sqs_as_rule_target "pn-ss-external-notification-DEV-queue" "PnSsEventRuleExternalNotifications" &
+    pids+=($!)
+    put_sqs_as_rule_target "pn-ss-staging-bucket-events-queue" "PnSsEventRuleStagingBucket" &
+    pids+=($!)
+
+    wait_for_pids pids "Failed to initialize EventBridge targets"
+    return "$?"
+}
+
 cleanup() {
   log "Cleaning up"
   silent rm -rf "$TMP_PATH"
@@ -373,6 +468,7 @@ main(){
   ( create_buckets && \
       load_files_to_buckets && \
       create_queues && \
+      initialize_event_bridge && \
       initialize_dynamo && \
       initialize_sm 'Pn-SS-SignAndTimemark' '{
                                               "aruba.sign.delegated.domain": "demoprod",

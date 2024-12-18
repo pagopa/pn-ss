@@ -118,6 +118,11 @@ deploy_lambda(){
   local fun_name=$(basename "$zip" .zip)
   log "Deploying  Lambda $fun_name"
 
+  if (aws lambda get-function --function-name "$fun_name" --endpoint-url "$LOCALSTACK_ENDPOINT" --region "$AWS_REGION" > /dev/null 2>&1); then
+    log "Lambda $fun_name already exists"
+    return 0
+  fi
+
   silent aws lambda create-function \
         --function-name "$fun_name" \
         --runtime nodejs14.x \

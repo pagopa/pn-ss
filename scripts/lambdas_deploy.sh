@@ -5,6 +5,9 @@ LOCALSTACK_ENDPOINT="http://localhost:4566"
 TMP_PATH="./tmp"
 lambdas=()
 
+QUEUE_LAMBDA_SOURCES=( "pn-ss-main-bucket-events-queue:gestoreBucketConcurrencyHandler" )
+
+
 
 ## LOGGING FUNCTIONS ##
 log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
@@ -157,6 +160,22 @@ deploy_lambdas() {
   return "$?"
 }
 
+configure_lambdas(){
+  log "Configuring Lambdas"
+
+  for entry in "${QUEUE_LAMBDA_SOURCES[@]}"; do
+    IFS=':' read -r queue lambda <<< "$entry"
+    log "Configuring Lambda $lambda to listen to queue $queue"
+    silent aws lambda create-event-source-mapping \
+      --function-name "$lambda" \
+      --event-source-arn "arn:aws:sqs:us-east-1:000000000000:$queue" \
+      --batch-size 10 \
+      --endpoint-url "$LOCALSTACK_ENDPOINT" \
+      --region "$AWS_REGION" || \
+      { log "Error configuring Lambda $lambda"; return 1; }
+  done
+}
+
 cleanup() {
   log "Cleaning up"
   if [ -d "$TMP_PATH" ]; then
@@ -171,6 +190,7 @@ main() {
   exit_code=0
   make_tmp_dir && \
   deploy_lambdas && \
+  configure_lambdas && \
   log "Lambdas deployed successfully" || \
   { log "Error deploying Lambdas"; exit_code=1; }
   cleanup &

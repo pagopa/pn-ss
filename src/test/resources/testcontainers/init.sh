@@ -365,6 +365,105 @@ cleanup() {
   silent rm -rf "$TMP_PATH"
   log "Cleanup complete"
 }
+get_queue_arn(){
+  local queue=$1
+  local queue_arn=$(silent aws sqs get-queue-attributes --queue-url "$queue" \
+                                                          --attribute-names QueueArn \
+                                                          --region "$AWS_REGION" \
+                                                          --endpoint-url "$LOCALSTACK_ENDPOINT" | \
+                                                          awk -F'"' '/QueueArn/ {print $4}')
+  echo "$queue_arn"
+}
+
+### QUEUE CONFIGURATIONS
+pn_ss_storage_safestorage_staging_config(){
+  local queue_arn=$(get_queue_arn "pn-ss-staging-bucket-events-queue")
+
+  if [ -z "$queue_arn" ]; then
+    log "Failed to get queue ARN for queue: pn-ss-staging-bucket-events-queue"
+    return 1
+  fi
+
+  local notification_config='{
+    "QueueConfigurations": [
+      {
+        "QueueArn": "'"$queue_arn"'",
+        "Events": ["s3:ObjectCreated:*"]
+      }
+    ]
+  }'
+
+  echo "$notification_config"
+}
+
+pn_ss_storage_safestorage_config(){
+  local queue_arn=$(get_queue_arn "pn-ss-main-bucket-events-queue")
+
+  if [ -z "$queue_arn" ]; then
+    log "Failed to get queue ARN for queue: pn-ss-main-bucket-events-queue"
+    return 1
+  fi
+
+  local notification_config='{
+    "QueueConfigurations": [
+      {
+        "QueueArn": "'"$queue_arn"'",
+        "Events": ["s3:ObjectCreated:*"]
+      },
+      {
+        "QueueArn": "'"$queue_arn"'",
+        "Events": ["s3:ObjectRemoved:*"]
+      },
+      {
+        "QueueArn": "'"$queue_arn"'",
+        "Events": ["s3:ObjectRestore:*"]
+      },
+      {
+        "QueueArn": "'"$queue_arn"'",
+        "Events": ["s3:LifecycleExpiration:DeleteMarkerCreated"]
+      },
+      {
+        "QueueArn": "'"$queue_arn"'",
+        "Events": ["s3:LifecycleTransition"]
+      }
+    ]
+  }'
+
+  echo "$notification_config"
+}
+
+
+
+buckets_configuration(){
+  log "### Configuring Buckets ###"
+  local pids=()
+
+  local pn_ss_storage_safestorage_staging_config=$(pn_ss_storage_safestorage_staging_config)
+  local pn_ss_storage_safestorage_config=$(pn_ss_storage_safestorage_config)
+
+  for bucket in "${S3_BUCKETS[@]}"; do
+    case $bucket in
+      "pn-ss-storage-safestorage-staging")
+        log "Configuring bucket: $bucket" && \
+        silent aws s3api put-bucket-notification-configuration --bucket "$bucket" \
+                                                      --notification-configuration "$pn_ss_storage_safestorage_staging_config" \
+                                                      --region "$AWS_REGION" \
+                                                      --endpoint-url "$LOCALSTACK_ENDPOINT" &
+        pids+=($!)
+        ;;
+      "pn-ss-storage-safestorage")
+        log "Configuring bucket: $bucket" && \
+        silent aws s3api put-bucket-notification-configuration --bucket "$bucket" \
+                                                      --notification-configuration "$pn_ss_storage_safestorage_config" \
+                                                      --region "$AWS_REGION" \
+                                                      --endpoint-url "$LOCALSTACK_ENDPOINT" &
+        pids+=($!)
+        ;;
+    esac
+  done
+
+
+}
 
 ## MAIN ##
 main(){
@@ -373,6 +472,7 @@ main(){
   ( create_buckets && \
       load_files_to_buckets && \
       create_queues && \
+      buckets_configuration && \
       initialize_dynamo && \
       initialize_sm 'Pn-SS-SignAndTimemark' '{
                                               "aruba.sign.delegated.domain": "demoprod",

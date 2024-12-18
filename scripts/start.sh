@@ -79,13 +79,13 @@ load_dynamodb(){
   silent ./dynamoDBLoad.sh -t "pn-SsAnagraficaClient" -i "./AnagraficaClient.json" -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
   { log "### Failed to populate pn-SsAnagraficaClient ###" ; return 1; }
 
-  log "### Updating pn-SsAnagraficaClient ###" && \
-  silent ./dynamoDBLoad.sh -t "pn-sSsAnagraficaClient" -i "./AnagraficaClient-toUpdate.json" -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
-  { log "### Failed to update pn-ss-SsAnagraficaClient ###" ; return 1; }
-
   log "### Populating pn-SsTipologieDocumenti ###" && \
   silent ./dynamoDBLoad.sh -t "pn-SsTipologieDocumenti" -i "./TipoDocumenti.json"  -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
   { log "### Failed to populate pn-SsTipologieDocumenti ###" ; return 1; }
+
+  log "### Populating pn-SmStates ###" && \
+  silent ./dynamoDBLoad.sh -t "pn-SmStates" -i "./StateMachine.json"  -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
+  { log "### Failed to populate pn-SmStates ###" ; return 1; }
 }
 
 init_localstack_env(){

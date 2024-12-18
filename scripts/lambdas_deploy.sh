@@ -168,7 +168,7 @@ configure_lambdas(){
     log "Configuring Lambda $lambda to listen to queue $queue"
     silent aws lambda create-event-source-mapping \
       --function-name "$lambda" \
-      --event-source-arn "arn:aws:sqs:us-east-1:000000000000:$queue" \
+      --event-source-arn "arn:aws:sqs:$AWS_REGION:000000000000:$queue" \
       --batch-size 10 \
       --endpoint-url "$LOCALSTACK_ENDPOINT" \
       --region "$AWS_REGION" || \

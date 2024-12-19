@@ -49,7 +49,7 @@ public class StreamsRecordProcessor {
     public static final String MODIFY_EVENT = "MODIFY";
     public static final String REMOVE_EVENT = "REMOVE";
     private static final String CAN_READ_TAGS = "canReadTags";
-    private final EventBridgeClient eventBridgeClient = EventBridgeClient.create();
+    private final EventBridgeClient eventBridgeClient;
     private final SqsService sqsService;
     private final StreamRecordProcessorQueueName streamRecordProcessorQueueName;
 
@@ -68,8 +68,8 @@ public class StreamsRecordProcessor {
 
 
 
-    public StreamsRecordProcessor(DynamoDbAsyncClient dynamoDbClient, SqsService sqsService, StreamRecordProcessorQueueName streamRecordProcessorQueueName, SqsEventHandlerRetryStrategyProperties sqsEventHandlerRetryStrategyProperties) {
-
+    public StreamsRecordProcessor(DynamoDbAsyncClient dynamoDbClient, SqsService sqsService, StreamRecordProcessorQueueName streamRecordProcessorQueueName, SqsEventHandlerRetryStrategyProperties sqsEventHandlerRetryStrategyProperties, EventBridgeClient eventBridgeClient) {
+        this.eventBridgeClient = eventBridgeClient;
         this.dynamoDbClient = dynamoDbClient;
         this.sqsService = sqsService;
         this.streamRecordProcessorQueueName = streamRecordProcessorQueueName;

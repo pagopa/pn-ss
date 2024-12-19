@@ -5,7 +5,7 @@ LOCALSTACK_ENDPOINT="http://localhost:4566"
 TMP_PATH="./tmp"
 lambdas=()
 
-QUEUE_LAMBDA_SOURCES=( "pn-ss-main-bucket-events-queue:gestoreBucketConcurrencyHandler" )
+QUEUE_LAMBDA_SOURCES=( "pn-ss-main-bucket-events-queue:gestoreBucketEventHandler" )
 
 
 
@@ -99,6 +99,13 @@ zip_lambda() {
   local fun_path="$TMP_PATH/$fun"
   local zip_path="$TMP_PATH/$fun.zip"
 
+  log "Changing permissions for $fun_path"
+
+  if ! (silent chmod -R 755 "$fun_path"); then
+    log "Error changing permissions for $fun_path"
+    return 1
+  fi
+
   log "Zipping Lambda $fun in $fun_path"
 
   curr_dir=$(pwd)
@@ -160,27 +167,68 @@ deploy_lambdas() {
   return "$?"
 }
 
-configure_lambdas(){
+configure_lambdas() {
   log "Configuring Lambdas"
 
   for entry in "${QUEUE_LAMBDA_SOURCES[@]}"; do
     IFS=':' read -r queue lambda <<< "$entry"
     log "Configuring Lambda $lambda to listen to queue $queue"
+
+    log "Waiting for Lambda $lambda to be ready"
+
+    aws lambda wait function-active-v2 --function-name "$lambda" \
+                                       --region "$AWS_REGION" \
+                                       --endpoint-url "$LOCALSTACK_ENDPOINT" || {
+      log "Error waiting for Lambda $lambda to be ready";
+      return 1;
+    }
+
+
     silent aws lambda create-event-source-mapping \
       --function-name "$lambda" \
       --event-source-arn "arn:aws:sqs:$AWS_REGION:000000000000:$queue" \
       --batch-size 10 \
       --endpoint-url "$LOCALSTACK_ENDPOINT" \
-      --region "$AWS_REGION" || \
-      { log "Error configuring Lambda $lambda"; return 1; }
+      --region "$AWS_REGION" || {
+        log "Error configuring Lambda $lambda";
+        return 1;
+      }
+
+     local env_string=""
+
+      if [ -f "$TMP_PATH/$lambda/properties.env" ]; then
+        declare -A env_vars
+        while IFS='=' read -r key value; do
+          if [[ -n "$key" && -n "$value" ]]; then
+            env_vars["$key"]="$value"
+            echo "key: $key value: $value"
+          fi
+        done < "$TMP_PATH/$lambda/properties.env"
+
+        env_string=$(for key in "${!env_vars[@]}"; do printf '%s=%s,' "$key" "${env_vars[$key]}"; done | sed 's/,$//')
+      fi
+
+    log "Configuring environment variables for Lambda $lambda"
+
+
+    aws lambda update-function-configuration \
+      --function-name "$lambda" \
+      --environment "Variables={$env_string}" \
+      --endpoint-url "$LOCALSTACK_ENDPOINT" \
+      --region "$AWS_REGION" || {
+        log "Error configuring environment variables for Lambda $lambda";
+        return 1;
+      }
   done
+
+  log "Lambdas configured successfully"
 }
 
 cleanup() {
   log "Cleaning up"
   if [ -d "$TMP_PATH" ]; then
     log "Removing temporary directory $TMP_PATH"
-    silent rm -rfv "$TMP_PATH"
+    silent rm -rv "$TMP_PATH"
   fi
   log "Cleanup complete"
 }

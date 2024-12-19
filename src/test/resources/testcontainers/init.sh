@@ -46,17 +46,406 @@ DYNAMODB_TABLES=(
 LIFECYCLE_RULE='{
                   "Rules": [
                     {
-                      "ID": "MoveToGlacier",
-                      "Filter": {
-                        "Prefix": ""
+                      "ID": "PnSsAbortIncompleteMultipartUpload",
+                      "AbortIncompleteMultipartUpload": {
+                        "DaysAfterInitiation": 1
+                      },
+                      "Status": "Enabled"
+                    },
+                    {
+                      "ID": "PnSsNotificationAttachmentTemporary",
+                      "Expiration": {
+                        "Days": 7
                       },
                       "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storageType",
+                          "Value": "PN_TEMPORARY_DOCUMENT"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsNotificationAttachment",
+                      "Expiration": {
+                        "Days": 120
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storageType",
+                          "Value": "PN_NOTIFIED_DOCUMENTS"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsAar",
+                      "Expiration": {
+                        "Days": 3655
+                      },
                       "Transitions": [
                         {
-                          "Days": 1,
-                          "StorageClass": "GLACIER"
+                          "StorageClass": "GLACIER",
+                          "Days": 365
                         }
-                      ]
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storageType",
+                          "Value": "PN_AAR"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLegalFacts",
+                      "Expiration": {
+                        "Days": 3655
+                      },
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 365
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storageType",
+                          "Value": "PN_LEGAL_FACTS"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLogsArchiveAudit5Y",
+                      "Expiration": {
+                        "Days": 1830
+                      },
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 1
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storageType",
+                          "Value": "PN_LOGS_ARCHIVE_AUDIT5Y"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLogsArchiveAudit10Y",
+                      "Expiration": {
+                        "Days": 3655
+                      },
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 1
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storageType",
+                          "Value": "PN_LOGS_ARCHIVE_AUDIT10Y"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsInvoicingActivityReport",
+                      "Expiration": {
+                        "Days": 366
+                      },
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 70
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storageType",
+                          "Value": "PN_INVOICING_ACTIVITY_REPORT"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsAddresses",
+                      "Expiration": {
+                        "Days": 30
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storageType",
+                          "Value": "PN_ADDRESSES_STORAGE"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLogsArchiveAudit2Y",
+                      "Expiration": {
+                        "Days": 731
+                      },
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 1
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storageType",
+                          "Value": "PN_LOGS_ARCHIVE_AUDIT2Y"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsNotificationAttachmentTemporary_expiry",
+                      "Expiration": {
+                        "Days": 7
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_expiry",
+                          "Value": "PN_TEMPORARY_DOCUMENT"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsNotificationAttachment_expiry",
+                      "Expiration": {
+                        "Days": 120
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_expiry",
+                          "Value": "PN_NOTIFIED_DOCUMENTS"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsAar_freeze",
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 365
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_freeze",
+                          "Value": "PN_AAR"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsAar_expiry",
+                      "Expiration": {
+                        "Days": 3655
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_expiry",
+                          "Value": "PN_AAR"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLegalFacts_freeze",
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 365
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_freeze",
+                          "Value": "PN_LEGAL_FACTS"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLegalFacts_expiry",
+                      "Expiration": {
+                        "Days": 3655
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_expiry",
+                          "Value": "PN_LEGAL_FACTS"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsInvoicingActivityReport_freeze",
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 70
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_freeze",
+                          "Value": "PN_INVOICING_ACTIVITY_REPORT"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsInvoicingActivityReport_expiry",
+                      "Expiration": {
+                        "Days": 366
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_expiry",
+                          "Value": "PN_INVOICING_ACTIVITY_REPORT"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsAddresses_expiry",
+                      "Expiration": {
+                        "Days": 30
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_expiry",
+                          "Value": "PN_ADDRESSES_STORAGE"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLogsArchiveAudit2Y_freeze",
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 1
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_freeze",
+                          "Value": "PN_LOGS_ARCHIVE_AUDIT2Y"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLogsArchiveAudit2Y_expiry",
+                      "Expiration": {
+                        "Days": 731
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_expiry",
+                          "Value": "PN_LOGS_ARCHIVE_AUDIT2Y"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLogsArchiveAudit5Y_freeze",
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 1
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_freeze",
+                          "Value": "PN_LOGS_ARCHIVE_AUDIT5Y"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLogsArchiveAudit5Y_expiry",
+                      "Expiration": {
+                        "Days": 1830
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_expiry",
+                          "Value": "PN_LOGS_ARCHIVE_AUDIT5Y"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLogsArchiveAudit10Y_freeze",
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 1
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_freeze",
+                          "Value": "PN_LOGS_ARCHIVE_AUDIT10Y"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsLogsArchiveAudit10Y_expiry",
+                      "Expiration": {
+                        "Days": 3655
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_expiry",
+                          "Value": "PN_LOGS_ARCHIVE_AUDIT10Y"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsPaperAttachments_freeze",
+                      "Transitions": [
+                        {
+                          "StorageClass": "GLACIER",
+                          "Days": 30
+                        }
+                      ],
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_freeze",
+                          "Value": "PN_PAPER_ATTACHMENT"
+                        }
+                      }
+                    },
+                    {
+                      "ID": "PnSsPaperAttachments_expiry",
+                      "Expiration": {
+                        "Days": 365
+                      },
+                      "Status": "Enabled",
+                      "Filter": {
+                        "Tag": {
+                          "Key": "storage_expiry",
+                          "Value": "PN_PAPER_ATTACHMENT"
+                        }
+                      }
                     }
                   ]
                 }'
@@ -195,10 +584,6 @@ create_bucket(){
                                           --object-lock-configuration "$OBJECT_LOCK_CONFIG"  \
                                           --region "$AWS_REGION"  \
                                           --endpoint-url "$LOCALSTACK_ENDPOINT" && \
-  silent aws s3api put-bucket-lifecycle-configuration --bucket "$bucket" \
-                                               --region "$AWS_REGION"  \
-                                               --lifecycle-configuration "$LIFECYCLE_RULE"  \
-                                               --endpoint-url "$LOCALSTACK_ENDPOINT" && \
   log "Created and configured bucket: $bucket" || \
   { log "Failed to create bucket: $bucket" ; return 1; }
 }
@@ -542,10 +927,14 @@ buckets_configuration(){
         ;;
       "pn-ss-storage-safestorage")
         log "Configuring bucket: $bucket" && \
-        silent aws s3api put-bucket-notification-configuration --bucket "$bucket" \
+        ( silent aws s3api put-bucket-notification-configuration --bucket "$bucket" \
                                                       --notification-configuration "$pn_ss_storage_safestorage_config" \
                                                       --region "$AWS_REGION" \
-                                                      --endpoint-url "$LOCALSTACK_ENDPOINT" &
+                                                      --endpoint-url "$LOCALSTACK_ENDPOINT" && \
+          silent aws s3api put-bucket-lifecycle-configuration --bucket "$bucket" \
+                                                       --region "$AWS_REGION"  \
+                                                       --lifecycle-configuration "$LIFECYCLE_RULE"  \
+                                                       --endpoint-url "$LOCALSTACK_ENDPOINT" ) & \
         pids+=($!)
         ;;
     esac

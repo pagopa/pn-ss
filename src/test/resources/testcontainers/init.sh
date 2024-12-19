@@ -50,7 +50,10 @@ LIFECYCLE_RULE='{
                       "AbortIncompleteMultipartUpload": {
                         "DaysAfterInitiation": 1
                       },
-                      "Status": "Enabled"
+                      "Status": "Enabled",
+                      "Filter": {
+                           "Prefix": ""
+                        }
                     },
                     {
                       "ID": "PnSsNotificationAttachmentTemporary",

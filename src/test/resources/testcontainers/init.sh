@@ -312,19 +312,7 @@ put_sqs_as_rule_target() {
   local rule_name=$2
   echo "Putting queue $queue_name as target for rule $rule_name"
 
-  queue_url=$(aws sqs get-queue-url --region $AWS_REGION --endpoint-url $LOCALSTACK_ENDPOINT --queue-name $queue_name --query "QueueUrl" --output text | tr -d '\r')
-
-  if [[ $? -eq 0 ]]; then
-    echo "Queue URL: $queue_url"
-    queue_arn=$(aws sqs get-queue-attributes --region "$AWS_REGION" --endpoint-url "$LOCALSTACK_ENDPOINT" --queue-url "$queue_url" --attribute-names "QueueArn" --query "Attributes.QueueArn" --output text | tr -d '\r')
-    if [[ $? -eq 0 ]]; then
-      echo "Queue ARN: $queue_arn"
-    else
-      echo "Failed to get ARN for queue: $queue_name"
-    fi
-  else
-    echo "Failed to get URL for queue: $queue_name"
-  fi
+  local queue_arn=$(get_queue_arn $queue_name)
 
   aws events put-targets \
     --region "$AWS_REGION" \
@@ -460,14 +448,20 @@ cleanup() {
   silent rm -rf "$TMP_PATH"
   log "Cleanup complete"
 }
-get_queue_arn(){
-  local queue=$1
-  local queue_arn=$(silent aws sqs get-queue-attributes --queue-url "$queue" \
-                                                          --attribute-names QueueArn \
-                                                          --region "$AWS_REGION" \
-                                                          --endpoint-url "$LOCALSTACK_ENDPOINT" | \
-                                                          awk -F'"' '/QueueArn/ {print $4}')
-  echo "$queue_arn"
+
+get_queue_arn()
+    {
+    local queue_name=$1
+    queue_url=$(aws sqs get-queue-url --region $AWS_REGION --endpoint-url $LOCALSTACK_ENDPOINT --queue-name $queue_name --query "QueueUrl" --output text | tr -d '\r')
+
+    if [[ $? -eq 0 ]]; then
+      queue_arn=$(aws sqs get-queue-attributes --region "$AWS_REGION" --endpoint-url "$LOCALSTACK_ENDPOINT" --queue-url "$queue_url" --attribute-names "QueueArn" --query "Attributes.QueueArn" --output text | tr -d '\r')
+      if [[ $? -eq 0 ]]; then
+        echo "$queue_arn"
+      else
+        return 1
+      fi
+    fi
 }
 
 ### QUEUE CONFIGURATIONS
@@ -502,23 +496,23 @@ pn_ss_storage_safestorage_config(){
   local notification_config='{
     "QueueConfigurations": [
       {
-        "QueueArn": "'"$queue_arn"'",
+        "QueueArn": "'$queue_arn'",
         "Events": ["s3:ObjectCreated:*"]
       },
       {
-        "QueueArn": "'"$queue_arn"'",
+        "QueueArn": "'$queue_arn'",
         "Events": ["s3:ObjectRemoved:*"]
       },
       {
-        "QueueArn": "'"$queue_arn"'",
+        "QueueArn": "'$queue_arn'",
         "Events": ["s3:ObjectRestore:*"]
       },
       {
-        "QueueArn": "'"$queue_arn"'",
+        "QueueArn": "'$queue_arn'",
         "Events": ["s3:LifecycleExpiration:DeleteMarkerCreated"]
       },
       {
-        "QueueArn": "'"$queue_arn"'",
+        "QueueArn": "'$queue_arn'",
         "Events": ["s3:LifecycleTransition"]
       }
     ]

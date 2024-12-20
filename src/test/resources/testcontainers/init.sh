@@ -854,10 +854,10 @@ get_queue_arn()
 
 ### QUEUE CONFIGURATIONS
 pn_ss_storage_safestorage_staging_config(){
-  local queue_arn=$(get_queue_arn "pn-ss-staging-bucket-events-queue")
+  local queue_arn=$(get_queue_arn "pn-ss-main-bucket-events-queue")
 
   if [ -z "$queue_arn" ]; then
-    log "Failed to get queue ARN for queue: pn-ss-staging-bucket-events-queue"
+    log "Failed to get queue ARN for queue: pn-ss-main-bucket-events-queue"
     return 1
   fi
 

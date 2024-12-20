@@ -74,6 +74,11 @@ for pid in "${pids[@]}"; do
   fi
 done
 
-wait
+echo -e "\nProcessing complete."
+echo "Total lines processed: $lineNum"
+echo "Total errors: $errorCount"
+if [[ $errorCount -gt 0 ]]; then
+  echo "See $logFile for details on errors."
+fi
 
 echo -e "\nAll items processed successfully."

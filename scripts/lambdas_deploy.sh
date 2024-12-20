@@ -46,6 +46,7 @@ verify_fun_directory(){
   for file in "${expected[@]}"; do
     if [ ! -f "$fun_path/$file" ]; then
       log "Error: $fun_path/$file not found, not a valid Lambda"
+      lambdas=("${lambdas[@]/$fun}")
       return 1
     fi
   done
@@ -176,7 +177,7 @@ configure_lambdas() {
 
     log "Waiting for Lambda $lambda to be ready"
 
-    aws lambda wait function-active-v2 --function-name "$lambda" \
+    silent aws lambda wait function-active-v2 --function-name "$lambda" \
                                        --region "$AWS_REGION" \
                                        --endpoint-url "$LOCALSTACK_ENDPOINT" || {
       log "Error waiting for Lambda $lambda to be ready";
@@ -193,19 +194,24 @@ configure_lambdas() {
         log "Error configuring Lambda $lambda";
         return 1;
       }
+  done
 
+  for lambda in "${lambdas[@]}"; do
      local env_string=""
-
-      if [ -f "$TMP_PATH/$lambda/localdev.env" ]; then
+     env_file="$TMP_PATH/$lambda/localdev.env"
+      if [ -f $env_file ]; then
+        log "#### Found $env_file for Lambda $lambda"
         declare -A env_vars
-        while IFS='=' read -r key value; do
+        while IFS='=' read -r key value || [[ -n "$key" ]]; do
           if [[ -n "$key" && -n "$value" ]]; then
             env_vars["$key"]="$value"
-            echo "key: $key value: $value"
           fi
-        done < "$TMP_PATH/$lambda/localdev.env"
+        done < "$env_file"
 
         env_string=$(for key in "${!env_vars[@]}"; do printf '%s=%s,' "$key" "${env_vars[$key]}"; done | sed 's/,$//')
+      else
+        log "#### No $env_file found for Lambda $lambda"
+        exit 1
       fi
 
     log "Configuring environment variables for Lambda $lambda"

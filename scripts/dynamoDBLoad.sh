@@ -57,15 +57,23 @@ fi
 
 numOfLines=$(($(cat ${inputFileName} | wc -l)))
 lineNum=0
-while read line ;
-do
-  lineNum=$((lineNum + 1))
-  printf "\r%3d%%" $((lineNum * 100 / numOfLines))
+while read line; do
+  aws ${aws_command_base_args} dynamodb put-item --table-name ${tableName} --item "${line}" > /dev/null & \
+  pids+=($!)
+done < ${inputFileName}
 
-  if ! aws ${aws_command_base_args} dynamodb put-item --table-name "${tableName}" --item "${line}" > /dev/null 2>&1; then
-    echo -e "\nFailed to put item at line ${lineNum}: ${line}"
-    exit 1
+for pid in "${pids[@]}"; do
+  lineNum=$((lineNum + 1))
+  wait $pid
+  rc=$?
+  if [[ $rc -ne 0 ]]; then
+    errorCount=$((errorCount + 1))
+    echo "Error on line $lineNum: AWS CLI command failed with exit code $rc. Line content: $line" >> $logFile
+  else
+    echo -ne "$((lineNum * 100 / numOfLines))%\r"
   fi
-done < "${inputFileName}"
+done
+
+wait
 
 echo -e "\nAll items processed successfully."

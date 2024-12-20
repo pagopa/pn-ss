@@ -11,8 +11,6 @@ LOCALSTACK_ENDPOINT="http://localhost:4566"
 
 
 ## DEFINITIONS ##
-NOTIFICATIONS_BUS_NAME="Pn-Ss-Notifications-Bus"
-
 S3_BUCKETS=(
             "pn-ss-storage-safestorage"
             "pn-ss-storage-safestorage-staging"
@@ -688,7 +686,6 @@ create_eventbridge_rule() {
     --endpoint-url="$LOCALSTACK_ENDPOINT" \
     --region "$AWS_REGION" \
     --name $event_name \
-    --event-bus-name "$NOTIFICATIONS_BUS_NAME" \
     --event-pattern "$event_pattern" \
     --state "ENABLED"
     log "Event rule created: $event_name" || \
@@ -705,7 +702,6 @@ put_sqs_as_rule_target() {
   aws events put-targets \
     --region "$AWS_REGION" \
     --endpoint-url "$LOCALSTACK_ENDPOINT" \
-    --event-bus-name "$NOTIFICATIONS_BUS_NAME" \
     --rule "$rule_name" \
     --targets "Id=${queue_name}-target,Arn=${queue_arn}"
 }
@@ -801,8 +797,6 @@ initialize_ssm(){
 initialize_event_bridge() {
     log "Initializing EventBridge"
     local pids=()
-    # Creating the Event Bus
-    create_event_bus $NOTIFICATIONS_BUS_NAME || return 1
 
     # Creating EventBridge Rules
     create_eventbridge_rule "PnSsEventRuleExternalNotifications" '{
@@ -862,6 +856,7 @@ pn_ss_storage_safestorage_staging_config(){
   fi
 
   local notification_config='{
+    "EventBridgeConfiguration": {},
     "QueueConfigurations": [
       {
         "QueueArn": "'"$queue_arn"'",

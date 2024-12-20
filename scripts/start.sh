@@ -15,7 +15,7 @@ INIT_SCRIPT=../src/test/resources/testcontainers/init.sh
 LAMBDAS_DEPLOY_SCRIPT=./lambdas_deploy.sh
 
 ## LOGGING FUNCTIONS ##
-log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
+log() { echo "[pn-ss-start][$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 
 silent() {
   if [ "$VERBOSE" = false ]; then

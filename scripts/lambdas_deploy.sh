@@ -10,7 +10,7 @@ QUEUE_LAMBDA_SOURCES=( "pn-ss-main-bucket-events-queue:gestoreBucketEventHandler
 
 
 ## LOGGING FUNCTIONS ##
-log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
+log() { echo "[pn-ss-lambda][$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 
 silent() {
   if [ "$VERBOSE" = false ]; then
@@ -196,14 +196,14 @@ configure_lambdas() {
 
      local env_string=""
 
-      if [ -f "$TMP_PATH/$lambda/properties.env" ]; then
+      if [ -f "$TMP_PATH/$lambda/localdev.env" ]; then
         declare -A env_vars
         while IFS='=' read -r key value; do
           if [[ -n "$key" && -n "$value" ]]; then
             env_vars["$key"]="$value"
             echo "key: $key value: $value"
           fi
-        done < "$TMP_PATH/$lambda/properties.env"
+        done < "$TMP_PATH/$lambda/localdev.env"
 
         env_string=$(for key in "${!env_vars[@]}"; do printf '%s=%s,' "$key" "${env_vars[$key]}"; done | sed 's/,$//')
       fi

@@ -517,7 +517,7 @@ SSM_CONFIG='{
 
 
 ## LOGGING FUNCTIONS ##
-log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
+log() { echo "[pn-ss-init][$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 
 silent() {
   if [ "$VERBOSE" = false ]; then

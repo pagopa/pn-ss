@@ -260,10 +260,6 @@ public class AwsConfiguration {
         return ssmClientBuilder.build();
     }
 
-    @Bean
-    public TaskExecutor taskExecutor() {
-        return new SimpleAsyncTaskExecutor(); // Or use another one of your liking
-    }
 
     private String getTaskId() {
 

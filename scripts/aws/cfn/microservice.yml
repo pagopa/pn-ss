@@ -405,8 +405,18 @@ Parameters:
 
   PnSsTaskExecutionPoolMaxSize:
     Type: String
-    Description: 'SpringBoot configuration Task Execution Max Pool Siza'
-    Default: '512'
+    Description: 'SpringBoot configuration Task Execution Max Pool Size'
+    Default: 0
+
+  PnSsTaskExecutionPoolCoreSize:
+    Type: String
+    Description: 'SpringBoot configuration Task Execution Pool Core Size'
+    Default: 0
+
+  PnSsTaskExecutionPoolQueueCapacity:
+    Type: String
+    Description: 'SpringBoot configuration Task Execution Pool Queue Capacity'
+    Default: 0
 
   PnSsDocumentDeletionMode:
     Type: String
@@ -511,6 +521,10 @@ Parameters:
     Type: Number
     Description: 'Max number of attempts for SQS retry strategy'
 
+  PnSsTransformationServiceMaxMessages:
+    Type: Number
+    Description: 'Max number of messages to be processed by the TransformationService'
+
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -528,7 +542,7 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
-
+    
   ServiceEndpointToPdfRaster:
     Type: String
     Description: 'Endpoint FQDN of PDFRaster microservice'
@@ -599,6 +613,9 @@ Resources:
         ContainerEnvEntry60: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
         ContainerEnvEntry61: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
         ContainerEnvEntry62: !Sub 'PnSsSignAndTimemarkMetricsSchema=${PnSsSignAndTimemarkMetricsSchema}'
+        ContainerEnvEntry63: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
+        ContainerEnvEntry64: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
+        ContainerEnvEntry65: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -1244,9 +1261,9 @@ Resources:
       SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn
 
   ######## Scadenza Documenti Lambda Handler  #########
-
-
-
+  
+  
+  
   PnSsScadenzaDocumentiLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1348,8 +1365,8 @@ Resources:
         S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventHandler.zip"
       Layers:
         - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
-
-
+        
+        
   PnSsQueuePolicyScadenzaDocumentiDynamoStreamDLQ:
     Type: AWS::SQS::QueuePolicy
     Properties:

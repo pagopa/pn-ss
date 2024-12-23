@@ -1,7 +1,7 @@
 #!/bin/bash
 
 region=eu-south-1
-account=089813480515
+account=""
 
 while getopts 'a:b:r:p:q:i:' opt ; do
   case "$opt" in 
@@ -46,6 +46,11 @@ fi
 
 if [[ ! $queueURL ]] ; then
   >&2 echo "-q parameter is mandatory"
+  exit 1
+fi
+
+if [[ ! $account ]] ; then
+  >&2 echo "-a parameter is mandatory"
   exit 1
 fi
 

@@ -42,9 +42,13 @@
     "PnSsSqsRetryStrategyMaxAttempts": "3",
     "PnSsSqsRetryStrategyMinBackoff": "3",
     "PnSsEventHandlerMaxMessages": "10",
+    "PnSsTransformationServiceMaxMessages": "10",
     "SpringCodecMaxInMemorySize": "10000000",
     "SignAndTimemarkMaxThreadPoolSize": "50",
-    "RasterMaxThreadPoolSize": "4",
-    "PnSsSignAndTimemarkMetricsSchema": "Pn-SS-SignAndTimemark-MetricsSchema"
+    "RasterMaxThreadPoolSize": "6",
+    "PnSsSignAndTimemarkMetricsSchema": "Pn-SS-SignAndTimemark-MetricsSchema",
+    "PnSsTaskExecutionPoolMaxSize": "2048",
+    "PnSsTaskExecutionPoolCoreSize": "8",
+    "PnSsTaskExecutionPoolQueueCapacity": "4096"
   }
 }

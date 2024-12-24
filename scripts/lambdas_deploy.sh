@@ -136,7 +136,7 @@ deploy_lambda(){
 
   silent aws lambda create-function \
         --function-name "$fun_name" \
-        --runtime nodejs14.x \
+        --runtime nodejs20.x \
         --handler index.handler \
         --role "arn:aws:iam::111122223333:role/service-role/$fun_name" \
         --zip-file fileb://"$zip" \

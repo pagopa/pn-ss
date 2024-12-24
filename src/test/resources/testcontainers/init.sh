@@ -15,7 +15,9 @@ S3_BUCKETS=(
             "pn-ss-storage-safestorage"
             "pn-ss-storage-safestorage-staging"
             "pn-runtime-environment-variables"
-            )
+)
+
+MAIN_BUCKET_QUEUE="pn-ss-main-bucket-events-queue"
 
 FILES_TO_BUCKETS=(
   "UpdateFileMetadataIgnore.list:pn-runtime-environment-variables/pn-safe-storage"
@@ -26,12 +28,12 @@ SQS_QUEUES=(
   "Pn-Ss-Availability-Queue"
   "pn-ss-staging-bucket-events-queue"
   "pn-ss-availability-events-queue"
-  "pn-ss-main-bucket-events-queue"
+  $MAIN_BUCKET_QUEUE
   "pn-ss-gestore-bucket-invocation-errors-queue"
   "pn-ss-external-notification-DEV-queue"
   "pn-ss-forward-events-pncoreeventbus-DLQueue"
   "pn-ss-scadenza-documenti-dynamoDBStreamDLQ-queue"
-          )
+)
 
 DYNAMODB_TABLES=(
   "pn-SsAnagraficaClient:name"
@@ -567,6 +569,7 @@ create_table() {
 
 create_bucket(){
   local bucket=$1
+  local queue=$2
 
   if silent aws s3api head-bucket --bucket "$bucket" \
                            --region "$AWS_REGION" \
@@ -576,15 +579,20 @@ create_bucket(){
   fi
 
   log "Creating bucket: $bucket"
-  silent aws s3api create-bucket --bucket "$bucket" \
+  aws s3api create-bucket --bucket "$bucket" \
                           --region "$AWS_REGION"  \
                           --endpoint-url "$LOCALSTACK_ENDPOINT" \
                           --create-bucket-configuration LocationConstraint="$AWS_REGION" \
                           --object-lock-enabled-for-bucket && \
-  silent aws s3api put-object-lock-configuration --bucket "$bucket" \
+  aws s3api put-object-lock-configuration --bucket "$bucket" \
                                           --object-lock-configuration "$OBJECT_LOCK_CONFIG"  \
                                           --region "$AWS_REGION"  \
                                           --endpoint-url "$LOCALSTACK_ENDPOINT" && \
+  aws --endpoint-url "$LOCALSTACK_ENDPOINT" s3api put-bucket-notification-configuration \
+   --bucket "$bucket" \
+  --notification-configuration  "{\"QueueConfigurations\":
+  [{\"QueueArn\": \"arn:aws:sqs:eu-south-1:000000000000:${queue}\",
+  \"Events\": [\"s3:ObjectCreated:*\", \"s3:ObjectRemoved:*\", \"s3:ObjectRestore\", \"s3:LifecycleExpiration:DeleteMarkerCreated\", \"s3:LifecycleTransition\"]}]}" && \
   log "Created and configured bucket: $bucket" || \
   { log "Failed to create bucket: $bucket" ; return 1; }
 }
@@ -712,7 +720,7 @@ create_buckets(){
 
   for bucket in "${S3_BUCKETS[@]}"; do
     log "Creating bucket: $bucket" && \
-    create_bucket $bucket &
+    create_bucket $bucket $MAIN_BUCKET_QUEUE &
     pids+=($!)
   done
 
@@ -945,9 +953,9 @@ buckets_configuration(){
 main(){
   log "### Initializing LocalStack Services ###"
 
-  ( create_buckets && \
+  ( create_queues && \
+      create_buckets && \
       load_files_to_buckets && \
-      create_queues && \
       buckets_configuration && \
       initialize_event_bridge && \
       initialize_dynamo && \

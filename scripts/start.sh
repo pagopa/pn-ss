@@ -66,7 +66,7 @@ deploy_lambdas() {
 build_run(){
   local curr_dir=$(pwd)
   cd ..
-  if ! ( ./mvnw -Dspring-boot.run.jvmArguments="-Dspring.profiles.active=$PROFILE -Daws.accessKeyId=$ACCESS_KEY -Daws.secretAccessKey=$SECRET_KEY -Daws.region=$REGION" spring-boot:run ); then
+  if ! ( ./mvnw -Dspring-boot.run.jvmArguments=" -Djava.net.preferIPv4Stack=true -Dspring.profiles.active=$PROFILE -Daws.accessKeyId=$ACCESS_KEY -Daws.secretAccessKey=$SECRET_KEY -Daws.region=$REGION" spring-boot:run ); then
   log "### Initialization failed ###"
   return 1
   fi

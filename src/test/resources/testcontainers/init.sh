@@ -25,6 +25,7 @@ FILES_TO_BUCKETS=(
 
 SQS_QUEUES=(
   "Pn-Ss-Availability-Queue"
+  "dgs-bing-ss-PnSsQueueStagingBucket-Pja8ntKQxYrs"
   "pn-ss-staging-bucket-events-queue"
   "pn-ss-availability-events-queue"
   $MAIN_BUCKET_QUEUE

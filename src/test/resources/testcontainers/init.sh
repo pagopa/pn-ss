@@ -24,7 +24,6 @@ FILES_TO_BUCKETS=(
 )
 
 SQS_QUEUES=(
-  "dgs-bing-ss-PnSsQueueStagingBucket-Pja8ntKQxYrs"
   "Pn-Ss-Availability-Queue"
   "pn-ss-staging-bucket-events-queue"
   "pn-ss-availability-events-queue"
@@ -807,9 +806,15 @@ initialize_event_bridge() {
     local pids=()
 
     # Creating EventBridge Rules
-    create_eventbridge_rule "PnSsEventRuleExternalNotifications" '{
-        "source": ["GESTORE DISPONIBILITA"]
-    }' &
+    create_eventbridge_rule "PnSsEventRuleExternalNotifications" '{"source": ["GESTORE DISPONIBILITA"],"region": ["eu-south-1"],"account": ["000000000000"]}' &
+    pids+=($!)
+
+    create_eventbridge_rule "pn-ec-microsvc-dev-PnEcEventRuleAvailabilityManager" '{
+                                                                                     "source": ["GESTORE DISPONIBILITA"],
+                                                                                     "detail": {
+                                                                                       "documentType": ["PN_PAPER_ATTACHMENT"]
+                                                                                     }
+                                                                                   }' &
     pids+=($!)
 
     create_eventbridge_rule "PnSsEventRuleStagingBucket" '{
@@ -823,10 +828,15 @@ initialize_event_bridge() {
     }' &
     pids+=($!)
 
+    wait_for_pids pids "Failed to initialize EventBridge rules"
+    [ "$?" -ne 0 ] && return 1
+    pids=()
     # Attaching SQS queues as targets to rules
     put_sqs_as_rule_target "pn-ss-external-notification-DEV-queue" "PnSsEventRuleExternalNotifications" &
     pids+=($!)
     put_sqs_as_rule_target "pn-ss-staging-bucket-events-queue" "PnSsEventRuleStagingBucket" &
+    pids+=($!)
+    put_sqs_as_rule_target "pn-ss-availability-events-queue" "pn-ec-microsvc-dev-PnEcEventRuleAvailabilityManager" &
     pids+=($!)
 
     wait_for_pids pids "Failed to initialize EventBridge targets"

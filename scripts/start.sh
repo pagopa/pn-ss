@@ -89,18 +89,16 @@ load_dynamodb(){
 }
 
 init_localstack_env(){
-  local exit_code=0
 
-  ( run_init && load_dynamodb ) & \
-  local infra_pid=$!
+  deploy_lambdas && \
+  echo "### Lambdas deployed ###" || \
+  { log "### Failed to deploy lambdas ###"; return 1; }
 
-  deploy_lambdas & \
-  local lambdas_pid=$!
 
-  wait $infra_pid || exit_code=1
-  wait $lambdas_pid || exit_code=1
+  ( run_init && load_dynamodb ) && \
+  echo "### Localstack environment initialized ###" || \
+  { log "### Failed to initialize Localstack environment ###"; return 1; }
 
-  return "$exit_code"
 }
 
 main(){

@@ -90,14 +90,14 @@ load_dynamodb(){
 
 init_localstack_env(){
 
-  deploy_lambdas && \
-  echo "### Lambdas deployed ###" || \
-  { log "### Failed to deploy lambdas ###"; return 1; }
-
 
   ( run_init && load_dynamodb ) && \
   echo "### Localstack environment initialized ###" || \
   { log "### Failed to initialize Localstack environment ###"; return 1; }
+
+  deploy_lambdas && \
+  echo "### Lambdas deployed ###" || \
+  { log "### Failed to deploy lambdas ###"; return 1; }
 
 }
 

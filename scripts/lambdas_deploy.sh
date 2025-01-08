@@ -139,6 +139,7 @@ deploy_lambda(){
         --runtime nodejs20.x \
         --handler index.handler \
         --role "arn:aws:iam::111122223333:role/service-role/$fun_name" \
+        --timeout 660 \
         --zip-file fileb://"$zip" \
         --endpoint-url "$LOCALSTACK_ENDPOINT" \
         --region "$AWS_REGION" || \

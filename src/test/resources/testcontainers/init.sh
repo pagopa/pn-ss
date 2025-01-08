@@ -682,7 +682,7 @@ create_event_bus()
   aws events create-event-bus \
     --region "$AWS_REGION" \
     --endpoint-url "$LOCALSTACK_ENDPOINT" \
-    --name $event_bus_name
+    --name $event_bus_name && \
     log "Event bus created: $event_bus_name" || \
   { log "Failed to create event bus: $event_bus_name"; return 1; }
 }
@@ -690,14 +690,28 @@ create_event_bus()
 create_eventbridge_rule() {
    local event_name=$1
    local event_pattern=$2
-   aws events put-rule \
-    --endpoint-url="$LOCALSTACK_ENDPOINT" \
-    --region "$AWS_REGION" \
-    --name $event_name \
-    --event-pattern "$event_pattern" \
-    --state "ENABLED"
-    log "Event rule created: $event_name" || \
-  { log "Failed to create event rule: $event_name"; return 1; }
+
+   if [ x$event_pattern = x ]; then
+     log "##### Event pattern not provided, using schedule expression #####"
+      aws events put-rule \
+        --endpoint-url="$LOCALSTACK_ENDPOINT" \
+        --region "$AWS_REGION" \
+        --name $event_name \
+        --schedule-expression "rate(1 minute)" \
+        --state "ENABLED" && \
+        log "Event rule created: $event_name" || \
+      { log "Failed to create event rule: $event_name"; return 1; }
+   else
+     log "##### Event pattern provided #####"
+     aws events put-rule \
+      --endpoint-url="$LOCALSTACK_ENDPOINT" \
+      --region "$AWS_REGION" \
+      --name $event_name \
+      --event-pattern "$event_pattern" \
+      --state "ENABLED" && \
+      log "Event rule created: $event_name" || \
+      { log "Failed to create event rule: $event_name"; return 1; }
+   fi
 }
 
 put_sqs_as_rule_target() {
@@ -810,27 +824,15 @@ initialize_event_bridge() {
     create_eventbridge_rule "PnSsEventRuleExternalNotifications" '{"source": ["GESTORE DISPONIBILITA"],"region": ["eu-south-1"],"account": ["000000000000"]}' &
     pids+=($!)
 
-    create_eventbridge_rule "pn-ec-microsvc-dev-PnEcEventRuleAvailabilityManager" '{
-                                                                                     "source": ["GESTORE DISPONIBILITA"],
-                                                                                     "detail": {
-                                                                                       "documentType": ["PN_PAPER_ATTACHMENT"]
-                                                                                     }
-                                                                                   }' &
+    create_eventbridge_rule "pn-ec-microsvc-dev-PnEcEventRuleAvailabilityManager" '{"source": ["GESTORE DISPONIBILITA"],"detail": {"documentType": ["PN_PAPER_ATTACHMENT"]}}' &
     pids+=($!)
 
-    create_eventbridge_rule "PnSsEventRuleStagingBucket" '{
-        "source": ["aws.s3"],
-        "detail-type": ["Object Created"],
-        "detail": {
-            "bucket": {
-                "name": ["pn-ss-storage-safestorage-staging"]
-            }
-        }
-    }' &
+    create_eventbridge_rule "PnSsEventRuleStagingBucket" '{"source": ["aws.s3"],"detail-type": ["Object Created"],"detail": {"bucket": {"name": ["pn-ss-storage-safestorage-staging"]}}}' &
     pids+=($!)
 
     wait_for_pids pids "Failed to initialize EventBridge rules"
     [ "$?" -ne 0 ] && return 1
+
     pids=()
     # Attaching SQS queues as targets to rules
     put_sqs_as_rule_target "pn-ss-external-notification-DEV-queue" "PnSsEventRuleExternalNotifications" &

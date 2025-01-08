@@ -691,7 +691,7 @@ create_eventbridge_rule() {
    local event_name=$1
    local event_pattern=$2
 
-   if [ x$event_pattern = x ]; then
+   if [ "x$event_pattern" = "x" ]; then
      log "##### Event pattern not provided, using schedule expression #####"
       aws events put-rule \
         --endpoint-url="$LOCALSTACK_ENDPOINT" \

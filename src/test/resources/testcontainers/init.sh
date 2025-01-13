@@ -569,7 +569,6 @@ create_table() {
 
 create_bucket(){
   local bucket=$1
-  local queue=$2
 
   if silent aws s3api head-bucket --bucket "$bucket" \
                            --region "$AWS_REGION" \
@@ -588,14 +587,11 @@ create_bucket(){
                                           --object-lock-configuration "$OBJECT_LOCK_CONFIG"  \
                                           --region "$AWS_REGION"  \
                                           --endpoint-url "$LOCALSTACK_ENDPOINT" && \
-  aws --endpoint-url "$LOCALSTACK_ENDPOINT" s3api put-bucket-notification-configuration \
-   --bucket "$bucket" \
-  --notification-configuration  "{\"QueueConfigurations\":
-  [{\"QueueArn\": \"arn:aws:sqs:eu-south-1:000000000000:${queue}\",
-  \"Events\": [\"s3:ObjectCreated:*\", \"s3:ObjectRemoved:*\", \"s3:ObjectRestore\", \"s3:LifecycleExpiration:DeleteMarkerCreated\", \"s3:LifecycleTransition\"]}]}" && \
-  log "Created and configured bucket: $bucket" || \
+  echo "Created bucket: $bucket" || \
   { log "Failed to create bucket: $bucket" ; return 1; }
 }
+
+
 
 load_to_s3(){
   local file=$1
@@ -734,7 +730,7 @@ create_buckets(){
 
   for bucket in "${S3_BUCKETS[@]}"; do
     log "Creating bucket: $bucket" && \
-    create_bucket $bucket $MAIN_BUCKET_QUEUE &
+    create_bucket $bucket &
     pids+=($!)
   done
 
@@ -814,6 +810,12 @@ initialize_ssm(){
                                --endpoint-url $LOCALSTACK_ENDPOINT && \
   log "Created SSM parameter: Pn-SS-IndexingConfiguration" || \
   { log "Failed to create SSM parameter: Pn-SS-IndexingConfiguration"; return 1; }
+
+  silent aws ssm get-parameter --name "Pn-SS-IndexingConfiguration" \
+                               --region $AWS_REGION \
+                               --endpoint-url $LOCALSTACK_ENDPOINT &&\
+  log "Verified SSM parameter: Pn-SS-IndexingConfiguration" || \
+  { log "Failed to verify SSM parameter: Pn-SS-IndexingConfiguration"; return 1; }
 }
 
 initialize_event_bridge() {

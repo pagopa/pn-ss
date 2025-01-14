@@ -40,9 +40,8 @@ public class CallMacchinaStatiImpl implements CallMacchinaStati {
                         .build(documentStatusChange.getProcessId(),
                                 documentStatusChange.getCurrentStatus()))
                 .retrieve()
-                .onStatus(HttpStatus::is5xxServerError, clientResponse -> clientResponse.createException().onErrorMap(WebClientResponseException.class, throwable -> new StateMachineServiceException(throwable.getMessage(), throwable)))
+                .onStatus(HttpStatus::is5xxServerError, clientResponse -> clientResponse.createException().map(throwable -> new StateMachineServiceException(throwable.getMessage(), throwable)))
                 .bodyToMono(MacchinaStatiValidateStatoResponseDto.class)
-                .onErrorMap(WebClientRequestException.class, throwable -> new StateMachineServiceException(throwable.getMessage(), throwable))
                 .flatMap(macchinaStatiValidateStatoResponseDto -> {
                     if (!macchinaStatiValidateStatoResponseDto.isAllowed()) {
                         return Mono.error(new InvalidNextStatusException(documentStatusChange));

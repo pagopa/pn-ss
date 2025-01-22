@@ -3,6 +3,7 @@ LAMBDA_FUNCTIONS_PATH=$1
 AWS_REGION=$2
 LOCALSTACK_ENDPOINT="http://localhost:4566"
 TMP_PATH="./tmp"
+NODE_RUNTIME="nodejs20.x"
 lambdas=()
 
 QUEUE_LAMBDA_SOURCES=( "pn-ss-main-bucket-events-queue:gestoreBucketEventHandler" )
@@ -133,10 +134,9 @@ deploy_lambda(){
     log "Lambda $fun_name already exists"
     return 0
   fi
-
   silent aws lambda create-function \
         --function-name "$fun_name" \
-        --runtime nodejs20.x \
+        --runtime $NODE_RUNTIME \
         --handler index.handler \
         --role "arn:aws:iam::111122223333:role/service-role/$fun_name" \
         --timeout 660 \

@@ -2,6 +2,8 @@ package it.pagopa.pn.library.sign.service;
 
 import com.namirial.sign.library.service.PnSignServiceImpl;
 import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
+import it.pagopa.pnss.common.service.impl.CloudWatchMetricsService;
+import it.pagopa.pnss.configuration.cloudwatch.CloudWatchMetricPublisherConfiguration;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
 import it.pagopa.pn.library.sign.exception.MaxRetryExceededException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
@@ -11,11 +13,14 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.wsdl.ArubaSignService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+
+import static it.pagopa.pn.library.sign.pojo.SignatureType.*;
 import static it.pagopa.pnss.utils.MockPecUtils.*;
 import static org.mockito.Mockito.*;
 
@@ -30,8 +35,16 @@ class PnSignServiceTest {
     private PnSignProviderService pnSignProviderService;
     @Autowired
     private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
+    @SpyBean
+    private CloudWatchMetricPublisherConfiguration cloudWatchMetricPublisherConfiguration;
+    @SpyBean
+    private CloudWatchMetricsService cloudWatchMetricsService;
     @MockBean
     private ArubaSignService arubaSignServiceClient;
+    @Value("${pn.sign.cloudwatch.namespace.aruba}")
+    private String arubaNamespace;
+    @Value("${pn.sign.cloudwatch.namespace.namirial}")
+    private String namirialNamespace;
 
     private static final String PROVIDER_SWITCH = "providerSwitch";
     private static final String CONDITIONAL_DATE_PROVIDER_PAST = "1999-02-01T10:00:00Z;aruba";
@@ -49,6 +62,7 @@ class PnSignServiceTest {
 
         verify(arubaSignProviderService, times(1)).signPdfDocument(fileBytes, true);
         verify(namirialSignProviderService, never()).signPdfDocument(any(), anyBoolean());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(arubaNamespace), eq(PADES.getValue()), anyLong(), anyLong());
     }
 
     @Test
@@ -77,6 +91,7 @@ class PnSignServiceTest {
 
         verify(arubaSignProviderService, times(1)).signXmlDocument(fileBytes, true);
         verify(namirialSignProviderService, never()).signXmlDocument(any(), anyBoolean());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(arubaNamespace), eq(XADES.getValue()), anyLong(), anyLong());
     }
 
     @Test
@@ -99,12 +114,12 @@ class PnSignServiceTest {
         byte[] fileBytes = "file".getBytes();
 
         mockArubaPkcs7SignV2Async(arubaSignServiceClient, "ok", fileBytes, RESP_OK);
-
         Mono<PnSignDocumentResponse> response = pnSignProviderService.pkcs7Signature(fileBytes, true);
         StepVerifier.create(response).expectNextCount(1).verifyComplete();
 
         verify(arubaSignProviderService, times(1)).pkcs7Signature(fileBytes, true);
         verify(namirialSignProviderService, never()).pkcs7Signature(any(), anyBoolean());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(arubaNamespace), eq(CADES.getValue()), anyLong(), anyLong());
     }
 
     @Test
@@ -133,6 +148,7 @@ class PnSignServiceTest {
 
         verify(namirialSignProviderService, times(1)).signPdfDocument(fileBytes, true);
         verify(arubaSignProviderService, never()).signPdfDocument(any(), anyBoolean());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(namirialNamespace), eq(PADES.getValue()), anyLong(), anyLong());
     }
 
     @Test
@@ -175,6 +191,7 @@ class PnSignServiceTest {
 
         verify(namirialSignProviderService, times(1)).signXmlDocument(fileBytes, true);
         verify(arubaSignProviderService, never()).signXmlDocument(any(), anyBoolean());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(namirialNamespace), eq(XADES.getValue()), anyLong(), anyLong());
     }
 
     @Test
@@ -217,6 +234,7 @@ class PnSignServiceTest {
 
         verify(namirialSignProviderService, times(1)).pkcs7Signature(fileBytes, true);
         verify(arubaSignProviderService, never()).pkcs7Signature(any(), anyBoolean());
+        verify(cloudWatchMetricsService, times(1)).publishResponseTime(eq(namirialNamespace), eq(CADES.getValue()), anyLong(), anyLong());
     }
 
     @Test

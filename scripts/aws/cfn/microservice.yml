@@ -434,6 +434,10 @@ Parameters:
     Type: String
     Description: 'Parameter used to define minimum backoff between attempts'
 
+  PnSsSignAndTimemarkMetricsSchema:
+    Type: String
+    Description: 'Name of the AWS parameter that contains the schema for the metrics of the sign and timemark service'
+
   CpuValue:
     Type: Number
     Default: 1024
@@ -608,9 +612,10 @@ Resources:
         ContainerEnvEntry59: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
         ContainerEnvEntry60: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
         ContainerEnvEntry61: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
-        ContainerEnvEntry62: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
-        ContainerEnvEntry63: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
-        ContainerEnvEntry64: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
+        ContainerEnvEntry62: !Sub 'PnSsSignAndTimemarkMetricsSchema=${PnSsSignAndTimemarkMetricsSchema}'
+        ContainerEnvEntry63: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
+        ContainerEnvEntry64: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
+        ContainerEnvEntry65: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

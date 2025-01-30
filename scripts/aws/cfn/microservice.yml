@@ -750,7 +750,7 @@ Resources:
   PnSsEventRuleStagingBucket:
     Type: AWS::Events::Rule
     Properties:
-      Description: 'Rule catching object creation events in SS staging bucket'
+      Description: 'Rule catching only ObjectTagging:Put and ObjectCreated:Put events in SS staging bucket'
       EventPattern:
         source:
           - 'aws.s3'
@@ -759,13 +759,16 @@ Resources:
         region:
           - !Ref AWS::Region
         detail-type:
-          - 'Object Created'
+          - 'AWS API Call via CloudTrail'   # EventBring non intercetta operazioni di tagging (solo creazione/eliminazione). Il tagging può essere filtrato da CloudTrail, così come PutObject
         detail:
-          bucket:
-            name:
+          eventSource:
+            - 's3.amazonaws.com'
+          eventName:
+            - 'PutObject'
+            - 'PutObjectTagging'
+          requestParameters:
+            bucketName:
               - !Ref PnSsStagingBucketName
-        resources:
-          - !Ref PnSsStagingBucketArn
       State: 'ENABLED'
       Targets:
         - Arn: !Ref PnSsQueueArnStagingBucket

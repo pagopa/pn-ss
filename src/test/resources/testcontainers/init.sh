@@ -463,7 +463,7 @@ OBJECT_LOCK_CONFIG='{
                       }
                     }'
 
-SSM_CONFIG='{
+INDEXING_CONFIG='{
       "globals": [
         {
           "key": "IUN",
@@ -515,6 +515,47 @@ SSM_CONFIG='{
       }
     }'
 
+METRICS_SCHEMA_CONFIG='{
+                           "PADES": {
+                             "0k-10k": [
+                               0,
+                               10
+                             ],
+                             "10k-100k": [
+                               10,
+                               100
+                             ],
+                             "100k+": [
+                               100
+                             ]
+                           },
+                           "CADES": {
+                             "0k-10k": [
+                               0,
+                               10
+                             ],
+                             "10k-100k": [
+                               10,
+                               100
+                             ],
+                             "100k+": [
+                               100
+                             ]
+                           },
+                           "XADES": {
+                             "0k-10k": [
+                               0,
+                               10
+                             ],
+                             "10k-100k": [
+                               10,
+                               100
+                             ],
+                             "100k+": [
+                               100
+                             ]
+                           }
+                         }'
 
 ## LOGGING FUNCTIONS ##
 log() { echo "[pn-ss-init][$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
@@ -710,6 +751,31 @@ create_eventbridge_rule() {
    fi
 }
 
+# Creazione dei parametri SSM
+create_ssm_parameter() {
+  local parameter_name=$1
+  local parameter_value=$2
+  echo "Creating parameter: $parameter_name"
+  echo "Parameter value: $parameter_value"
+
+  silent aws ssm get-parameter \
+    --region "$AWS_REGION" \
+    --endpoint-url "$LOCALSTACK_ENDPOINT" \
+    --name "$parameter_name" && \
+    log "Parameter already exists: $parameter_name" && \
+    return 0
+
+  aws ssm put-parameter \
+    --region "$AWS_REGION" \
+    --endpoint-url "$LOCALSTACK_ENDPOINT" \
+    --name "$parameter_name" \
+    --type String \
+    --value "$parameter_value" && \
+    log "Parameter created: $parameter_name" || \
+  { log "Failed to create parameter: $parameter_name"; return 1; }
+}
+
+
 put_sqs_as_rule_target() {
   local queue_name=$1
   local rule_name=$2
@@ -795,27 +861,8 @@ initialize_sm(){
 initialize_ssm(){
   log "### Initializing SSM Parameters ###"
 
-  if silent aws ssm get-parameter --name "Pn-SS-IndexingConfiguration" \
-                                   --region $AWS_REGION \
-                                   --endpoint-url $LOCALSTACK_ENDPOINT; then
-    log "SSM parameter already exists: Pn-SS-IndexingConfiguration" && return 0
-  fi
-
-  indexingConfig=$SSM_CONFIG
-
-  silent aws ssm put-parameter --name "Pn-SS-IndexingConfiguration" \
-                               --type "String" \
-                               --value "$indexingConfig" \
-                               --region $AWS_REGION \
-                               --endpoint-url $LOCALSTACK_ENDPOINT && \
-  log "Created SSM parameter: Pn-SS-IndexingConfiguration" || \
-  { log "Failed to create SSM parameter: Pn-SS-IndexingConfiguration"; return 1; }
-
-  silent aws ssm get-parameter --name "Pn-SS-IndexingConfiguration" \
-                               --region $AWS_REGION \
-                               --endpoint-url $LOCALSTACK_ENDPOINT &&\
-  log "Verified SSM parameter: Pn-SS-IndexingConfiguration" || \
-  { log "Failed to verify SSM parameter: Pn-SS-IndexingConfiguration"; return 1; }
+  create_ssm_parameter "Pn-SS-IndexingConfiguration" "$INDEXING_CONFIG" && \
+  create_ssm_parameter "Pn-SS-SignAndTimemark-MetricsSchema" "$METRICS_SCHEMA_CONFIG"
 }
 
 initialize_event_bridge() {

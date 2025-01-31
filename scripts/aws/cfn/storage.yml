@@ -584,31 +584,15 @@ Resources:
           QueueHasAlarm: 'false'
           AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
-# La coda per trasformazione antivirus
-    PnSsQueueAntivirusTranformationStack:
+# La coda per trasformazione SIGN
+    PnSsQueueSignTranformationStack:
       Type: AWS::CloudFormation::Stack
       UpdateReplacePolicy: Retain
       DeletionPolicy: Retain
       Properties:
         TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
         Parameters:
-          QueueName: 'pn-ss-transformation-antivirus-queue'
-          SqsManagedSseEnabled: true
-          MaxReceiveCount: 10
-          HasDLQ: True
-          VisibilityTimeout: 300
-          QueueHasAlarm: 'false'
-          AlarmSNSTopicName: !Ref AlarmSNSTopicName
-
-# La coda per trasformazione RASTER
-    PnSsQueueRasterTranformationStack:
-      Type: AWS::CloudFormation::Stack
-      UpdateReplacePolicy: Retain
-      DeletionPolicy: Retain
-      Properties:
-        TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
-        Parameters:
-          QueueName: 'pn-ss-transformation-raster-queue'
+          QueueName: 'pn-ss-transformation-sign-queue'
           SqsManagedSseEnabled: true
           MaxReceiveCount: 10
           HasDLQ: True

@@ -610,7 +610,7 @@ Resources:
         MaxReceiveCount: 10
         HasDLQ: True
         VisibilityTimeout: 300
-        QueueHasAlarm: 'false'
+        QueueHasAlarm: 'true'
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 ########### GESTORE BUCKET INVOKE DLQ ###########
@@ -806,6 +806,14 @@ Resources:
 
 
 Outputs:
+  PnSsQueueTransformationAntivirusQueueName:
+    Description: 'Nome della coda di trasformazione antivirus'
+    Value: !GetAtt PnSsQueueTransformationAntivirusStack.Outputs.QueueName
+
+  PnSsQueueTransformationAntivirusQueueArn:
+    Description: 'ARN della coda di trasformazione transformation'
+    Value: !GetAtt PnSsQueueTransformationAntivirusStack.Outputs.QueueArn
+
   PnSsTableNameAnagraficaClient:
     Description: 'Nome della tabella SS Anagrafica Client'
     Value: !Ref PnSsTableAnagraficaClient

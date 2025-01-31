@@ -29,7 +29,7 @@ public class TransformationConfig {
     }
 
     public String getTransformationQueueName(DocumentType.TransformationsEnum transformation) {
-        return null;
+        return config.get(transformation);
     }
 
 }

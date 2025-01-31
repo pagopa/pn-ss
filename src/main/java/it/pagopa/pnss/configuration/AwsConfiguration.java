@@ -39,8 +39,6 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -54,11 +52,11 @@ import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
+import software.amazon.awssdk.services.ssm.SsmAsyncClient;
+import software.amazon.awssdk.services.ssm.SsmAsyncClientBuilder;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.SsmClientBuilder;
 
-import software.amazon.awssdk.services.ssm.SsmAsyncClient;
-import software.amazon.awssdk.services.ssm.SsmAsyncClientBuilder;
 import java.net.URI;
 import java.util.List;
 
@@ -95,9 +93,6 @@ public class AwsConfiguration {
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
-
-    @Value("${test.aws.cloudwatch.endpoint:#{null}}")
-    private String testAwsCloudwatchEndpoint;
 
     @Value("${test.aws.ssm.endpoint:#{null}}")
     private String testAwsSsmEndpoint;
@@ -225,6 +220,19 @@ public class AwsConfiguration {
     }
 
     @Bean
+    public SsmClient ssmClient() {
+        SsmClientBuilder ssmClient = SsmClient.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            ssmClient.endpointOverride(URI.create(testAwsSsmEndpoint));
+        }
+
+        return ssmClient.build();
+    }
+
+    @Bean
     public S3Presigner s3Presigner()
     {
         S3Presigner.Builder builder = S3Presigner.builder()
@@ -237,29 +245,6 @@ public class AwsConfiguration {
 
         return builder.build();
     }
-
-    @Bean
-    public CloudWatchAsyncClient cloudWatchAsyncClient() {
-        CloudWatchAsyncClientBuilder cloudWatchAsyncClientBuilder = CloudWatchAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
-
-        if (testAwsCloudwatchEndpoint != null) {
-            cloudWatchAsyncClientBuilder.endpointOverride(URI.create(testAwsCloudwatchEndpoint));
-        }
-
-        return cloudWatchAsyncClientBuilder.build();
-    }
-
-    @Bean
-    public SsmClient ssmClient() {
-        SsmClientBuilder ssmClientBuilder = SsmClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
-
-        if (testAwsSsmEndpoint != null) {
-            ssmClientBuilder.endpointOverride(URI.create(testAwsSsmEndpoint));
-        }
-
-        return ssmClientBuilder.build();
-    }
-
 
     private String getTaskId() {
 

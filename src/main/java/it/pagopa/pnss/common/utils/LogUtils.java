@@ -89,11 +89,6 @@ public class LogUtils {
     public static final String RESTORE_OBJECT = "restoreObject()";
     public static final String DELETE_OBJECT = "deleteObject()";
 
-    //CLOUDWATCH
-    public static final String PUBLISH_RESPONSE_TIME = "CloudWatchMetricsService.publishResponseTime()";
-    public static final String ERROR_RETRIEVING_METRIC_NAMESPACE = "Error retrieving metric namespace. The given provider is not valid.";
-    public static final String GET_DIMENSION = "MetrcisDimensionConfiguration.getDimension()";
-
     //VALIDATION
     public static final String X_TRACE_ID_VALUE = "X_TRACE_ID_VALUE";
     public static final String USER_CONFIGURATION = "USER_CONFIGURATION";
@@ -105,6 +100,7 @@ public class LogUtils {
     public static final String SIGN_AND_TIMEMARK_TRANSFORMATION = "TransformationService.signAndTimemarkTransformation()";
     public static final String RASTER_TRANSFORMATION = "TransformationService.rasterTransformation()";
     public static final String CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET = "TransformationService.changeFromStagingBucketToHotBucket()";
+    public static final String TRANSFORMATION_CONFIG = "TransformationConfig";
 
     //RETENTION SERVICE
     public static final String GET_RETENTION_UNTIL = "RetentionService.getRetentionUntil()";

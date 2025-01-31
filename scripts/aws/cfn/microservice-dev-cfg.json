@@ -38,6 +38,7 @@
     "MemoryAmount": "4GB",
     "PnSsIgnoredUpdateMetadataList": "s3://pn-runtime-environment-variables-eu-south-1-089813480515/pn-safe-storage/UpdateFileMetadataIgnore.list",
     "PnSsIndexingConfiguration": "Pn-SS-IndexingConfiguration",
+    "PnSsTransformationConfiguration": "Pn-SS-TransformationConfiguration",
     "PnSsSafeClients": "pn-delivery;pn-delivery-push;pn-radd-alt;pn-service-desk",
     "PnSsSqsRetryStrategyMaxAttempts": "3",
     "PnSsSqsRetryStrategyMinBackoff": "3",
@@ -46,9 +47,8 @@
     "SpringCodecMaxInMemorySize": "10000000",
     "SignAndTimemarkMaxThreadPoolSize": "50",
     "RasterMaxThreadPoolSize": "6",
-    "PnSsSignAndTimemarkMetricsSchema": "Pn-SS-SignAndTimemark-MetricsSchema",
     "PnSsTaskExecutionPoolMaxSize": "2048",
     "PnSsTaskExecutionPoolCoreSize": "8",
-    "PnSsTaskExecutionPoolQueueCapacity": "4096"
+    "PnSsTaskExecutionPoolQueueCapacity": "4096" 
   }
 }

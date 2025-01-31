@@ -17,7 +17,6 @@ import javax.annotation.PostConstruct;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import it.pagopa.pnss.repositorymanager.entity.ScadenzaDocumentiEntity;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.repositorymanager.entity.TagsRelationsEntity;
 import lombok.CustomLog;
 import org.json.JSONException;
@@ -104,6 +103,7 @@ public class LocalStackTestConfig {
         try {
             initS3(localStackContainer);
             initIndexingConfigurationSsm();
+            initTransformationConfigSsm();
 
             //Set Aruba secret credentials.
             localStackContainer.execInContainer("awslocal",
@@ -127,8 +127,6 @@ public class LocalStackTestConfig {
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
-
-        initParameterStore();
     }
 
     private static String getArubaCredentials() {
@@ -145,26 +143,6 @@ public class LocalStackTestConfig {
             throw new RuntimeException(e);
         }
     }
-
-    private static void initParameterStore() {
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            String dimensionsJsonSchema = objectMapper.readTree(LocalStackTestConfig.class.getClassLoader().getResource("json/sign-dimensions-schema-test.json")).toString();
-            localStackContainer.execInContainer("awslocal",
-                    "ssm",
-                    "put-parameter",
-                    "--name",
-                    "Pn-SS-SignAndTimemark-MetricsSchema",
-                    "--type",
-                    "String",
-                    "--value",
-                    dimensionsJsonSchema);
-            log.debug("Created parameter Pn-SS-SignAndTimemark-MetricsSchema");
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
 
     private static void setNamirialCredentials(){
         System.setProperty("namirial.server.apikey", "namirial-api-key");
@@ -265,6 +243,26 @@ public class LocalStackTestConfig {
         }
     }
 
+    private static void initTransformationConfigSsm() throws IOException {
+        log.info("<-- START TRANSFORMATION CONFIG SSM init-->");
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        var fileReader = new FileReader("src/test/resources/transformation/transformation-config.json");
+        Object json = gson.fromJson(fileReader, Object.class);
+        String jsonStr = gson.toJson(json);
+        try {
+            localStackContainer.execInContainer("awslocal",
+                    "ssm",
+                    "put-parameter",
+                    "--name",
+                    "Pn-SS-TransformationConfiguration",
+                    "--type",
+                    "String",
+                    "--value",
+                    jsonStr);
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private static void execInContainer(String... command) throws IOException, InterruptedException {
         Container.ExecResult result = localStackContainer.execInContainer(command);

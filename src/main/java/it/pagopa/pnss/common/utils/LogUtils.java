@@ -105,6 +105,7 @@ public class LogUtils {
     public static final String SIGN_AND_TIMEMARK_TRANSFORMATION = "TransformationService.signAndTimemarkTransformation()";
     public static final String RASTER_TRANSFORMATION = "TransformationService.rasterTransformation()";
     public static final String CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET = "TransformationService.changeFromStagingBucketToHotBucket()";
+    public static final String TRANSFORMATION_CONFIG = "TransformationConfig";
 
     //RETENTION SERVICE
     public static final String GET_RETENTION_UNTIL = "RetentionService.getRetentionUntil()";

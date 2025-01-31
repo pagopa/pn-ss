@@ -103,6 +103,7 @@ public class LocalStackTestConfig {
         try {
             initS3(localStackContainer);
             initIndexingConfigurationSsm();
+            initTransformationConfigSsm();
 
             //Set Aruba secret credentials.
             localStackContainer.execInContainer("awslocal",
@@ -242,6 +243,26 @@ public class LocalStackTestConfig {
         }
     }
 
+    private static void initTransformationConfigSsm() throws IOException {
+        log.info("<-- START TRANSFORMATION CONFIG SSM init-->");
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        var fileReader = new FileReader("src/test/resources/transformation/transformation-config.json");
+        Object json = gson.fromJson(fileReader, Object.class);
+        String jsonStr = gson.toJson(json);
+        try {
+            localStackContainer.execInContainer("awslocal",
+                    "ssm",
+                    "put-parameter",
+                    "--name",
+                    "Pn-SS-TransformationConfiguration",
+                    "--type",
+                    "String",
+                    "--value",
+                    jsonStr);
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private static void execInContainer(String... command) throws IOException, InterruptedException {
         Container.ExecResult result = localStackContainer.execInContainer(command);

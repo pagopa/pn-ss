@@ -54,6 +54,9 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
 import software.amazon.awssdk.services.ssm.SsmAsyncClient;
 import software.amazon.awssdk.services.ssm.SsmAsyncClientBuilder;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.SsmClientBuilder;
+
 import java.net.URI;
 import java.util.List;
 
@@ -206,6 +209,19 @@ public class AwsConfiguration {
     @Bean
     public SsmAsyncClient ssmAsyncClient() {
         SsmAsyncClientBuilder ssmClient = SsmAsyncClient.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            ssmClient.endpointOverride(URI.create(testAwsSsmEndpoint));
+        }
+
+        return ssmClient.build();
+    }
+
+    @Bean
+    public SsmClient ssmClient() {
+        SsmClientBuilder ssmClient = SsmClient.builder()
                 .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
                 .region(Region.of(awsConfigurationProperties.regionCode()));
 

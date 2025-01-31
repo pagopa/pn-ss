@@ -560,7 +560,7 @@ Resources:
     Properties:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
-        QueueName: 'pn-transformation-dummy-queue'
+        QueueName: 'pn-ss-transformation-dummy-queue'
         SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True

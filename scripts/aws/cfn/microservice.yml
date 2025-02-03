@@ -490,6 +490,10 @@ Parameters:
     Type: String
     Description: 'Name of the parameter store containing the configuration for the indexing service'
 
+  PnSsTransformationConfiguration:
+    Type: String
+    Description: 'Name of the parameter store containing the configuration for the transformation service'
+
   SpringCodecMaxInMemorySize:
     Type: String
     Description: 'Spring Codec Max Memory Size'
@@ -652,6 +656,7 @@ Resources:
         ContainerEnvEntry67: !Sub 'PnSsQueueNameSignAndTimemarkTranformation=${PnSsQueueNameSignAndTimemarkTranformation}'
         ContainerEnvEntry68: !Sub 'PnSsQueueNameAntivirusTranformation=${PnSsQueueNameAntivirusTranformation}'
         ContainerEnvEntry69: !Sub 'PnSsQueueNameSignTranformationStack=${PnSsQueueNameSignTranformationStack}'
+        ContainerEnvEntry70: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

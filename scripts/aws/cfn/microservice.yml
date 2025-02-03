@@ -717,6 +717,7 @@ Resources:
             Resource:
               - !Ref PnSsQueueArnStagingBucket
               - !Ref PnSsQueueArnAvailability
+              - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:pn-ss-transformation*queue'sch
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:

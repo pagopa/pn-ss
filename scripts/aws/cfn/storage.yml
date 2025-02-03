@@ -513,6 +513,13 @@ Resources:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
             Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+          - Event: 's3:ObjectTagging:Put'
+            Queue: !GetAtt PnSsQueueTransformationAntivirusStack.Outputs.QueueARN
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: "prefix"
+                    Value: "ANTIVIRUS_"
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced

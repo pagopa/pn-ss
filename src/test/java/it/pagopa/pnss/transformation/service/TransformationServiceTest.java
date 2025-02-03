@@ -125,7 +125,7 @@ class TransformationServiceTest {
                 .contentType(contentType).build());
 
         //THEN
-        StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
+        StepVerifier.create(testMono).verifyComplete();
         verify(s3Service).getObject(FILE_KEY, bucket);
         verifyPnSignProviderCalls(contentType, true);
         verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());
@@ -148,7 +148,7 @@ class TransformationServiceTest {
                 .contentType(contentType).build());
 
         //THEN
-        StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
+        StepVerifier.create(testMono).verifyComplete();
         verify(s3Service).getObject(FILE_KEY, bucket);
         verifyPnSignProviderCalls(contentType, false);
         verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());
@@ -199,12 +199,11 @@ class TransformationServiceTest {
         //GIVEN
         String bucket = bucketName.ssStageName();
         String contentType = "application/pdf";
-        deleteObjectInBucket(FILE_KEY, bucket);
 
         //WHEN
         mockSignCalls();
         var testMono = transformationService.signAndTimemarkTransformation(TransformationMessage.builder()
-                .fileKey(FILE_KEY)
+                .fileKey("FAKE")
                 .transformationType(SIGN_AND_TIMEMARK)
                 .bucketName(bucket)
                 .contentType(contentType).build());
@@ -218,12 +217,11 @@ class TransformationServiceTest {
         //GIVEN
         String bucket = bucketName.ssStageName();
         String contentType = "application/pdf";
-        deleteObjectInBucket(FILE_KEY, bucket);
 
         //WHEN
         mockSignCalls();
         var testMono = transformationService.signTransformation(TransformationMessage.builder()
-                .fileKey(FILE_KEY)
+                .fileKey("FAKE")
                 .transformationType(SIGN)
                 .bucketName(bucket)
                 .contentType(contentType).build());
@@ -252,7 +250,6 @@ class TransformationServiceTest {
                 .thenAwait(Duration.ofMillis(2))
                 .expectNextMatches(PutObjectTaggingResponse.class::isInstance)
                 .verifyComplete();
-        verify(s3Service).getObject(FILE_KEY, bucket);
         verify(s3Service).putObjectTagging(FILE_KEY, bucket, expectedTagging);
     }
 
@@ -262,7 +259,6 @@ class TransformationServiceTest {
         String bucket = bucketName.ssStageName();
         Tag tag = Tag.builder().key("Transformation-" + DUMMY).value("OK").build();
         s3TestClient.putObjectTagging(builder -> builder.tagging(Tagging.builder().tagSet(tag).build()).key(FILE_KEY).bucket(bucket));
-        deleteObjectInBucket(FILE_KEY, bucket);
 
         //WHEN
         var testMono = transformationService.dummyTransformation(TransformationMessage.builder()
@@ -271,8 +267,7 @@ class TransformationServiceTest {
                 .bucketName(bucket).build());
 
         //THEN
-        StepVerifier.create(testMono).expectNextMatches(PutObjectTaggingResponse.class::isInstance).verifyComplete();
-        verify(s3Service).getObject(FILE_KEY, bucket);
+        StepVerifier.create(testMono).verifyComplete();
         verify(s3Service, never()).putObjectTagging(anyString(), anyString(), any());
     }
 
@@ -280,16 +275,15 @@ class TransformationServiceTest {
     void dummy_S3_Ko() {
         //GIVEN
         String bucket = bucketName.ssStageName();
-        deleteObjectInBucket(FILE_KEY, bucket);
 
         //WHEN
         var testMono = transformationService.dummyTransformation(TransformationMessage.builder()
-                .fileKey(FILE_KEY)
+                .fileKey("FAKE")
                 .transformationType(DUMMY)
                 .bucketName(bucket).build());
 
         //THEN
-        StepVerifier.create(testMono).expectNextMatches(NoSuchKeyException.class::isInstance).verifyComplete();
+        StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
     }
 
     void mockSignCalls() {

@@ -5,6 +5,7 @@ import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.transformation.model.dto.TransformationMessage;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -71,7 +72,11 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(FILE_KEY, contentType, bucket);
+        var testMono = transformationService.signAndTimemarkTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(SIGN_AND_TIMEMARK)
+                .bucketName(bucket)
+                .contentType(contentType).build());
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
@@ -90,7 +95,11 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signTransformation(FILE_KEY, contentType, bucket);
+        var testMono = transformationService.signTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(SIGN)
+                .bucketName(bucket)
+                .contentType(contentType).build());
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
@@ -109,7 +118,11 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(FILE_KEY, contentType, bucketName.ssStageName());
+        var testMono = transformationService.signAndTimemarkTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(SIGN_AND_TIMEMARK)
+                .bucketName(bucket)
+                .contentType(contentType).build());
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
@@ -128,7 +141,11 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signTransformation(FILE_KEY, contentType, bucket);
+        var testMono = transformationService.signTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(SIGN)
+                .bucketName(bucket)
+                .contentType(contentType).build());
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
@@ -145,7 +162,11 @@ class TransformationServiceTest {
 
         //WHEN
         when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception")));
-        var testMono = transformationService.signAndTimemarkTransformation(FILE_KEY, contentType, bucket);
+        var testMono = transformationService.signAndTimemarkTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(SIGN_AND_TIMEMARK)
+                .bucketName(bucket)
+                .contentType(contentType).build());
 
         //THEN
         StepVerifier.create(testMono).expectError(PnSpapiPermanentErrorException.class).verify();
@@ -161,7 +182,11 @@ class TransformationServiceTest {
 
         //WHEN
         when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception")));
-        var testMono = transformationService.signTransformation(FILE_KEY, contentType, bucket);
+        var testMono = transformationService.signTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(SIGN)
+                .bucketName(bucket)
+                .contentType(contentType).build());
 
         //THEN
         StepVerifier.create(testMono).expectError(PnSpapiPermanentErrorException.class).verify();
@@ -178,7 +203,11 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(FILE_KEY, contentType, bucket);
+        var testMono = transformationService.signAndTimemarkTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(SIGN_AND_TIMEMARK)
+                .bucketName(bucket)
+                .contentType(contentType).build());
 
         //THEN
         StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
@@ -193,7 +222,11 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signTransformation(FILE_KEY, contentType, bucket);
+        var testMono = transformationService.signTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(SIGN)
+                .bucketName(bucket)
+                .contentType(contentType).build());
 
         //THEN
         StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
@@ -207,7 +240,10 @@ class TransformationServiceTest {
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
         //WHEN
-        var testMono = transformationService.dummyTransformation(FILE_KEY, bucket);
+        var testMono = transformationService.dummyTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(DUMMY)
+                .bucketName(bucket).build());
 
         //THEN
         StepVerifier.create(testMono)
@@ -229,7 +265,10 @@ class TransformationServiceTest {
         deleteObjectInBucket(FILE_KEY, bucket);
 
         //WHEN
-        var testMono = transformationService.dummyTransformation(FILE_KEY, bucket);
+        var testMono = transformationService.dummyTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(DUMMY)
+                .bucketName(bucket).build());
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectTaggingResponse.class::isInstance).verifyComplete();
@@ -244,7 +283,10 @@ class TransformationServiceTest {
         deleteObjectInBucket(FILE_KEY, bucket);
 
         //WHEN
-        var testMono = transformationService.dummyTransformation(FILE_KEY, bucket);
+        var testMono = transformationService.dummyTransformation(TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .transformationType(DUMMY)
+                .bucketName(bucket).build());
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(NoSuchKeyException.class::isInstance).verifyComplete();

@@ -17,6 +17,7 @@ import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.model.dto.CreationDetail;
+import it.pagopa.pnss.transformation.model.dto.TransformationMessage;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import lombok.CustomLog;
 import org.apache.commons.lang3.NotImplementedException;
@@ -78,103 +79,15 @@ public class TransformationService {
         this.sqsService = sqsService;
     }
 
-    @Scheduled(cron = "${PnEcCronScaricamentoEsitiPec ?:*/10 * * * * *}")
-    void newStagingBucketObjectCreatedListener() {
-        MDC.clear();
-        log.logStartingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER);
-        AtomicBoolean hasMessages = new AtomicBoolean();
-        hasMessages.set(true);
-        Mono.defer(() -> sqsService.getMessages(signQueueName, CreatedS3ObjectDto.class, maxMessages)
-                        .doOnNext(messageWrapper -> logIncomingMessage(signQueueName,  messageWrapper.getMessageContent()))
-                        .flatMap(sqsMessageWrapper -> {
-                            String fileKey = isKeyPresent(sqsMessageWrapper.getMessageContent()) ? sqsMessageWrapper.getMessageContent().getCreationDetailObject().getObject().getKey() : "null";
-                            MDC.put(MDC_CORR_ID_KEY, fileKey);
-                            return MDCUtils.addMDCToContextAndExecute(newStagingBucketObjectCreatedEvent(sqsMessageWrapper));
-                        })
-                        .collectList())
-                        .doOnNext(list -> hasMessages.set(!list.isEmpty()))
-                        .repeat(hasMessages::get)
-                        .doOnError(e -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER, false, e.getMessage()))
-                        .doOnComplete(() -> log.logEndingProcess(NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER))
-                        .blockLast();
-    }
-
-    public Mono<DeleteMessageResponse> newStagingBucketObjectCreatedEvent(SqsMessageWrapper<CreatedS3ObjectDto> newStagingBucketObjectWrapper) {
-
-        log.debug(LogUtils.INVOKING_METHOD, NEW_STAGING_BUCKET_OBJECT_CREATED, newStagingBucketObjectWrapper.getMessageContent());
-
-        AtomicReference<String> fileKeyReference = new AtomicReference<>("");
-        return Mono.fromCallable(() -> {
-                    return  newStagingBucketObjectWrapper;
-                })
-                .filter(wrapper-> isKeyPresent(wrapper.getMessageContent()))
-                .doOnDiscard(SqsMessageWrapper.class, wrapper -> {
-                    CreatedS3ObjectDto newStagingBucketObject = (CreatedS3ObjectDto) wrapper.getMessageContent();
-                    log.debug("The new staging bucket object with id '{}' was discarded", newStagingBucketObject.getId());
-                })
-                .flatMap(wrapper -> {
-                    CreationDetail detailObject = wrapper.getMessageContent().getCreationDetailObject();
-                    String fileKey = detailObject.getObject().getKey();
-                    fileKeyReference.set(fileKey);
-                    return objectTransformation(fileKey, detailObject.getBucketOriginDetail().getName(), wrapper.getMessageContent().getRetry());
-                })
-                .doOnError(throwable -> log.debug(EXCEPTION_IN_PROCESS + ": {}", NEW_STAGING_BUCKET_OBJECT_CREATED, throwable.getMessage(), throwable))
-                .flatMap(transformationResponse ->
-                        sqsService.deleteMessageFromQueue(newStagingBucketObjectWrapper.getMessage(), signQueueName)
-                                .doOnSuccess(response -> log.debug("Message with key '{}' was deleted", fileKeyReference.get()))
-                                .doOnError(throwable -> log.error("An error occurred during deletion of message with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()))
-                )
-                .doOnError(throwable -> !(throwable instanceof InvalidStatusTransformationException || throwable instanceof IllegalTransformationException), throwable -> log.error("An error occurred during transformations for document with key '{}' -> {}", fileKeyReference.get(), throwable.getMessage()))
-                .onErrorResume(throwable -> newStagingBucketObjectWrapper.getMessageContent().getRetry() <= MAX_RETRIES, throwable -> {
-                    newStagingBucketObjectWrapper.getMessageContent().setRetry(newStagingBucketObjectWrapper.getMessageContent().getRetry() + 1);
-                    return sqsService.send(signQueueName, newStagingBucketObjectWrapper.getMessageContent())
-                            .then(sqsService.deleteMessageFromQueue(newStagingBucketObjectWrapper.getMessage(), signQueueName))
-                            .doOnSuccess(response -> log.debug("Retry - Message with key '{}' was deleted", fileKeyReference.get()))
-                            .doOnError(throwable1 -> log.error("Retry - An error occurred during deletion of message with key '{}' -> {}", fileKeyReference.get(), throwable1.getMessage()));
-                });
-    }
-
-    public Mono<DeleteObjectResponse> objectTransformation(String key, String stagingBucketName, int retry) {
-        log.debug(INVOKING_METHOD, OBJECT_TRANSFORMATION, Stream.of(key, stagingBucketName).toList());
-        return documentClientCall.getDocument(key)
-                .map(DocumentResponse::getDocument)
-                .filter(document -> document.getDocumentState().equalsIgnoreCase(STAGED) || document.getDocumentState().equalsIgnoreCase(AVAILABLE))
-                .doOnDiscard(Document.class, document -> log.warn("Current status '{}' is not valid for transformation for document '{}'", document.getDocumentState(), key))
-                .switchIfEmpty(Mono.error(new InvalidStatusTransformationException(key)))
-                .filter(document -> {
-                    var transformations = document.getDocumentType().getTransformations();
-                    log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return CompareUtils.enumContainsAny(DocumentType.TransformationsEnum.class,transformations);
-                })
-                .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
-                .filterWhen(document -> isSignatureNeeded(key, retry))
-                .flatMap(document -> chooseTransformationType(document, key, stagingBucketName))
-                .then(removeObjectFromStagingBucket(key, stagingBucketName))
-                .doOnSuccess(response -> log.debug(SUCCESSFUL_OPERATION_LABEL, OBJECT_TRANSFORMATION, response))
-                .doOnError(throwable -> log.debug(EXCEPTION_IN_PROCESS + ": {}", OBJECT_TRANSFORMATION, throwable.getMessage(), throwable));
-    }
-
-    private Mono<PutObjectResponse> chooseTransformationType(Document document, String key, String stagingBucketName) {
-        var transformations = document.getDocumentType().getTransformations();
-        if (transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)) {
-            return signAndTimemarkTransformation(key, document.getContentType(), stagingBucketName);
-        } else if (transformations.contains(DocumentType.TransformationsEnum.SIGN)) {
-            return signTransformation(key, document.getContentType(), stagingBucketName);
-        } else if (transformations.contains(DocumentType.TransformationsEnum.DUMMY)) {
-            return dummyTransformation(key,stagingBucketName);
-        }
-        else return Mono.error(new IllegalTransformationException(key));
-    }
-
-    public Mono<PutObjectResponse> signAndTimemarkTransformation(String fileKey, String contentType, String bucketName) {
+    public Mono<PutObjectResponse> signAndTimemarkTransformation(TransformationMessage transformationMessage) {
         throw new NotImplementedException();
     }
 
-    public Mono<PutObjectResponse> signTransformation(String fileKey, String contentType, String bucketName) {
+    public Mono<PutObjectResponse> signTransformation(TransformationMessage transformationMessage) {
         throw new NotImplementedException();
     }
 
-    public Mono<PutObjectResponse> dummyTransformation(String fileKey, String bucketName) {
+    public Mono<PutObjectResponse> dummyTransformation(TransformationMessage transformationMessage) {
         throw new NotImplementedException();
     }
 

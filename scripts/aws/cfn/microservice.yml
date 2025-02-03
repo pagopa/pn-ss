@@ -274,7 +274,39 @@ Parameters:
     Type: String
     Description: 'ARN coda per notifiche disponibilità'
 
-#### Parametri presenti nel file json di configurazione  ###
+  PnSsQueueNameDummyTranformation:
+    Type: String
+    Description: 'Nome coda per trasformazione dummy'
+
+  PnSsQueueArnDummyTranformation:
+    Type: String
+    Description: 'ARN coda per trasformazione dummy'
+
+  PnSsQueueNameSignAndTimemarkTranformation:
+    Type: String
+    Description: 'Nome coda per trasformazione sign_and_timemark'
+
+  PnSsQueueArnSignAndTimemarkTranformation:
+    Type: String
+    Description: 'ARN coda per tasformazione sign_and_timemark'
+
+  PnSsQueueNameAntivirusTranformation:
+    Type: String
+    Description: 'Nome coda per la trasformazione antivirus'
+
+  PnSsQueueArnAntivirusTranformation:
+    Type: String
+    Description: 'ARN coda per la trasformazione antivirus'
+
+  PnSsQueueNameSignTranformationStack:
+    Type: String
+    Description: 'Nome coda per la trasformazione sign'
+
+  PnSsQueueArnSignTranformationStack:
+    Type: String
+    Description: 'ARN coda per la trasformazione sign'
+
+  #### Parametri presenti nel file json di configurazione  ###
 
   PnSsUriBuilderstayHotTime:
     Type: String
@@ -620,7 +652,11 @@ Resources:
         ContainerEnvEntry63: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
         ContainerEnvEntry64: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
         ContainerEnvEntry65: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
-        ContainerEnvEntry66: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
+        ContainerEnvEntry66: !Sub 'PnSsQueueNameDummyTranformation=${PnSsQueueNameDummyTranformation}'
+        ContainerEnvEntry67: !Sub 'PnSsQueueNameSignAndTimemarkTranformation=${PnSsQueueNameSignAndTimemarkTranformation}'
+        ContainerEnvEntry68: !Sub 'PnSsQueueNameAntivirusTranformation=${PnSsQueueNameAntivirusTranformation}'
+        ContainerEnvEntry69: !Sub 'PnSsQueueNameSignTranformationStack=${PnSsQueueNameSignTranformationStack}'
+        ContainerEnvEntry70: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

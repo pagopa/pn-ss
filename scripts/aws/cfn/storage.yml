@@ -806,10 +806,6 @@ Resources:
 
 
 Outputs:
-  PnSsQueueTransformationAntivirusQueueName:
-    Description: 'Nome della coda di trasformazione antivirus'
-    Value: !GetAtt PnSsQueueTransformationAntivirusStack.Outputs.QueueName
-
   PnSsQueueTransformationAntivirusQueueArn:
     Description: 'ARN della coda di trasformazione transformation'
     Value: !GetAtt PnSsQueueTransformationAntivirusStack.Outputs.QueueArn

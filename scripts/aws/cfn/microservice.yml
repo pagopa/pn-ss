@@ -96,10 +96,6 @@ Parameters:
     Default: 'safeStorageObjectPutAndGetTracing'
     Description: 'Destination path into bucket name'
 
-  PnSsQueueTransformationAntivirusQueueName:
-    Type: String
-    Description: 'Nome della coda di trasformazione antivirus'
-
   PnSsQueueTransformationAntivirusQueueArn:
     Type: String
     Description: 'ARN della coda di trasformazione transformation'

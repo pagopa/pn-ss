@@ -5,6 +5,7 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -125,6 +126,16 @@ public class S3ServiceImpl implements S3Service {
         return Mono.fromCompletionStage(s3AsyncClient.putObjectTagging(builder -> builder.key(key).bucket(bucketName).tagging(tagging)))
                 .doOnNext(putObjectTaggingResponse ->  log.info(CLIENT_METHOD_RETURN, PUT_OBJECT_TAGGING, putObjectTaggingResponse))
                 .retryWhen(s3RetryStrategy);
+    }
+
+    @Override
+    public Mono<GetObjectTaggingResponse> getObjectTagging(String key, String bucketName) {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Mono<ListObjectVersionsResponse> listObjectVersions(String key, String bucket) {
+        throw new NotImplementedException();
     }
 
 }

@@ -25,5 +25,9 @@ public interface S3Service {
 
     Mono<PutObjectTaggingResponse> putObjectTagging(String key, String bucket, Tagging tagging);
 
+    Mono<GetObjectTaggingResponse> getObjectTagging(String key, String bucket);
+
+    Mono<ListObjectVersionsResponse> listObjectVersions(String key, String bucket);
+
 
 }

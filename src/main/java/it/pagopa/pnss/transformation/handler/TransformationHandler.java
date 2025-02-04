@@ -1,6 +1,7 @@
 package it.pagopa.pnss.transformation.handler;
 
 import io.awspring.cloud.messaging.listener.Acknowledgment;
+import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import it.pagopa.pnss.transformation.service.TransformationService;
 import lombok.CustomLog;
@@ -16,7 +17,7 @@ public class TransformationHandler {
         this.transformationService = transformationService;
     }
 
-    @SqsListener
+    @SqsListener(value = "${pn.ss.transformation.queues.staging}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     void processAndPublishTransformation(S3EventNotification event, Acknowledgment acknowledgment) {
         transformationService.handleS3Event(event.getRecords().get(0))
                 .doOnSuccess(result -> acknowledgment.acknowledge())

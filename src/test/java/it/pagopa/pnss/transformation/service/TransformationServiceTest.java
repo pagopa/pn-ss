@@ -7,6 +7,8 @@ import it.pagopa.pn.library.sign.service.impl.ArubaSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.exception.SqsClientException;
+import it.pagopa.pnss.common.service.EventBridgeService;
 import it.pagopa.pnss.transformation.exception.InvalidDocumentStateException;
 import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
 import it.pagopa.pnss.common.rest.call.pdfraster.PdfRasterCall;
@@ -14,7 +16,6 @@ import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configuration.TransformationConfig;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
 import it.pagopa.pnss.transformation.model.dto.TransformationMessage;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
@@ -23,7 +24,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import reactor.core.publisher.Mono;
@@ -37,8 +37,6 @@ import software.amazon.awssdk.eventnotifications.s3.model.UserIdentity;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
-import software.amazon.awssdk.services.sqs.model.QueueDoesNotExistException;
-import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -73,15 +71,12 @@ class TransformationServiceTest {
     private S3Service s3Service;
     @MockBean
     private PdfRasterCall pdfRasterCall;
-    @Value("${s3.queue.sign-queue-name}")
-    private String signQueueName;
     @Autowired
     private SqsAsyncClient sqsAsyncClient;
     @SpyBean
     private TransformationConfig transformationConfig;
-
-    @Value("${pn.ss.transformation-service.dummy.delay}")
-    private Integer dummyDelay;
+    @SpyBean
+    private EventBridgeService eventBridgeService;
     private final String FILE_KEY = "FILE_KEY";
     private static final String SIGN_AND_TIMEMARK = "SIGN_AND_TIMEMARK";
     private static final String SIGN = "SIGN";
@@ -97,10 +92,35 @@ class TransformationServiceTest {
     @AfterEach
     void clean() {
         deleteObjectInBucket(FILE_KEY, bucketName.ssHotName());
+        deleteObjectInBucket(FILE_KEY, bucketName.ssStageName());
     }
 
     @Test
     void handleEvent_FirstTransformation_Ok() {
+        //GIVEN
+        String sourceBucket = bucketName.ssStageName();
+        String contentType = "application/pdf";
+        String nextTransformation = SIGN_AND_TIMEMARK;
+        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT);
+        TransformationMessage expectedMessage = TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .bucketName(sourceBucket)
+                .contentType(contentType)
+                .transformationType(nextTransformation)
+                .build();
+
+        //WHEN
+        mockGetDocument(contentType, STAGED, List.of(nextTransformation));
+        var testMono = transformationService.handleS3Event(record);
+
+        //THEN
+        StepVerifier.create(testMono).verifyComplete();
+        verify(s3Service).listObjectVersions(FILE_KEY, sourceBucket);
+        verify(sqsService).send(any(), eq(expectedMessage));
+    }
+
+    @Test
+    void handleEvent_FirstTransformation_ObjectHasMoreVersions_Ok() {
         //GIVEN
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
@@ -151,6 +171,35 @@ class TransformationServiceTest {
         verify(sqsService).send(any(), eq(expectedMessage));
     }
 
+    // Il valore associato al tag Transformation è "ERROR". Ci aspettiamo che venga notificato un evento di indisponibilità.
+    @Test
+    void handleEvent_OtherTransformations_ErrorState() {
+        //GIVEN
+        String sourceBucket = bucketName.ssStageName();
+        String contentType = "application/pdf";
+        String nextTransformation = DUMMY;
+        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT);
+        TransformationMessage expectedMessage = TransformationMessage.builder()
+                .fileKey(FILE_KEY)
+                .bucketName(sourceBucket)
+                .contentType(contentType)
+                .transformationType(nextTransformation)
+                .build();
+
+        // Simuliamo il fatto che la prima trasformazione è già stata fatta.
+        Tag tag = Tag.builder().key("Transformation-" + SIGN_AND_TIMEMARK).value("ERROR").build();
+        s3TestClient.putObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket).tagging(Tagging.builder().tagSet(tag).build()));
+
+        //WHEN
+        mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, nextTransformation));
+        var testMono = transformationService.handleS3Event(record);
+
+        //THEN
+        StepVerifier.create(testMono).verifyComplete();
+        verify(s3Service).getObjectTagging(FILE_KEY, sourceBucket);
+        verify(eventBridgeService).putSingleEvent(any());
+    }
+
     // L'oggetto S3 ha un tag di tipo Transformation-xxx, ma il valore associato non è riconosciuto.
     @Test
     void handleEvent_OtherTransformations_UnrecognizedTransformationState_Ko() {
@@ -175,9 +224,8 @@ class TransformationServiceTest {
         var testMono = transformationService.handleS3Event(record);
 
         //THEN
-        StepVerifier.create(testMono).expectError(InvalidTransformationStateException.StatusNotRecognizedException.class);
+        StepVerifier.create(testMono).expectError(InvalidTransformationStateException.StatusNotRecognizedException.class).verify();
         verify(s3Service).getObjectTagging(FILE_KEY, sourceBucket);
-        verify(sqsService).send(any(), eq(expectedMessage));
     }
 
     // L'oggetto S3 non ha un tag di tipo Transformation-xxx, quindi lo stato della trasformazione non è considerato valido.
@@ -186,21 +234,14 @@ class TransformationServiceTest {
         //GIVEN
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
-        String nextTransformation = DUMMY;
         S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT);
-        TransformationMessage expectedMessage = TransformationMessage.builder()
-                .fileKey(FILE_KEY)
-                .bucketName(sourceBucket)
-                .contentType(contentType)
-                .transformationType(nextTransformation)
-                .build();
 
         // Inseriamo un tag che non ci aspettiamo. Il tag di tipo Transformation-xxx non viene inserito.
         Tag tag = Tag.builder().key("FakeTagKey").value("FakeTagValue").build();
         s3TestClient.putObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket).tagging(Tagging.builder().tagSet(tag).build()));
 
         //WHEN
-        mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, nextTransformation));
+        mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, DUMMY));
         var testMono = transformationService.handleS3Event(record);
 
         //THEN
@@ -239,9 +280,11 @@ class TransformationServiceTest {
         String lastTransformation = DUMMY;
         S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT);
 
-        // Simuliamo il fatto che l'ultima trasformazione è stata applicata.
+        // Simuliamo che l'ultima trasformazione è stata applicata.
         Tag tag = Tag.builder().key("Transformation-" + lastTransformation).value("OK").build();
         s3TestClient.putObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket).tagging(Tagging.builder().tagSet(tag).build()));
+        // Simuliamo che il file è già presente nel bucket finale
+        putObjectInBucket(FILE_KEY, bucketName.ssHotName(),  new byte[10]);
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, lastTransformation));
@@ -274,7 +317,7 @@ class TransformationServiceTest {
         S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT);
 
         //WHEN
-        mockGetDocument(contentType, ATTACHED, List.of("NONE"));
+        mockGetDocument(contentType, STAGED, List.of("NONE"));
         var testMono = transformationService.handleS3Event(record);
 
         //THEN
@@ -315,7 +358,7 @@ class TransformationServiceTest {
         var testMono = transformationService.handleS3Event(record);
 
         //THEN
-        StepVerifier.create(testMono).expectError(QueueDoesNotExistException.class).verify();
+        StepVerifier.create(testMono).expectError(SqsClientException.class).verify();
         verify(s3Service).listObjectVersions(FILE_KEY, sourceBucket);
         verify(sqsService).send(any(), eq(expectedMessage));
     }
@@ -325,6 +368,7 @@ class TransformationServiceTest {
                 .tipoDocumento(DocTypesConstant.PN_AAR)
                 .checksum(DocumentType.ChecksumEnum.MD5);
         var document = new Document().documentType(documentType1);
+        document.setDocumentKey(FILE_KEY);
         document.setContentType(contentType);
         document.getDocumentType().setTransformations(transformations.stream().map(DocumentType.TransformationsEnum::fromValue).toList());
         document.setDocumentState(documentState);
@@ -374,7 +418,9 @@ class TransformationServiceTest {
     }
 
     private void deleteObjectInBucket(String key, String bucketName) {
-        s3TestClient.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(key).build());
+        ListObjectVersionsResponse response = s3TestClient.listObjectVersions(ListObjectVersionsRequest.builder().prefix(key).bucket(bucketName).build());
+        response.versions().forEach(version -> s3TestClient.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(version.key()).versionId(version.versionId()).build()));
+        response.deleteMarkers().forEach(deleteMarker -> s3TestClient.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(deleteMarker.key()).versionId(deleteMarker.versionId()).build()));
     }
 
     private S3EventNotificationRecord createS3Event(String eventName, String fileKey) {
@@ -389,11 +435,6 @@ class TransformationServiceTest {
 
     private S3EventNotificationRecord createS3Event(String eventName) {
         return createS3Event(eventName, FILE_KEY);
-    }
-
-    private Mono<SendMessageResponse> sendMessageToQueue(CreatedS3ObjectDto createdS3ObjectDto) {
-        return sqsService.send(signQueueName, createdS3ObjectDto);
-
     }
 
 }

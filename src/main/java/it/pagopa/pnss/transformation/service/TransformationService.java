@@ -36,14 +36,6 @@ public class TransformationService {
     private String defaultInternalApiKeyValue;
     @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
     private String defaultInternalClientIdValue;
-    @Value("${s3.queue.sign-queue-name}")
-    private String signQueueName;
-    @Value("${pn.ss.transformation-service.max.messages}")
-    private int maxMessages;
-    @Value("${pn.ss.transformation-service.dummy.delay:250}")
-    private Integer dummyDelay;
-    // Numero massimo di retry. Due step: 1) firma del documento e inserimento nel bucket 2) delete del file dal bucket di staging, piu' un retry aggiuntivo di sicurezza
-    private static final int MAX_RETRIES = 3;
 
     public TransformationService(S3ServiceImpl s3Service,
                                  PnSignProviderService pnSignService,
@@ -86,19 +78,6 @@ public class TransformationService {
 
     private Mono<DeleteObjectResponse> removeObjectFromStagingBucket(String key, String stagingBucketName) {
         return Mono.defer(() -> s3Service.deleteObject(key, stagingBucketName)).onErrorResume(NoSuchKeyException.class, throwable -> Mono.empty());
-    }
-
-    private boolean isKeyPresent(CreatedS3ObjectDto createdS3ObjectDto) {
-        var detailObject = createdS3ObjectDto.getCreationDetailObject();
-        return detailObject != null && detailObject.getObject() != null && !StringUtils.isEmpty(detailObject.getObject().getKey());
-    }
-
-    private void waitDelay() {
-        try {
-            Thread.sleep(dummyDelay);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
     }
 
 }

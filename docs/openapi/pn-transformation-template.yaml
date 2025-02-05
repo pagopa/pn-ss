@@ -1,0 +1,24 @@
+openapi: 3.0.1
+info:
+  title: PN Template for Transformation
+  description: >-
+    Template utilizzato per condividere le classi DTO tra i servizi di trasformazione
+  version: 1.0.0
+
+paths:
+  {}
+
+components:
+  schemas:
+    TransformationMessage:
+      type: object
+      description: DTO per la gestione dei messaggi di trasformazione (RASTER, DUMMY, SIGN, SIGN_AND_TIMEMARK)
+      properties:
+        fileKey:
+          type: string
+        transformationType:
+          type: string
+        bucketName:
+          type: string
+        contentType:
+          type: string

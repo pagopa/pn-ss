@@ -443,6 +443,33 @@
                         </configuration>
                     </execution>
 
+                    <execution>
+                        <id>generate-transformation-dto</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <inputSpec>${project.basedir}/docs/openapi/pn-transformation-template.yaml</inputSpec>
+                            <generatorName>spring</generatorName>
+                            <library>spring-boot</library>
+                            <generateApiDocumentation>false</generateApiDocumentation>
+                            <generateApiTests>false</generateApiTests>
+                            <generateModelTests>false</generateModelTests>
+                            <configOptions>
+                                <delegatePattern>true</delegatePattern>
+                                <interfaceOnly>true</interfaceOnly>
+                                <annotationLibrary>none</annotationLibrary>
+                                <documentationProvider>source</documentationProvider>
+                                <openApiNullable>false</openApiNullable>
+                                <reactive>true</reactive>
+                                <skipDefaultInterface>false</skipDefaultInterface>
+                                <useTags>true</useTags>
+                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto</modelPackage>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+
                 </executions>
             </plugin>
         </plugins>

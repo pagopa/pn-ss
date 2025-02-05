@@ -13,7 +13,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.SpyBean;
@@ -25,7 +29,10 @@ import software.amazon.awssdk.services.s3.model.*;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.stream.Stream;
 
+import static it.pagopa.pnss.configurationproperties.TransformationProperties.OK;
+import static it.pagopa.pnss.configurationproperties.TransformationProperties.TRANSFORMATION_TAG_PREFIX;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -45,7 +52,7 @@ class TransformationServiceTest {
     private String signQueueName;
     @SpyBean
     private PnSignProviderService pnSignProviderService;
-    @Value("${pn.ss.transformation-service.dummy.delay}")
+    @Value("${pn.ss.transformation.dummy-delay}")
     private Integer dummyDelay;
     private final String FILE_KEY = "FILE_KEY";
     private static final String SIGN_AND_TIMEMARK = "SIGN_AND_TIMEMARK";
@@ -67,7 +74,7 @@ class TransformationServiceTest {
     void signAndTimemark_Ok(String contentType) {
         //GIVEN
         String bucket = bucketName.ssStageName();
-        Tag tag = Tag.builder().key("Transformation-" + SIGN_AND_TIMEMARK).value("OK").build();
+        Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + SIGN_AND_TIMEMARK).value(OK).build();
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
         //WHEN
@@ -76,7 +83,7 @@ class TransformationServiceTest {
                 .fileKey(FILE_KEY)
                 .transformationType(SIGN_AND_TIMEMARK)
                 .bucketName(bucket)
-                .contentType(contentType).build());
+                .contentType(contentType).build(), true);
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
@@ -90,16 +97,16 @@ class TransformationServiceTest {
     void sign_Ok(String contentType) {
         //GIVEN
         String bucket = bucketName.ssStageName();
-        Tag tag = Tag.builder().key("Transformation-" + SIGN).value("OK").build();
+        Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + SIGN).value(OK).build();
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signTransformation(TransformationMessage.builder()
+        var testMono = transformationService.signAndTimemarkTransformation(TransformationMessage.builder()
                 .fileKey(FILE_KEY)
                 .transformationType(SIGN)
                 .bucketName(bucket)
-                .contentType(contentType).build());
+                .contentType(contentType).build(), false);
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
@@ -108,54 +115,33 @@ class TransformationServiceTest {
         verify(s3Service).putObject(eq(FILE_KEY), any(), eq(contentType), eq(bucket), eq(expectedTagging));
     }
 
-    @Test
-    void signAndTimemark_Idempotence_Ok() {
+    @ParameterizedTest
+    @MethodSource("provideSignAndTimemarkArgs")
+    void signAndTimemark_Idempotence_Ok(String transformationType, boolean marcatura) {
         //GIVEN
         String contentType = "application/pdf";
         String bucket = bucketName.ssStageName();
-        Tag tag = Tag.builder().key("Transformation-" + SIGN_AND_TIMEMARK).value("OK").build();
+        Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + transformationType).value(OK).build();
         s3TestClient.putObjectTagging(builder -> builder.tagging(Tagging.builder().tagSet(tag).build()).key(FILE_KEY).bucket(bucket));
 
         //WHEN
         mockSignCalls();
         var testMono = transformationService.signAndTimemarkTransformation(TransformationMessage.builder()
                 .fileKey(FILE_KEY)
-                .transformationType(SIGN_AND_TIMEMARK)
+                .transformationType(transformationType)
                 .bucketName(bucket)
-                .contentType(contentType).build());
+                .contentType(contentType).build(), marcatura);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
         verify(s3Service).getObject(FILE_KEY, bucket);
-        verifyPnSignProviderCalls(contentType, true);
+        verifyPnSignProviderCalls(contentType, marcatura);
         verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());
     }
 
-    @Test
-    void sign_Idempotence_Ok() {
-        //GIVEN
-        String contentType = "application/pdf";
-        String bucket = bucketName.ssStageName();
-        Tag tag = Tag.builder().key("Transformation-" + SIGN).value("OK").build();
-        s3TestClient.putObjectTagging(builder -> builder.tagging(Tagging.builder().tagSet(tag).build()).key(FILE_KEY).bucket(bucket));
-
-        //WHEN
-        mockSignCalls();
-        var testMono = transformationService.signTransformation(TransformationMessage.builder()
-                .fileKey(FILE_KEY)
-                .transformationType(SIGN)
-                .bucketName(bucket)
-                .contentType(contentType).build());
-
-        //THEN
-        StepVerifier.create(testMono).verifyComplete();
-        verify(s3Service).getObject(FILE_KEY, bucket);
-        verifyPnSignProviderCalls(contentType, false);
-        verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());
-    }
-
-    @Test
-    void signAndTimemark_SignProvider_Ko() {
+    @ParameterizedTest
+    @MethodSource("provideSignAndTimemarkArgs")
+    void signAndTimemark_SignProvider_Ko(String transformationType, boolean marcatura) {
         //GIVEN
         String contentType = "application/pdf";
         String bucket = bucketName.ssStageName();
@@ -164,9 +150,9 @@ class TransformationServiceTest {
         when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception")));
         var testMono = transformationService.signAndTimemarkTransformation(TransformationMessage.builder()
                 .fileKey(FILE_KEY)
-                .transformationType(SIGN_AND_TIMEMARK)
+                .transformationType(transformationType)
                 .bucketName(bucket)
-                .contentType(contentType).build());
+                .contentType(contentType).build(), marcatura);
 
         //THEN
         StepVerifier.create(testMono).expectError(PnSpapiPermanentErrorException.class).verify();
@@ -174,28 +160,9 @@ class TransformationServiceTest {
         verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());
     }
 
-    @Test
-    void sign_SignProvider_Ko() {
-        //GIVEN
-        String contentType = "application/pdf";
-        String bucket = bucketName.ssStageName();
-
-        //WHEN
-        when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception")));
-        var testMono = transformationService.signTransformation(TransformationMessage.builder()
-                .fileKey(FILE_KEY)
-                .transformationType(SIGN)
-                .bucketName(bucket)
-                .contentType(contentType).build());
-
-        //THEN
-        StepVerifier.create(testMono).expectError(PnSpapiPermanentErrorException.class).verify();
-        verify(s3Service).getObject(FILE_KEY, bucket);
-        verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());
-    }
-
-    @Test
-    void signAndTimemark_S3_Ko() {
+    @ParameterizedTest
+    @MethodSource("provideSignAndTimemarkArgs")
+    void signAndTimemark_S3_Ko(String transformationType, boolean marcatura) {
         //GIVEN
         String bucket = bucketName.ssStageName();
         String contentType = "application/pdf";
@@ -204,27 +171,9 @@ class TransformationServiceTest {
         mockSignCalls();
         var testMono = transformationService.signAndTimemarkTransformation(TransformationMessage.builder()
                 .fileKey("FAKE")
-                .transformationType(SIGN_AND_TIMEMARK)
+                .transformationType(transformationType)
                 .bucketName(bucket)
-                .contentType(contentType).build());
-
-        //THEN
-        StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
-    }
-
-    @Test
-    void sign_S3_Ko() {
-        //GIVEN
-        String bucket = bucketName.ssStageName();
-        String contentType = "application/pdf";
-
-        //WHEN
-        mockSignCalls();
-        var testMono = transformationService.signTransformation(TransformationMessage.builder()
-                .fileKey("FAKE")
-                .transformationType(SIGN)
-                .bucketName(bucket)
-                .contentType(contentType).build());
+                .contentType(contentType).build(), marcatura);
 
         //THEN
         StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
@@ -234,7 +183,7 @@ class TransformationServiceTest {
     void dummy_Ok() {
         //GIVEN
         String bucket = bucketName.ssStageName();
-        Tag tag = Tag.builder().key("Transformation-" + DUMMY).value("OK").build();
+        Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + DUMMY).value(OK).build();
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
         //WHEN
@@ -257,7 +206,7 @@ class TransformationServiceTest {
     void dummy_Idempotence_Ok() {
         //GIVEN
         String bucket = bucketName.ssStageName();
-        Tag tag = Tag.builder().key("Transformation-" + DUMMY).value("OK").build();
+        Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + DUMMY).value(OK).build();
         s3TestClient.putObjectTagging(builder -> builder.tagging(Tagging.builder().tagSet(tag).build()).key(FILE_KEY).bucket(bucket));
 
         //WHEN
@@ -314,5 +263,10 @@ class TransformationServiceTest {
     private void deleteObjectInBucket(String key, String bucketName) {
         s3TestClient.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(key).build());
     }
+
+    private static Stream<Arguments> provideSignAndTimemarkArgs() {
+        return Stream.of(Arguments.of(SIGN_AND_TIMEMARK, true), Arguments.of(SIGN, false));
+    }
+
 
 }

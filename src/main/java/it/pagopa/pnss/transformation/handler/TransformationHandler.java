@@ -2,6 +2,7 @@ package it.pagopa.pnss.transformation.handler;
 
 import io.awspring.cloud.messaging.listener.Acknowledgment;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
+import it.pagopa.pnss.configurationproperties.TransformationProperties;
 import it.pagopa.pnss.transformation.model.dto.TransformationMessage;
 import it.pagopa.pnss.transformation.service.TransformationService;
 import lombok.CustomLog;
@@ -14,13 +15,13 @@ import java.util.concurrent.Semaphore;
 @CustomLog
 public class TransformationHandler {
     private final TransformationService transformationService;
+    private final TransformationProperties props;
     private final Semaphore signAndTimemarkSemaphore;
 
-    public TransformationHandler(TransformationService transformationService,
-                                 @Value("${transformation.max-thread-pool-size.sign-and-timemark}") Integer signAndTimemarkMaxThreadPoolSize,
-                                 @Value("${transformation.max-thread-pool-size.raster}") Integer rasterMaxThreadPoolSize) {
+    public TransformationHandler(TransformationService transformationService, TransformationProperties props) {
         this.transformationService = transformationService;
-        this.signAndTimemarkSemaphore = new Semaphore(signAndTimemarkMaxThreadPoolSize);
+        this.props = props;
+        this.signAndTimemarkSemaphore = new Semaphore(props.getMaxThreadPoolSize().getSignAndTimemark());
     }
 
     @SqsListener

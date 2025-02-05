@@ -99,13 +99,8 @@ public class LogUtils {
     public static final String USER_CONFIGURATION = "USER_CONFIGURATION";
 
     //TRANSFORMATION
-    public static final String NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER = "newStagingBucketObjectCreatedListener()";
-    public static final String NEW_STAGING_BUCKET_OBJECT_CREATED = "TransformationService.newStagingBucketObjectCreated()";
-    public static final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
     public static final String SIGN_AND_TIMEMARK_TRANSFORMATION = "TransformationService.signAndTimemarkTransformation()";
     public static final String DUMMY_TRANSFORMATION = "TransformationService.dummyTransformation()";
-    public static final String RASTER_TRANSFORMATION = "TransformationService.rasterTransformation()";
-    public static final String CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET = "TransformationService.changeFromStagingBucketToHotBucket()";
     public static final String TRANSFORMATION_CONFIG = "TransformationConfig";
 
     //RETENTION SERVICE

@@ -134,7 +134,10 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<GetObjectTaggingResponse> getObjectTagging(String key, String bucketName) {
-        throw new NotImplementedException();
+        log.debug(CLIENT_METHOD_INVOCATION, GET_OBJECT_TAGGING, Stream.of(key, bucketName).toList());
+        return Mono.fromCompletionStage(s3AsyncClient.getObjectTagging(builder -> builder.key(key).bucket(bucketName)))
+                .doOnNext(putObjectTaggingResponse -> log.info(CLIENT_METHOD_RETURN, GET_OBJECT_TAGGING, putObjectTaggingResponse))
+                .retryWhen(s3RetryStrategy);
     }
 
 }

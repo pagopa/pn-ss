@@ -102,6 +102,9 @@ public class LogUtils {
     public static final String SIGN_AND_TIMEMARK_TRANSFORMATION = "TransformationService.signAndTimemarkTransformation()";
     public static final String DUMMY_TRANSFORMATION = "TransformationService.dummyTransformation()";
     public static final String TRANSFORMATION_CONFIG = "TransformationConfig";
+    public static final String SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER = "signAndTimemarkTransformationSubscriber";
+    public static final String SIGN_TRANSFORMATION_SUBSCRIBER = "signTransformationSubscriber";
+    public static final String DUMMY_TRANSFORMATION_SUBSCRIBER = "dummyTransformationSubscriber";
 
     //RETENTION SERVICE
     public static final String GET_RETENTION_UNTIL = "RetentionService.getRetentionUntil()";

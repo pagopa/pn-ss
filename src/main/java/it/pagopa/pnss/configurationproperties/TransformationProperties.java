@@ -33,5 +33,6 @@ public class TransformationProperties {
     @Data
     public static class MaxThreadPoolSize {
         private int signAndTimemark;
+        private int sign;
     }
 }

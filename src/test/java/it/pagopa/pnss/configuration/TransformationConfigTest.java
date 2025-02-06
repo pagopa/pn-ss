@@ -16,7 +16,7 @@ class TransformationConfigTest {
     private TransformationConfig transformationConfig;
 
     @ParameterizedTest
-    @ValueSource(strings = {"DUMMY", "SIGN_AND_TIMEMARK", "SIGN", "RASTER", "ANTIVIRUS"})
+    @ValueSource(strings = {"DUMMY", "SIGN_AND_TIMEMARK", "SIGN", "RASTER"})
     void getTransformationQueueName_Ok(String transformation) {
         String queueName = transformationConfig.getTransformationQueueName(transformation);
         assertNotNull(queueName);

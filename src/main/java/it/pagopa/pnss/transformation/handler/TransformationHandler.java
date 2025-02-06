@@ -4,8 +4,8 @@ import io.awspring.cloud.messaging.listener.Acknowledgment;
 import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import it.pagopa.pn.commons.utils.MDCUtils;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
 import it.pagopa.pnss.configurationproperties.TransformationProperties;
-import it.pagopa.pnss.transformation.model.dto.TransformationMessage;
 import it.pagopa.pnss.transformation.service.TransformationService;
 import lombok.CustomLog;
 import org.slf4j.MDC;
@@ -16,7 +16,6 @@ import java.util.concurrent.Semaphore;
 import java.util.function.Function;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
-import static it.pagopa.pnss.common.utils.SqsUtils.logIncomingMessage;
 
 @Component
 @CustomLog

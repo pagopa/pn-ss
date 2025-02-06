@@ -152,12 +152,6 @@ public class TransformationService {
                 .filter(document -> document.getDocumentState().equalsIgnoreCase(STAGED) || document.getDocumentState().equalsIgnoreCase(AVAILABLE))
                 .doOnDiscard(Document.class, document -> log.warn("Current status '{}' is not valid for transformation for document '{}'", document.getDocumentState(), key))
                 .switchIfEmpty(Mono.error(new InvalidStatusTransformationException(key)))
-                .filter(document -> {
-                    var transformations = document.getDocumentType().getTransformations();
-                    log.debug("Transformations list of document with key '{}' : {}", document.getDocumentKey(), transformations);
-                    return CompareUtils.enumContainsAny(DocumentType.TransformationsEnum.class,transformations);
-                })
-                .switchIfEmpty(Mono.error(new IllegalTransformationException(key)))
                 .filterWhen(document -> isSignatureNeeded(key, retry))
                 .flatMap(document -> chooseTransformationType(document, key, stagingBucketName))
                 .then(removeObjectFromStagingBucket(key, stagingBucketName))
@@ -167,13 +161,13 @@ public class TransformationService {
 
     private Mono<PutObjectResponse> chooseTransformationType(Document document, String key, String stagingBucketName) {
         var transformations = document.getDocumentType().getTransformations();
-        if (transformations.contains(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)) {
+        if (transformations.contains("SIGN_AND_TIMEMARK")) {
             return signAndTimemarkTransformation(document, key, stagingBucketName, true);
-        } else if (transformations.contains(DocumentType.TransformationsEnum.SIGN)) {
+        } else if (transformations.contains("SIGN")) {
             return signAndTimemarkTransformation(document, key, stagingBucketName, false);
-        } else if (transformations.contains(DocumentType.TransformationsEnum.RASTER)) {
+        } else if (transformations.contains("RASTER")) {
             return rasterTransformation(document, key, stagingBucketName);
-        } else if (transformations.contains(DocumentType.TransformationsEnum.DUMMY)) {
+        } else if (transformations.contains("DUMMY")) {
             return dummyTransformation(document,key,stagingBucketName);
         }
         else return Mono.error(new IllegalTransformationException(key));

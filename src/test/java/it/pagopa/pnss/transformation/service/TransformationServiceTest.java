@@ -123,7 +123,7 @@ class TransformationServiceTest {
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
-        mockGetDocument("application/pdf", BOOKED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        mockGetDocument("application/pdf", BOOKED, List.of("SIGN_AND_TIMEMARK"));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
         StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
@@ -139,7 +139,7 @@ class TransformationServiceTest {
 
         createdS3ObjectDto.setRetry(4);
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(null, createdS3ObjectDto);
-        mockGetDocument("application/pdf", BOOKED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        mockGetDocument("application/pdf", BOOKED, List.of("SIGN_AND_TIMEMARK"));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
         StepVerifier.create(testMono).expectError(InvalidStatusTransformationException.class).verify();
@@ -156,7 +156,7 @@ class TransformationServiceTest {
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
-        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.NONE));
+        mockGetDocument("application/pdf", STAGED, List.of("NONE"));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
         StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
@@ -174,7 +174,7 @@ class TransformationServiceTest {
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
 
-        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        mockGetDocument("application/pdf", STAGED, List.of("SIGN_AND_TIMEMARK"));
         when(arubaSignProviderService.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.error(new ArubaSignException()));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
@@ -192,7 +192,7 @@ class TransformationServiceTest {
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
-        mockGetDocument(contentType, STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        mockGetDocument(contentType, STAGED, List.of("SIGN_AND_TIMEMARK"));
         mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
@@ -212,7 +212,7 @@ class TransformationServiceTest {
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
         ReflectionTestUtils.setField(pnSignServiceConfigurationProperties, PROVIDER_SWITCH, NAMIRIAL_PROVIDER);
-        mockGetDocument(contentType, STAGED, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        mockGetDocument(contentType, STAGED, List.of("SIGN_AND_TIMEMARK"));
         mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
@@ -233,7 +233,7 @@ class TransformationServiceTest {
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
         putObjectInBucket(FILE_KEY, bucketName.ssStageName(), new byte[10]);
-        mockGetDocument("application/pdf", AVAILABLE, List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        mockGetDocument("application/pdf", AVAILABLE, List.of("SIGN_AND_TIMEMARK"));
         mockSignCalls();
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
@@ -242,8 +242,8 @@ class TransformationServiceTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = DocumentType.TransformationsEnum.class, names = {"SIGN", "SIGN_AND_TIMEMARK"})
-    void newStagingBucketObjectCreatedEventRetryInHotBucketOk(DocumentType.TransformationsEnum transformation) {
+    @ValueSource(strings = {"SIGN", "SIGN_AND_TIMEMARK"})
+    void newStagingBucketObjectCreatedEventRetryInHotBucketOk(String transformation) {
 
         CreatedS3ObjectDto createdS3ObjectDto = getCreatedS3ObjectDto();
 
@@ -270,7 +270,7 @@ class TransformationServiceTest {
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
-        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.RASTER));
+        mockGetDocument("application/pdf", STAGED, List.of("RASTER"));
         when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.just(new byte[10]));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
@@ -291,7 +291,7 @@ class TransformationServiceTest {
 
 
         putObjectInBucket(FILE_KEY, bucketName.ssHotName(), new byte[10]);
-        mockGetDocument("application/pdf", AVAILABLE, List.of(DocumentType.TransformationsEnum.RASTER));
+        mockGetDocument("application/pdf", AVAILABLE, List.of("RASTER"));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
         StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
@@ -307,7 +307,7 @@ class TransformationServiceTest {
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
-        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.RASTER));
+        mockGetDocument("application/pdf", STAGED, List.of("RASTER"));
         when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.error(new RuntimeException("error")));
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
@@ -324,7 +324,7 @@ class TransformationServiceTest {
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
-        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
+        mockGetDocument("application/pdf", STAGED, List.of("DUMMY"));
 
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
@@ -341,7 +341,7 @@ class TransformationServiceTest {
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
-        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
+        mockGetDocument("application/pdf", STAGED, List.of("DUMMY"));
 
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
@@ -367,7 +367,7 @@ class TransformationServiceTest {
         Message message = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
         SqsMessageWrapper<CreatedS3ObjectDto> sqsMessageWrapper = new SqsMessageWrapper<>(message, createdS3ObjectDto);
 
-        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
+        mockGetDocument("application/pdf", STAGED, List.of("DUMMY"));
 
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
 
@@ -395,7 +395,7 @@ class TransformationServiceTest {
         when(pdfRasterCall.convertPdf(any(byte[].class), anyString())).thenReturn(Mono.error(new RuntimeException("error")));
 
         when(s3Service.putObject(anyString(),any(),anyString(),anyString())).thenReturn(Mono.error(new RuntimeException("error")));
-        mockGetDocument("application/pdf", STAGED, List.of(DocumentType.TransformationsEnum.DUMMY));
+        mockGetDocument("application/pdf", STAGED, List.of("DUMMY"));
 
         var testMono = transformationService.newStagingBucketObjectCreatedEvent(sqsMessageWrapper);
         StepVerifier.create(testMono).expectNextMatches(DeleteMessageResponse.class::isInstance).verifyComplete();
@@ -404,7 +404,7 @@ class TransformationServiceTest {
     }
 
 
-    void mockGetDocument(String contentType, String documentState, List<DocumentType.TransformationsEnum> transformations) {
+    void mockGetDocument(String contentType, String documentState, List<String> transformations) {
         var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())))
                 .tipoDocumento(DocTypesConstant.PN_AAR)
                 .checksum(DocumentType.ChecksumEnum.MD5);

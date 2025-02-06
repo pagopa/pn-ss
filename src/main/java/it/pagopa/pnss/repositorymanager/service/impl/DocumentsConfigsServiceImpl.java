@@ -61,7 +61,7 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         dtc.setInformationClassification(
                 docType.getInformationClassification() != null ? ConfidentialityLevel.fromValue(docType.getInformationClassification()
                                                                                                        .getValue()) : null);
-        dtc.setTransformations(docType.getTransformations().stream().map(object -> DocumentTypeConfiguration.TransformationsEnum.valueOf(object.name())).toList());
+        dtc.setTransformations(docType.getTransformations());
         dtc.setTimestamped(docType.getTimeStamped() != null ? DocumentTypeConfiguration.TimestampedEnum.fromValue(docType.getTimeStamped().getValue()) : null);
         dtc.setChecksum(docType.getChecksum() != null ? DocumentTypeConfiguration.ChecksumEnum.fromValue(docType.getChecksum().getValue()) : null);
         return dtc;

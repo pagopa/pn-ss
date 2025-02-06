@@ -290,19 +290,11 @@ Parameters:
     Type: String
     Description: 'ARN coda per tasformazione sign_and_timemark'
 
-  PnSsQueueNameAntivirusTranformation:
-    Type: String
-    Description: 'Nome coda per la trasformazione antivirus'
-
-  PnSsQueueArnAntivirusTranformation:
-    Type: String
-    Description: 'ARN coda per la trasformazione antivirus'
-
-  PnSsQueueNameSignTranformationStack:
+  PnSsQueueNameSignTranformation:
     Type: String
     Description: 'Nome coda per la trasformazione sign'
 
-  PnSsQueueArnSignTranformationStack:
+  PnSsQueueArnSignTranformation:
     Type: String
     Description: 'ARN coda per la trasformazione sign'
 
@@ -654,9 +646,8 @@ Resources:
         ContainerEnvEntry65: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
         ContainerEnvEntry66: !Sub 'PnSsQueueNameDummyTranformation=${PnSsQueueNameDummyTranformation}'
         ContainerEnvEntry67: !Sub 'PnSsQueueNameSignAndTimemarkTranformation=${PnSsQueueNameSignAndTimemarkTranformation}'
-        ContainerEnvEntry68: !Sub 'PnSsQueueNameAntivirusTranformation=${PnSsQueueNameAntivirusTranformation}'
-        ContainerEnvEntry69: !Sub 'PnSsQueueNameSignTranformationStack=${PnSsQueueNameSignTranformationStack}'
-        ContainerEnvEntry70: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
+        ContainerEnvEntry68: !Sub 'PnSsQueueNameSignTranformation=${PnSsQueueNameSignTranformation}'
+        ContainerEnvEntry69: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

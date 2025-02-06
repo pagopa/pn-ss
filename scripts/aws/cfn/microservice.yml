@@ -290,19 +290,11 @@ Parameters:
     Type: String
     Description: 'ARN coda per tasformazione sign_and_timemark'
 
-  PnSsQueueNameAntivirusTranformation:
-    Type: String
-    Description: 'Nome coda per la trasformazione antivirus'
-
-  PnSsQueueArnAntivirusTranformation:
-    Type: String
-    Description: 'ARN coda per la trasformazione antivirus'
-
-  PnSsQueueNameSignTranformationStack:
+  PnSsQueueNameSignTranformation:
     Type: String
     Description: 'Nome coda per la trasformazione sign'
 
-  PnSsQueueArnSignTranformationStack:
+  PnSsQueueArnSignTranformation:
     Type: String
     Description: 'ARN coda per la trasformazione sign'
 
@@ -658,10 +650,9 @@ Resources:
         ContainerEnvEntry65: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
         ContainerEnvEntry66: !Sub 'PnSsQueueNameDummyTranformation=${PnSsQueueNameDummyTranformation}'
         ContainerEnvEntry67: !Sub 'PnSsQueueNameSignAndTimemarkTranformation=${PnSsQueueNameSignAndTimemarkTranformation}'
-        ContainerEnvEntry68: !Sub 'PnSsQueueNameAntivirusTranformation=${PnSsQueueNameAntivirusTranformation}'
-        ContainerEnvEntry69: !Sub 'PnSsQueueNameSignTranformationStack=${PnSsQueueNameSignTranformationStack}'
-        ContainerEnvEntry70: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
-        ContainerEnvEntry71: !Sub 'SignMaxThreadPoolSize=${SignMaxThreadPoolSize}'
+        ContainerEnvEntry68: !Sub 'PnSsQueueNameSignTranformation=${PnSsQueueNameSignTranformation}'
+        ContainerEnvEntry69: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
+        ContainerEnvEntry70: !Sub 'SignMaxThreadPoolSize=${SignMaxThreadPoolSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -791,31 +782,6 @@ Resources:
               - 'ssm:GetParameter'
             Resource:
               - '*'
-
-  #####    Staging Bucket Events Rule    #####
-  PnSsEventRuleStagingBucket:
-    Type: AWS::Events::Rule
-    Properties:
-      Description: 'Rule catching object creation events in SS staging bucket'
-      EventPattern:
-        source:
-          - 'aws.s3'
-        account:
-          - !Ref AWS::AccountId
-        region:
-          - !Ref AWS::Region
-        detail-type:
-          - 'Object Created'
-        detail:
-          bucket:
-            name:
-              - !Ref PnSsStagingBucketName
-        resources:
-          - !Ref PnSsStagingBucketArn
-      State: 'ENABLED'
-      Targets:
-        - Arn: !Ref PnSsQueueArnStagingBucket
-          Id: "SQSTargetForStagingBucket"
 
   #####    External notifications    #####
   PnSsRoleExternalNotifications:
@@ -951,10 +917,6 @@ Resources:
         LambdaArns: !GetAtt PnSsGestoreBucket.Arn
         # KinesisDataArns:
         # KinesisFirehoseArns:
-        EventRuleArns: !GetAtt PnSsEventRuleStagingBucket.Arn
-          # !Join
-          # - ','
-          # - - !Ref PnSsEventRuleArnStagingBucket
         BucketNames:
           !Join
           - ','

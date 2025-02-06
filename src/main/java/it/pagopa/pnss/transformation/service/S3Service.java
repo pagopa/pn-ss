@@ -10,7 +10,11 @@ import java.time.Duration;
 public interface S3Service {
 
     Mono<ResponseBytes<GetObjectResponse>> getObject(String key, String bucketName);
+
+    Mono<PutObjectResponse> putObject(String key, byte[] fileBytes, String contentType, String bucketName, Tagging tagging);
+
     Mono<PutObjectResponse> putObject(String key, byte[] fileBytes, String contentType, String bucketName);
+
     Mono<DeleteObjectResponse> deleteObject(String key, String bucketName);
 
     Mono<RestoreObjectResponse> restoreObject(String key, String bucketName, RestoreRequest restoreRequest);
@@ -24,6 +28,8 @@ public interface S3Service {
     Mono<PutObjectRetentionResponse> putObjectRetention(String key, String bucket, ObjectLockRetention objectLockRetention);
 
     Mono<PutObjectTaggingResponse> putObjectTagging(String key, String bucket, Tagging tagging);
+
+    Mono<GetObjectTaggingResponse> getObjectTagging(String key, String bucket);
 
 
 }

@@ -494,6 +494,10 @@ Parameters:
     Type: String
     Description: 'Sign and timemark transformation max thread pool size'
 
+  SignMaxThreadPoolSize:
+    Type: String
+    Description: 'Sign transformation max thread pool size'
+
   RasterMaxThreadPoolSize:
     Type: String
     Description: 'Raster transformation max thread pool size'
@@ -648,6 +652,7 @@ Resources:
         ContainerEnvEntry67: !Sub 'PnSsQueueNameSignAndTimemarkTranformation=${PnSsQueueNameSignAndTimemarkTranformation}'
         ContainerEnvEntry68: !Sub 'PnSsQueueNameSignTranformation=${PnSsQueueNameSignTranformation}'
         ContainerEnvEntry69: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
+        ContainerEnvEntry70: !Sub 'SignMaxThreadPoolSize=${SignMaxThreadPoolSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

@@ -1,5 +1,6 @@
 package it.pagopa.pnss.transformation.service;
 
+import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pnss.common.client.DocumentClientCall;
@@ -14,11 +15,12 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
-import static it.pagopa.pnss.configurationproperties.TransformationProperties.OK;
-import static it.pagopa.pnss.configurationproperties.TransformationProperties.TRANSFORMATION_TAG_PREFIX;
+import static it.pagopa.pnss.configurationproperties.TransformationProperties.*;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
@@ -52,6 +54,9 @@ public class TransformationService {
         this.props = props;
     }
 
+    private static final List<Class<? extends Throwable>> PERMANENT_TRASNFORMATION_EXCEPTIONS = List.of(PnSpapiPermanentErrorException.class);
+    private final Predicate<Throwable> isPermanentException = e -> PERMANENT_TRASNFORMATION_EXCEPTIONS.contains(e.getClass());
+
     public Mono<PutObjectResponse> signAndTimemarkTransformation(TransformationMessage transformationMessage, boolean marcatura) {
         log.debug(INVOKING_METHOD, SIGN_AND_TIMEMARK_TRANSFORMATION, Stream.of(transformationMessage, marcatura).toList());
         String fileKey = transformationMessage.getFileKey();
@@ -64,7 +69,8 @@ public class TransformationService {
                     Tagging tagging = buildTransformationTagging(transformationType, OK);
                     return s3Service.putObject(fileKey, pnSignDocumentResponse.getSignedDocument(), contentType, bucketName, tagging);
                 })
-                .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, SIGN_AND_TIMEMARK_TRANSFORMATION, result));
+                .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, SIGN_AND_TIMEMARK_TRANSFORMATION, result))
+                .onErrorResume(isPermanentException, error -> handlePermanentTransformationException(fileKey, bucketName, transformationType, error).then(Mono.empty()));
     }
 
     public Mono<PutObjectTaggingResponse> dummyTransformation(TransformationMessage transformationMessage) {
@@ -84,9 +90,14 @@ public class TransformationService {
                 .flatMapIterable(GetObjectTaggingResponse::tagSet)
                 .filter(tag -> tag.key().equals(TRANSFORMATION_TAG_PREFIX + transformation))
                 .next()
-                .doOnNext(tag -> log.warn("Found tag {} for key '{}'. Skipping {} transformation.", tag, key, transformation))
+                .doOnNext(tag -> log.debug("Found tag {} for key '{}'. Skipping {} transformation.", tag, key, transformation))
                 .map(tag -> false)
                 .defaultIfEmpty(true);
+    }
+
+    private Mono<PutObjectTaggingResponse> handlePermanentTransformationException(String fileKey, String bucketName, String transformationType, Throwable throwable) {
+        log.error(EXCEPTION_IN_TRANSFORMATION, transformationType, throwable);
+        return s3Service.putObjectTagging(fileKey, bucketName, buildTransformationTagging(transformationType, ERROR));
     }
 
     private Mono<PnSignDocumentResponse> signDocument(String fileKey, String contentType, String bucketName, boolean marcatura) {

@@ -31,8 +31,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.stream.Stream;
 
-import static it.pagopa.pnss.configurationproperties.TransformationProperties.OK;
-import static it.pagopa.pnss.configurationproperties.TransformationProperties.TRANSFORMATION_TAG_PREFIX;
+import static it.pagopa.pnss.configurationproperties.TransformationProperties.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -139,12 +138,15 @@ class TransformationServiceTest {
         verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());
     }
 
+    // Eccezione permanente. Ci aspettiamo che venga applicato il tag Tranformation-xxx=ERROR e che l'operazione dia segnale di completamento.
     @ParameterizedTest
     @MethodSource("provideSignAndTimemarkArgs")
     void signAndTimemark_SignProvider_Ko(String transformationType, boolean marcatura) {
         //GIVEN
         String contentType = "application/pdf";
         String bucket = bucketName.ssStageName();
+        Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + transformationType).value(ERROR).build();
+        Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
         //WHEN
         when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception")));
@@ -155,8 +157,9 @@ class TransformationServiceTest {
                 .contentType(contentType).build(), marcatura);
 
         //THEN
-        StepVerifier.create(testMono).expectError(PnSpapiPermanentErrorException.class).verify();
+        StepVerifier.create(testMono).verifyComplete();
         verify(s3Service).getObject(FILE_KEY, bucket);
+        verify(s3Service).putObjectTagging(FILE_KEY, bucket, expectedTagging);
         verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());
     }
 

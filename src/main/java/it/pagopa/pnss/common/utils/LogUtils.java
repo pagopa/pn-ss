@@ -105,6 +105,7 @@ public class LogUtils {
     public static final String SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER = "signAndTimemarkTransformationSubscriber";
     public static final String SIGN_TRANSFORMATION_SUBSCRIBER = "signTransformationSubscriber";
     public static final String DUMMY_TRANSFORMATION_SUBSCRIBER = "dummyTransformationSubscriber";
+    public static final String EXCEPTION_IN_TRANSFORMATION = "Exception in '{}' transformation.";
 
     //RETENTION SERVICE
     public static final String GET_RETENTION_UNTIL = "RetentionService.getRetentionUntil()";

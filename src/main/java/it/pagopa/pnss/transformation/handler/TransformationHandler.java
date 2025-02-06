@@ -22,13 +22,11 @@ import static it.pagopa.pnss.common.utils.SqsUtils.logIncomingMessage;
 @CustomLog
 public class TransformationHandler {
     private final TransformationService transformationService;
-    private final TransformationProperties props;
     private final Semaphore signAndTimemarkSemaphore;
     private final Semaphore signSemaphore;
 
     public TransformationHandler(TransformationService transformationService, TransformationProperties props) {
         this.transformationService = transformationService;
-        this.props = props;
         this.signAndTimemarkSemaphore = new Semaphore(props.getMaxThreadPoolSize().getSignAndTimemark());
         this.signSemaphore = new Semaphore(props.getMaxThreadPoolSize().getSign());
     }
@@ -36,7 +34,7 @@ public class TransformationHandler {
     @SqsListener(value = "${pn.ss.transformation.queues.sign-and-timemark}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     void signAndTimemarkTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgment acknowledgment) {
         acquireSemaphore(signAndTimemarkSemaphore);
-        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, true), props.getQueues().getSignAndTimemark(), acknowledgment, SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER)
+        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, true), acknowledgment, SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER)
                 .doFinally(signalType -> signAndTimemarkSemaphore.release())
                 .subscribe();
     }
@@ -44,21 +42,20 @@ public class TransformationHandler {
     @SqsListener(value = "${pn.ss.transformation.queues.sign}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     void signTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgment acknowledgment) {
         acquireSemaphore(signSemaphore);
-        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, false), props.getQueues().getSign(), acknowledgment, SIGN_TRANSFORMATION_SUBSCRIBER)
+        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, false), acknowledgment, SIGN_TRANSFORMATION_SUBSCRIBER)
                 .doFinally(signalType -> signSemaphore.release())
                 .subscribe();
     }
 
     @SqsListener(value = "${pn.ss.transformation.queues.dummy}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     void dummyTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgment acknowledgment) {
-        consumeTransformationMessage(transformationMessage, transformationService::dummyTransformation, props.getQueues().getDummy(), acknowledgment, DUMMY_TRANSFORMATION_SUBSCRIBER).subscribe();
+        consumeTransformationMessage(transformationMessage, transformationService::dummyTransformation, acknowledgment, DUMMY_TRANSFORMATION_SUBSCRIBER).subscribe();
     }
 
-    private Mono<?> consumeTransformationMessage(TransformationMessage transformationMessage, Function<TransformationMessage, Mono<?>> transformationFunction, String queueName, Acknowledgment acknowledgment, String op) {
+    private Mono<?> consumeTransformationMessage(TransformationMessage transformationMessage, Function<TransformationMessage, Mono<?>> transformationFunction, Acknowledgment acknowledgment, String op) {
         MDCUtils.clearMDCKeys();
         MDC.put(MDC_CORR_ID_KEY, transformationMessage.getFileKey());
         log.logStartingProcess(op);
-        logIncomingMessage(queueName, transformationMessage);
         return MDCUtils.addMDCToContextAndExecute(transformationFunction.apply(transformationMessage)
                 .doOnSuccess(result -> {
                     log.logEndingProcess(op);

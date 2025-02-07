@@ -62,11 +62,45 @@ public class EventBridgeUtil {
         }
     }
 
+    public static PutEventsRequestEntry createMessageForIndisponibilita(DocumentEntity documentEntity, String fileKey, String disponibilitaDocumentiEventBridge){
+        NotificationMessage message = new NotificationMessage();
+
+        message.setKey(fileKey);
+
+        message.setDocumentStatus(documentEntity.getDocumentLogicalState()!=null ? documentEntity.getDocumentLogicalState().toString():null);
+        message.setContentType(documentEntity.getContentType()!=null ? documentEntity.getContentType().toString():null);
+
+        message.setChecksum(documentEntity.getCheckSum()!=null ? documentEntity.getCheckSum().toString():null);
+
+        message.setClientShortCode(documentEntity.getClientShortCode()!=null ? documentEntity.getClientShortCode().toString():null);
+
+
+        ObjectMapper objMap = new ObjectMapper();
+
+        try {
+            String event = objMap.writeValueAsString(message);
+            return createPutEventRequestEntryForIndisponibilita(event, disponibilitaDocumentiEventBridge);
+        } catch (JsonProcessingException e) {
+            throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
+        }
+    }
+
     private static PutEventsRequestEntry createPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge, String oldDocumentState){
         return  PutEventsRequestEntry.builder()
                 .time(new Date().toInstant())
                 .source(GESTORE_DISPONIBILITA_EVENT_NAME)
                 .detailType(oldDocumentState.equalsIgnoreCase(FREEZED) ? EVENT_BUS_SOURCE_GLACIER_DOCUMENTS : EVENT_BUS_SOURCE_AVAILABLE_DOCUMENT)
+                .eventBusName(disponibilitaDocumentiEventBridge)
+
+                .detail(event).build();
+
+    }
+
+    private static PutEventsRequestEntry createPutEventRequestEntryForIndisponibilita(String event, String disponibilitaDocumentiEventBridge){
+        return  PutEventsRequestEntry.builder()
+                .time(new Date().toInstant())
+                .source(GESTORE_DISPONIBILITA_EVENT_NAME)
+                .detailType(EVENT_BUS_SOURCE_TRANSFORMATION_DOCUMENT)
                 .eventBusName(disponibilitaDocumentiEventBridge)
 
                 .detail(event).build();

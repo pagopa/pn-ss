@@ -29,5 +29,8 @@ public interface S3Service {
 
     Mono<ListObjectVersionsResponse> listObjectVersions(String key, String bucket);
 
+    Mono<DeleteObjectsResponse> deleteObjectVersions(String key, String bucketName, String versionId);
 
-}
+
+
+    }

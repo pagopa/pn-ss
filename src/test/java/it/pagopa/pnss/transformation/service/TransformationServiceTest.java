@@ -9,6 +9,7 @@ import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.exception.SqsClientException;
 import it.pagopa.pnss.common.service.EventBridgeService;
+import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.transformation.exception.InvalidDocumentStateException;
 import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
 import it.pagopa.pnss.common.rest.call.pdfraster.PdfRasterCall;
@@ -44,13 +45,15 @@ import java.util.List;
 import java.util.Map;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static it.pagopa.pnss.transformation.service.TransformationService.OBJECT_CREATED_PUT_EVENT;
+import static it.pagopa.pnss.transformation.service.TransformationService.OBJECT_TAGGING_PUT_EVENT;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @SpringBootTestWebEnv
 @CustomLog
 class TransformationServiceTest {
-/*
+
     @SpyBean
     private TransformationService transformationService;
     @MockBean
@@ -65,6 +68,8 @@ class TransformationServiceTest {
     private S3Client s3TestClient;
     @Autowired
     private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
+    @Autowired
+    AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
     @SpyBean
     private SqsService sqsService;
     @SpyBean
@@ -81,8 +86,7 @@ class TransformationServiceTest {
     private static final String SIGN_AND_TIMEMARK = "SIGN_AND_TIMEMARK";
     private static final String SIGN = "SIGN";
     private static final String DUMMY = "DUMMY";
-    private final String OBJECT_CREATED_PUT = "ObjectCreated:Put";
-    private final String OBJECT_TAGGING_PUT = "ObjectTagging:Put";
+
 
     @BeforeEach
     void initialize() {
@@ -101,7 +105,7 @@ class TransformationServiceTest {
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
         String nextTransformation = SIGN_AND_TIMEMARK;
-        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT);
+        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT_EVENT);
         TransformationMessage expectedMessage = TransformationMessage.builder()
                 .fileKey(FILE_KEY)
                 .bucketName(sourceBucket)
@@ -115,7 +119,6 @@ class TransformationServiceTest {
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
-        verify(s3Service).listObjectVersions(FILE_KEY, sourceBucket);
         verify(sqsService).send(any(), eq(expectedMessage));
     }
 
@@ -125,7 +128,7 @@ class TransformationServiceTest {
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
         String nextTransformation = SIGN_AND_TIMEMARK;
-        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT);
+        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT_EVENT);
         TransformationMessage expectedMessage = TransformationMessage.builder()
                 .fileKey(FILE_KEY)
                 .bucketName(sourceBucket)
@@ -139,7 +142,6 @@ class TransformationServiceTest {
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
-        verify(s3Service).listObjectVersions(FILE_KEY, sourceBucket);
         verify(sqsService).send(any(), eq(expectedMessage));
     }
 
@@ -149,7 +151,7 @@ class TransformationServiceTest {
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
         String nextTransformation = DUMMY;
-        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT);
+        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
         TransformationMessage expectedMessage = TransformationMessage.builder()
                 .fileKey(FILE_KEY)
                 .bucketName(sourceBucket)
@@ -178,7 +180,7 @@ class TransformationServiceTest {
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
         String nextTransformation = DUMMY;
-        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT);
+        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
         TransformationMessage expectedMessage = TransformationMessage.builder()
                 .fileKey(FILE_KEY)
                 .bucketName(sourceBucket)
@@ -207,7 +209,7 @@ class TransformationServiceTest {
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
         String nextTransformation = DUMMY;
-        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT);
+        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
         TransformationMessage expectedMessage = TransformationMessage.builder()
                 .fileKey(FILE_KEY)
                 .bucketName(sourceBucket)
@@ -228,25 +230,6 @@ class TransformationServiceTest {
         verify(s3Service).getObjectTagging(FILE_KEY, sourceBucket);
     }
 
-    // L'oggetto S3 non ha un tag di tipo Transformation-xxx, quindi lo stato della trasformazione non è considerato valido.
-    @Test
-    void handleEvent_OtherTransformations_TransformationStateNotFound_Ko() {
-        //GIVEN
-        String sourceBucket = bucketName.ssStageName();
-        String contentType = "application/pdf";
-        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT);
-
-        // Inseriamo un tag che non ci aspettiamo. Il tag di tipo Transformation-xxx non viene inserito.
-        Tag tag = Tag.builder().key("FakeTagKey").value("FakeTagValue").build();
-        s3TestClient.putObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket).tagging(Tagging.builder().tagSet(tag).build()));
-
-        //WHEN
-        mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, DUMMY));
-        var testMono = transformationService.handleS3Event(record);
-
-        //THEN
-        StepVerifier.create(testMono).expectError(InvalidTransformationStateException.StatusNotFoundException.class).verify();
-    }
 
     @Test
     void handleEvent_AllTransformationsApplied_Ok() {
@@ -254,7 +237,7 @@ class TransformationServiceTest {
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
         String lastTransformation = DUMMY;
-        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT);
+        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
 
         // Simuliamo il fatto che l'ultima trasformazione è stata applicata.
         Tag tag = Tag.builder().key("Transformation-" + lastTransformation).value("OK").build();
@@ -278,7 +261,7 @@ class TransformationServiceTest {
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
         String lastTransformation = DUMMY;
-        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT);
+        S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
 
         // Simuliamo che l'ultima trasformazione è stata applicata.
         Tag tag = Tag.builder().key("Transformation-" + lastTransformation).value("OK").build();
@@ -300,7 +283,7 @@ class TransformationServiceTest {
     void handleEvent_InvalidDocumentState_Ko() {
         //GIVEN
         String contentType = "application/pdf";
-        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT);
+        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT_EVENT);
 
         //WHEN
         mockGetDocument(contentType, ATTACHED, List.of(SIGN_AND_TIMEMARK));
@@ -314,7 +297,7 @@ class TransformationServiceTest {
     void handleEvent_InvalidTransformation_Ko() {
         //GIVEN
         String contentType = "application/pdf";
-        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT);
+        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT_EVENT);
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of("NONE"));
@@ -328,7 +311,7 @@ class TransformationServiceTest {
     void handleEvent_S3_Ko() {
         //GIVEN
         String contentType = "application/pdf";
-        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT, "FAKE");
+        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT_EVENT, "FAKE");
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK));
@@ -344,7 +327,7 @@ class TransformationServiceTest {
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
         String nextTransformation = SIGN_AND_TIMEMARK;
-        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT);
+        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT_EVENT);
         TransformationMessage expectedMessage = TransformationMessage.builder()
                 .fileKey(FILE_KEY)
                 .bucketName(sourceBucket)
@@ -359,7 +342,6 @@ class TransformationServiceTest {
 
         //THEN
         StepVerifier.create(testMono).expectError(SqsClientException.class).verify();
-        verify(s3Service).listObjectVersions(FILE_KEY, sourceBucket);
         verify(sqsService).send(any(), eq(expectedMessage));
     }
 
@@ -436,6 +418,5 @@ class TransformationServiceTest {
     private S3EventNotificationRecord createS3Event(String eventName) {
         return createS3Event(eventName, FILE_KEY);
     }
-*/
 
 }

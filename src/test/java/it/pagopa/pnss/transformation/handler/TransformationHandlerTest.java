@@ -28,6 +28,7 @@ class TransformationHandlerTest {
     @Autowired
     private TransformationHandler transformationHandler;
     private static final S3EventNotification S3_EVENT_NOTIFICATION = new S3EventNotification(List.of(new S3EventNotificationRecord()));
+    private final TransformationMessage TRANSFORMATION_MESSAGE = createTransformationMessage();
 
     @Test
     void processAndPublishTransformation_Ok() {
@@ -61,5 +62,108 @@ class TransformationHandlerTest {
         verify(acknowledgment, never()).acknowledge();
     }
 
+
+    @Test
+    void signAndTimemarkTransformationSubscriber_Ok() {
+        //GIVEN
+        TestPublisher<PutObjectResponse> testPublisher = TestPublisher.createCold();
+        testPublisher.next(PutObjectResponse.builder().build());
+        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+
+        //WHEN
+        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(true))).thenReturn(testPublisher.mono());
+
+        //THEN
+        Assertions.assertDoesNotThrow(() -> transformationHandler.signAndTimemarkTransformationSubscriber(TRANSFORMATION_MESSAGE, acknowledgment));
+        testPublisher.assertWasSubscribed();
+        verify(acknowledgment).acknowledge();
+    }
+
+    @Test
+    void signAndTimemarkTransformationSubscriber_Ko() {
+        //GIVEN
+        TestPublisher<PutObjectResponse> testPublisher = TestPublisher.createCold();
+        testPublisher.error(NoSuchKeyException.builder().build());
+        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+
+        //WHEN
+        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(true))).thenReturn(testPublisher.mono());
+
+        //THEN
+        Assertions.assertDoesNotThrow(() -> transformationHandler.signAndTimemarkTransformationSubscriber(TRANSFORMATION_MESSAGE, acknowledgment));
+        testPublisher.assertWasSubscribed();
+        verify(acknowledgment, never()).acknowledge();
+    }
+
+    @Test
+    void signTransformationSubscriber_Ok() {
+        //GIVEN
+        TestPublisher<PutObjectResponse> testPublisher = TestPublisher.createCold();
+        testPublisher.next(PutObjectResponse.builder().build());
+        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+
+        //WHEN
+        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(false))).thenReturn(testPublisher.mono());
+
+        //THEN
+        Assertions.assertDoesNotThrow(() -> transformationHandler.signTransformationSubscriber(createTransformationMessage(), acknowledgment));
+        testPublisher.assertWasSubscribed();
+        verify(acknowledgment).acknowledge();
+    }
+
+    @Test
+    void signTransformationSubscriber_Ko() {
+        //GIVEN
+        TestPublisher<PutObjectResponse> testPublisher = TestPublisher.createCold();
+        testPublisher.error(NoSuchKeyException.builder().build());
+        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+
+        //WHEN
+        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(false))).thenReturn(testPublisher.mono());
+
+        //THEN
+        Assertions.assertDoesNotThrow(() -> transformationHandler.signTransformationSubscriber(TRANSFORMATION_MESSAGE, acknowledgment));
+        testPublisher.assertWasSubscribed();
+        verify(acknowledgment, never()).acknowledge();
+    }
+
+    @Test
+    void dummyTransformationSubscriber_Ok() {
+        //GIVEN
+        TestPublisher<PutObjectTaggingResponse> testPublisher = TestPublisher.createCold();
+        testPublisher.next(PutObjectTaggingResponse.builder().build());
+        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+
+        //WHEN
+        when(transformationService.dummyTransformation(any(TransformationMessage.class))).thenReturn(testPublisher.mono());
+
+        //THEN
+        Assertions.assertDoesNotThrow(() -> transformationHandler.dummyTransformationSubscriber(TRANSFORMATION_MESSAGE, acknowledgment));
+        testPublisher.assertWasSubscribed();
+        verify(acknowledgment).acknowledge();
+    }
+
+    @Test
+    void dummyTransformationSubscriber_Ko() {
+        //GIVEN
+        TestPublisher<PutObjectTaggingResponse> testPublisher = TestPublisher.createCold();
+        testPublisher.error(NoSuchKeyException.builder().build());
+        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+
+        //WHEN
+        when(transformationService.dummyTransformation(any(TransformationMessage.class))).thenReturn(testPublisher.mono());
+
+        //THEN
+        Assertions.assertDoesNotThrow(() -> transformationHandler.dummyTransformationSubscriber(TRANSFORMATION_MESSAGE, acknowledgment));
+        testPublisher.assertWasSubscribed();
+        verify(acknowledgment, never()).acknowledge();
+    }
+
+    private TransformationMessage createTransformationMessage() {
+        TransformationMessage transformationMessage = new TransformationMessage();
+        String FILE_KEY = "fileKey";
+        transformationMessage.setFileKey(FILE_KEY);
+        return transformationMessage;
+    }
 
 }

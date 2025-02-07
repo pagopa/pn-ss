@@ -513,6 +513,10 @@ Resources:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
             Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
+          - Event: 's3:ObjectCreated:Put'
+            Queue: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueARN
+          - Event: 's3:ObjectTagging:Put'
+            Queue: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueARN
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
@@ -599,22 +603,6 @@ Resources:
           VisibilityTimeout: 300
           QueueHasAlarm: 'false'
           AlarmSNSTopicName: !Ref AlarmSNSTopicName
-
-# La coda per trasformazione antivirus
-  PnSsQueueAntivirusTranformationStack:
-    Type: AWS::CloudFormation::Stack
-    UpdateReplacePolicy: Retain
-    DeletionPolicy: Retain
-    Properties:
-      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
-      Parameters:
-        QueueName: 'pn-ss-transformation-antivirus-queue'
-        SqsManagedSseEnabled: true
-        MaxReceiveCount: 10
-        HasDLQ: True
-        VisibilityTimeout: 300
-        QueueHasAlarm: 'false'
-        AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 ########### GESTORE BUCKET INVOKE QUEUE ###########
 # La coda PnSsQueueGestoreBucketInvoke è il target delle S3 notifications provenienti dal bucket principale #
@@ -938,19 +926,11 @@ Outputs:
     Description: 'ARN coda per la trasformazione sign_and_timemark'
     Value: !GettAtt PnSsQueueSignAndTimemarkTranformationStack.Outputs.QueueARN
 
-  PnSsQueueNameAntivirusTranformation:
-    Description: 'Nome coda per la trasformazione antivirus'
-    Value: !GettAtt PnSsQueueAntivirusTranformationStack.Outputs.QueueName
-
-  PnSsQueueArnAntivirusTranformation:
-    Description: 'ARN coda per la trasformazione antivirus'
-    Value: !GettAtt PnSsQueueAntivirusTranformationStack.Outputs.QueueARN
-
-  PnSsQueueNameSignTranformationStack:
+  PnSsQueueNameSignTranformation:
     Description: 'Nome coda per la trasformazione sign'
     Value: !GettAtt PnSsQueueSignTranformationStack.Outputs.QueueARN
 
-  PnSsQueueArnSignTranformationStack:
+  PnSsQueueArnSignTranformation:
     Description: 'ARN coda per la trasformazione sign'
     Value: !GettAtt PnSsQueueSignTranformationStack.Outputs.QueueARN
 

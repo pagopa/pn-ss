@@ -53,19 +53,23 @@ public class S3ServiceImpl implements S3Service {
     }
 
     @Override
-    public Mono<PutObjectResponse> putObject(String key, byte[] fileBytes, String contentType, String bucketName) {
-        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, PUT_OBJECT, Stream.of(key, bucketName).toList());
+    public Mono<PutObjectResponse> putObject(String key, byte[] fileBytes, String contentType, String bucketName, Tagging tagging) {
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, PUT_OBJECT, Stream.of(key, contentType, bucketName, tagging).toList());
         return Mono.fromCallable(() -> new String(Base64.encodeBase64(DigestUtils.md5(fileBytes))))
                    .flatMap(contentMD5 -> Mono.fromCompletionStage(s3AsyncClient.putObject(builder -> builder.key(key)
                                                                                                              .contentMD5(contentMD5)
                                                                                                              .contentType(contentType)
-                                                                                                             .bucket(bucketName),
+                                                                                                             .bucket(bucketName)
+                                                                                                             .tagging(tagging),
                                                                                            AsyncRequestBody.fromBytes(fileBytes))))
                    .doOnNext(putObjectResponse -> log.info(CLIENT_METHOD_RETURN, PUT_OBJECT, putObjectResponse))
                    .retryWhen(s3RetryStrategy)
                    .doOnError(throwable -> log.warn(CLIENT_METHOD_RETURN_WITH_ERROR, PUT_OBJECT, throwable, throwable.getMessage()));
+    }
 
-
+    @Override
+    public Mono<PutObjectResponse> putObject(String key, byte[] fileBytes, String contentType, String bucketName) {
+        return putObject(key, fileBytes, contentType, bucketName, null);
     }
 
     @Override
@@ -163,4 +167,3 @@ public class S3ServiceImpl implements S3Service {
                     .doOnNext(deleteObjectsResponse -> log.info(CLIENT_METHOD_RETURN, DELETE_VERSIONS_OBJECT, deleteObjectsResponse)).retryWhen(s3RetryStrategy);
         }
 }
-

@@ -9,6 +9,10 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "pn.ss.transformation")
 public class TransformationProperties {
 
+    public  static final String TRANSFORMATION_TAG_PREFIX = "Transformation-";
+    public static final String OK = "OK";
+    public static final String ERROR = "ERROR";
+
     private long dummyDelay;
     private Queues queues;
     private MaxThreadPoolSize maxThreadPoolSize;
@@ -29,5 +33,6 @@ public class TransformationProperties {
     @Data
     public static class MaxThreadPoolSize {
         private int signAndTimemark;
+        private int sign;
     }
 }

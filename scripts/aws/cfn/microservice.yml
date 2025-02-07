@@ -96,6 +96,10 @@ Parameters:
     Default: 'safeStorageObjectPutAndGetTracing'
     Description: 'Destination path into bucket name'
 
+  PnSsQueueTransformationAntivirusQueueArn:
+    Type: String
+    Description: 'ARN della coda di trasformazione transformation'
+
 #### Parametri provenienti dal Template della Stack SS-Storage ####
   PnSsTableNameAnagraficaClient:
     Type: String

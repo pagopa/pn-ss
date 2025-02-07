@@ -21,6 +21,12 @@ exports.handleEvent = async function (event) {
                 Key: newKey
             }));
 
+            // Delete the original file to avoid duplication (renaming)
+            await s3.send(new DeleteObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: s3Object
+            }));
+
             return {statusCode: 200, body: "File renamed successfully for antivirus scan."};
         }
 

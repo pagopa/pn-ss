@@ -806,10 +806,6 @@ Resources:
 
 
 Outputs:
-  PnSsQueueTransformationAntivirusQueueArn:
-    Description: 'ARN della coda di trasformazione transformation'
-    Value: !GetAtt PnSsQueueTransformationAntivirusStack.Outputs.QueueArn
-
   PnSsTableNameAnagraficaClient:
     Description: 'Nome della tabella SS Anagrafica Client'
     Value: !Ref PnSsTableAnagraficaClient

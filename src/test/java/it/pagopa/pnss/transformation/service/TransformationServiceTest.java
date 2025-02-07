@@ -1,10 +1,8 @@
 package it.pagopa.pnss.transformation.service;
 
-import com.namirial.sign.library.service.PnSignServiceImpl;
 import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;;
-import it.pagopa.pn.library.sign.service.impl.ArubaSignProviderService;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
@@ -19,7 +17,6 @@ import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configuration.TransformationConfig;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import it.pagopa.pnss.transformation.model.dto.TransformationMessage;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -51,12 +48,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
+
 import static it.pagopa.pnss.configurationproperties.TransformationProperties.*;
 
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static it.pagopa.pnss.configurationproperties.TransformationProperties.*;
 import static it.pagopa.pnss.transformation.service.TransformationService.OBJECT_CREATED_PUT_EVENT;
 import static it.pagopa.pnss.transformation.service.TransformationService.OBJECT_TAGGING_PUT_EVENT;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -70,10 +66,6 @@ class TransformationServiceTest {
     private TransformationService transformationService;
     @MockBean
     private DocumentClientCall documentClientCall;
-    @MockBean
-    private ArubaSignProviderService arubaSignProviderService;
-    @MockBean
-    private PnSignServiceImpl namirialProviderService;
     @Autowired
     private BucketName bucketName;
     @Autowired
@@ -94,8 +86,6 @@ class TransformationServiceTest {
     private TransformationConfig transformationConfig;
     @SpyBean
     private EventBridgeService eventBridgeService;
-    @Value("${s3.queue.sign-queue-name}")
-    private String signQueueName;
     @SpyBean
     private PnSignProviderService pnSignProviderService;
     @Value("${pn.ss.transformation.dummy-delay}")
@@ -124,12 +114,7 @@ class TransformationServiceTest {
         String contentType = "application/pdf";
         String nextTransformation = SIGN_AND_TIMEMARK;
         S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT_EVENT);
-        TransformationMessage expectedMessage = TransformationMessage.builder()
-                .fileKey(FILE_KEY)
-                .bucketName(sourceBucket)
-                .contentType(contentType)
-                .transformationType(nextTransformation)
-                .build();
+        TransformationMessage expectedMessage = createTransformationMessage(nextTransformation, sourceBucket, contentType);
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
@@ -147,12 +132,7 @@ class TransformationServiceTest {
         String contentType = "application/pdf";
         String nextTransformation = SIGN_AND_TIMEMARK;
         S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT_EVENT);
-        TransformationMessage expectedMessage = TransformationMessage.builder()
-                .fileKey(FILE_KEY)
-                .bucketName(sourceBucket)
-                .contentType(contentType)
-                .transformationType(nextTransformation)
-                .build();
+        TransformationMessage expectedMessage = createTransformationMessage(nextTransformation, sourceBucket, contentType);
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
@@ -170,12 +150,7 @@ class TransformationServiceTest {
         String contentType = "application/pdf";
         String nextTransformation = DUMMY;
         S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
-        TransformationMessage expectedMessage = TransformationMessage.builder()
-                .fileKey(FILE_KEY)
-                .bucketName(sourceBucket)
-                .contentType(contentType)
-                .transformationType(nextTransformation)
-                .build();
+        TransformationMessage expectedMessage = createTransformationMessage(nextTransformation, sourceBucket, contentType);
 
         // Simuliamo il fatto che la prima trasformazione è già stata fatta.
         Tag tag = Tag.builder().key("Transformation-" + SIGN_AND_TIMEMARK).value("OK").build();
@@ -197,21 +172,14 @@ class TransformationServiceTest {
         //GIVEN
         String sourceBucket = bucketName.ssStageName();
         String contentType = "application/pdf";
-        String nextTransformation = DUMMY;
         S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
-        TransformationMessage expectedMessage = TransformationMessage.builder()
-                .fileKey(FILE_KEY)
-                .bucketName(sourceBucket)
-                .contentType(contentType)
-                .transformationType(nextTransformation)
-                .build();
 
         // Simuliamo il fatto che la prima trasformazione è già stata fatta.
         Tag tag = Tag.builder().key("Transformation-" + SIGN_AND_TIMEMARK).value("ERROR").build();
         s3TestClient.putObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket).tagging(Tagging.builder().tagSet(tag).build()));
 
         //WHEN
-        mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, nextTransformation));
+        mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, DUMMY));
         var testMono = transformationService.handleS3Event(record);
 
         //THEN
@@ -228,12 +196,7 @@ class TransformationServiceTest {
         String contentType = "application/pdf";
         String nextTransformation = DUMMY;
         S3EventNotificationRecord record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
-        TransformationMessage expectedMessage = TransformationMessage.builder()
-                .fileKey(FILE_KEY)
-                .bucketName(sourceBucket)
-                .contentType(contentType)
-                .transformationType(nextTransformation)
-                .build();
+        TransformationMessage expectedMessage = createTransformationMessage(nextTransformation, sourceBucket, contentType);
 
         // Inseriamo un tag Transformation, ma con uno stato non riconosciuto.
         Tag tag = Tag.builder().key("Transformation-" + SIGN_AND_TIMEMARK).value("FAKE").build();
@@ -346,12 +309,7 @@ class TransformationServiceTest {
         String contentType = "application/pdf";
         String nextTransformation = SIGN_AND_TIMEMARK;
         S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT_EVENT);
-        TransformationMessage expectedMessage = TransformationMessage.builder()
-                .fileKey(FILE_KEY)
-                .bucketName(sourceBucket)
-                .contentType(contentType)
-                .transformationType(nextTransformation)
-                .build();
+        TransformationMessage expectedMessage = createTransformationMessage(nextTransformation, sourceBucket, contentType);
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
@@ -504,7 +462,7 @@ class TransformationServiceTest {
         StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
     }
 
-    private it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage createTransformationMessage(String transformationType, String bucketName, String contentType, String fileKey) {
+    private TransformationMessage createTransformationMessage(String transformationType, String bucketName, String contentType, String fileKey) {
         it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage transformationMessage = new it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage();
         transformationMessage.setFileKey(fileKey);
         transformationMessage.setTransformationType(transformationType);
@@ -513,7 +471,7 @@ class TransformationServiceTest {
         return transformationMessage;
     }
 
-    private it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage createTransformationMessage(String transformationType, String bucketName, String contentType) {
+    private TransformationMessage createTransformationMessage(String transformationType, String bucketName, String contentType) {
         return createTransformationMessage(transformationType, bucketName, contentType, FILE_KEY);
     }
 
@@ -524,7 +482,7 @@ class TransformationServiceTest {
         var document = new Document().documentType(documentType1);
         document.setDocumentKey(FILE_KEY);
         document.setContentType(contentType);
-        document.getDocumentType().setTransformations(transformations.stream().map(DocumentType.TransformationsEnum::fromValue).toList());
+        document.getDocumentType().setTransformations(transformations);
         document.setDocumentState(documentState);
         var documentResponse = new DocumentResponse().document(document);
 

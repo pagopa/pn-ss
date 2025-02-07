@@ -4,9 +4,8 @@ package it.pagopa.pnss.transformation.service;
 import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.service.EventBridgeService;
 import it.pagopa.pnss.common.service.SqsService;
@@ -17,7 +16,6 @@ import it.pagopa.pnss.configurationproperties.TransformationProperties;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.transformation.exception.InvalidDocumentStateException;
 import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
-import it.pagopa.pnss.transformation.model.dto.TransformationMessage;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,8 +59,6 @@ public class TransformationService {
     public static final String OBJECT_TAGGING_PUT_EVENT = "s3:ObjectTagging:Put";
     @Value("${event.bridge.disponibilita-documenti-name}")
     private String disponibilitaDocumentiEventBridge;
-    @Value("${s3.queue.sign-queue-name}")
-    private String signQueueName;
     @Value("${pn.ss.transformation-service.max.messages}")
     private int maxMessages;
 
@@ -105,20 +101,17 @@ public class TransformationService {
                         return Mono.error(new InvalidDocumentStateException(document.getDocument().getDocumentState(), fileKey));
                     }
 
-                    List<DocumentType.TransformationsEnum> docTransformationList = document.getDocument().getDocumentType().getTransformations();
-                    List<String> transformationNames = docTransformationList.stream()
-                            .map(DocumentType.TransformationsEnum::name)
-                            .toList();
+                    List<String> transformations = document.getDocument().getDocumentType().getTransformations();
 
                     String docContentType = document.getDocument().getContentType();
 
                     return s3Service.getObjectTagging(fileKey, sourceBucket)
                             .flatMap(response -> {
                                 if (!response.hasTagSet() || response.tagSet().isEmpty()) {
-                                    return publishTransformationOnQueue(fileKey, sourceBucket, transformationNames.get(0), docContentType).then();
+                                    return publishTransformationOnQueue(fileKey, sourceBucket, transformations.get(0), docContentType).then();
                                 } else {
                                     log.info("No tags are present for document: {}", fileKey);
-                                    return handleObjectTag(fileKey, sourceBucket, response, transformationNames, docContentType, document);
+                                    return handleObjectTag(fileKey, sourceBucket, response, transformations, docContentType, document);
                                 }
                             });
                 });
@@ -179,12 +172,11 @@ public class TransformationService {
                                                                    String transformationType,
                                                                    String docContentType) {
 
-        TransformationMessage message = TransformationMessage.builder()
-                .fileKey(fileKey)
-                .bucketName(sourceBucket)
-                .contentType(docContentType)
-                .transformationType(transformationType)
-                .build();
+        TransformationMessage message = new TransformationMessage();
+        message.setFileKey(fileKey);
+        message.setBucketName(sourceBucket);
+        message.setContentType(docContentType);
+        message.setTransformationType(transformationType);
 
         String queueName = transformationConfig.getTransformationQueueName(transformationType);
 

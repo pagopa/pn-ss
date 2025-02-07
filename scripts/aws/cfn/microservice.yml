@@ -1319,6 +1319,57 @@ Resources:
                 Resource:
                   - !Ref PnSsQueueArnScadenzaDocumentiDynamoStreamDLQ
 
+  PnSsTransformationAntivirusLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ 'PnSsTransformationAntivirusLambda', '-role']]
+      Description: 'IAM Role for SafeStorage Antivirus Transformation Lambda'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'PnSsTransformationAntivirusInlinePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: 'S3Permissions'
+                Effect: Allow
+                Action:
+                  - 's3:ListBucket'
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                  - 's3:DeleteObject'
+                  - 's3:GetObjectTagging'
+                  - 's3:PutObjectTagging'
+                Resource:
+                  - !Ref PnSsStagingBucketArn
+                  - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
+
+              - Sid: 'SQSPermissions'
+                Effect: Allow
+                Action:
+                  - 'sqs:ReceiveMessage'
+                  - 'sqs:DeleteMessage'
+                  - 'sqs:GetQueueAttributes'
+                Resource:
+                  - !Ref PnSsQueueArnTransformationAntivirus
+
+              - Sid: 'KMSPermissions'
+                Effect: Allow
+                Action:
+                  - 'kms:Decrypt'
+                  - 'kms:GenerateDataKey'
+                Resource:
+                  - !Ref PnSsKmsArnBucket
+
+
   PnSsScadenzaDocumentiEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
@@ -1364,8 +1415,38 @@ Resources:
         S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventHandler.zip"
       Layers:
         - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
-        
-        
+
+
+  PnSsTransformationAntivirusLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref PnSsTransformationAntivirusLambdaName
+      Description: 'Lambda function to handle SafeStorage antivirus processing'
+      Handler: "index.handler"
+      MemorySize: 1024
+      ReservedConcurrentExecutions: 10
+      Runtime: nodejs20.x
+      Role: !GetAtt PnSsTransformationAntivirusLambdaRole.Arn
+      Timeout: 240
+      VpcConfig:
+        SubnetIds:
+          - !Select [ 0, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 1, !Split [ ",", !Ref SubnetsIds ] ]
+          - !Select [ 2, !Split [ ",", !Ref SubnetsIds ] ]
+        SecurityGroupIds:
+          - !GetAtt PnSsSecurityGroupSafeStorage.GroupId
+      Environment:
+        Variables:
+          PnSsStagingBucketName: !Ref PnSsStagingBucketName
+      Tags:
+        - Key: "pn-eni-related"
+          Value: "true"
+      Code:
+        S3Bucket: !Ref MicroserviceBucketName
+        S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/transformationAntivirusLambda.zip"
+      Layers:
+        - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
+
   PnSsQueuePolicyScadenzaDocumentiDynamoStreamDLQ:
     Type: AWS::SQS::QueuePolicy
     Properties:

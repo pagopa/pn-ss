@@ -35,10 +35,19 @@ public class TransformationHandler {
     }
 
     @SqsListener(value = "${pn.ss.transformation.queues.staging}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
-    void processAndPublishTransformation(S3EventNotification event, Acknowledgment acknowledgment) {
-        transformationService.handleS3Event(event.getRecords().get(0))
-                .doOnSuccess(result -> acknowledgment.acknowledge())
-                .subscribe();
+    void processAndPublishTransformation(String json, Acknowledgment acknowledgment) {
+        S3EventNotification event = S3EventNotification.fromJson(json);
+        String fileKey = event.getRecords().get(0).getS3().getObject().getKey();
+        MDC.put(MDC_CORR_ID_KEY, fileKey);
+        log.logStartingProcess(PROCESS_TRANSFORMATION_EVENT);
+        MDCUtils.addMDCToContextAndExecute(
+                transformationService.handleS3Event(event.getRecords().get(0))
+                        .doOnSuccess(result -> {
+                            log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT);
+                            acknowledgment.acknowledge();
+                        })
+                        .doOnError(throwable -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, throwable.getMessage()))
+        ).subscribe();
     }
 
     @SqsListener(value = "${pn.ss.transformation.queues.sign-and-timemark}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)

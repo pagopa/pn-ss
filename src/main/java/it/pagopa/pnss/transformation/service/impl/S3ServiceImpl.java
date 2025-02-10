@@ -19,6 +19,7 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -155,15 +156,13 @@ public class S3ServiceImpl implements S3Service {
     }
 
     @Override
-    public Mono<DeleteObjectsResponse> deleteObjectVersions(String key, String stagingBucketName, String versionId) {
-            log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, DELETE_VERSIONS_OBJECT, Stream.of(key, stagingBucketName).toList());
-            return Mono.fromCompletionStage(() -> s3AsyncClient.deleteObjects(DeleteObjectsRequest.builder()
-                    .bucket(stagingBucketName).delete(Delete.builder()
-                                    .objects(ObjectIdentifier.builder()
-                                            .key(key).versionId(versionId)
-                                            .build())
-                                    .build())
-                    .build()))
-                    .doOnNext(deleteObjectsResponse -> log.info(CLIENT_METHOD_RETURN, DELETE_VERSIONS_OBJECT, deleteObjectsResponse)).retryWhen(s3RetryStrategy);
-        }
+    public Mono<DeleteObjectsResponse> deleteObjectVersions(String key, String bucketName, List<ObjectIdentifier> identifiers) {
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, DELETE_OBJECT_VERSIONS, Stream.of(key, bucketName).toList());
+        return Mono.fromCompletionStage(() -> s3AsyncClient.deleteObjects(DeleteObjectsRequest.builder()
+                        .bucket(bucketName)
+                        .delete(builder -> builder.objects(identifiers))
+                        .build()))
+                .doOnNext(deleteObjectsResponse -> log.info(CLIENT_METHOD_RETURN, DELETE_OBJECT_VERSIONS, deleteObjectsResponse))
+                .retryWhen(s3RetryStrategy);
+    }
 }

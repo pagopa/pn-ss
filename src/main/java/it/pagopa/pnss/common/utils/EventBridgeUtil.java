@@ -1,7 +1,6 @@
 
 package it.pagopa.pnss.common.utils;
 
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.availabledocument.dto.NotificationMessage;
@@ -28,6 +27,7 @@ public class EventBridgeUtil {
     public static final String CONTENTTYPE_KEY = "contentType";
     public static final String CLIENTSHORTCODE_KEY = "clientShortCode";
     public static final String TAGS_KEY = "tags";
+    private static final ObjectMapper objMap = new ObjectMapper();
 
     public static PutEventsRequestEntry createMessage(DocumentEntity documentEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState, Boolean canReadTags){
         String key = documentEntity.getDocumentKey();
@@ -52,59 +52,40 @@ public class EventBridgeUtil {
             message.setTags(tags);
         }
 
-        ObjectMapper objMap = new ObjectMapper();
-
         try {
             String event = objMap.writeValueAsString(message);
-            return createPutEventRequestEntry(event, disponibilitaDocumentiEventBridge,oldDocumentState);
+            return createPutEventRequestEntry(event, disponibilitaDocumentiEventBridge, oldDocumentState.equalsIgnoreCase(FREEZED) ? EVENT_BUS_SOURCE_GLACIER_DOCUMENTS : EVENT_BUS_SOURCE_AVAILABLE_DOCUMENT);
         } catch (JsonProcessingException e) {
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
     }
 
-    public static PutEventsRequestEntry createMessageForIndisponibilita(DocumentEntity documentEntity, String fileKey, String disponibilitaDocumentiEventBridge){
+    public static PutEventsRequestEntry createUnavailabilityMessage(DocumentEntity documentEntity, String fileKey, String eventBusName){
         NotificationMessage message = new NotificationMessage();
 
         message.setKey(fileKey);
-
-        message.setDocumentStatus(documentEntity.getDocumentLogicalState()!=null ? documentEntity.getDocumentLogicalState().toString():null);
-        message.setContentType(documentEntity.getContentType()!=null ? documentEntity.getContentType().toString():null);
-
-        message.setChecksum(documentEntity.getCheckSum()!=null ? documentEntity.getCheckSum().toString():null);
-
-        message.setClientShortCode(documentEntity.getClientShortCode()!=null ? documentEntity.getClientShortCode().toString():null);
-
-
-        ObjectMapper objMap = new ObjectMapper();
+        message.setDocumentStatus(documentEntity.getDocumentLogicalState()!=null ? documentEntity.getDocumentLogicalState():null);
+        message.setContentType(documentEntity.getContentType()!=null ? documentEntity.getContentType():null);
+        message.setChecksum(documentEntity.getCheckSum()!=null ? documentEntity.getCheckSum():null);
+        message.setClientShortCode(documentEntity.getClientShortCode()!=null ? documentEntity.getClientShortCode():null);
 
         try {
             String event = objMap.writeValueAsString(message);
-            return createPutEventRequestEntryForIndisponibilita(event, disponibilitaDocumentiEventBridge);
+            return createPutEventRequestEntry(event, eventBusName, EVENT_BUS_SOURCE_TRANSFORMATION_DOCUMENT);
         } catch (JsonProcessingException e) {
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
     }
 
-    private static PutEventsRequestEntry createPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge, String oldDocumentState){
+    private static PutEventsRequestEntry createPutEventRequestEntry(String event, String eventBusName, String detailType){
         return  PutEventsRequestEntry.builder()
                 .time(new Date().toInstant())
                 .source(GESTORE_DISPONIBILITA_EVENT_NAME)
-                .detailType(oldDocumentState.equalsIgnoreCase(FREEZED) ? EVENT_BUS_SOURCE_GLACIER_DOCUMENTS : EVENT_BUS_SOURCE_AVAILABLE_DOCUMENT)
-                .eventBusName(disponibilitaDocumentiEventBridge)
-
+                .detailType(detailType)
+                .eventBusName(eventBusName)
                 .detail(event).build();
 
     }
 
-    private static PutEventsRequestEntry createPutEventRequestEntryForIndisponibilita(String event, String disponibilitaDocumentiEventBridge){
-        return  PutEventsRequestEntry.builder()
-                .time(new Date().toInstant())
-                .source(GESTORE_DISPONIBILITA_EVENT_NAME)
-                .detailType(EVENT_BUS_SOURCE_TRANSFORMATION_DOCUMENT)
-                .eventBusName(disponibilitaDocumentiEventBridge)
-
-                .detail(event).build();
-
-    }
 }
 

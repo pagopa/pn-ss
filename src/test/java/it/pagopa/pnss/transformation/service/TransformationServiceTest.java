@@ -261,20 +261,6 @@ class TransformationServiceTest {
     }
 
     @Test
-    void handleEvent_InvalidDocumentState_Ko() {
-        //GIVEN
-        String contentType = "application/pdf";
-        S3EventNotificationRecord record = createS3Event(OBJECT_CREATED_PUT_EVENT);
-
-        //WHEN
-        mockGetDocument(contentType, ATTACHED, List.of(SIGN_AND_TIMEMARK));
-        var testMono = transformationService.handleS3Event(record);
-
-        //THEN
-        StepVerifier.create(testMono).expectError(InvalidDocumentStateException.class).verify();
-    }
-
-    @Test
     void handleEvent_InvalidTransformation_Ko() {
         //GIVEN
         String contentType = "application/pdf";

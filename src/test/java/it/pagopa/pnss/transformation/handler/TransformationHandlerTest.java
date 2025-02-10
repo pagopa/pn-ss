@@ -27,7 +27,7 @@ class TransformationHandlerTest {
     private TransformationService transformationService;
     @Autowired
     private TransformationHandler transformationHandler;
-    private static final S3EventNotification S3_EVENT_NOTIFICATION = new S3EventNotification(List.of(new S3EventNotificationRecord()));
+    private static final String S3_EVENT_NOTIFICATION = "{\"Records\":[{\"s3\":{\"bucket\":{\"name\":\"fake-bucket\"},\"object\":{\"key\":\"FAKE\"}}}]}";
     private final TransformationMessage TRANSFORMATION_MESSAGE = createTransformationMessage();
 
     @Test

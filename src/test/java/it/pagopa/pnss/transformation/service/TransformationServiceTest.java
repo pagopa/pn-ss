@@ -12,7 +12,6 @@ import it.pagopa.pnss.common.service.EventBridgeService;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.transformation.exception.InvalidDocumentStateException;
 import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
-import it.pagopa.pnss.common.rest.call.pdfraster.PdfRasterCall;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configuration.TransformationConfig;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -78,8 +77,6 @@ class TransformationServiceTest {
     private SqsService sqsService;
     @SpyBean
     private S3Service s3Service;
-    @MockBean
-    private PdfRasterCall pdfRasterCall;
     @Autowired
     private SqsAsyncClient sqsAsyncClient;
     @SpyBean

@@ -3,6 +3,10 @@ package it.pagopa.pnss.transformation.handler;
 import io.awspring.cloud.messaging.listener.Acknowledgment;
 import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
+import it.pagopa.pnss.transformation.service.TransformationService;
+import lombok.CustomLog;
+import org.springframework.stereotype.Component;
+import software.amazon.awssdk.eventnotifications.s3.model.S3EventNotification;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
 import it.pagopa.pnss.configurationproperties.TransformationProperties;
@@ -28,6 +32,22 @@ public class TransformationHandler {
         this.transformationService = transformationService;
         this.signAndTimemarkSemaphore = new Semaphore(props.getMaxThreadPoolSize().getSignAndTimemark());
         this.signSemaphore = new Semaphore(props.getMaxThreadPoolSize().getSign());
+    }
+
+    @SqsListener(value = "${pn.ss.transformation.queues.staging}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
+    void processAndPublishTransformation(String json, Acknowledgment acknowledgment) {
+        S3EventNotification event = S3EventNotification.fromJson(json);
+        String fileKey = event.getRecords().get(0).getS3().getObject().getKey();
+        MDC.put(MDC_CORR_ID_KEY, fileKey);
+        log.logStartingProcess(PROCESS_TRANSFORMATION_EVENT);
+        MDCUtils.addMDCToContextAndExecute(
+                transformationService.handleS3Event(event.getRecords().get(0))
+                        .doOnSuccess(result -> {
+                            log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT);
+                            acknowledgment.acknowledge();
+                        })
+                        .doOnError(throwable -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, throwable.getMessage()))
+        ).subscribe();
     }
 
     @SqsListener(value = "${pn.ss.transformation.queues.sign-and-timemark}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)

@@ -6,6 +6,7 @@ import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.time.Duration;
+import java.util.List;
 
 public interface S3Service {
 
@@ -31,5 +32,8 @@ public interface S3Service {
 
     Mono<GetObjectTaggingResponse> getObjectTagging(String key, String bucket);
 
+    Mono<ListObjectVersionsResponse> listObjectVersions(String key, String bucket);
+
+    Mono<DeleteObjectsResponse> deleteObjectVersions(String key, String bucketName, List<ObjectIdentifier> identifiers);
 
 }

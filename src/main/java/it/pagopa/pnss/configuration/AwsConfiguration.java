@@ -47,6 +47,8 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.services.eventbridge.EventBridgeAsyncClient;
+import software.amazon.awssdk.services.eventbridge.EventBridgeAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -89,6 +91,9 @@ public class AwsConfiguration {
 
     @Value("${test.aws.secretsmanager.endpoint:#{null}}")
     String secretsManagerLocalStackEndpoint;
+
+    @Value("${test.aws.eventbridge.endpoint:#{null}}")
+    String eventBridgeLocalStackEndpoint;
 
     @Value("${test.event.bridge:#{null}}")
     private String testEventBridge;
@@ -260,6 +265,16 @@ public class AwsConfiguration {
         return ssmClientBuilder.build();
     }
 
+    @Bean
+    public EventBridgeAsyncClient eventBridgeAsyncClient() {
+        EventBridgeAsyncClientBuilder eventBridgeAsyncClientBuilder = EventBridgeAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            eventBridgeAsyncClientBuilder.endpointOverride(URI.create(eventBridgeLocalStackEndpoint));
+        }
+
+        return eventBridgeAsyncClientBuilder.build();
+    }
 
     private String getTaskId() {
 

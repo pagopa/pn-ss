@@ -498,10 +498,6 @@ Parameters:
     Type: String
     Description: 'Sign transformation max thread pool size'
 
-  RasterMaxThreadPoolSize:
-    Type: String
-    Description: 'Raster transformation max thread pool size'
-
 ### Altri parametri
   AlarmSNSTopicName:
     Type: String
@@ -574,10 +570,6 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
-    
-  ServiceEndpointToPdfRaster:
-    Type: String
-    Description: 'Endpoint FQDN of PDFRaster microservice'
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
@@ -640,19 +632,17 @@ Resources:
         ContainerEnvEntry55: !Sub 'PnSsEventHandlerMaxMessages=${PnSsEventHandlerMaxMessages}'
         ContainerEnvEntry56: !Sub 'PnSsSqsRetryStrategyMinBackoff=${PnSsSqsRetryStrategyMinBackoff}'
         ContainerEnvEntry57: !Sub 'PnSsSqsRetryStrategyMaxAttempts=${PnSsSqsRetryStrategyMaxAttempts}'
-        ContainerEnvEntry58: !Sub 'PdfRasterBaseUrl=http://${ServiceEndpointToPdfRaster}:8080'
-        ContainerEnvEntry59: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
-        ContainerEnvEntry60: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
-        ContainerEnvEntry61: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
-        ContainerEnvEntry62: !Sub 'PnSsSignAndTimemarkMetricsSchema=${PnSsSignAndTimemarkMetricsSchema}'
-        ContainerEnvEntry63: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
-        ContainerEnvEntry64: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
-        ContainerEnvEntry65: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
-        ContainerEnvEntry66: !Sub 'PnSsQueueNameDummyTranformation=${PnSsQueueNameDummyTranformation}'
-        ContainerEnvEntry67: !Sub 'PnSsQueueNameSignAndTimemarkTranformation=${PnSsQueueNameSignAndTimemarkTranformation}'
-        ContainerEnvEntry68: !Sub 'PnSsQueueNameSignTranformation=${PnSsQueueNameSignTranformation}'
-        ContainerEnvEntry69: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
-        ContainerEnvEntry70: !Sub 'SignMaxThreadPoolSize=${SignMaxThreadPoolSize}'
+        ContainerEnvEntry58: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
+        ContainerEnvEntry59: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
+        ContainerEnvEntry60: !Sub 'PnSsSignAndTimemarkMetricsSchema=${PnSsSignAndTimemarkMetricsSchema}'
+        ContainerEnvEntry61: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
+        ContainerEnvEntry62: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
+        ContainerEnvEntry63: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
+        ContainerEnvEntry64: !Sub 'PnSsQueueNameDummyTranformation=${PnSsQueueNameDummyTranformation}'
+        ContainerEnvEntry65: !Sub 'PnSsQueueNameSignAndTimemarkTranformation=${PnSsQueueNameSignAndTimemarkTranformation}'
+        ContainerEnvEntry66: !Sub 'PnSsQueueNameSignTranformation=${PnSsQueueNameSignTranformation}'
+        ContainerEnvEntry67: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
+        ContainerEnvEntry68: !Sub 'SignMaxThreadPoolSize=${SignMaxThreadPoolSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

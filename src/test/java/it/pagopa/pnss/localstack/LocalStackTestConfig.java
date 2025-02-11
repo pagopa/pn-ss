@@ -1,7 +1,7 @@
 package it.pagopa.pnss.localstack;
 
-import static it.pagopa.pnss.utils.QueueNameConstant.ALL_QUEUE_NAME_LIST;
 import static it.pagopa.pnss.localstack.LocalStackUtils.DEFAULT_LOCAL_STACK_TAG;
+import static it.pagopa.pnss.utils.QueueNameConstant.ALL_QUEUE_NAME_LIST;
 import static java.util.Map.entry;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.*;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SECRETSMANAGER;
@@ -100,6 +100,9 @@ public class LocalStackTestConfig {
         System.setProperty("test.aws.kinesis.endpoint", String.valueOf(localStackContainer.getEndpointOverride(KINESIS)));
         System.setProperty("test.aws.cloudwatch.endpoint", String.valueOf(localStackContainer.getEndpointOverride(CLOUDWATCH)));
         System.setProperty("test.aws.ssm.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SSM)));
+        // Prendiamo l'endpoint override di SSM, in quanto EVENT BRIDGE non risulta disponibile nella enum.
+        // Fix temporanea, in quanto questa logica andrà cambiata con le modifiche di localdev (PN-13370)
+        System.setProperty("test.aws.eventbridge.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SSM)));
 
         try {
             initS3(localStackContainer);

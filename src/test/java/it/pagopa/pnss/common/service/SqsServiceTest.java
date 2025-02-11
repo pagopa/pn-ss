@@ -22,7 +22,7 @@ import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 class SqsServiceTest {
     @Autowired
     SqsService sqsService;
-    @Value("${s3.queue.sign-queue-name}")
+    @Value("${pn.ss.transformation.queues.staging}")
     private String signQueueName;
     @Autowired
     private SqsAsyncClient sqsAsyncClient;

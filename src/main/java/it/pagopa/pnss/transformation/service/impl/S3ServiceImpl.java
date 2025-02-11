@@ -5,7 +5,6 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -20,6 +19,7 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -46,7 +46,7 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<ResponseBytes<GetObjectResponse>> getObject(String key, String bucketName) {
-        log.debug(CLIENT_METHOD_INVOCATION, GET_OBJECT, Stream.of(key, bucketName).toList());
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, GET_OBJECT, Stream.of(key, bucketName).toList());
         return Mono.fromCompletionStage(s3AsyncClient.getObject(builder -> builder.key(key).bucket(bucketName),
                                                                 AsyncResponseTransformer.toBytes()))
                    .doOnNext(getObjectResponseResponseBytes -> log.info(CLIENT_METHOD_RETURN, GET_OBJECT, key))
@@ -55,7 +55,7 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<PutObjectResponse> putObject(String key, byte[] fileBytes, String contentType, String bucketName, Tagging tagging) {
-        log.debug(CLIENT_METHOD_INVOCATION, PUT_OBJECT, Stream.of(key, contentType, bucketName, tagging).toList());
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, PUT_OBJECT, Stream.of(key, contentType, bucketName, tagging).toList());
         return Mono.fromCallable(() -> new String(Base64.encodeBase64(DigestUtils.md5(fileBytes))))
                    .flatMap(contentMD5 -> Mono.fromCompletionStage(s3AsyncClient.putObject(builder -> builder.key(key)
                                                                                                              .contentMD5(contentMD5)
@@ -75,7 +75,7 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<DeleteObjectResponse> deleteObject(String key, String bucketName) {
-        log.debug(CLIENT_METHOD_INVOCATION, DELETE_OBJECT, Stream.of(key, bucketName).toList());
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, DELETE_OBJECT, Stream.of(key, bucketName).toList());
         return Mono.fromCompletionStage(s3AsyncClient.deleteObject(builder -> builder.key(key).bucket(bucketName)))
                    .doOnNext(deleteObjectResponse -> log.info(CLIENT_METHOD_RETURN, DELETE_OBJECT, deleteObjectResponse))
                    .retryWhen(s3RetryStrategy)
@@ -84,7 +84,7 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<RestoreObjectResponse> restoreObject(String key, String bucketName, RestoreRequest restoreRequest) {
-        log.debug(CLIENT_METHOD_INVOCATION, RESTORE_OBJECT, Stream.of(key, bucketName, restoreRequest).toList());
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, RESTORE_OBJECT, Stream.of(key, bucketName, restoreRequest).toList());
         return Mono.fromCompletionStage(s3AsyncClient.restoreObject(builder -> builder.key(key).bucket(bucketName).restoreRequest(restoreRequest)))
                 .doOnNext(restoreObjectResponse -> log.info(CLIENT_METHOD_RETURN, RESTORE_OBJECT, restoreObjectResponse))
                 .retryWhen(s3RetryStrategy.filter(isRestoreAlreadyInProgress.negate()))
@@ -93,7 +93,7 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<PresignedGetObjectRequest> presignGetObject(GetObjectRequest getObjectRequest, Duration duration) {
-        log.debug(CLIENT_METHOD_INVOCATION, PRESIGN_GET_OBJECT, Stream.of(getObjectRequest, duration).toList());
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, PRESIGN_GET_OBJECT, Stream.of(getObjectRequest, duration).toList());
         return Mono.just(s3Presigner.presignGetObject(builder -> builder.getObjectRequest(getObjectRequest).signatureDuration(duration)))
                 .doOnNext(presignedGetObjectRequest -> log.info(CLIENT_METHOD_RETURN, PRESIGN_GET_OBJECT, presignedGetObjectRequest))
                 .retryWhen(s3RetryStrategy);
@@ -101,7 +101,7 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<GetBucketLifecycleConfigurationResponse> getBucketLifecycleConfiguration(String bucketName) {
-            log.debug(CLIENT_METHOD_INVOCATION, GET_BUCKET_LIFECYCLE_CONFIGURATION, bucketName);
+            log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, GET_BUCKET_LIFECYCLE_CONFIGURATION, bucketName);
             return Mono.fromCompletionStage(s3AsyncClient.getBucketLifecycleConfiguration(builder -> builder.bucket(bucketName)))
                     .doOnNext(response -> log.info(CLIENT_METHOD_RETURN, GET_BUCKET_LIFECYCLE_CONFIGURATION, response))
                     .retryWhen(s3RetryStrategy);
@@ -110,7 +110,7 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<HeadObjectResponse> headObject(String key, String bucketName) {
-        log.debug(CLIENT_METHOD_INVOCATION, HEAD_OBJECT, Stream.of(key, bucketName).toList());
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, HEAD_OBJECT, Stream.of(key, bucketName).toList());
         return Mono.fromCompletionStage(s3AsyncClient.headObject(builder -> builder.key(key).bucket(bucketName).checksumMode(ChecksumMode.ENABLED)))
                 .doOnNext(headObjectResponse -> log.info(CLIENT_METHOD_RETURN, HEAD_OBJECT, headObjectResponse))
                 .retryWhen(s3RetryStrategy.filter(throwable -> !(throwable instanceof NoSuchKeyException)));
@@ -118,7 +118,7 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<PutObjectRetentionResponse> putObjectRetention(String key, String bucketName, ObjectLockRetention objectLockRetention) {
-        log.debug(CLIENT_METHOD_INVOCATION, PUT_OBJECT_RETENTION, Stream.of(key, bucketName, objectLockRetention).toList());
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, PUT_OBJECT_RETENTION, Stream.of(key, bucketName, objectLockRetention).toList());
         return Mono.fromCompletionStage(s3AsyncClient.putObjectRetention(builder -> builder.key(key).bucket(bucketName).retention(objectLockRetention)))
                 .doOnNext(putObjectRetentionResponse -> log.info(CLIENT_METHOD_RETURN, PUT_OBJECT_RETENTION, putObjectRetentionResponse))
                 .retryWhen(s3RetryStrategy);
@@ -126,7 +126,7 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<PutObjectTaggingResponse> putObjectTagging(String key, String bucketName, Tagging tagging) {
-        log.debug(CLIENT_METHOD_INVOCATION, PUT_OBJECT_TAGGING, Stream.of(key, bucketName, tagging).toList());
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, PUT_OBJECT_TAGGING, Stream.of(key, bucketName, tagging).toList());
         return Mono.fromCompletionStage(s3AsyncClient.putObjectTagging(builder -> builder.key(key).bucket(bucketName).tagging(tagging)))
                 .doOnNext(putObjectTaggingResponse ->  log.info(CLIENT_METHOD_RETURN, PUT_OBJECT_TAGGING, putObjectTaggingResponse))
                 .retryWhen(s3RetryStrategy);
@@ -134,10 +134,35 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Mono<GetObjectTaggingResponse> getObjectTagging(String key, String bucketName) {
-        log.debug(CLIENT_METHOD_INVOCATION, GET_OBJECT_TAGGING, Stream.of(key, bucketName).toList());
-        return Mono.fromCompletionStage(s3AsyncClient.getObjectTagging(builder -> builder.key(key).bucket(bucketName)))
-                .doOnNext(putObjectTaggingResponse -> log.info(CLIENT_METHOD_RETURN, GET_OBJECT_TAGGING, putObjectTaggingResponse))
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, GET_OBJECT_TAGGING, Stream.of(key, bucketName).toList());
+        return Mono.fromCompletionStage(() -> s3AsyncClient.getObjectTagging(GetObjectTaggingRequest.builder()
+                .key(key)
+                .bucket(bucketName)
+                .build()))
+                .doOnNext(response -> log.info(CLIENT_METHOD_RETURN, GET_OBJECT_TAGGING, response))
                 .retryWhen(s3RetryStrategy);
     }
 
+    @Override
+    public Mono<ListObjectVersionsResponse> listObjectVersions(String key, String bucketName) {
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, LIST_OBJECT_VERSION, Stream.of(key, bucketName).toList());
+        return Mono.fromCompletionStage(() -> s3AsyncClient.listObjectVersions(
+                ListObjectVersionsRequest.builder()
+                        .bucket(bucketName)
+                        .prefix(key)
+                        .build()))
+                        .doOnNext(response -> log.info(CLIENT_METHOD_RETURN, LIST_OBJECT_VERSION, response))
+                .retryWhen(s3RetryStrategy);
+    }
+
+    @Override
+    public Mono<DeleteObjectsResponse> deleteObjectVersions(String key, String bucketName, List<ObjectIdentifier> identifiers) {
+        log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, DELETE_OBJECT_VERSIONS, Stream.of(key, bucketName).toList());
+        return Mono.fromCompletionStage(() -> s3AsyncClient.deleteObjects(DeleteObjectsRequest.builder()
+                        .bucket(bucketName)
+                        .delete(builder -> builder.objects(identifiers))
+                        .build()))
+                .doOnNext(deleteObjectsResponse -> log.info(CLIENT_METHOD_RETURN, DELETE_OBJECT_VERSIONS, deleteObjectsResponse))
+                .retryWhen(s3RetryStrategy);
+    }
 }

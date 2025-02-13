@@ -274,27 +274,27 @@ Parameters:
     Type: String
     Description: 'ARN coda per notifiche disponibilità'
 
-  PnSsQueueNameDummyTranformation:
+  PnSsQueueNameDummyTransformation:
     Type: String
     Description: 'Nome coda per trasformazione dummy'
 
-  PnSsQueueArnDummyTranformation:
+  PnSsQueueArnDummyTransformation:
     Type: String
     Description: 'ARN coda per trasformazione dummy'
 
-  PnSsQueueNameSignAndTimemarkTranformation:
+  PnSsQueueNameSignAndTimemarkTransformation:
     Type: String
     Description: 'Nome coda per trasformazione sign_and_timemark'
 
-  PnSsQueueArnSignAndTimemarkTranformation:
+  PnSsQueueArnSignAndTimemarkTransformation:
     Type: String
     Description: 'ARN coda per tasformazione sign_and_timemark'
 
-  PnSsQueueNameSignTranformation:
+  PnSsQueueNameSignTransformation:
     Type: String
     Description: 'Nome coda per la trasformazione sign'
 
-  PnSsQueueArnSignTranformation:
+  PnSsQueueArnSignTransformation:
     Type: String
     Description: 'ARN coda per la trasformazione sign'
 
@@ -638,9 +638,9 @@ Resources:
         ContainerEnvEntry61: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
         ContainerEnvEntry62: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
         ContainerEnvEntry63: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
-        ContainerEnvEntry64: !Sub 'PnSsQueueNameDummyTranformation=${PnSsQueueNameDummyTranformation}'
-        ContainerEnvEntry65: !Sub 'PnSsQueueNameSignAndTimemarkTranformation=${PnSsQueueNameSignAndTimemarkTranformation}'
-        ContainerEnvEntry66: !Sub 'PnSsQueueNameSignTranformation=${PnSsQueueNameSignTranformation}'
+        ContainerEnvEntry64: !Sub 'PnSsQueueNameDummyTransformation=${PnSsQueueNameDummyTransformation}'
+        ContainerEnvEntry65: !Sub 'PnSsQueueNameSignAndTimemarkTransformation=${PnSsQueueNameSignAndTimemarkTransformation}'
+        ContainerEnvEntry66: !Sub 'PnSsQueueNameSignTransformation=${PnSsQueueNameSignTransformation}'
         ContainerEnvEntry67: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
         ContainerEnvEntry68: !Sub 'SignMaxThreadPoolSize=${SignMaxThreadPoolSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'

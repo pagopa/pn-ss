@@ -557,7 +557,7 @@ Resources:
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 # La coda per la trasformazione DUMMY
-  PnSsQueueDummyTranformationStack:
+  PnSsQueueDummyTransformationStack:
     Type: AWS::CloudFormation::Stack
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
@@ -573,7 +573,7 @@ Resources:
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 # La coda per trasformazione SIGN_AND_TIMEMARK
-    PnSsQueueSignAndTimemarkTranformationStack:
+    PnSsQueueSignAndTimemarkTransformationStack:
       Type: AWS::CloudFormation::Stack
       UpdateReplacePolicy: Retain
       DeletionPolicy: Retain
@@ -589,7 +589,7 @@ Resources:
           AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 # La coda per trasformazione SIGN
-    PnSsQueueSignTranformationStack:
+    PnSsQueueSignTransformationStack:
       Type: AWS::CloudFormation::Stack
       UpdateReplacePolicy: Retain
       DeletionPolicy: Retain
@@ -910,29 +910,29 @@ Outputs:
     Description: 'ARN Bucket SS Staging'
     Value: !GetAtt PnSsStagingBucket.Arn
 
-  PnSsQueueNameDummyTranformation:
+  PnSsQueueNameDummyTransformation:
     Description: 'Nome coda per la trasformazione dummy'
-    Value: !GetAtt PnSsQueueDummyTranformationStack.Outputs.QueueName
+    Value: !GetAtt PnSsQueueDummyTransformationStack.Outputs.QueueName
 
-  PnSsQueueArnDummyTranformation:
+  PnSsQueueArnDummyTransformation:
     Description: 'ARN coda per la trasformazione dummy'
-    Value: !GetAtt PnSsQueueDummyTranformationStack.Outputs.QueueARN
+    Value: !GetAtt PnSsQueueDummyTransformationStack.Outputs.QueueARN
 
-  PnSsQueueNameSignAndTimemarkTranformation:
+  PnSsQueueNameSignAndTimemarkTransformation:
     Description: 'Nome coda per la trasformazione sign_and_timemark'
-    Value: !GetAtt PnSsQueueSignAndTimemarkTranformationStack.Outputs.QueueName
+    Value: !GetAtt PnSsQueueSignAndTimemarkTransformationStack.Outputs.QueueName
 
-  PnSsQueueArnSignAndTimemarkTranformation:
+  PnSsQueueArnSignAndTimemarkTransformation:
     Description: 'ARN coda per la trasformazione sign_and_timemark'
-    Value: !GetAtt PnSsQueueSignAndTimemarkTranformationStack.Outputs.QueueARN
+    Value: !GetAtt PnSsQueueSignAndTimemarkTransformationStack.Outputs.QueueARN
 
-  PnSsQueueNameSignTranformation:
+  PnSsQueueNameSignTransformation:
     Description: 'Nome coda per la trasformazione sign'
-    Value: !GetAtt PnSsQueueSignTranformationStack.Outputs.QueueName
+    Value: !GetAtt PnSsQueueSignTransformationStack.Outputs.QueueName
 
-  PnSsQueueArnSignTranformation:
+  PnSsQueueArnSignTransformation:
     Description: 'ARN coda per la trasformazione sign'
-    Value: !GetAtt PnSsQueueSignTranformationStack.Outputs.QueueARN
+    Value: !GetAtt PnSsQueueSignTransformationStack.Outputs.QueueARN
 
   PnSsQueueNameAvailability:
     Description: 'Nome coda per notifiche disponibilità'

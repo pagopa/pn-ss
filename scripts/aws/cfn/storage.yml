@@ -573,7 +573,7 @@ Resources:
         AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
 # La coda per trasformazione SIGN_AND_TIMEMARK
-    PnSsQueueSignAndTimemarkTransformationStack:
+  PnSsQueueSignAndTimemarkTransformationStack:
       Type: AWS::CloudFormation::Stack
       UpdateReplacePolicy: Retain
       DeletionPolicy: Retain

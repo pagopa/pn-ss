@@ -511,8 +511,6 @@ Resources:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
         QueueConfigurations:
-          - Event: 's3:ObjectCreated:*'
-            Queue: !GetAtt PnSsQueueGestoreBucketInvokeStack.Outputs.QueueARN
           - Event: 's3:ObjectCreated:Put'
             Queue: !GetAtt PnSsQueueStagingBucketStack.Outputs.QueueARN
           - Event: 's3:ObjectTagging:Put'

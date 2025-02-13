@@ -912,27 +912,27 @@ Outputs:
 
   PnSsQueueNameDummyTranformation:
     Description: 'Nome coda per la trasformazione dummy'
-    Value: !GettAtt PnSsQueueDummyTranformationStack.Outputs.QueueName
+    Value: !GetAtt PnSsQueueDummyTranformationStack.Outputs.QueueName
 
   PnSsQueueArnDummyTranformation:
     Description: 'ARN coda per la trasformazione dummy'
-    Value: !GettAtt PnSsQueueDummyTranformationStack.Outputs.QueueARN
+    Value: !GetAtt PnSsQueueDummyTranformationStack.Outputs.QueueARN
 
   PnSsQueueNameSignAndTimemarkTranformation:
     Description: 'Nome coda per la trasformazione sign_and_timemark'
-    Value: !GettAtt PnSsQueueSignAndTimemarkTranformationStack.Outputs.QueueName
+    Value: !GetAtt PnSsQueueSignAndTimemarkTranformationStack.Outputs.QueueName
 
   PnSsQueueArnSignAndTimemarkTranformation:
     Description: 'ARN coda per la trasformazione sign_and_timemark'
-    Value: !GettAtt PnSsQueueSignAndTimemarkTranformationStack.Outputs.QueueARN
+    Value: !GetAtt PnSsQueueSignAndTimemarkTranformationStack.Outputs.QueueARN
 
   PnSsQueueNameSignTranformation:
     Description: 'Nome coda per la trasformazione sign'
-    Value: !GettAtt PnSsQueueSignTranformationStack.Outputs.QueueARN
+    Value: !GetAtt PnSsQueueSignTranformationStack.Outputs.QueueARN
 
   PnSsQueueArnSignTranformation:
     Description: 'ARN coda per la trasformazione sign'
-    Value: !GettAtt PnSsQueueSignTranformationStack.Outputs.QueueARN
+    Value: !GetAtt PnSsQueueSignTranformationStack.Outputs.QueueARN
 
   PnSsQueueNameAvailability:
     Description: 'Nome coda per notifiche disponibilità'

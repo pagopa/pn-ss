@@ -928,7 +928,7 @@ Outputs:
 
   PnSsQueueNameSignTranformation:
     Description: 'Nome coda per la trasformazione sign'
-    Value: !GetAtt PnSsQueueSignTranformationStack.Outputs.QueueARN
+    Value: !GetAtt PnSsQueueSignTranformationStack.Outputs.QueueName
 
   PnSsQueueArnSignTranformation:
     Description: 'ARN coda per la trasformazione sign'

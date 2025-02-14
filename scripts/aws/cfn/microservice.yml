@@ -744,6 +744,9 @@ Resources:
             Resource:
               - !Ref PnSsQueueArnStagingBucket
               - !Ref PnSsQueueArnAvailability
+              - !Ref PnSsQueueArnSignAndTimemarkTransformation
+              - !Ref PnSsQueueArnSignTransformation
+              - !Ref PnSsQueueArnDummyTransformation
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:

@@ -3,17 +3,14 @@ package it.pagopa.pnss.transformation.handler;
 import io.awspring.cloud.messaging.listener.Acknowledgment;
 import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
+import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.service.TransformationService;
 import lombok.CustomLog;
 import org.springframework.stereotype.Component;
-import software.amazon.awssdk.eventnotifications.s3.model.S3EventNotification;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
 import it.pagopa.pnss.configurationproperties.TransformationProperties;
-import it.pagopa.pnss.transformation.service.TransformationService;
-import lombok.CustomLog;
 import org.slf4j.MDC;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.util.concurrent.Semaphore;
@@ -35,13 +32,12 @@ public class TransformationHandler {
     }
 
     @SqsListener(value = "${pn.ss.transformation.queues.staging}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
-    void processAndPublishTransformation(String json, Acknowledgment acknowledgment) {
-        S3EventNotification event = S3EventNotification.fromJson(json);
-        String fileKey = event.getRecords().get(0).getS3().getObject().getKey();
+    void processAndPublishTransformation(S3EventNotificationMessage s3EventNotificationMessage, Acknowledgment acknowledgment) {
+        String fileKey = s3EventNotificationMessage.getEventNotificationDetail().getObject().getKey();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(PROCESS_TRANSFORMATION_EVENT);
         MDCUtils.addMDCToContextAndExecute(
-                transformationService.handleS3Event(event.getRecords().get(0))
+                transformationService.handleS3Event(s3EventNotificationMessage)
                         .doOnSuccess(result -> {
                             log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT);
                             acknowledgment.acknowledge();

@@ -773,6 +773,32 @@ Resources:
             Resource:
               - '*'
 
+  #####    Staging Bucket Events Rule    #####
+  PnSsEventRuleStagingBucket:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: 'Rule catching object creation events in SS staging bucket'
+      EventPattern:
+        source:
+          - 'aws.s3'
+        account:
+          - !Ref AWS::AccountId
+        region:
+          - !Ref AWS::Region
+        detail-type:
+          - 'Object Created'
+          - 'Object Tags Added'
+        detail:
+          bucket:
+            name:
+              - !Ref PnSsStagingBucketName
+        resources:
+          - !Ref PnSsStagingBucketArn
+      State: 'ENABLED'
+      Targets:
+        - Arn: !Ref PnSsQueueArnStagingBucket
+          Id: "SQSTargetForStagingBucket"
+
   #####    External notifications    #####
   PnSsRoleExternalNotifications:
     Type: AWS::IAM::Role
@@ -907,6 +933,10 @@ Resources:
         LambdaArns: !GetAtt PnSsGestoreBucket.Arn
         # KinesisDataArns:
         # KinesisFirehoseArns:
+        EventRuleArns: !GetAtt PnSsEventRuleStagingBucket.Arn
+          # !Join
+          # - ','
+          # - - !Ref PnSsEventRuleArnStagingBucket
         BucketNames:
           !Join
           - ','

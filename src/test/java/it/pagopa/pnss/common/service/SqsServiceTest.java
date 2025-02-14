@@ -2,7 +2,7 @@ package it.pagopa.pnss.common.service;
 
 
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import it.pagopa.pnss.transformation.model.dto.CreatedS3ObjectDto;
+import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import lombok.CustomLog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ class SqsServiceTest {
 
     @Test
     void testSendOk() {
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        S3EventNotificationMessage createdS3ObjectDto = new S3EventNotificationMessage();
         log.info(signQueueName);
 
         Mono<SendMessageResponse> sendMessageResponseMono = sqsService.send(signQueueName, createdS3ObjectDto);
@@ -43,7 +43,7 @@ class SqsServiceTest {
 
     @Test
     void testSendWrongQueueName() {
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        S3EventNotificationMessage createdS3ObjectDto = new S3EventNotificationMessage();
         log.info(signQueueName);
         String queueName = "signQueueName";
         StepVerifier.create(sqsService.send(queueName, createdS3ObjectDto))
@@ -55,7 +55,7 @@ class SqsServiceTest {
     void getMessages() {
         sendMessageToQueue().block();
 
-        StepVerifier.create(sqsService.getMessages(signQueueName, CreatedS3ObjectDto.class, MAX_MESSAGES))
+        StepVerifier.create(sqsService.getMessages(signQueueName, S3EventNotificationMessage.class, MAX_MESSAGES))
                 .expectNextCount(1)
                 .verifyComplete();
     }
@@ -65,7 +65,7 @@ class SqsServiceTest {
         SendMessageResponse sendMessageResponse = sendMessageToQueue().block();
         assert sendMessageResponse != null : "sendMessageResponse is null";
         //Message received = sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(signQueueName)).join().messages().get(0);
-        Message received = sqsService.getMessages(signQueueName, CreatedS3ObjectDto.class, MAX_MESSAGES).filter(sqsMessageWrapper -> sqsMessageWrapper.getMessage().messageId().equals(sendMessageResponse.messageId())).blockFirst().getMessage();
+        Message received = sqsService.getMessages(signQueueName, S3EventNotificationMessage.class, MAX_MESSAGES).filter(sqsMessageWrapper -> sqsMessageWrapper.getMessage().messageId().equals(sendMessageResponse.messageId())).blockFirst().getMessage();
         assert received != null : "received is null";
 
         Mono<DeleteMessageResponse> deleteMessageResponseMono = sqsService.deleteMessageFromQueue(received, signQueueName);
@@ -81,7 +81,7 @@ class SqsServiceTest {
     }
 
     private Mono<SendMessageResponse> sendMessageToQueue() {
-        CreatedS3ObjectDto createdS3ObjectDto = new CreatedS3ObjectDto();
+        S3EventNotificationMessage createdS3ObjectDto = new S3EventNotificationMessage();
         return sqsService.send(signQueueName, createdS3ObjectDto);
 
     }

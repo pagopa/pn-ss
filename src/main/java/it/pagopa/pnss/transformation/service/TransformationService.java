@@ -15,16 +15,17 @@ import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.TransformationProperties;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
+import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.eventnotifications.s3.model.S3EventNotificationRecord;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
+import software.amazon.awssdk.utils.StringUtils;
 
 import java.time.Duration;
 import java.util.List;
@@ -51,8 +52,9 @@ public class TransformationService {
     private final EventBridgeService eventBridgeService;
     private final TransformationConfig transformationConfig;
     private final TransformationProperties props;
-    public static final String OBJECT_CREATED_PUT_EVENT = "s3:ObjectCreated:Put";
-    public static final String OBJECT_TAGGING_PUT_EVENT = "s3:ObjectTagging:Put";
+    public static final String OBJECT_CREATED_PUT_EVENT = "Object Created";
+    public static final String OBJECT_TAGGING_PUT_EVENT = "Object Tags Added";
+    public static final String PUT_OBJECT_REASON = "PutObject";
     @Value("${event.bridge.disponibilita-documenti-name}")
     private String disponibilitaDocumentiEventBridge;
 
@@ -77,13 +79,13 @@ public class TransformationService {
         this.props = props;
     }
 
-    public Mono<Void> handleS3Event(S3EventNotificationRecord s3Record) {
-        log.debug(INVOKING_METHOD, HANDLE_S3_EVENT, s3Record.toString());
-        String fileKey = s3Record.getS3().getObject().getKey();
+    public Mono<Void> handleS3Event(S3EventNotificationMessage message) {
+        log.debug(INVOKING_METHOD, HANDLE_S3_EVENT, message);
+        String fileKey = message.getEventNotificationDetail().getObject().getKey();
         String sourceBucket = bucketNames.ssStageName();
-        String eventType = s3Record.getEventName();
+        String eventType = message.getDetailType();
 
-        if (!(OBJECT_CREATED_PUT_EVENT.equals(eventType) || OBJECT_TAGGING_PUT_EVENT.equals(eventType))) {
+        if (!(isValidEventType(eventType, message.getEventNotificationDetail().getReason()))) {
             log.info("Skipping processing transformation for key {} with event type: {}", fileKey, eventType);
             return Mono.empty();
         }
@@ -100,6 +102,11 @@ public class TransformationService {
                                 return handleObjectTag(fileKey, sourceBucket, tagOpt.get(), transformations, docContentType, document);
                             });
                 });
+    }
+
+    // Il campo reason non è sempre valorizzato: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
+    private boolean isValidEventType(String detailType, String reason) {
+        return OBJECT_TAGGING_PUT_EVENT.equals(detailType) || (OBJECT_CREATED_PUT_EVENT.equals(detailType) && StringUtils.equals(reason, PUT_OBJECT_REASON));
     }
 
     private Mono<Void> handleObjectTag(String fileKey, String sourceBucket, Tag tag, List<String> transformations, String docContentType, DocumentResponse document) {

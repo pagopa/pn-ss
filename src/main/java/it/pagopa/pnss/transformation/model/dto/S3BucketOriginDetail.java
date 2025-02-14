@@ -1,14 +1,13 @@
 package it.pagopa.pnss.transformation.model.dto;
 
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Data
 @NoArgsConstructor
-public class BucketOriginDetail {
-
+@AllArgsConstructor
+@Builder
+public class S3BucketOriginDetail {
     String name;
 }

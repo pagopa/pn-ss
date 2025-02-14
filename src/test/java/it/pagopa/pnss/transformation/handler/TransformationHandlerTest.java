@@ -3,19 +3,18 @@ package it.pagopa.pnss.transformation.handler;
 import io.awspring.cloud.messaging.listener.Acknowledgment;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.transformation.model.dto.S3EventNotificationDetail;
+import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
+import it.pagopa.pnss.transformation.model.dto.S3Object;
 import it.pagopa.pnss.transformation.service.TransformationService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import reactor.test.publisher.TestPublisher;
-import software.amazon.awssdk.eventnotifications.s3.model.S3EventNotification;
-import software.amazon.awssdk.eventnotifications.s3.model.S3EventNotificationRecord;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
-
-import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -27,7 +26,7 @@ class TransformationHandlerTest {
     private TransformationService transformationService;
     @Autowired
     private TransformationHandler transformationHandler;
-    private static final String S3_EVENT_NOTIFICATION = "{\"Records\":[{\"s3\":{\"bucket\":{\"name\":\"fake-bucket\"},\"object\":{\"key\":\"FAKE\"}}}]}";
+    private static final S3EventNotificationMessage S3_EVENT_NOTIFICATION = createS3EventMessage();
     private final TransformationMessage TRANSFORMATION_MESSAGE = createTransformationMessage();
 
     @Test
@@ -38,7 +37,7 @@ class TransformationHandlerTest {
         Acknowledgment acknowledgment = mock(Acknowledgment.class);
 
         //WHEN
-        when(transformationService.handleS3Event(any(S3EventNotificationRecord.class))).thenReturn(testPublisher.mono());
+        when(transformationService.handleS3Event(any(S3EventNotificationMessage.class))).thenReturn(testPublisher.mono());
 
         //THEN
         Assertions.assertDoesNotThrow(() -> transformationHandler.processAndPublishTransformation(S3_EVENT_NOTIFICATION, acknowledgment));
@@ -54,7 +53,7 @@ class TransformationHandlerTest {
         Acknowledgment acknowledgment = mock(Acknowledgment.class);
 
         //WHEN
-        when(transformationService.handleS3Event(any(S3EventNotificationRecord.class))).thenReturn(testPublisher.mono());
+        when(transformationService.handleS3Event(any(S3EventNotificationMessage.class))).thenReturn(testPublisher.mono());
 
         //THEN
         Assertions.assertDoesNotThrow(() -> transformationHandler.processAndPublishTransformation(S3_EVENT_NOTIFICATION, acknowledgment));
@@ -164,6 +163,12 @@ class TransformationHandlerTest {
         String FILE_KEY = "fileKey";
         transformationMessage.setFileKey(FILE_KEY);
         return transformationMessage;
+    }
+
+    private static S3EventNotificationMessage createS3EventMessage() {
+        S3Object s3Object = S3Object.builder().key("fileKey").build();
+        S3EventNotificationDetail detail = S3EventNotificationDetail.builder().object(s3Object).build();
+        return S3EventNotificationMessage.builder().eventNotificationDetail(detail).build();
     }
 
 }

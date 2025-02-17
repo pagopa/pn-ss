@@ -1,7 +1,5 @@
 package it.pagopa.pnss.transformation.service;
 
-
-import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
@@ -13,10 +11,10 @@ import it.pagopa.pnss.common.utils.EventBridgeUtil;
 import it.pagopa.pnss.configuration.TransformationConfig;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.TransformationProperties;
-import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
+import it.pagopa.pnss.transformation.utils.TransformationUtils;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -25,17 +23,16 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
-import software.amazon.awssdk.utils.StringUtils;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 import static it.pagopa.pnss.common.utils.LogUtils.SUCCESSFUL_OPERATION_LABEL;
 import static it.pagopa.pnss.configurationproperties.TransformationProperties.*;
+import static it.pagopa.pnss.transformation.utils.TransformationUtils.*;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
@@ -52,14 +49,8 @@ public class TransformationService {
     private final EventBridgeService eventBridgeService;
     private final TransformationConfig transformationConfig;
     private final TransformationProperties props;
-    public static final String OBJECT_CREATED_PUT_EVENT = "Object Created";
-    public static final String OBJECT_TAGGING_PUT_EVENT = "Object Tags Added";
-    public static final String PUT_OBJECT_REASON = "PutObject";
     @Value("${event.bridge.disponibilita-documenti-name}")
     private String disponibilitaDocumentiEventBridge;
-
-    private static final List<Class<? extends Throwable>> PERMANENT_TRASNFORMATION_EXCEPTIONS = List.of(PnSpapiPermanentErrorException.class);
-    private final Predicate<Throwable> isPermanentException = e -> PERMANENT_TRASNFORMATION_EXCEPTIONS.contains(e.getClass());
 
     public TransformationService(S3ServiceImpl s3Service,
                                  PnSignProviderService pnSignService,
@@ -104,16 +95,11 @@ public class TransformationService {
                 });
     }
 
-    // Il campo reason non è sempre valorizzato: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
-    private boolean isValidEventType(String detailType, String reason) {
-        return OBJECT_TAGGING_PUT_EVENT.equals(detailType) || (OBJECT_CREATED_PUT_EVENT.equals(detailType) && StringUtils.equals(reason, PUT_OBJECT_REASON));
-    }
-
     private Mono<Void> handleObjectTag(String fileKey, String sourceBucket, Tag tag, List<String> transformations, String docContentType, DocumentResponse document) {
         log.debug(INVOKING_METHOD, HANDLE_OBJ_TAG, Stream.of(fileKey, sourceBucket, tag, transformations, docContentType, document).toList());
         String tagState = tag.value();
         return switch (tagState) {
-            case OK -> handleNextTransformation(tag.key(), fileKey, sourceBucket, transformations, docContentType);
+            case OK -> endTransformation(tag.key(), fileKey, sourceBucket, transformations, docContentType);
             case ERROR -> sendUnavailabilityEvent(fileKey, sourceBucket, document);
             default -> Mono.error(new InvalidTransformationStateException.StatusNotRecognizedException(tagState));
         };
@@ -121,33 +107,25 @@ public class TransformationService {
 
 
     /*
-     * Gestisce l'evento di trasformazione di un file basato sul tag associato all'oggetto S3:
+     * Conclude il processo di trasformazione:
      *     - Determina il tipo di trasformazione attuale rimuovendo il prefisso "Transformation-" dal tag
      *     - Verifica se la trasformazione è presente nella lista delle trasformazioni previste
-     *     - Se esiste una trasformazione successiva, pubblica un messaggio nella coda per avviarla
-     *     - Se tutte le trasformazioni sono completate:
+     *     - Se la trasformazione è stata completata:
      *          - Verifica se il file è già nel bucket finale
      *          - Se si, lo rimuove dal bucket temporaneo
      *          - Se no, lo carica nel bucket finale e poi lo rimuove dal bucket temporaneo
      */
-    private Mono<Void> handleNextTransformation(String tagKey, String fileKey, String sourceBucket, List<String> transformations, String docContentType) {
+    private Mono<Void> endTransformation(String tagKey, String fileKey, String sourceBucket, List<String> transformations, String docContentType) {
         String transformationType = tagKey.replace(TRANSFORMATION_TAG_PREFIX, "");
         return Mono.just(transformationType)
                 .filter(transformations::contains)
                 .switchIfEmpty(Mono.fromRunnable(() -> log.warn("Transformation {} is not recognized in the transformation list.", transformationType)))
                 .flatMap(currentTransformation -> {
-                    int currentIndexTransformation = transformations.indexOf(currentTransformation);
-                    if (currentIndexTransformation + 1 < transformations.size()) {
-                        String nextTransformation = transformations.get(currentIndexTransformation + 1);
-                        log.debug("Next transformation: {}", nextTransformation);
-                        return publishTransformationOnQueue(fileKey, sourceBucket, nextTransformation, docContentType);
-                    } else {
-                        log.debug("All transformations are completed for file: {}", fileKey);
-                        return isAlreadyInBucket(fileKey)
-                                .flatMap(isInFinalBucket -> Boolean.TRUE.equals(isInFinalBucket) ?
-                                        removeObjectFromStagingBucket(fileKey, sourceBucket) :
-                                        uploadToFinalBucket(fileKey, docContentType, sourceBucket));
-                    }
+                    log.debug("Transformation completed for file: {}", fileKey);
+                    return isAlreadyInBucket(fileKey)
+                            .flatMap(isInFinalBucket -> Boolean.TRUE.equals(isInFinalBucket) ?
+                                    removeObjectFromStagingBucket(fileKey, sourceBucket) :
+                                    uploadToFinalBucket(fileKey, docContentType, sourceBucket));
                 })
                 .then();
     }
@@ -202,24 +180,12 @@ public class TransformationService {
     private Mono<Void> sendUnavailabilityEvent(String fileKey, String sourceBucket, DocumentResponse documentResponse) {
         log.warn("Transformation error detected for file: {} in bucket: {}", fileKey, sourceBucket);
         return Mono.just(documentResponse)
-                .flatMap(this::mapToDocumentEntity)
+                .flatMap(TransformationUtils::mapToDocumentEntity)
                 .flatMap(documentEntity -> {
                     PutEventsRequestEntry event = EventBridgeUtil.createUnavailabilityMessage(documentEntity, fileKey, disponibilitaDocumentiEventBridge);
                     return eventBridgeService.putSingleEvent(event);
                 })
                 .then();
-    }
-
-    private Mono<DocumentEntity> mapToDocumentEntity(DocumentResponse documentResponse) {
-        return Mono.fromSupplier(() -> {
-            DocumentEntity documentEntity = new DocumentEntity();
-            documentEntity.setDocumentKey(documentResponse.getDocument().getDocumentKey());
-            documentEntity.setDocumentState(documentResponse.getDocument().getDocumentState());
-            documentEntity.setContentType(documentResponse.getDocument().getContentType());
-            documentEntity.setClientShortCode(documentResponse.getDocument().getClientShortCode());
-            documentEntity.setCheckSum(documentResponse.getDocument().getCheckSum());
-            return documentEntity;
-        });
     }
 
     public Mono<PutObjectResponse> signAndTimemarkTransformation(TransformationMessage transformationMessage, boolean marcatura) {
@@ -279,10 +245,6 @@ public class TransformationService {
                     };
 
                 });
-    }
-
-    private Tagging buildTransformationTagging(String transformation, String value) {
-        return Tagging.builder().tagSet(Tag.builder().key(TRANSFORMATION_TAG_PREFIX + transformation).value(value).build()).build();
     }
 
 }

@@ -50,7 +50,7 @@ import static it.pagopa.pnss.configurationproperties.TransformationProperties.*;
 
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static it.pagopa.pnss.transformation.service.TransformationService.*;
+import static it.pagopa.pnss.transformation.utils.TransformationUtils.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -136,75 +136,6 @@ class TransformationServiceTest {
         StepVerifier.create(testMono).verifyComplete();
         verify(sqsService).send(any(), eq(expectedMessage));
     }
-
-    @Test
-    void handleEvent_OtherTransformations_Ok() {
-        //GIVEN
-        String sourceBucket = bucketName.ssStageName();
-        String contentType = "application/pdf";
-        String nextTransformation = DUMMY;
-        S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
-        TransformationMessage expectedMessage = createTransformationMessage(nextTransformation, sourceBucket, contentType);
-
-        // Simuliamo il fatto che la prima trasformazione è già stata fatta.
-        Tag tag = Tag.builder().key("Transformation-" + SIGN_AND_TIMEMARK).value("OK").build();
-        s3TestClient.putObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket).tagging(Tagging.builder().tagSet(tag).build()));
-
-        //WHEN
-        mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, nextTransformation));
-        var testMono = transformationService.handleS3Event(record);
-
-        //THEN
-        StepVerifier.create(testMono).verifyComplete();
-        verify(s3Service).getObjectTagging(FILE_KEY, sourceBucket);
-        verify(sqsService).send(any(), eq(expectedMessage));
-    }
-
-    // Il valore associato al tag Transformation è "ERROR". Ci aspettiamo che venga notificato un evento di indisponibilità.
-    @Test
-    void handleEvent_OtherTransformations_ErrorState() {
-        //GIVEN
-        String sourceBucket = bucketName.ssStageName();
-        String contentType = "application/pdf";
-        S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
-
-        // Simuliamo il fatto che la prima trasformazione è già stata fatta.
-        Tag tag = Tag.builder().key("Transformation-" + SIGN_AND_TIMEMARK).value("ERROR").build();
-        s3TestClient.putObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket).tagging(Tagging.builder().tagSet(tag).build()));
-
-        //WHEN
-        mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, DUMMY));
-        var testMono = transformationService.handleS3Event(record);
-
-        //THEN
-        StepVerifier.create(testMono).verifyComplete();
-        verify(s3Service).getObjectTagging(FILE_KEY, sourceBucket);
-        verify(eventBridgeService).putSingleEvent(any());
-    }
-
-    // L'oggetto S3 ha un tag di tipo Transformation-xxx, ma il valore associato non è riconosciuto.
-    @Test
-    void handleEvent_OtherTransformations_UnrecognizedTransformationState_Ko() {
-        //GIVEN
-        String sourceBucket = bucketName.ssStageName();
-        String contentType = "application/pdf";
-        String nextTransformation = DUMMY;
-        S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
-        TransformationMessage expectedMessage = createTransformationMessage(nextTransformation, sourceBucket, contentType);
-
-        // Inseriamo un tag Transformation, ma con uno stato non riconosciuto.
-        Tag tag = Tag.builder().key("Transformation-" + SIGN_AND_TIMEMARK).value("FAKE").build();
-        s3TestClient.putObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket).tagging(Tagging.builder().tagSet(tag).build()));
-
-        //WHEN
-        mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, nextTransformation));
-        var testMono = transformationService.handleS3Event(record);
-
-        //THEN
-        StepVerifier.create(testMono).expectError(InvalidTransformationStateException.StatusNotRecognizedException.class).verify();
-        verify(s3Service).getObjectTagging(FILE_KEY, sourceBucket);
-    }
-
 
     @Test
     void handleEvent_AllTransformationsApplied_Ok() {

@@ -216,11 +216,6 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
-  PnSsKmsBucketAlias:
-    Type: AWS::KMS::Alias
-    Properties:
-      AliasName: alias/PnSsKmsBucket
-      TargetKeyId: !GetAtt PnSsKmsBucket.KeyId
 
   PnSsBucket:
     Type: AWS::S3::Bucket

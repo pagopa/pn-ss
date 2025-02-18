@@ -204,6 +204,9 @@ Resources:
       KeySpec: SYMMETRIC_DEFAULT
       KeyUsage: ENCRYPT_DECRYPT
       EnableKeyRotation: true
+      Tags:
+        - Key: "KeyType"
+          Value: "PnSsKmsBucket"
       KeyPolicy:
         Version: 2012-10-17
         Statement:

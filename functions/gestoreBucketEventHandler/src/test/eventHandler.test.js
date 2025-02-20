@@ -1,5 +1,5 @@
 const { mockClient } = require("aws-sdk-client-mock");
-const { S3Client, GetObjectCommand, GetObjectTaggingCommand } = require("@aws-sdk/client-s3")
+const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3")
 const proxyquire = require("proxyquire").noPreserveCache();
 const { expect } = require("chai");
 const fs = require("fs");
@@ -50,10 +50,6 @@ describe("gestoreBucketEventHandler tests", function () {
         documentState: "staged",
       };
 
-      s3MockClient.on(GetObjectTaggingCommand).resolves({
-        TagSet: []
-      });
-
       var originalRequest;
       mocker.mock({
         url: PATHPATCH,
@@ -66,45 +62,6 @@ describe("gestoreBucketEventHandler tests", function () {
       const res = await lambda.handleEvent(event);
 
       expect(JSON.parse(originalRequest.body)).to.deep.equal(expectedRequest);
-      expect(res).deep.equals({
-        batchItemFailures: [],
-      });
-
-    });
-
-
-    it("test staging bucket, object has tags, ok", async () => {
-
-      const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
-      const STAGINGBUCKET = process.env.PnSsStagingBucketName;
-      const NOW = new Date(Date.now()).toISOString();
-
-      const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
-
-      const docKey = "fileKey";
-      var event = createEvent(OBJECT_CREATED_PUT, docKey, "", STAGINGBUCKET, NOW);
-
-      var callCounter = 0;
-      mocker.mock({
-        url: PATHPATCH,
-        response: async function (requestInfo) {
-          callCounter++;
-          return {};
-        }
-      });
-
-      s3MockClient.on(GetObjectTaggingCommand).resolves({
-        TagSet: [
-          {
-            Key: "Transformation-xxx",
-            Value: "OK",
-          }
-        ]
-      });
-
-      const res = await lambda.handleEvent(event);
-
-      expect(callCounter).equals(0);
       expect(res).deep.equals({
         batchItemFailures: [],
       });
@@ -126,10 +83,6 @@ describe("gestoreBucketEventHandler tests", function () {
         documentKey: docKey,
         documentState: "staged",
       };
-
-      s3MockClient.on(GetObjectTaggingCommand).resolves({
-        TagSet: []
-      });
 
       var originalRequest;
       mocker.mock({

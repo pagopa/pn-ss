@@ -1,7 +1,7 @@
 "use strict";
 
 const http = require(process.env.PnSsGestoreRepositoryProtocol);
-const { S3Client, GetObjectCommand, GetObjectTaggingCommand } = require("@aws-sdk/client-s3")
+const { S3Client, GetObjectCommand} = require("@aws-sdk/client-s3")
 const crypto = require("crypto");
 
 const HOSTNAME = process.env.PnSsHostname;
@@ -42,13 +42,6 @@ exports.handleEvent = async (event) => {
           break;
         case "ObjectCreated:Put":
           if (bucketName === STAGINGBUCKET) {
-            const response = await s3.send(new GetObjectTaggingCommand({
-              Bucket: STAGINGBUCKET,
-              Key: jsonDocument.documentKey
-            }));
-            var tagSet = response.TagSet;
-            // Check sull'esistenza di tag "Transformation-xxx". Se ci sono vuol dire che sono in corso trasformazioni sull'oggetto e non devo chiamare la patch.
-            if (tagSet.length > 0 && tagSet.some(obj => obj.Key.startsWith("Transformation-"))) return;
             jsonDocument.documentState = "staged";
           } else {
             jsonDocument.contentLenght = bodyData.Records[0].s3.object.size;

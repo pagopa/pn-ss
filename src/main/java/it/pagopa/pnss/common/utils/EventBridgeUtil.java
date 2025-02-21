@@ -27,6 +27,7 @@ public class EventBridgeUtil {
     public static final String CONTENTTYPE_KEY = "contentType";
     public static final String CLIENTSHORTCODE_KEY = "clientShortCode";
     public static final String TAGS_KEY = "tags";
+    public static final String UNAVAILABILITY_DOCUMENT_STATUS = "ERROR";
     private static final ObjectMapper objMap = new ObjectMapper();
 
     public static PutEventsRequestEntry createMessage(DocumentEntity documentEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState, Boolean canReadTags){
@@ -64,7 +65,7 @@ public class EventBridgeUtil {
         NotificationMessage message = new NotificationMessage();
 
         message.setKey(fileKey);
-        message.setDocumentStatus(documentEntity.getDocumentLogicalState()!=null ? documentEntity.getDocumentLogicalState():null);
+        message.setDocumentStatus(UNAVAILABILITY_DOCUMENT_STATUS);
         message.setContentType(documentEntity.getContentType()!=null ? documentEntity.getContentType():null);
         message.setChecksum(documentEntity.getCheckSum()!=null ? documentEntity.getCheckSum():null);
         message.setClientShortCode(documentEntity.getClientShortCode()!=null ? documentEntity.getClientShortCode():null);

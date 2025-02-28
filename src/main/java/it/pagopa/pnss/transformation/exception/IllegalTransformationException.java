@@ -1,4 +1,4 @@
-package it.pagopa.pnss.common.exception;
+package it.pagopa.pnss.transformation.exception;
 
 public class IllegalTransformationException extends RuntimeException {
 

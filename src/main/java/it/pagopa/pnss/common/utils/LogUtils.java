@@ -20,6 +20,7 @@ public class LogUtils {
     public static final String EXCEPTION_IN_PROCESS = "Exception in '{}'";
     public static final String INVOKING_INTERNAL_SERVICE = "Invoking internal service '{}' '{}'. Waiting Sync response.";
     public static final String CLIENT_METHOD_INVOCATION = "Client method '{}' - args: '{}'";
+    public static final String CLIENT_METHOD_INVOCATION_WITH_ARGS = "Client method '{}' - args: '{}'";
     public static final String CLIENT_METHOD_RETURN = "Return client method: {} = {}";
     public static final String CLIENT_METHOD_RETURN_WITH_ERROR = "Return client method '{}' with error: {} - {}";
     public static final String INITIALIZING = "Initializing '{}'";
@@ -81,6 +82,7 @@ public class LogUtils {
     public static final String PUT_OBJECT_RETENTION = "putObjectRetention()";
     public static final String PUT_OBJECT_TAGGING = "putObjectTagging()";
     public static final String GET_OBJECT_TAGGING = "getObjectTagging()";
+    public static final String LIST_OBJECT_VERSION = "getListObjectVersions()";
     public static final String DELETE_OBJECT_TAGGING = "deleteObjectTagging()";
     public static final String GET_OBJECT = "getObject()";
     public static final String HEAD_OBJECT = "headObject()";
@@ -88,6 +90,7 @@ public class LogUtils {
     public static final String PRESIGN_GET_OBJECT = "presignGetObject()";
     public static final String RESTORE_OBJECT = "restoreObject()";
     public static final String DELETE_OBJECT = "deleteObject()";
+    public static final String DELETE_OBJECT_VERSIONS = "deleteObjectVersions()";
 
     //CLOUDWATCH
     public static final String PUBLISH_RESPONSE_TIME = "CloudWatchMetricsService.publishResponseTime()";
@@ -99,12 +102,18 @@ public class LogUtils {
     public static final String USER_CONFIGURATION = "USER_CONFIGURATION";
 
     //TRANSFORMATION
-    public static final String NEW_STAGING_BUCKET_OBJECT_CREATED_LISTENER = "newStagingBucketObjectCreatedListener()";
-    public static final String NEW_STAGING_BUCKET_OBJECT_CREATED = "TransformationService.newStagingBucketObjectCreated()";
-    public static final String OBJECT_TRANSFORMATION = "TransformationService.objectTransformation()";
+    public static final String HANDLE_S3_EVENT = "TransformationService.handleS3Event()";
+    public static final String HANDLE_OBJ_TAG = "TransformationService.handleObjectTag()";
+    public static final String UPLOAD_FINAL_BUCKET = "TransformationService.uploadToFinalBucket()";
+    public static final String PUBLISH_TRANSFORMATION_ON_QUEUE = "TransformationService.publishTransformationOnQueue()";
     public static final String SIGN_AND_TIMEMARK_TRANSFORMATION = "TransformationService.signAndTimemarkTransformation()";
-    public static final String RASTER_TRANSFORMATION = "TransformationService.rasterTransformation()";
-    public static final String CHANGE_FROM_STAGING_BUCKET_TO_HOT_BUCKET = "TransformationService.changeFromStagingBucketToHotBucket()";
+    public static final String DUMMY_TRANSFORMATION = "TransformationService.dummyTransformation()";
+    public static final String TRANSFORMATION_CONFIG = "TransformationConfig";
+    public static final String SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER = "signAndTimemarkTransformationSubscriber";
+    public static final String SIGN_TRANSFORMATION_SUBSCRIBER = "signTransformationSubscriber";
+    public static final String DUMMY_TRANSFORMATION_SUBSCRIBER = "dummyTransformationSubscriber";
+    public static final String EXCEPTION_IN_TRANSFORMATION = "Exception in '{}' transformation.";
+    public static final String PROCESS_TRANSFORMATION_EVENT = "processAndPublishTransformation";
 
     //RETENTION SERVICE
     public static final String GET_RETENTION_UNTIL = "RetentionService.getRetentionUntil()";
@@ -141,5 +150,8 @@ public class LogUtils {
     public static final String VALIDATE_QUERY_PARAMS = "AdditionalFileTagsService.validateQueryParams()";
     public static final String MASSIVE_POST_TAG_DOCUMENT = "massivePostTagDocument";
 
+
+    //EVENTBRIDGE
+    public static final String EVENT_BRIDGE_PUT_SINGLE_EVENT = "EventBridge - PutEvents.putSingleEvent()";
 
 }

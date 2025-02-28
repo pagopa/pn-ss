@@ -218,7 +218,7 @@ class UriBuilderUploadTest {
 
         when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
 
         FileCreationRequest fcr = new FileCreationRequest();
         fcr.setContentType("application/pdf");
@@ -430,7 +430,7 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
 
             FileCreationRequest fcr = new FileCreationRequest();
             fcr.setContentType("application/pdf");
@@ -452,7 +452,7 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
 
             FileCreationRequest fcr = new FileCreationRequest();
             fcr.setContentType("application/badContentType");
@@ -476,7 +476,7 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
             when(tagsClientCall.putTags("documentKey",new TagsChanges().SET(setTags))).thenReturn(Mono.just(new TagsResponse()));
 
             FileCreationRequest fcr = new FileCreationRequest();
@@ -500,7 +500,7 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
             when(tagsClientCall.putTags("documentKey",new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.just(new TagsResponse()));
 
             fileUploadTestCall(fcr).expectStatus().isOk();
@@ -581,7 +581,7 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
             when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new PutTagsBadRequestException()));
 
             fileUploadTestCall(fcr).expectStatus().isBadRequest();
@@ -603,7 +603,7 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
             when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new PutTagsBadRequestException()));
 
             fileUploadTestCall(fcr).expectStatus().isForbidden();
@@ -623,7 +623,7 @@ class UriBuilderUploadTest {
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
             when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new DocumentKeyNotPresentException("documentKey")));
 
             fileUploadTestCall(fcr).expectStatus().isNotFound();

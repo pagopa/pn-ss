@@ -274,7 +274,31 @@ Parameters:
     Type: String
     Description: 'ARN coda per notifiche disponibilità'
 
-#### Parametri presenti nel file json di configurazione  ###
+  PnSsQueueNameDummyTransformation:
+    Type: String
+    Description: 'Nome coda per trasformazione dummy'
+
+  PnSsQueueArnDummyTransformation:
+    Type: String
+    Description: 'ARN coda per trasformazione dummy'
+
+  PnSsQueueNameSignAndTimemarkTransformation:
+    Type: String
+    Description: 'Nome coda per trasformazione sign_and_timemark'
+
+  PnSsQueueArnSignAndTimemarkTransformation:
+    Type: String
+    Description: 'ARN coda per tasformazione sign_and_timemark'
+
+  PnSsQueueNameSignTransformation:
+    Type: String
+    Description: 'Nome coda per la trasformazione sign'
+
+  PnSsQueueArnSignTransformation:
+    Type: String
+    Description: 'ARN coda per la trasformazione sign'
+
+  #### Parametri presenti nel file json di configurazione  ###
 
   PnSsUriBuilderstayHotTime:
     Type: String
@@ -458,6 +482,10 @@ Parameters:
     Type: String
     Description: 'Name of the parameter store containing the configuration for the indexing service'
 
+  PnSsTransformationConfiguration:
+    Type: String
+    Description: 'Name of the parameter store containing the configuration for the transformation service'
+
   SpringCodecMaxInMemorySize:
     Type: String
     Description: 'Spring Codec Max Memory Size'
@@ -466,9 +494,9 @@ Parameters:
     Type: String
     Description: 'Sign and timemark transformation max thread pool size'
 
-  RasterMaxThreadPoolSize:
+  SignMaxThreadPoolSize:
     Type: String
-    Description: 'Raster transformation max thread pool size'
+    Description: 'Sign transformation max thread pool size'
 
 ### Altri parametri
   AlarmSNSTopicName:
@@ -542,10 +570,6 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
-    
-  ServiceEndpointToPdfRaster:
-    Type: String
-    Description: 'Endpoint FQDN of PDFRaster microservice'
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
@@ -608,14 +632,17 @@ Resources:
         ContainerEnvEntry55: !Sub 'PnSsEventHandlerMaxMessages=${PnSsEventHandlerMaxMessages}'
         ContainerEnvEntry56: !Sub 'PnSsSqsRetryStrategyMinBackoff=${PnSsSqsRetryStrategyMinBackoff}'
         ContainerEnvEntry57: !Sub 'PnSsSqsRetryStrategyMaxAttempts=${PnSsSqsRetryStrategyMaxAttempts}'
-        ContainerEnvEntry58: !Sub 'PdfRasterBaseUrl=http://${ServiceEndpointToPdfRaster}:8080'
-        ContainerEnvEntry59: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
-        ContainerEnvEntry60: !Sub 'RasterMaxThreadPoolSize=${RasterMaxThreadPoolSize}'
-        ContainerEnvEntry61: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
-        ContainerEnvEntry62: !Sub 'PnSsSignAndTimemarkMetricsSchema=${PnSsSignAndTimemarkMetricsSchema}'
-        ContainerEnvEntry63: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
-        ContainerEnvEntry64: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
-        ContainerEnvEntry65: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
+        ContainerEnvEntry58: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
+        ContainerEnvEntry59: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
+        ContainerEnvEntry60: !Sub 'PnSsSignAndTimemarkMetricsSchema=${PnSsSignAndTimemarkMetricsSchema}'
+        ContainerEnvEntry61: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
+        ContainerEnvEntry62: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
+        ContainerEnvEntry63: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
+        ContainerEnvEntry64: !Sub 'PnSsQueueNameDummyTransformation=${PnSsQueueNameDummyTransformation}'
+        ContainerEnvEntry65: !Sub 'PnSsQueueNameSignAndTimemarkTransformation=${PnSsQueueNameSignAndTimemarkTransformation}'
+        ContainerEnvEntry66: !Sub 'PnSsQueueNameSignTransformation=${PnSsQueueNameSignTransformation}'
+        ContainerEnvEntry67: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
+        ContainerEnvEntry68: !Sub 'SignMaxThreadPoolSize=${SignMaxThreadPoolSize}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -717,6 +744,9 @@ Resources:
             Resource:
               - !Ref PnSsQueueArnStagingBucket
               - !Ref PnSsQueueArnAvailability
+              - !Ref PnSsQueueArnSignAndTimemarkTransformation
+              - !Ref PnSsQueueArnSignTransformation
+              - !Ref PnSsQueueArnDummyTransformation
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -760,6 +790,7 @@ Resources:
           - !Ref AWS::Region
         detail-type:
           - 'Object Created'
+          - 'Object Tags Added'
         detail:
           bucket:
             name:

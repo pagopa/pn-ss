@@ -59,6 +59,9 @@ public class LocalStackTestConfig {
         System.setProperty("test.aws.cloudwatch.endpoint", String.valueOf(localStack.getEndpointOverride(CLOUDWATCH)));
         System.setProperty("test.aws.ssm.endpoint", String.valueOf(localStack.getEndpointOverride(SSM)));
         System.setProperty("aws.endpoint-url", localStack.getEndpointOverride(DYNAMODB).toString());
+        // Prendiamo l'endpoint override di SSM, in quanto EVENT BRIDGE non risulta disponibile nella enum.
+        // Fix temporanea, in quanto questa logica andrà cambiata con le modifiche di localdev (PN-13370)
+        System.setProperty("test.aws.eventbridge.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SSM)));
 
         try {
             System.setProperty("aws.sharedCredentialsFile", new ClassPathResource("testcontainers/credentials").getFile().getAbsolutePath());

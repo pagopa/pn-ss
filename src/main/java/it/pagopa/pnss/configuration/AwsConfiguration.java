@@ -29,8 +29,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.handler.annotation.support.PayloadMethodArgumentResolver;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -41,12 +39,16 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.services.eventbridge.EventBridgeAsyncClient;
+import software.amazon.awssdk.services.eventbridge.EventBridgeAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -54,6 +56,9 @@ import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.SsmClientBuilder;
+
 import software.amazon.awssdk.services.ssm.SsmAsyncClient;
 import software.amazon.awssdk.services.ssm.SsmAsyncClientBuilder;
 import java.net.URI;
@@ -87,11 +92,17 @@ public class AwsConfiguration {
     @Value("${test.aws.secretsmanager.endpoint:#{null}}")
     String secretsManagerLocalStackEndpoint;
 
+    @Value("${test.aws.eventbridge.endpoint:#{null}}")
+    String eventBridgeLocalStackEndpoint;
+
     @Value("${test.event.bridge:#{null}}")
     private String testEventBridge;
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
+
+    @Value("${test.aws.cloudwatch.endpoint:#{null}}")
+    private String testAwsCloudwatchEndpoint;
 
     @Value("${test.aws.ssm.endpoint:#{null}}")
     private String testAwsSsmEndpoint;
@@ -231,9 +242,38 @@ public class AwsConfiguration {
 
         return builder.build();
     }
+
     @Bean
-    public TaskExecutor taskExecutor() {
-        return new SimpleAsyncTaskExecutor(); // Or use another one of your liking
+    public CloudWatchAsyncClient cloudWatchAsyncClient() {
+        CloudWatchAsyncClientBuilder cloudWatchAsyncClientBuilder = CloudWatchAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsCloudwatchEndpoint != null) {
+            cloudWatchAsyncClientBuilder.endpointOverride(URI.create(testAwsCloudwatchEndpoint));
+        }
+
+        return cloudWatchAsyncClientBuilder.build();
+    }
+
+    @Bean
+    public SsmClient ssmClient() {
+        SsmClientBuilder ssmClientBuilder = SsmClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            ssmClientBuilder.endpointOverride(URI.create(testAwsSsmEndpoint));
+        }
+
+        return ssmClientBuilder.build();
+    }
+
+    @Bean
+    public EventBridgeAsyncClient eventBridgeAsyncClient() {
+        EventBridgeAsyncClientBuilder eventBridgeAsyncClientBuilder = EventBridgeAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            eventBridgeAsyncClientBuilder.endpointOverride(URI.create(eventBridgeLocalStackEndpoint));
+        }
+
+        return eventBridgeAsyncClientBuilder.build();
     }
 
     private String getTaskId() {

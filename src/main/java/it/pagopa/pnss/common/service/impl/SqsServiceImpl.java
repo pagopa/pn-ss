@@ -65,7 +65,7 @@ public class SqsServiceImpl implements SqsService {
         AtomicBoolean listIsEmpty = new AtomicBoolean();
         listIsEmpty.set(false);
 
-        BooleanSupplier condition = () -> (actualMessages.get() <= maxMessages && !listIsEmpty.get());
+        BooleanSupplier condition = () -> (actualMessages.get() < maxMessages && !listIsEmpty.get());
 
         return getQueueUrlFromName(queueName).flatMap(queueUrl -> Mono.fromCompletionStage(sqsAsyncClient.receiveMessage(builder -> builder.queueUrl(
                         queueUrl))))

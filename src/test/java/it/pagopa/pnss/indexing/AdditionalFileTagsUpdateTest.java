@@ -1,7 +1,6 @@
 package it.pagopa.pnss.indexing;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
-import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
@@ -22,7 +21,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.testcontainers.shaded.org.hamcrest.core.AllOf;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -300,7 +298,6 @@ class AdditionalFileTagsUpdateTest {
         Map<String, List<String>> set = new HashMap<>();
         set.put("IUN", List.of("XXXFEF3RFD", "CHDGDTFENM"));
         var tag = new AdditionalFileTagsUpdateRequest().SET(set);
-        var tagsDto = new TagsDto().tags(set);
 
         when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.error(new DocumentKeyNotPresentException("NOTFOUND")));
 
@@ -600,7 +597,7 @@ class AdditionalFileTagsUpdateTest {
     }
 
     /**
-     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una fileKey esistente,
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di due fileKey diverse,
      * ma passando per update/set un tag non esistente
      * Risultato atteso: 200 OK
      * Errori popolati
@@ -609,10 +606,11 @@ class AdditionalFileTagsUpdateTest {
     void testMassiveRequestOkWithSetInvalidTagError() {
         Map<String, List<String>> set = new HashMap<>();
         set.put("INVALID", List.of("XXXFEF3RFD", "CHDGDTFENM"));
-        String fileKey = "documentKey";
-        Tags tag = new Tags().fileKey(fileKey).SET(set);
-        List<Tags> tagsList = new ArrayList<>();
-        tagsList.add(tag);
+        String fileKey1 = "documentKey1";
+        String fileKey2 = "documentKey2";
+        Tags tag1 = new Tags().fileKey(fileKey1).SET(set);
+        Tags tag2 = new Tags().fileKey(fileKey2).SET(set);
+        List<Tags> tagsList = new ArrayList<>(List.of(tag1, tag2));
         AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
 
         var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
@@ -635,7 +633,7 @@ class AdditionalFileTagsUpdateTest {
                         Matchers.hasItem(allOf(
                                 hasProperty("resultCode", is("400.00")),
                                 hasProperty("resultDescription", containsStringIgnoringCase("not found in the indexing configuration")),
-                                hasProperty("fileKey", hasItem(containsString("documentKey"))))));
+                                hasProperty("fileKey", containsInAnyOrder(fileKey1, fileKey2)))));
     }
 
     /**
@@ -687,8 +685,6 @@ class AdditionalFileTagsUpdateTest {
         tagsList.add(tag);
         AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
 
-        var tagsDto = new TagsDto().tags(tagsMassiveUpdateRequest.getTags().get(0).getSET());
-        var tagResponse = new TagsResponse().tagsDto(tagsDto);
 
         when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.error(new PutTagsBadRequestException()));
 

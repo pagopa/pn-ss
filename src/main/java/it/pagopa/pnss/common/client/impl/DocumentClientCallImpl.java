@@ -89,4 +89,5 @@ public class DocumentClientCallImpl implements DocumentClientCall {
     public ResponseEntity<Document> deleteDocument(String keyFile) throws IdClientNotFoundException {
         return null;
     }
+
 }

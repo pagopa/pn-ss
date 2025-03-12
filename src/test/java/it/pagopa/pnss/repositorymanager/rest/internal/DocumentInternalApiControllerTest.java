@@ -227,7 +227,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		docTypes.setInitialStatus("SAVED");
 		docTypes.setStatuses(statuses1);
 		docTypes.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
-		docTypes.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+		docTypes.setTransformations(List.of("SIGN_AND_TIMEMARK"));
 		docTypes.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
 		log.info("execute createDocument() : docType : {}", docTypes);
 
@@ -268,7 +268,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		docTypes.setInitialStatus("SAVED");
 		docTypes.setStatuses(statuses1);
 		docTypes.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
-		docTypes.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+		docTypes.setTransformations(List.of("SIGN_AND_TIMEMARK"));
 		docTypes.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
 		log.info("execute createDocument() : docType : {}", docTypes);
 

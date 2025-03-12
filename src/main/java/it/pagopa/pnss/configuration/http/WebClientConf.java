@@ -1,7 +1,6 @@
 package it.pagopa.pnss.configuration.http;
 
 import it.pagopa.pnss.common.configurationproperties.endpoint.internal.statemachine.StateMachineEndpointProperties;
-import it.pagopa.pnss.common.configurationproperties.endpoint.internal.pdfraster.PdfRasterEndpointProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,9 +22,6 @@ public class WebClientConf {
     @Value("${pn.log.cx-id-header}")
     private String corrIdHeaderName;
 
-	@Value("${spring.codec.max-in-memory-size}")
-	int PDFRastermaxInMemorySize; // 10MB
-
 	public WebClientConf(JettyHttpClientConf jettyHttpClientConf) {
         this.jettyHttpClientConf = jettyHttpClientConf;
     }
@@ -41,14 +37,6 @@ public class WebClientConf {
     @Bean
     public WebClient stateMachineWebClient(StateMachineEndpointProperties stateMachineEndpointProperties) {
         return defaultJsonWebClientBuilder().baseUrl(stateMachineEndpointProperties.containerBaseUrl()).build();
-    }
-
-    @Bean
-    public WebClient pdfRasterWebClient(PdfRasterEndpointProperties pdfRasterEndpointProperties) {
-    	ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
-            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(PDFRastermaxInMemorySize))
-            .build();
-        return defaultJsonWebClientBuilder().exchangeStrategies(exchangeStrategies).baseUrl(pdfRasterEndpointProperties.containerBaseUrl()).build();
     }
 
     @Bean

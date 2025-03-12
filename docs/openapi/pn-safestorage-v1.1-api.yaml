@@ -1095,7 +1095,6 @@ components:
           type: array
           items:
             type: string
-            enum: ['NONE', 'SIGN_AND_TIMEMARK', 'RASTER']
         validations:
           description: lista di validazioni da applicare al documento 
           type: array

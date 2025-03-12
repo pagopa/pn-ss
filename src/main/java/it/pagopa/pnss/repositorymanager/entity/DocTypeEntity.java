@@ -24,8 +24,7 @@ public class DocTypeEntity {
 	private Map<String, CurrentStatusEntity> statuses;
 	@Getter(onMethod=@__({@DynamoDBTypeConvertedEnum}))
 	private DocumentType.InformationClassificationEnum informationClassification;
-	@Getter(onMethod=@__({@DynamoDBTypeConvertedEnum}))
-	private List<DocumentType.TransformationsEnum> transformations;
+	private List<String> transformations;
 	@Getter(onMethod=@__({@DynamoDBTypeConvertedEnum}))
 	private DocumentType.TimeStampedEnum timeStamped;
 }

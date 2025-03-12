@@ -19,9 +19,6 @@ import org.springframework.context.annotation.PropertySource;
 // BUCKET
 @PropertySource("classpath:bucket/bucket.properties")
 
-// QUEUE
-@PropertySource("classpath:queue/queue.properties")
-
 // EVENT STREAM
 @PropertySource("classpath:eventStream/dynamo-event-stream.properties")
 
@@ -48,6 +45,9 @@ import org.springframework.context.annotation.PropertySource;
 
 // TRANSFORMATION
 @PropertySource("classpath:transformation/transformation.properties")
+
+// CLOUDWATCH
+@PropertySource("classpath:cloudwatch/cloudwatch.properties")
 
 public class TemplateApplication {
 

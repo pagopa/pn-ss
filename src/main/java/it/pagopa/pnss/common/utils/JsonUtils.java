@@ -1,6 +1,7 @@
 package it.pagopa.pnss.common.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.common.exception.JsonStringToObjectException;
 import org.springframework.stereotype.Component;
@@ -52,6 +53,31 @@ public class JsonUtils {
             return obj;
         } catch (JsonProcessingException e) {
             throw new JsonStringToObjectException(jsonString, classToMap, e.getMessage());
+        }
+    }
+
+    /**
+     * Convert a json string into a type of given type reference.
+     * This method validates the object with the javax Validator.
+     *
+     * @param <T>        the type parameter
+     * @param jsonString the json string
+     * @param typeReference the type reference
+     * @return the converted object
+     * @throws JsonStringToObjectException the json string to object exception
+     */
+    public <T> T convertJsonStringToObject(String jsonString, TypeReference<T> typeReference) throws JsonStringToObjectException {
+        try {
+            T obj = objectMapper.readValue(jsonString, typeReference);
+            // Validazione dell'oggetto
+            Set<ConstraintViolation<T>> violations = validator.validate(obj);
+            if (!violations.isEmpty()) {
+                List<String> violationsList = violations.stream().map(tConstraintViolation -> tConstraintViolation.getPropertyPath() + " - " + tConstraintViolation.getMessage()).toList();
+                throw new JsonStringToObjectException(jsonString, typeReference, violationsList);
+            }
+            return obj;
+        } catch (JsonProcessingException e) {
+            throw new JsonStringToObjectException(jsonString, typeReference, e.getMessage());
         }
     }
 

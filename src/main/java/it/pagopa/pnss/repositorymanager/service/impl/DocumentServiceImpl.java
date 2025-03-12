@@ -23,6 +23,7 @@ import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
+import it.pagopa.pnss.repositorymanager.exception.ResourceDeletedException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -162,6 +163,12 @@ public class DocumentServiceImpl implements DocumentService {
         return Mono.defer(()-> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build())))
                 .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                 .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
+                .handle((documentEntity, sink) -> {
+                    if (documentEntity.getDocumentState().equals(DELETED)) {
+                        sink.error(new ResourceDeletedException.DocumentDeletedException(documentKey));
+                    } else sink.next(documentEntity);
+                })
+                .cast(DocumentEntity.class)
                 .flatMap(documentEntity -> {
                     if (hasBeenPatched(documentEntity, documentChanges)) {
                         log.debug("Same changes have been already applied to document '{}'", documentKey);

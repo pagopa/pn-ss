@@ -193,7 +193,8 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 
 	@Test
 	void testFileMetadataUpdateOk() {
-		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus()))).tipoDocumento(DocTypesConstant.PN_AAR);
+		Map<String, CurrentStatus> statuses = Map.ofEntries(Map.entry(SAVED, new CurrentStatus().technicalState(AVAILABLE).storage("storageType")));
+		var documentType1 = new DocumentType().statuses(statuses).tipoDocumento(DocTypesConstant.PN_AAR);
 		var document = new Document().documentType(documentType1).documentState(BOOKED);
         var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
@@ -238,7 +239,8 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 
 	@Test
 	void testFileMetadataUpdateStatusDeleted() {
-		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus()))).tipoDocumento(DocTypesConstant.PN_AAR);
+		Map<String, CurrentStatus> statuses = Map.ofEntries(Map.entry(SAVED, new CurrentStatus().technicalState(AVAILABLE).storage("storageType")));
+		var documentType1 = new DocumentType().statuses(statuses).tipoDocumento(DocTypesConstant.PN_AAR);
 		var document = new Document().documentType(documentType1).documentState(DELETED);
 		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));

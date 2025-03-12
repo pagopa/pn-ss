@@ -11,6 +11,7 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.utility.MountableFile;
 
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -22,6 +23,8 @@ public class LocalStackTestConfig {
     static LocalStackContainer localStack =
             new LocalStackContainer(DockerImageName.parse("localstack/localstack:1.0.4"))
                     .withServices(DYNAMODB)
+                    .withCopyFileToContainer(MountableFile.forClasspathResource("testcontainers/config"),
+                            "/config")
                     .withClasspathResourceMapping("testcontainers/init.sh",
                             "/docker-entrypoint-initaws.d/make-storages.sh", BindMode.READ_ONLY)
                     .withClasspathResourceMapping("testcontainers/credentials",
@@ -29,6 +32,7 @@ public class LocalStackTestConfig {
                     .withFileSystemBind(Paths.get("functions").toAbsolutePath().toString(),
                             "/tmp/pn-ss/lambda_import", BindMode.READ_ONLY)
                     .withEnv("AWS_DEFAULT_REGION", "eu-central-1")
+                    .withEnv("RUNNING_IN_DOCKER", "true")
                     .withNetworkAliases("localstack")
                     .withNetwork(Network.builder().build())
                     .waitingFor(Wait.forLogMessage(".*Initialization complete.*", 1))
@@ -60,8 +64,7 @@ public class LocalStackTestConfig {
         System.setProperty("test.aws.ssm.endpoint", String.valueOf(localStack.getEndpointOverride(SSM)));
         System.setProperty("aws.endpoint-url", localStack.getEndpointOverride(DYNAMODB).toString());
         // Prendiamo l'endpoint override di SSM, in quanto EVENT BRIDGE non risulta disponibile nella enum.
-        // Fix temporanea, in quanto questa logica andrà cambiata con le modifiche di localdev (PN-13370)
-        System.setProperty("test.aws.eventbridge.endpoint", String.valueOf(localStackContainer.getEndpointOverride(SSM)));
+        System.setProperty("test.aws.eventbridge.endpoint", String.valueOf(localStack.getEndpointOverride(SSM)));
 
         try {
             System.setProperty("aws.sharedCredentialsFile", new ClassPathResource("testcontainers/credentials").getFile().getAbsolutePath());

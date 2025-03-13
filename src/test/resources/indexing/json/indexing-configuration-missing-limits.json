@@ -1,0 +1,22 @@
+{
+  "globals": [
+    {
+      "key": "IUN",
+      "indexed": true,
+      "multivalue": true
+    }
+  ],
+  "locals": [
+    {
+      "key": "pn-radd-fsu~DataCreazione",
+      "indexed": true,
+      "multivalue": true
+    }
+  ],
+  "limits": {
+    "MaxTagsPerRequest": 50,
+    "MaxOperationsOnTagsPerRequest": 50,
+    "MaxFileKeys": 1000,
+    "MaxMapValuesForSearch": 10
+  }
+}

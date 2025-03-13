@@ -1,6 +1,6 @@
 {
   "Parameters": {
-    "PnSsUriBuilderstayHotTime": "1",
+    "PnSsUriBuilderstayHotTime": "7",
     "PresignedUrlMinutesLifespan": "60",
     "PnSsGestoreRepositoryProtocol" : "http",
     "PnSsGestoreRepositoryPort" : "8080",
@@ -36,6 +36,20 @@
     "PnSsNamirialServerAddress": "https://fspagopa-test.namirial.com/easysign",
     "CpuValue": "1024",
     "MemoryAmount": "4GB",
-    "PnSsIgnoredUpdateMetadataList": "s3://pn-runtime-environment-variables-eu-south-1-089813480515/pn-safe-storage/UpdateFileMetadataIgnore.list"
+    "PnSsIgnoredUpdateMetadataList": "s3://pn-runtime-environment-variables-eu-south-1-089813480515/pn-safe-storage/UpdateFileMetadataIgnore.list",
+    "PnSsIndexingConfiguration": "Pn-SS-IndexingConfiguration",
+    "PnSsTransformationConfiguration": "Pn-SS-TransformationConfiguration",
+    "PnSsSafeClients": "pn-delivery;pn-delivery-push;pn-radd-alt;pn-service-desk",
+    "PnSsSqsRetryStrategyMaxAttempts": "3",
+    "PnSsSqsRetryStrategyMinBackoff": "3",
+    "PnSsEventHandlerMaxMessages": "10",
+    "PnSsTransformationServiceMaxMessages": "10",
+    "SpringCodecMaxInMemorySize": "10000000",
+    "SignAndTimemarkMaxThreadPoolSize": "50",
+    "SignMaxThreadPoolSize": "50",
+    "PnSsSignAndTimemarkMetricsSchema": "Pn-SS-SignAndTimemark-MetricsSchema",
+    "PnSsTaskExecutionPoolMaxSize": "2048",
+    "PnSsTaskExecutionPoolCoreSize": "8",
+    "PnSsTaskExecutionPoolQueueCapacity": "4096"
   }
 }

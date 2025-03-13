@@ -19,9 +19,6 @@ import org.springframework.context.annotation.PropertySource;
 // BUCKET
 @PropertySource("classpath:bucket/bucket.properties")
 
-// QUEUE
-@PropertySource("classpath:queue/queue.properties")
-
 // EVENT STREAM
 @PropertySource("classpath:eventStream/dynamo-event-stream.properties")
 
@@ -42,6 +39,15 @@ import org.springframework.context.annotation.PropertySource;
 
 // IGNORED UPDATE METADATA
 @PropertySource("classpath:configuration/ignored-update-metadata.properties")
+
+// INDEXING
+@PropertySource("classpath:indexing/indexing.properties")
+
+// TRANSFORMATION
+@PropertySource("classpath:transformation/transformation.properties")
+
+// CLOUDWATCH
+@PropertySource("classpath:cloudwatch/cloudwatch.properties")
 
 public class TemplateApplication {
 

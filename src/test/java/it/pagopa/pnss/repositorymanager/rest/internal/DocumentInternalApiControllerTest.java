@@ -878,6 +878,31 @@ log.info("documentInputTags {}", documentInputTags);
 	}
 
 	@Test
+	void patchItemDocumentDeletedKo() {
+		String documentKey = "docKeyDeletedDocument";
+
+		DocTypeEntity docTypeEntity = new DocTypeEntity();
+		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
+
+		var documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(docTypeEntity);
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(DELETED);
+
+		insertDocumentEntity(documentEntity);
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(SAVED);
+		docChanges.setContentLenght(new BigDecimal(50));
+
+		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON).body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isEqualTo(HttpStatus.GONE);
+		log.info("\n Test 6 (patchItem) passed \n");
+	}
+
+	@Test
 	// codice test: DCSS.103.1
 	void deleteItem() {
 

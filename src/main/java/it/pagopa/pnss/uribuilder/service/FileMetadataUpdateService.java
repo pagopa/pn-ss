@@ -34,6 +34,7 @@ import reactor.core.publisher.Flux;
 import software.amazon.awssdk.services.s3.model.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static it.pagopa.pnss.common.constant.Constant.DELETED;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @Service

@@ -58,11 +58,11 @@ public class FileUploadApiController implements FileUploadApi {
 																 Mono<FileCreationRequest> fileCreationRequest,
 																 final ServerWebExchange exchange) {
         MDC.clear();
-		MDC.put(MDC_CORR_ID_KEY, xTraceIdValue);
-		log.logStartingProcess(CREATE_FILE);
         // Nelle run di localdev, viene settato un traceId randomico
         boolean isLocal = Arrays.asList(env.getActiveProfiles()).contains("local");
         String xTraceIdValue = !isLocal ? exchange.getRequest().getHeaders().getFirst(xTraceId) : UUID.randomUUID().toString();
+		MDC.put(MDC_CORR_ID_KEY, xTraceIdValue);
+		log.logStartingProcess(CREATE_FILE);
         return MDCUtils.addMDCToContextAndExecute(fileCreationRequest.flatMap(request -> uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
                                                         request,
                                                         xChecksumValue,

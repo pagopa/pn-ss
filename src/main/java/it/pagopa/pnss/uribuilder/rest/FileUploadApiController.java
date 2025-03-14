@@ -10,6 +10,7 @@ import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
 import lombok.CustomLog;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -20,6 +21,9 @@ import org.springframework.web.server.ServerWebExchange;
 import it.pagopa.pnss.common.client.exception.ChecksumException;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import reactor.core.publisher.Mono;
+
+import java.util.Arrays;
+import java.util.UUID;
 
 import static it.pagopa.pnss.common.utils.LogUtils.CREATE_FILE;
 import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
@@ -32,9 +36,11 @@ public class FileUploadApiController implements FileUploadApi {
     private String xTraceId;
 
     private final UriBuilderService uriBuilderService;
+    private final Environment env;
 
-    public FileUploadApiController(UriBuilderService uriBuilderService) {
+    public FileUploadApiController(UriBuilderService uriBuilderService, Environment env) {
         this.uriBuilderService = uriBuilderService;
+        this.env = env;
     }
 
     @ExceptionHandler(PutTagsBadRequestException.class)
@@ -51,12 +57,12 @@ public class FileUploadApiController implements FileUploadApi {
     public Mono<ResponseEntity<FileCreationResponse>> createFile(String xPagopaSafestorageCxId, String xChecksumValue, String xChecksum,
 																 Mono<FileCreationRequest> fileCreationRequest,
 																 final ServerWebExchange exchange) {
-
-        String xTraceIdValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
-		MDC.clear();
+        MDC.clear();
 		MDC.put(MDC_CORR_ID_KEY, xTraceIdValue);
 		log.logStartingProcess(CREATE_FILE);
-
+        // Nelle run di localdev, viene settato un traceId randomico
+        boolean isLocal = Arrays.asList(env.getActiveProfiles()).contains("local");
+        String xTraceIdValue = !isLocal ? exchange.getRequest().getHeaders().getFirst(xTraceId) : UUID.randomUUID().toString();
         return MDCUtils.addMDCToContextAndExecute(fileCreationRequest.flatMap(request -> uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
                                                         request,
                                                         xChecksumValue,

@@ -125,10 +125,6 @@ create_bucket(){
                           --endpoint-url "$LOCALSTACK_ENDPOINT" \
                           --create-bucket-configuration LocationConstraint="$AWS_REGION" \
                           --object-lock-enabled-for-bucket && \
-  aws s3api put-object-lock-configuration --bucket "$bucket" \
-                                          --object-lock-configuration "$OBJECT_LOCK_CONFIG"  \
-                                          --region "$AWS_REGION"  \
-                                          --endpoint-url "$LOCALSTACK_ENDPOINT" && \
   echo "Created bucket: $bucket" || \
   { log "Failed to create bucket: $bucket" ; return 1; }
 }
@@ -376,9 +372,6 @@ initialize_event_bridge() {
     create_eventbridge_rule "PnSsEventRuleExternalNotifications" '{"source": ["GESTORE DISPONIBILITA"],"region": ["eu-south-1"],"account": ["000000000000"]}' &
     pids+=($!)
 
-    create_eventbridge_rule "pn-ec-microsvc-dev-PnEcEventRuleAvailabilityManager" '{"source": ["GESTORE DISPONIBILITA"],"detail": {"documentType": ["PN_PAPER_ATTACHMENT"]}}' &
-    pids+=($!)
-
     create_eventbridge_rule "PnSsEventRuleStagingBucket" '{"source": ["aws.s3"],"detail-type": ["Object Created", "Object Tags Added"],"detail": {"bucket": {"name": ["pn-ss-storage-safestorage-staging"]}}}' &
     pids+=($!)
 
@@ -390,8 +383,6 @@ initialize_event_bridge() {
     put_sqs_as_rule_target "pn-ss-external-notification-DEV-queue" "PnSsEventRuleExternalNotifications" &
     pids+=($!)
     put_sqs_as_rule_target "pn-ss-staging-bucket-events-queue" "PnSsEventRuleStagingBucket" &
-    pids+=($!)
-    put_sqs_as_rule_target "pn-ss-availability-events-queue" "pn-ec-microsvc-dev-PnEcEventRuleAvailabilityManager" &
     pids+=($!)
 
     wait_for_pids pids "Failed to initialize EventBridge targets"
@@ -498,7 +489,11 @@ buckets_configuration(){
         ;;
       "pn-ss-storage-safestorage")
         log "Configuring bucket: $bucket" && \
-        ( silent aws s3api put-bucket-notification-configuration --bucket "$bucket" \
+        (silent aws s3api put-object-lock-configuration --bucket "$bucket" \
+                                                    --object-lock-configuration "$OBJECT_LOCK_CONFIG"  \
+                                                    --region "$AWS_REGION"  \
+                                                    --endpoint-url "$LOCALSTACK_ENDPOINT" && \
+          silent aws s3api put-bucket-notification-configuration --bucket "$bucket" \
                                                       --notification-configuration "$pn_ss_storage_safestorage_config" \
                                                       --region "$AWS_REGION" \
                                                       --endpoint-url "$LOCALSTACK_ENDPOINT" && \

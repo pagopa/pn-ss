@@ -12,7 +12,7 @@ import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -35,7 +35,7 @@ public class DocumentsConfigsServiceImplTest {
     StorageConfigurationsServiceImpl storageConfigurationsService;
     @Autowired
     DocumentsConfigsServiceImpl documentsConfigsService;
-    @MockBean
+    @SpyBean
     S3ServiceImpl s3Service;
     private static DynamoDbTable<DocTypeEntity> docTypeDynamoDbTable;
 

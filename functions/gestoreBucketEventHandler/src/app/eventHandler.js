@@ -1,6 +1,6 @@
 "use strict";
 
-const http = require(process.env.PnSsGestoreRepositoryProtocol);
+const http = require("http");
 const { S3Client, GetObjectCommand} = require("@aws-sdk/client-s3")
 const crypto = require("crypto");
 

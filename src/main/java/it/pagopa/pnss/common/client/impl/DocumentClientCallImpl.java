@@ -1,6 +1,5 @@
 package it.pagopa.pnss.common.client.impl;
 
-import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentInput;
@@ -11,7 +10,6 @@ import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import lombok.CustomLog;
-import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

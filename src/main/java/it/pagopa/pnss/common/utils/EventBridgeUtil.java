@@ -27,6 +27,8 @@ public class EventBridgeUtil {
     public static final String CONTENTTYPE_KEY = "contentType";
     public static final String CLIENTSHORTCODE_KEY = "clientShortCode";
     public static final String TAGS_KEY = "tags";
+    public static final String UNAVAILABILITY_DOCUMENT_STATUS = "ERROR";
+    private static final ObjectMapper objMap = new ObjectMapper();
 
     private EventBridgeUtil(){}
 
@@ -53,25 +55,40 @@ public class EventBridgeUtil {
             message.setTags(tags);
         }
 
-        ObjectMapper objMap = new ObjectMapper();
-
         try {
             String event = objMap.writeValueAsString(message);
-            return createPutEventRequestEntry(event, disponibilitaDocumentiEventBridge,oldDocumentState);
+            return createPutEventRequestEntry(event, disponibilitaDocumentiEventBridge, oldDocumentState.equalsIgnoreCase(FREEZED) ? EVENT_BUS_SOURCE_GLACIER_DOCUMENTS : EVENT_BUS_SOURCE_AVAILABLE_DOCUMENT);
         } catch (JsonProcessingException e) {
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
     }
 
-    private static PutEventsRequestEntry createPutEventRequestEntry(String event, String disponibilitaDocumentiEventBridge, String oldDocumentState){
+    public static PutEventsRequestEntry createUnavailabilityMessage(DocumentEntity documentEntity, String fileKey, String eventBusName){
+        NotificationMessage message = new NotificationMessage();
+
+        message.setKey(fileKey);
+        message.setDocumentStatus(UNAVAILABILITY_DOCUMENT_STATUS);
+        message.setContentType(documentEntity.getContentType()!=null ? documentEntity.getContentType():null);
+        message.setChecksum(documentEntity.getCheckSum()!=null ? documentEntity.getCheckSum():null);
+        message.setClientShortCode(documentEntity.getClientShortCode()!=null ? documentEntity.getClientShortCode():null);
+
+        try {
+            String event = objMap.writeValueAsString(message);
+            return createPutEventRequestEntry(event, eventBusName, EVENT_BUS_SOURCE_TRANSFORMATION_DOCUMENT);
+        } catch (JsonProcessingException e) {
+            throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
+        }
+    }
+
+    private static PutEventsRequestEntry createPutEventRequestEntry(String event, String eventBusName, String detailType){
         return  PutEventsRequestEntry.builder()
                 .time(new Date().toInstant())
                 .source(GESTORE_DISPONIBILITA_EVENT_NAME)
-                .detailType(oldDocumentState.equalsIgnoreCase(FREEZED) ? EVENT_BUS_SOURCE_GLACIER_DOCUMENTS : EVENT_BUS_SOURCE_AVAILABLE_DOCUMENT)
-                .eventBusName(disponibilitaDocumentiEventBridge)
-
+                .detailType(detailType)
+                .eventBusName(eventBusName)
                 .detail(event).build();
 
     }
+
 }
 

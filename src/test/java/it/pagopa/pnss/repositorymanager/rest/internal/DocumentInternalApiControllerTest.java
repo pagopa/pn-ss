@@ -251,7 +251,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 		docTypes.setInitialStatus("SAVED");
 		docTypes.setStatuses(statuses1);
 		docTypes.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
-		docTypes.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+		docTypes.setTransformations(List.of("SIGN_AND_TIMEMARK"));
 		docTypes.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
 		return docTypes;
 	}
@@ -775,6 +775,31 @@ log.info("documentInputTags {}", documentInputTags);
 
 		log.info("\n Test 8 (patchItemIncorrectParameters) passed \n");
 
+	}
+
+	@Test
+	void patchItemDocumentDeletedKo() {
+		String documentKey = "docKeyDeletedDocument";
+
+		DocTypeEntity docTypeEntity = new DocTypeEntity();
+		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
+
+		var documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(docTypeEntity);
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(DELETED);
+
+		insertDocumentEntity(documentEntity);
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(SAVED);
+		docChanges.setContentLenght(new BigDecimal(50));
+
+		webTestClient.patch().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+				.accept(APPLICATION_JSON).contentType(APPLICATION_JSON).body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isEqualTo(HttpStatus.GONE);
+		log.info("\n Test 6 (patchItem) passed \n");
 	}
 
 	@Test

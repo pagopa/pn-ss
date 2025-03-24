@@ -591,7 +591,7 @@ class UriBuilderServiceDownloadTest {
 
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
         mockGetDocumentTags(d, "documentKey");
-        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
         // Chiamata al metodo da testare
         Mono<FileDownloadResponse> result = uriBuilderService.createUriForDownloadFile("documentKey", xPagopaSafestorageCxId, xTraceIdValue, metadataOnly, true);
 
@@ -633,7 +633,7 @@ class UriBuilderServiceDownloadTest {
 
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
         mockGetDocumentTags(d, "documentKey");
-        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK)))));
+        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
         // Chiamata al metodo da testare
         Mono<FileDownloadResponse> result = uriBuilderService.createUriForDownloadFile("documentKey", xPagopaSafestorageCxId, xTraceIdValue, metadataOnly, false);
 

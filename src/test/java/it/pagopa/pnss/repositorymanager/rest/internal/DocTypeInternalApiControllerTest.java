@@ -84,7 +84,7 @@ public class DocTypeInternalApiControllerTest {
 		docTypesInsertInput.setInitialStatus("SAVED");
 		docTypesInsertInput.setStatuses(statuses1);
 		docTypesInsertInput.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
-		docTypesInsertInput.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+		docTypesInsertInput.setTransformations(List.of("SIGN_AND_TIMEMARK"));
 		docTypesInsertInput.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesInsertInput : {}", docTypesInsertInput);
 
@@ -97,7 +97,7 @@ public class DocTypeInternalApiControllerTest {
 		docTypesUpdateDeleteInput.setInitialStatus("PRELOADED");
 		docTypesUpdateDeleteInput.setStatuses(statuses2);
 		docTypesUpdateDeleteInput.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
-		docTypesUpdateDeleteInput.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+		docTypesUpdateDeleteInput.setTransformations(List.of("SIGN_AND_TIMEMARK"));
 		docTypesUpdateDeleteInput.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
 		log.info("execute createDocumentType() : docTypesUpdateDeleteInput : {}", docTypesUpdateDeleteInput);
 	}

@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -40,7 +41,7 @@ public class DocumentsConfigsServiceImplTest {
     StorageConfigurationsServiceImpl storageConfigurationsService;
     @Autowired
     DocumentsConfigsServiceImpl documentsConfigsService;
-    @MockBean
+    @SpyBean
     S3ServiceImpl s3Service;
     private static DynamoDbTable<DocTypeEntity> docTypeDynamoDbTable;
 
@@ -132,7 +133,7 @@ public class DocumentsConfigsServiceImplTest {
         docTypeEntity.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
 
         docTypeEntity.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
-        docTypeEntity.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        docTypeEntity.setTransformations(List.of("SIGN_AND_TIMEMARK"));
         docTypeEntity.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
         docTypeEntity.setChecksum(DocumentType.ChecksumEnum.SHA256.getValue());
 

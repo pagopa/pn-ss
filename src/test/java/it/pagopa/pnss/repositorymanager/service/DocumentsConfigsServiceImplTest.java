@@ -11,12 +11,11 @@ import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.impl.DocumentsConfigsServiceImpl;
 import it.pagopa.pnss.repositorymanager.service.impl.StorageConfigurationsServiceImpl;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
-import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
+import it.pagopa.pnss.transformation.service.S3Service;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import reactor.core.publisher.Mono;
@@ -42,7 +41,7 @@ public class DocumentsConfigsServiceImplTest {
     @Autowired
     DocumentsConfigsServiceImpl documentsConfigsService;
     @SpyBean
-    S3ServiceImpl s3Service;
+    S3Service s3Service;
     private static DynamoDbTable<DocTypeEntity> docTypeDynamoDbTable;
 
     @BeforeAll

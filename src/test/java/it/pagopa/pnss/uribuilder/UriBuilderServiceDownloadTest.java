@@ -13,7 +13,6 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.CustomLog;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -47,8 +46,6 @@ import java.net.URI;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static it.pagopa.pnss.common.DocTypesConstant.*;
 import static it.pagopa.pnss.common.constant.Constant.*;

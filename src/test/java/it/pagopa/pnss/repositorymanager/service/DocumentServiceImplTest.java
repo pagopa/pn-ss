@@ -213,7 +213,7 @@ public class DocumentServiceImplTest {
                 .tipoDocumento(T1)
                 .initialStatus("initialStatus")
                 .informationClassification(DocumentType.InformationClassificationEnum.HC)
-                .transformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK))
+                .transformations(List.of("SIGN_AND_TIMEMARK"))
                 .timeStamped(DocumentType.TimeStampedEnum.STANDARD)
                 .checksum(DocumentType.ChecksumEnum.SHA256)
                 .statuses(Map.of(AVAILABLE, new CurrentStatus()
@@ -250,7 +250,7 @@ public class DocumentServiceImplTest {
         docTypeEntity.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
 
         docTypeEntity.setInformationClassification(DocumentType.InformationClassificationEnum.HC);
-        docTypeEntity.setTransformations(List.of(DocumentType.TransformationsEnum.SIGN_AND_TIMEMARK));
+        docTypeEntity.setTransformations(List.of("SIGN_AND_TIMEMARK"));
         docTypeEntity.setTimeStamped(DocumentType.TimeStampedEnum.STANDARD);
         docTypeEntity.setChecksum(DocumentType.ChecksumEnum.SHA256.getValue());
 

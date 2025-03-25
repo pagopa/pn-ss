@@ -9,12 +9,6 @@ VERBOSE=false
 AWS_REGION="eu-south-1"
 LOCALSTACK_ENDPOINT="http://localhost:4566"
 
-if [ "$RUNNING_IN_DOCKER" = "true" ]; then
-    CONFIG_FILES_DIR="/config"
-else
-    CONFIG_FILES_DIR="../src/test/resources/testcontainers/config"
-fi
-
 ## DEFINITIONS ##
 S3_BUCKETS=(
             "pn-ss-storage-safestorage"
@@ -52,11 +46,526 @@ DYNAMODB_TABLES=(
   "pn-SsTags:tagKeyValue"
               )
 
-LIFECYCLE_RULE=$(cat ${CONFIG_FILES_DIR}/lifecycle-rules.json)
-OBJECT_LOCK_CONFIG=$(cat ${CONFIG_FILES_DIR}/object-lock-configuration.json)
-INDEXING_CONFIG=$(cat ${CONFIG_FILES_DIR}/indexing-config.json)
-METRICS_SCHEMA_CONFIG=$(cat ${CONFIG_FILES_DIR}/metrics-schema-config.json)
-TRANSFORMATION_CONFIG=$(cat ${CONFIG_FILES_DIR}/transformation-config.json)
+LIFECYCLE_RULE='{
+                 "Rules": [
+                   {
+                     "ID": "PnSsAbortIncompleteMultipartUpload",
+                     "AbortIncompleteMultipartUpload": {
+                       "DaysAfterInitiation": 1
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Prefix": ""
+                     }
+                   },
+                   {
+                     "ID": "PnSsNotificationAttachmentTemporary",
+                     "Expiration": {
+                       "Days": 7
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storageType",
+                         "Value": "PN_TEMPORARY_DOCUMENT"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsNotificationAttachment",
+                     "Expiration": {
+                       "Days": 120
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storageType",
+                         "Value": "PN_NOTIFIED_DOCUMENTS"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsAar",
+                     "Expiration": {
+                       "Days": 3655
+                     },
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 365
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storageType",
+                         "Value": "PN_AAR"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLegalFacts",
+                     "Expiration": {
+                       "Days": 3655
+                     },
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 365
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storageType",
+                         "Value": "PN_LEGAL_FACTS"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLogsArchiveAudit5Y",
+                     "Expiration": {
+                       "Days": 1830
+                     },
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 1
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storageType",
+                         "Value": "PN_LOGS_ARCHIVE_AUDIT5Y"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLogsArchiveAudit10Y",
+                     "Expiration": {
+                       "Days": 3655
+                     },
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 1
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storageType",
+                         "Value": "PN_LOGS_ARCHIVE_AUDIT10Y"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsInvoicingActivityReport",
+                     "Expiration": {
+                       "Days": 366
+                     },
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 70
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storageType",
+                         "Value": "PN_INVOICING_ACTIVITY_REPORT"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsAddresses",
+                     "Expiration": {
+                       "Days": 30
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storageType",
+                         "Value": "PN_ADDRESSES_STORAGE"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLogsArchiveAudit2Y",
+                     "Expiration": {
+                       "Days": 731
+                     },
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 1
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storageType",
+                         "Value": "PN_LOGS_ARCHIVE_AUDIT2Y"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsNotificationAttachmentTemporary_expiry",
+                     "Expiration": {
+                       "Days": 7
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_expiry",
+                         "Value": "PN_TEMPORARY_DOCUMENT"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsNotificationAttachment_expiry",
+                     "Expiration": {
+                       "Days": 120
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_expiry",
+                         "Value": "PN_NOTIFIED_DOCUMENTS"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsAar_freeze",
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 365
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_freeze",
+                         "Value": "PN_AAR"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsAar_expiry",
+                     "Expiration": {
+                       "Days": 3655
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_expiry",
+                         "Value": "PN_AAR"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLegalFacts_freeze",
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 365
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_freeze",
+                         "Value": "PN_LEGAL_FACTS"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLegalFacts_expiry",
+                     "Expiration": {
+                       "Days": 3655
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_expiry",
+                         "Value": "PN_LEGAL_FACTS"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsInvoicingActivityReport_freeze",
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 70
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_freeze",
+                         "Value": "PN_INVOICING_ACTIVITY_REPORT"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsInvoicingActivityReport_expiry",
+                     "Expiration": {
+                       "Days": 366
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_expiry",
+                         "Value": "PN_INVOICING_ACTIVITY_REPORT"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsAddresses_expiry",
+                     "Expiration": {
+                       "Days": 30
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_expiry",
+                         "Value": "PN_ADDRESSES_STORAGE"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLogsArchiveAudit2Y_freeze",
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 1
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_freeze",
+                         "Value": "PN_LOGS_ARCHIVE_AUDIT2Y"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLogsArchiveAudit2Y_expiry",
+                     "Expiration": {
+                       "Days": 731
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_expiry",
+                         "Value": "PN_LOGS_ARCHIVE_AUDIT2Y"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLogsArchiveAudit5Y_freeze",
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 1
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_freeze",
+                         "Value": "PN_LOGS_ARCHIVE_AUDIT5Y"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLogsArchiveAudit5Y_expiry",
+                     "Expiration": {
+                       "Days": 1830
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_expiry",
+                         "Value": "PN_LOGS_ARCHIVE_AUDIT5Y"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLogsArchiveAudit10Y_freeze",
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 1
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_freeze",
+                         "Value": "PN_LOGS_ARCHIVE_AUDIT10Y"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsLogsArchiveAudit10Y_expiry",
+                     "Expiration": {
+                       "Days": 3655
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_expiry",
+                         "Value": "PN_LOGS_ARCHIVE_AUDIT10Y"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsPaperAttachments_freeze",
+                     "Transitions": [
+                       {
+                         "StorageClass": "GLACIER",
+                         "Days": 30
+                       }
+                     ],
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_freeze",
+                         "Value": "PN_PAPER_ATTACHMENT"
+                       }
+                     }
+                   },
+                   {
+                     "ID": "PnSsPaperAttachments_expiry",
+                     "Expiration": {
+                       "Days": 365
+                     },
+                     "Status": "Enabled",
+                     "Filter": {
+                       "Tag": {
+                         "Key": "storage_expiry",
+                         "Value": "PN_PAPER_ATTACHMENT"
+                       }
+                     }
+                   }
+                 ]
+               }'
+
+OBJECT_LOCK_CONFIG='{
+                      "ObjectLockEnabled": "Enabled",
+                      "Rule": {
+                        "DefaultRetention": {
+                          "Mode": "GOVERNANCE",
+                          "Days": 1
+                        }
+                      }
+                    }'
+
+INDEXING_CONFIG='{
+                  "globals": [
+                    {
+                      "key": "IUN",
+                      "indexed": true,
+                      "multivalue": true
+                    },
+                    {
+                      "key": "DataNotifica",
+                      "indexed": true,
+                      "multivalue": true
+                    },
+                    {
+                      "key": "Conservazione",
+                      "indexed": false,
+                      "multivalue": false
+                    },
+                    {
+                      "key": "TAG_MULTIVALUE_NOT_INDEXED",
+                      "indexed": false,
+                      "multivalue": true
+                    },
+                    {
+                      "key": "TAG_SINGLEVALUE_INDEXED",
+                      "indexed": true,
+                      "multivalue": false
+                    }
+                  ],
+                  "locals": [
+                    {
+                      "key": "pn-radd-fsu~DataCreazione",
+                      "indexed": true,
+                      "multivalue": true
+                    },
+                    {
+                      "key": "pn-downtime-logs~active",
+                      "indexed": false,
+                      "multivalue": false
+                    }
+                  ],
+                  "limits": {
+                    "MaxTagsPerRequest": 50,
+                    "MaxOperationsOnTagsPerRequest": 4,
+                    "MaxFileKeys": 5,
+                    "MaxMapValuesForSearch": 10,
+                    "MaxFileKeysUpdateMassivePerRequest": 100,
+                    "MaxTagsPerDocument": 2,
+                    "MaxValuesPerTagDocument": 5,
+                    "MaxValuesPerTagPerRequest": 5
+                  }
+                }'
+
+METRICS_SCHEMA_CONFIG='{
+                         "PADES": {
+                           "0k-10k": [
+                             0,
+                             10
+                           ],
+                           "10k-100k": [
+                             10,
+                             100
+                           ],
+                           "100k+": [
+                             100
+                           ]
+                         },
+                         "CADES": {
+                           "0k-10k": [
+                             0,
+                             10
+                           ],
+                           "10k-100k": [
+                             10,
+                             100
+                           ],
+                           "100k+": [
+                             100
+                           ]
+                         },
+                         "XADES": {
+                           "0k-10k": [
+                             0,
+                             10
+                           ],
+                           "10k-100k": [
+                             10,
+                             100
+                           ],
+                           "100k+": [
+                             100
+                           ]
+                         }
+                       }'
+
+TRANSFORMATION_CONFIG='{
+                         "DUMMY": "pn-ss-transformation-dummy-queue",
+                         "SIGN_AND_TIMEMARK": "pn-ss-transformation-sign-and-timemark-queue",
+                         "SIGN": "pn-ss-transformation-sign-queue",
+                         "RASTER": "pn-ss-transformation-raster-queue"
+                       }'
 
 ## LOGGING FUNCTIONS ##
 log() { echo "[pn-ss-init][$(date +'%Y-%m-%d %H:%M:%S')] $*"; }

@@ -23,8 +23,6 @@ public class LocalStackTestConfig {
     static LocalStackContainer localStack =
             new LocalStackContainer(DockerImageName.parse("localstack/localstack:1.0.4"))
                     .withServices(DYNAMODB)
-                    .withCopyFileToContainer(MountableFile.forClasspathResource("testcontainers/config"),
-                            "/config")
                     .withClasspathResourceMapping("testcontainers/init.sh",
                             "/docker-entrypoint-initaws.d/make-storages.sh", BindMode.READ_ONLY)
                     .withClasspathResourceMapping("testcontainers/credentials",
@@ -32,7 +30,6 @@ public class LocalStackTestConfig {
                     .withFileSystemBind(Paths.get("functions").toAbsolutePath().toString(),
                             "/tmp/pn-ss/lambda_import", BindMode.READ_ONLY)
                     .withEnv("AWS_DEFAULT_REGION", "eu-central-1")
-                    .withEnv("RUNNING_IN_DOCKER", "true")
                     .withNetworkAliases("localstack")
                     .withNetwork(Network.builder().build())
                     .waitingFor(Wait.forLogMessage(".*Initialization complete.*", 1))

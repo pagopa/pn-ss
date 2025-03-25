@@ -11,7 +11,6 @@ SECRET_KEY=TEST
 curr_dir=$(pwd)
 cli_pager=$(aws configure get cli_pager)
 
-INIT_SCRIPT=../src/test/resources/testcontainers/init.sh
 LAMBDAS_DEPLOY_SCRIPT=./lambdas_deploy.sh
 
 ## LOGGING FUNCTIONS ##
@@ -48,13 +47,6 @@ verify_localstack() {
   fi
 }
 
-run_init() {
-  if ! $INIT_SCRIPT ; then
-    log "### Failed to run init.sh ###"
-    return 1
-  fi
-}
-
 deploy_lambdas() {
   if ! $LAMBDAS_DEPLOY_SCRIPT $FUNCTIONS_DIR $REGION; then
     log "### Failed to deploy lambdas ###"
@@ -88,25 +80,13 @@ load_dynamodb(){
   { log "### Failed to populate pn-SmStates ###" ; return 1; }
 }
 
-init_localstack_env(){
-
-
-  ( run_init && load_dynamodb ) && \
-  echo "### Localstack environment initialized ###" || \
-  { log "### Failed to initialize Localstack environment ###"; return 1; }
-
-  deploy_lambdas && \
-  echo "### Lambdas deployed ###" || \
-  { log "### Failed to deploy lambdas ###"; return 1; }
-
-}
-
 main(){
   log "### Starting pn-ss ###"
   aws configure set cli_pager ""
   local start_time=$(date +%s)
   verify_localstack && \
-  init_localstack_env && \
+  load_dynamodb && \
+  deploy_lambdas && \
   build_run || \
   { log "### Failed to start pn-ss ###"; exit 1; }
   log "### pn-ss started ###"

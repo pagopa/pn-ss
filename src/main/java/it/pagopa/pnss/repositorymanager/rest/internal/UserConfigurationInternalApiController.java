@@ -24,8 +24,11 @@ import reactor.core.publisher.Mono;
 @CustomLog
 public class UserConfigurationInternalApiController implements UserConfigurationInternalApi {
 
-	@Autowired
-	private UserConfigurationService userConfigurationService;
+	private final UserConfigurationService userConfigurationService;
+
+	public UserConfigurationInternalApiController(UserConfigurationService userConfigurationService) {
+		this.userConfigurationService = userConfigurationService;
+	}
 
 	private UserConfigurationResponse getResponse(UserConfiguration userConfiguration) {
 		UserConfigurationResponse response = new UserConfigurationResponse();
@@ -88,7 +91,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 		log.logStartingProcess(INSERT_USER_CONFIGURATION);
 
 		return userConfiguration
-				.flatMap(request -> userConfigurationService.insertUserConfiguration(request))
+				.flatMap(userConfigurationService::insertUserConfiguration)
 				.map(userConfigurationOutput -> ResponseEntity.ok(getResponse(userConfigurationOutput)))
 				.doOnSuccess(result -> log.logEndingProcess(INSERT_USER_CONFIGURATION))
 				.onErrorResume(throwable -> {

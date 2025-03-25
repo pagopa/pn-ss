@@ -62,7 +62,7 @@ public class StreamsRecordProcessor {
     DynamoDbAsyncClient dynamoDbClient;
     @Value("${event.bridge.disponibilita-documenti-name}")
     private String disponibilitaDocumentiEventBridge;
-    @Value("$(pn.ss.safe-clients)")
+    @Value("${pn.ss.safe-clients}")
     private String safeClients;
 
 
@@ -86,22 +86,7 @@ public class StreamsRecordProcessor {
 
         findEventSendToBridge()
                 .buffer(10)
-                .map(tuple -> {
-                    List<PutEventsRequestEntry> putEventsRequestEntries = tuple.stream()
-                            .map(Tuple2::getT2)
-                            .toList();
-                    PutEventsRequest eventsRequest = PutEventsRequest.builder()
-                            .entries(putEventsRequestEntries)
-                            .build();
-
-                    log.debug(CLIENT_METHOD_INVOCATION, "eventBridgeClient.putEvents()", eventsRequest);
-
-                    eventBridgeClient.putEvents(eventsRequest);
-
-                    return tuple.stream()
-                            .map(Tuple2::getT1)
-                            .toList();
-                })
+                .map(this::processEventBridgeEntries)
                 .flatMap(wrappers ->
                      Flux.fromIterable(wrappers)
                             .map(SqsMessageWrapper::getMessage)
@@ -115,28 +100,47 @@ public class StreamsRecordProcessor {
                 .block();
     }
 
+    private List<SqsMessageWrapper<DocumentStateDto>> processEventBridgeEntries(List<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> tuple) {
+        List<PutEventsRequestEntry> putEventsRequestEntries = tuple.stream()
+                .map(Tuple2::getT2)
+                .toList();
+        PutEventsRequest eventsRequest = PutEventsRequest.builder()
+                .entries(putEventsRequestEntries)
+                .build();
+
+        log.debug(CLIENT_METHOD_INVOCATION, "eventBridgeClient.putEvents()", eventsRequest);
+
+        eventBridgeClient.putEvents(eventsRequest);
+
+        return tuple.stream()
+                .map(Tuple2::getT1)
+                .toList();
+    }
+
 
     public Flux<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> findEventSendToBridge() {
         final String FIND_EVENT_SEND_TO_BRIDGE = "StreamRecordProcessor.findEventSendToBridge()";
         log.debug(INVOKING_METHOD, FIND_EVENT_SEND_TO_BRIDGE);
         return sqsService.getMessages(streamRecordProcessorQueueName.sqsName(), DocumentStateDto.class, maxMessages)
-                .flatMap(recordEvent -> {
-                    DocumentEntity docEntity = recordEvent.getMessageContent().getDocumentEntity();
-                    MDC.put(MDC_CORR_ID_KEY, docEntity.getDocumentKey());
-                    return MDCUtils.addMDCToContextAndExecute(getCanReadTags(docEntity)
-                            .mapNotNull(canReadTags -> {
-                                PutEventsRequestEntry putEventsRequestEntry = EventBridgeUtil.createMessage(docEntity,
-                                        disponibilitaDocumentiEventBridge,
-                                        recordEvent.getMessageContent().getOldDocumentState(),
-                                        canReadTags);
-                                if (putEventsRequestEntry != null) {
-                                    log.info("Event send to bridge {}", putEventsRequestEntry);
-                                }
-                                return Tuples.of(recordEvent, Objects.requireNonNull(putEventsRequestEntry));
-                            }));
-                })
+                .flatMap(this::buildEventEntryWithMessage)
                 .doOnError(e -> log.fatal("DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> log.info("DBStream: Nessun evento da inviare a bridge"));
+    }
+
+    private Mono<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> buildEventEntryWithMessage(SqsMessageWrapper<DocumentStateDto> recordEvent) {
+        DocumentEntity docEntity = recordEvent.getMessageContent().getDocumentEntity();
+        MDC.put(MDC_CORR_ID_KEY, docEntity.getDocumentKey());
+        return MDCUtils.addMDCToContextAndExecute(getCanReadTags(docEntity)
+                .mapNotNull(canReadTags -> {
+                    PutEventsRequestEntry putEventsRequestEntry = EventBridgeUtil.createMessage(docEntity,
+                            disponibilitaDocumentiEventBridge,
+                            recordEvent.getMessageContent().getOldDocumentState(),
+                            canReadTags);
+                    if (putEventsRequestEntry != null) {
+                        log.info("Event send to bridge {}", putEventsRequestEntry);
+                    }
+                    return Tuples.of(recordEvent, Objects.requireNonNull(putEventsRequestEntry));
+                }));
     }
 
 

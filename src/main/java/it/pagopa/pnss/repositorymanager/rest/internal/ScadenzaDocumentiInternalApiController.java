@@ -20,13 +20,16 @@ import reactor.core.publisher.Mono;
 @CustomLog
 public class ScadenzaDocumentiInternalApiController implements ScadenzaDocumentiInternalApi {
 
-    @Autowired
-    private ScadenzaDocumentiService scadenzaDocumentiService;
+    private final ScadenzaDocumentiService scadenzaDocumentiService;
+
+    public ScadenzaDocumentiInternalApiController(ScadenzaDocumentiService scadenzaDocumentiService) {
+        this.scadenzaDocumentiService = scadenzaDocumentiService;
+    }
 
     @Override
     public Mono<ResponseEntity<ScadenzaDocumentiResponse>> insertOrUpdateScadenzaDocumenti(Mono<ScadenzaDocumentiInput> scadenzaDocumentiInput, ServerWebExchange exchange) {
         log.logStartingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI);
-        return scadenzaDocumentiInput.flatMap(scadenzaDocumenti -> scadenzaDocumentiService.insertOrUpdateScadenzaDocumenti(scadenzaDocumenti))
+        return scadenzaDocumentiInput.flatMap(scadenzaDocumentiService::insertOrUpdateScadenzaDocumenti)
                 .map(scadenzaDocumenti -> new ScadenzaDocumentiResponse().scadenzaDocumenti(scadenzaDocumenti))
                 .map(ResponseEntity::ok)
                 .doOnSuccess(result -> log.logEndingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI))

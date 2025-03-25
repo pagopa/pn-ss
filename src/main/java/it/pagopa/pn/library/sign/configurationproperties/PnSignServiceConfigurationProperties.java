@@ -25,11 +25,11 @@ public class PnSignServiceConfigurationProperties {
     }
 
     private TreeMap<DateTime, String> splitDateProviders(String propertyString) {
-        TreeMap<DateTime, String> dateProviders = new TreeMap<DateTime, String>();
+        TreeMap<DateTime, String> dateProviders = new TreeMap<>();
         String[] propertyArray = propertyString.split(",");
         for (String property : propertyArray) {
             DateTime key;
-            String value = "";
+            String value;
             String[] propertyBase = property.split(";");
             key = DateTime.parse(propertyBase[0]);
             value = (propertyBase[1].toLowerCase());

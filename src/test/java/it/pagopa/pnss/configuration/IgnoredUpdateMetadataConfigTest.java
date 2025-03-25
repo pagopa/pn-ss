@@ -29,7 +29,7 @@ class IgnoredUpdateMetadataConfigTest extends IgnoredUpdateMetadataConfigTestSet
     private BucketName bucketName;
     private String defaultBucketName;
     private String defaultFileName;
-    private static final String fileKey = "ignored-update-metadata.csv";
+    private static final String FILE_KEY = "ignored-update-metadata.csv";
 
     @BeforeEach
     void beforeEach()
@@ -79,7 +79,7 @@ class IgnoredUpdateMetadataConfigTest extends IgnoredUpdateMetadataConfigTestSet
     void testRefreshIgnoredUpdateMetadataList_EmptyFile() throws InterruptedException {
         Thread.sleep(1000);
         byte[] fileBytes = new byte[0];
-        PutObjectRequest request = PutObjectRequest.builder().bucket(bucketName.ssHotName()).key(fileKey).contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(fileBytes)))).build();
+        PutObjectRequest request = PutObjectRequest.builder().bucket(bucketName.ssHotName()).key(FILE_KEY).contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(fileBytes)))).build();
         s3TestClient.putObject(request, RequestBody.fromBytes(fileBytes));
         Mono<Integer> fluxToTest = ignoredUpdateMetadataConfig.refreshIgnoredUpdateMetadataList();
         StepVerifier.create(fluxToTest).expectNextMatches(size -> size.equals(0)).verifyComplete();

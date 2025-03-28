@@ -9,6 +9,8 @@ import org.springframework.validation.annotation.Validated;
 import javax.validation.constraints.Pattern;
 import java.util.*;
 
+import static it.pagopa.pnss.common.constant.Constant.*;
+
 @ConfigurationProperties(prefix = "pn.sign")
 @Validated
 @CustomLog
@@ -20,8 +22,14 @@ public class PnSignServiceConfigurationProperties {
 
     private String actualProvider;
 
+
     public String getProviderSwitch() {
-        return returnPropertyValue(providerSwitch);
+        String provider = returnPropertyValue(providerSwitch).toUpperCase();
+        log.debug("Provider switch: " + provider);
+        if (! List.of(ARUBA, NAMIRIAL, DUMMY).contains(provider)) {
+            throw new IllegalArgumentException("Invalid provider: " + provider);
+        }
+        return provider;
     }
 
     private TreeMap<DateTime, String> splitDateProviders(String propertyString) {

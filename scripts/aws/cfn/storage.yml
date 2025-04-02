@@ -358,7 +358,7 @@ Resources:
                 Value: 'PN_AAR'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 365
+                TransitionInDays: 1825
           - Id: 'PnSsAar_expiry'
             Status: 'Enabled'
             ExpirationInDays: 3655

@@ -469,7 +469,6 @@
                             </configOptions>
                         </configuration>
                     </execution>
-
                 </executions>
             </plugin>
         </plugins>

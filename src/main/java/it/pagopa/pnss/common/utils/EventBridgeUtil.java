@@ -30,6 +30,8 @@ public class EventBridgeUtil {
     public static final String UNAVAILABILITY_DOCUMENT_STATUS = "ERROR";
     private static final ObjectMapper objMap = new ObjectMapper();
 
+    private EventBridgeUtil(){}
+
     public static PutEventsRequestEntry createMessage(DocumentEntity documentEntity, String disponibilitaDocumentiEventBridge, String oldDocumentState, Boolean canReadTags){
         String key = documentEntity.getDocumentKey();
         NotificationMessage message = new NotificationMessage();
@@ -40,13 +42,13 @@ public class EventBridgeUtil {
         message.setDocumentType(documentEntity.getDocumentType()!=null && documentEntity.getDocumentType().getTipoDocumento()!= null ?
                 documentEntity.getDocumentType().getTipoDocumento():null);
 
-        message.setDocumentStatus(documentEntity.getDocumentLogicalState()!=null ? documentEntity.getDocumentLogicalState().toString():null);
-        message.setContentType(documentEntity.getContentType()!=null ? documentEntity.getContentType().toString():null);
+        message.setDocumentStatus(documentEntity.getDocumentLogicalState()!=null ? documentEntity.getDocumentLogicalState():null);
+        message.setContentType(documentEntity.getContentType()!=null ? documentEntity.getContentType():null);
 
-        message.setChecksum(documentEntity.getCheckSum()!=null ? documentEntity.getCheckSum().toString():null);
+        message.setChecksum(documentEntity.getCheckSum()!=null ? documentEntity.getCheckSum():null);
 
-        message.setRetentionUntil(documentEntity.getRetentionUntil()!=null ? documentEntity.getRetentionUntil().toString():null);
-        message.setClientShortCode(documentEntity.getClientShortCode()!=null ? documentEntity.getClientShortCode().toString():null);
+        message.setRetentionUntil(documentEntity.getRetentionUntil()!=null ? documentEntity.getRetentionUntil():null);
+        message.setClientShortCode(documentEntity.getClientShortCode()!=null ? documentEntity.getClientShortCode():null);
 
         if (documentEntity.getTags() != null && canReadTags) {
             Map<String, List<String>> tags =documentEntity.getTags();

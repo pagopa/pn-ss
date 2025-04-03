@@ -13,7 +13,7 @@ import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.TransformationProperties;
 import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
-import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
+import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.transformation.utils.TransformationUtils;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,7 +41,7 @@ import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 @CustomLog
 public class TransformationService {
 
-    private final S3ServiceImpl s3Service;
+    private final S3Service s3Service;
     private final PnSignProviderService pnSignService;
     private final DocumentClientCall documentClientCall;
     private final BucketName bucketNames;
@@ -52,7 +52,7 @@ public class TransformationService {
     @Value("${event.bridge.disponibilita-documenti-name}")
     private String disponibilitaDocumentiEventBridge;
 
-    public TransformationService(S3ServiceImpl s3Service,
+    public TransformationService(S3Service s3Service,
                                  PnSignProviderService pnSignService,
                                  DocumentClientCall documentClientCall,
                                  BucketName bucketNames,

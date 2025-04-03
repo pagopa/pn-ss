@@ -13,6 +13,7 @@ import software.amazon.awssdk.metrics.MetricCollector;
 import software.amazon.awssdk.metrics.SdkMetric;
 import java.util.stream.Stream;
 
+import static it.pagopa.pnss.common.constant.Constant.DUMMY;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 /**
@@ -55,6 +56,7 @@ public class CloudWatchMetricsService {
      * @return the mono
      */
     public Mono<PnSignDocumentResponse> executeAndPublishResponseTime(Mono<PnSignDocumentResponse> mono, String namespace, String metricName) {
+        if(namespace.equals(DUMMY)) return mono; // Skip publishing metrics for dummy sign
         return mono.elapsed()
                 .flatMap(tuple -> publishResponseTime(namespace, metricName, tuple.getT1(), tuple.getT2().getSignedDocument().length / 1024)
                         .thenReturn(tuple.getT2()));

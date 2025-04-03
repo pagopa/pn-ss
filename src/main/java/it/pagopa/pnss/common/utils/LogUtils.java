@@ -25,6 +25,7 @@ public class LogUtils {
     public static final String CLIENT_METHOD_RETURN_WITH_ERROR = "Return client method '{}' with error: {} - {}";
     public static final String INITIALIZING = "Initializing '{}'";
     public static final String EXCEPTION_DURING_INITIALIZATION = "Exception during '{}' initialization";
+    public static final String ERROR_RETRIEVING_PROVIDER = "Error retrieving provider '{}'";
     public static final String ARG = " - '{}'";
 
     //DOWNLOAD

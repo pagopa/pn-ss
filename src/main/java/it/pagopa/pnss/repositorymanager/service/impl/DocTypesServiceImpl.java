@@ -33,20 +33,17 @@ import static it.pagopa.pnss.common.utils.LogUtils.SUCCESSFUL_OPERATION_LABEL;
 public class DocTypesServiceImpl implements DocTypesService {
 
     private final ObjectMapper objectMapper;
-
     private final DynamoDbAsyncTableDecorator<DocTypeEntity> docTypeEntityDynamoDbAsyncTable;
-
     private final RetryBackoffSpec dynamoRetryStrategy;
-
-    @Autowired
-    RepositoryManagerDynamoTableName managerDynamoTableName;
+    final RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public DocTypesServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy) {
+                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy, RepositoryManagerDynamoTableName managerDynamoTableName) {
         this.objectMapper = objectMapper;
         this.dynamoRetryStrategy = dynamoRetryStrategy;
         this.docTypeEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.tipologieDocumentiName(),
                                                                                  TableSchema.fromBean(DocTypeEntity.class)));
+        this.managerDynamoTableName = managerDynamoTableName;
     }
 
     private Mono<DocTypeEntity> getErrorIdDocTypeNotFoundException(String typeId) {

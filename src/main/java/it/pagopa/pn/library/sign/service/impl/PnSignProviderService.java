@@ -8,6 +8,7 @@ import it.pagopa.pn.library.sign.exception.MaxRetryExceededException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.PnSignService;
 import it.pagopa.pn.library.sign.PnSignServiceManager;
+import it.pagopa.pn.ss.dummy.sign.service.PnDummySignServiceImpl;
 import it.pagopa.pnss.common.service.impl.CloudWatchMetricsService;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,7 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 
 import static it.pagopa.pn.library.sign.pojo.SignatureType.*;
+import static it.pagopa.pnss.common.constant.Constant.*;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @Service("pnSignService")
@@ -54,7 +56,7 @@ public class PnSignProviderService implements PnSignService {
     @Override
     public Mono<PnSignDocumentResponse> signPdfDocument(byte[] fileBytes, Boolean timestamping) {
         log.debug(INVOKING_METHOD, PN_SIGN_PDF_DOCUMENT, timestamping);
-        PnSignService provider = getProvider(pnSignServiceConfigurationProperties.getProviderSwitch());
+        PnSignService provider = pnSignServiceManager.getProviderService(pnSignServiceConfigurationProperties.getProviderSwitch());
         return cloudWatchMetricsService.executeAndPublishResponseTime(provider.signPdfDocument(fileBytes, timestamping), getMetricNamespace(provider), PADES.getValue())
                 .retryWhen(pnSignRetryStrategy)
                 .doOnSuccess(result -> log.info(SUCCESSFUL_OPERATION_LABEL, PN_SIGN_PDF_DOCUMENT, result));
@@ -63,7 +65,7 @@ public class PnSignProviderService implements PnSignService {
     @Override
     public Mono<PnSignDocumentResponse> signXmlDocument(byte[] fileBytes, Boolean timestamping)  {
         log.debug(INVOKING_METHOD, PN_SIGN_XML_DOCUMENT, timestamping);
-        PnSignService provider = getProvider(pnSignServiceConfigurationProperties.getProviderSwitch());
+        PnSignService provider = pnSignServiceManager.getProviderService(pnSignServiceConfigurationProperties.getProviderSwitch());
         return cloudWatchMetricsService.executeAndPublishResponseTime(provider.signXmlDocument(fileBytes, timestamping), getMetricNamespace(provider), XADES.getValue())
                 .retryWhen(pnSignRetryStrategy)
                 .doOnSuccess(result -> log.info(SUCCESSFUL_OPERATION_LABEL, PN_SIGN_XML_DOCUMENT, result));
@@ -72,16 +74,10 @@ public class PnSignProviderService implements PnSignService {
     @Override
     public Mono<PnSignDocumentResponse> pkcs7Signature(byte[] fileBytes, Boolean timestamping)  {
         log.debug(INVOKING_METHOD, PN_PKCS_7_SIGNATURE, timestamping);
-        PnSignService provider = getProvider(pnSignServiceConfigurationProperties.getProviderSwitch());
+        PnSignService provider = pnSignServiceManager.getProviderService(pnSignServiceConfigurationProperties.getProviderSwitch());
         return cloudWatchMetricsService.executeAndPublishResponseTime(provider.pkcs7Signature(fileBytes, timestamping), getMetricNamespace(provider), CADES.getValue())
                 .retryWhen(pnSignRetryStrategy)
                 .doOnSuccess(result -> log.info(SUCCESSFUL_OPERATION_LABEL, PN_PKCS_7_SIGNATURE, result));
-    }
-
-    private PnSignService getProvider(String providerName) {
-        if (providerName.equals("aruba"))
-            return pnSignServiceManager.getArubaSignProviderService();
-        else return pnSignServiceManager.getNamirialProviderService();
     }
 
     /**
@@ -95,6 +91,8 @@ public class PnSignProviderService implements PnSignService {
             return arubaNamespace;
         } else if (service instanceof PnSignServiceImpl) {
             return namirialNamespace;
+        } else if (service instanceof PnDummySignServiceImpl) {
+            return DUMMY;
         } else {
             log.debug(ERROR_RETRIEVING_METRIC_NAMESPACE);
             throw new IllegalArgumentException(ERROR_RETRIEVING_METRIC_NAMESPACE);

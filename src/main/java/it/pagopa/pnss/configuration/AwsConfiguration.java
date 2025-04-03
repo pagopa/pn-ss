@@ -1,39 +1,16 @@
 package it.pagopa.pnss.configuration;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBStreams;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBStreamsClientBuilder;
-import com.amazonaws.services.dynamodbv2.streamsadapter.AmazonDynamoDBStreamsAdapterClient;
-import com.amazonaws.services.dynamodbv2.streamsadapter.StreamsWorkerFactory;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
-import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
-import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.handler.annotation.support.PayloadMethodArgumentResolver;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -47,6 +24,8 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
+import software.amazon.awssdk.services.eventbridge.EventBridgeClientBuilder;
 import software.amazon.awssdk.services.eventbridge.EventBridgeAsyncClient;
 import software.amazon.awssdk.services.eventbridge.EventBridgeAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -68,10 +47,7 @@ import java.util.List;
 @Slf4j
 public class AwsConfiguration {
 
-    private final DynamoEventStreamName dynamoEventStreamName;
-    private final AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
     private final AwsConfigurationProperties awsConfigurationProperties;
-    private final WebClient genericWebClient = WebClient.builder().build();
 
     /*
      * Set in LocalStackTestConfig
@@ -107,14 +83,10 @@ public class AwsConfiguration {
     @Value("${test.aws.ssm.endpoint:#{null}}")
     private String testAwsSsmEndpoint;
 
-    private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
 
-    public AwsConfiguration(AwsConfigurationProperties awsConfigurationProperties, DynamoEventStreamName dynamoEventStreamName,
-                            AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName) {
+    public AwsConfiguration(AwsConfigurationProperties awsConfigurationProperties) {
         this.awsConfigurationProperties = awsConfigurationProperties;
-        this.dynamoEventStreamName = dynamoEventStreamName;
-        this.availabelDocumentEventBridgeName = availabelDocumentEventBridgeName;
     }
 
     //  <-- spring-cloud-starter-aws-messaging -->
@@ -243,6 +215,20 @@ public class AwsConfiguration {
         return builder.build();
     }
 
+
+    @Bean
+    public EventBridgeClient eventBridgeClient() {
+        EventBridgeClientBuilder builder = EventBridgeClient.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (eventBridgeLocalStackEndpoint != null) {
+            builder.endpointOverride(URI.create(eventBridgeLocalStackEndpoint));
+        }
+
+        return builder.build();
+    }
+
     @Bean
     public CloudWatchAsyncClient cloudWatchAsyncClient() {
         CloudWatchAsyncClientBuilder cloudWatchAsyncClientBuilder = CloudWatchAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
@@ -276,42 +262,4 @@ public class AwsConfiguration {
         return eventBridgeAsyncClientBuilder.build();
     }
 
-    private String getTaskId() {
-
-        String ecsMetadataUri = System.getenv("ECS_CONTAINER_METADATA_URI_V4");
-
-        if (ecsMetadataUri == null) {
-            log.error("ECS_CONTAINER_METADATA_URI_V4 environment variable not found.");
-            return "streams-worker";
-        }
-
-
-        return genericWebClient.get()
-                .retrieve()
-                .bodyToMono(String.class)
-                .flatMap(response -> {
-                    ObjectMapper objectMapper = new ObjectMapper();
-                    try {
-                        JsonNode jsonNode = objectMapper.readTree(response);
-                        String taskArn = jsonNode.get("TaskARN").asText();
-                        String[] parts = taskArn.split("/");
-                        if (parts.length > 0) {
-                            return Mono.just(parts[parts.length - 1]);
-                        } else {
-                            log.error("Invalid TaskARN format");
-                            return Mono.just("streams-worker");
-                        }
-                   } catch (JsonProcessingException e) {
-                        log.error("Error while parsing JSON response", e);
-                        return Mono.just("streams-worker");
-                    }
-                })
-                .onErrorResume(throwable -> {
-                    log.error("Error while fetching container metadata", throwable);
-                    return Mono.just("streams-worker");
-                }).block();
-    }
 }
-
-
-

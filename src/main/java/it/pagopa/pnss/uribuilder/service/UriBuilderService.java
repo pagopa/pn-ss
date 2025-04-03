@@ -104,11 +104,10 @@ public class UriBuilderService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
     private final IndexingConfiguration indexingConfiguration;
 
-    @Autowired
-    RepositoryManagerDynamoTableName managerDynamoTableName;
+    final RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService, RetryBackoffSpec gestoreRepositoryRetryStrategy, ThreadPoolTaskExecutor taskExecutor, IndexingConfiguration indexingConfiguration) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService, RetryBackoffSpec gestoreRepositoryRetryStrategy, ThreadPoolTaskExecutor taskExecutor, IndexingConfiguration indexingConfiguration, RepositoryManagerDynamoTableName managerDynamoTableName) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
@@ -121,6 +120,7 @@ public class UriBuilderService {
         this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
         this.taskExecutor = taskExecutor;
         this.indexingConfiguration = indexingConfiguration;
+        this.managerDynamoTableName = managerDynamoTableName;
     }
 
     private Mono<String> getBucketName(DocumentType docType) {

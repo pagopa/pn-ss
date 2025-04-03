@@ -27,7 +27,7 @@ class TransformationHandlerTest {
     @Autowired
     private TransformationHandler transformationHandler;
     private static final S3EventNotificationMessage S3_EVENT_NOTIFICATION = createS3EventMessage();
-    private final TransformationMessage TRANSFORMATION_MESSAGE = createTransformationMessage();
+    private final TransformationMessage transformationMessage = createTransformationMessage();
 
     @Test
     void processAndPublishTransformation_Ok() {
@@ -73,7 +73,7 @@ class TransformationHandlerTest {
         when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(true))).thenReturn(testPublisher.mono());
 
         //THEN
-        Assertions.assertDoesNotThrow(() -> transformationHandler.signAndTimemarkTransformationSubscriber(TRANSFORMATION_MESSAGE, acknowledgment));
+        Assertions.assertDoesNotThrow(() -> transformationHandler.signAndTimemarkTransformationSubscriber(transformationMessage, acknowledgment));
         testPublisher.assertWasSubscribed();
         verify(acknowledgment).acknowledge();
     }
@@ -89,7 +89,7 @@ class TransformationHandlerTest {
         when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(true))).thenReturn(testPublisher.mono());
 
         //THEN
-        Assertions.assertDoesNotThrow(() -> transformationHandler.signAndTimemarkTransformationSubscriber(TRANSFORMATION_MESSAGE, acknowledgment));
+        Assertions.assertDoesNotThrow(() -> transformationHandler.signAndTimemarkTransformationSubscriber(transformationMessage, acknowledgment));
         testPublisher.assertWasSubscribed();
         verify(acknowledgment, never()).acknowledge();
     }
@@ -121,7 +121,7 @@ class TransformationHandlerTest {
         when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(false))).thenReturn(testPublisher.mono());
 
         //THEN
-        Assertions.assertDoesNotThrow(() -> transformationHandler.signTransformationSubscriber(TRANSFORMATION_MESSAGE, acknowledgment));
+        Assertions.assertDoesNotThrow(() -> transformationHandler.signTransformationSubscriber(transformationMessage, acknowledgment));
         testPublisher.assertWasSubscribed();
         verify(acknowledgment, never()).acknowledge();
     }
@@ -137,7 +137,7 @@ class TransformationHandlerTest {
         when(transformationService.dummyTransformation(any(TransformationMessage.class))).thenReturn(testPublisher.mono());
 
         //THEN
-        Assertions.assertDoesNotThrow(() -> transformationHandler.dummyTransformationSubscriber(TRANSFORMATION_MESSAGE, acknowledgment));
+        Assertions.assertDoesNotThrow(() -> transformationHandler.dummyTransformationSubscriber(transformationMessage, acknowledgment));
         testPublisher.assertWasSubscribed();
         verify(acknowledgment).acknowledge();
     }
@@ -153,15 +153,15 @@ class TransformationHandlerTest {
         when(transformationService.dummyTransformation(any(TransformationMessage.class))).thenReturn(testPublisher.mono());
 
         //THEN
-        Assertions.assertDoesNotThrow(() -> transformationHandler.dummyTransformationSubscriber(TRANSFORMATION_MESSAGE, acknowledgment));
+        Assertions.assertDoesNotThrow(() -> transformationHandler.dummyTransformationSubscriber(transformationMessage, acknowledgment));
         testPublisher.assertWasSubscribed();
         verify(acknowledgment, never()).acknowledge();
     }
 
     private TransformationMessage createTransformationMessage() {
         TransformationMessage transformationMessage = new TransformationMessage();
-        String FILE_KEY = "fileKey";
-        transformationMessage.setFileKey(FILE_KEY);
+        String fileKey = "fileKey";
+        transformationMessage.setFileKey(fileKey);
         return transformationMessage;
     }
 

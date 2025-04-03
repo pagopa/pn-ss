@@ -50,6 +50,9 @@
     "PnSsSignAndTimemarkMetricsSchema": "Pn-SS-SignAndTimemark-MetricsSchema",
     "PnSsTaskExecutionPoolMaxSize": "2048",
     "PnSsTaskExecutionPoolCoreSize": "8",
-    "PnSsTaskExecutionPoolQueueCapacity": "4096"
+    "PnSsTaskExecutionPoolQueueCapacity": "4096",
+    "MountEfs": "false",
+    "PnCronAnalyzer": "-",
+    "WireTapLogActivation": "false"
   }
 }

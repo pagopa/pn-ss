@@ -52,7 +52,7 @@
     "PnSsTaskExecutionPoolCoreSize": "8",
     "PnSsTaskExecutionPoolQueueCapacity": "4096",
     "MountEfs": "false",
-    "PnCronAnalyzer": "* */1 * * * *",
+    "PnCronAnalyzer": "-",
     "WireTapLogActivation": "false"
   }
 }

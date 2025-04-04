@@ -68,11 +68,11 @@ build_run(){
 load_dynamodb(){
   log "### Populating DynamoDB ###"
   log "### Populating pn-SsAnagraficaClient ###" && \
-  ./dynamoDBLoad.sh -t "pn-SsAnagraficaClient" -i "./AnagraficaClient.json" -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
+  ./dynamoDBLoad.sh -t "pn-SsAnagraficaClient" -i "localdev/AnagraficaClient.json" -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
   { log "### Failed to populate pn-SsAnagraficaClient ###" ; return 1; }
 
   log "### Populating pn-SsTipologieDocumenti ###" && \
-  ./dynamoDBLoad.sh -t "pn-SsTipologieDocumenti" -i "./TipoDocumenti.json"  -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
+  ./dynamoDBLoad.sh -t "pn-SsTipologieDocumenti" -i "localdev/TipoDocumenti.json"  -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
   { log "### Failed to populate pn-SsTipologieDocumenti ###" ; return 1; }
 
   log "### Populating pn-SmStates ###" && \

@@ -137,6 +137,14 @@ Parameters:
     Type: String
     Description: 'ARN dello stream relativo alla tabella SS Scadenza Documenti'
 
+  PnSsTableNameTags:
+    Type: String
+    Description: 'Nome tabella conteniente i tags'
+
+  PnSsTableArnTags:
+    Type: String
+    Description: 'ARN tabella conteniente i tags'
+
   PnSsBucketName:
     Type: String
     Description: 'Nome del Bucket SS'
@@ -258,7 +266,39 @@ Parameters:
     Type: String
     Description: 'ARN della chiave KMS per la cifratura dei file nei bucket'
 
-#### Parametri presenti nel file json di configurazione  ###
+  PnSsQueueNameAvailability:
+    Type: String
+    Description: 'Nome coda per notifiche disponibilità'
+
+  PnSsQueueArnAvailability:
+    Type: String
+    Description: 'ARN coda per notifiche disponibilità'
+
+  PnSsQueueNameDummyTransformation:
+    Type: String
+    Description: 'Nome coda per trasformazione dummy'
+
+  PnSsQueueArnDummyTransformation:
+    Type: String
+    Description: 'ARN coda per trasformazione dummy'
+
+  PnSsQueueNameSignAndTimemarkTransformation:
+    Type: String
+    Description: 'Nome coda per trasformazione sign_and_timemark'
+
+  PnSsQueueArnSignAndTimemarkTransformation:
+    Type: String
+    Description: 'ARN coda per tasformazione sign_and_timemark'
+
+  PnSsQueueNameSignTransformation:
+    Type: String
+    Description: 'Nome coda per la trasformazione sign'
+
+  PnSsQueueArnSignTransformation:
+    Type: String
+    Description: 'ARN coda per la trasformazione sign'
+
+  #### Parametri presenti nel file json di configurazione  ###
 
   PnSsUriBuilderstayHotTime:
     Type: String
@@ -389,8 +429,18 @@ Parameters:
 
   PnSsTaskExecutionPoolMaxSize:
     Type: String
-    Description: 'SpringBoot configuration Task Execution Max Pool Siza'
-    Default: '512'
+    Description: 'SpringBoot configuration Task Execution Max Pool Size'
+    Default: 0
+
+  PnSsTaskExecutionPoolCoreSize:
+    Type: String
+    Description: 'SpringBoot configuration Task Execution Pool Core Size'
+    Default: 0
+
+  PnSsTaskExecutionPoolQueueCapacity:
+    Type: String
+    Description: 'SpringBoot configuration Task Execution Pool Queue Capacity'
+    Default: 0
 
   PnSsDocumentDeletionMode:
     Type: String
@@ -408,6 +458,10 @@ Parameters:
     Type: String
     Description: 'Parameter used to define minimum backoff between attempts'
 
+  PnSsSignAndTimemarkMetricsSchema:
+    Type: String
+    Description: 'Name of the AWS parameter that contains the schema for the metrics of the sign and timemark service'
+
   CpuValue:
     Type: Number
     Default: 1024
@@ -423,6 +477,26 @@ Parameters:
     Type: String
     Default: ''
     Description: URL to the file containing the list of fileKeys which s3 object doesn't need to be updated.
+
+  PnSsIndexingConfiguration:
+    Type: String
+    Description: 'Name of the parameter store containing the configuration for the indexing service'
+
+  PnSsTransformationConfiguration:
+    Type: String
+    Description: 'Name of the parameter store containing the configuration for the transformation service'
+
+  SpringCodecMaxInMemorySize:
+    Type: String
+    Description: 'Spring Codec Max Memory Size'
+
+  SignAndTimemarkMaxThreadPoolSize:
+    Type: String
+    Description: 'Sign and timemark transformation max thread pool size'
+
+  SignMaxThreadPoolSize:
+    Type: String
+    Description: 'Sign transformation max thread pool size'
 
 ### Altri parametri
   AlarmSNSTopicName:
@@ -440,6 +514,10 @@ Parameters:
   PnSsPreloadedDocsRetentionDays:
     Type: Number
     Description: 'Numero di giorni di retention per i file di tipo PRELOADED'
+
+  PnSsSafeClients:
+    Type: String
+    Description: 'List of safe clients'
 
   JavaToolOptions:
     Type: String
@@ -459,6 +537,22 @@ Parameters:
     Type: String
     Description: 'S3 prefix to upload lambda compiled package'
 
+  PnSsEventHandlerMaxMessages:
+    Type: Number
+    Description: 'Max number of messages to be processed by the StreamsRecordProcessor'
+
+  PnSsSqsRetryStrategyMinBackoff:
+    Type: Number
+    Description: 'Min backoff time for SQS retry strategy'
+
+  PnSsSqsRetryStrategyMaxAttempts:
+    Type: Number
+    Description: 'Max number of attempts for SQS retry strategy'
+
+  PnSsTransformationServiceMaxMessages:
+    Type: Number
+    Description: 'Max number of messages to be processed by the TransformationService'
+
   # Namirial provider properties
   PnSsNamirialServerAddress:
     Type: String
@@ -476,6 +570,32 @@ Parameters:
   EcsLogGroup:
     Type: String
     Description: 'Ecs log group name'
+
+  # EFS parameters
+  FargateEFSFileSystemID:
+    Type: String
+    Description: "EFS Filesystem"
+
+  MountEfs:
+    Type: String
+    Default: false
+    AllowedValues:
+      - "true"
+      - "false"
+
+  # Logging parameters
+  WireTapLogActivation:
+    Type: String
+    Default: false
+    Description: Activation of wire logs
+    AllowedValues:
+      - true
+      - false
+
+  PnCronAnalyzer:
+    Type: String
+    Default: '-'
+    Description: Cron for which you send the metric to CloudWatch
 
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
@@ -531,6 +651,26 @@ Resources:
         ContainerEnvEntry48: !Sub 'PnSsTableNameScadenzaDocumenti=${PnSsTableNameScadenzaDocumenti}'
         ContainerEnvEntry49: !Sub 'PnSsTableScadenzaDocumentiStreamArn=${PnSsTableScadenzaDocumentiStreamArn}'
         ContainerEnvEntry50: !Sub 'PnSsIgnoredUpdateMetadataList=${PnSsIgnoredUpdateMetadataList}'
+        ContainerEnvEntry51: !Sub 'PnSsIndexingConfiguration=${PnSsIndexingConfiguration}'
+        ContainerEnvEntry52: !Sub 'PnSsTableNameTags=${PnSsTableNameTags}'
+        ContainerEnvEntry53: !Sub 'PnSsSafeClients=${PnSsSafeClients}'
+        ContainerEnvEntry54: !Sub 'PnSsQueueNameAvailability=${PnSsQueueNameAvailability}'
+        ContainerEnvEntry55: !Sub 'PnSsEventHandlerMaxMessages=${PnSsEventHandlerMaxMessages}'
+        ContainerEnvEntry56: !Sub 'PnSsSqsRetryStrategyMinBackoff=${PnSsSqsRetryStrategyMinBackoff}'
+        ContainerEnvEntry57: !Sub 'PnSsSqsRetryStrategyMaxAttempts=${PnSsSqsRetryStrategyMaxAttempts}'
+        ContainerEnvEntry58: !Sub 'SignAndTimemarkMaxThreadPoolSize=${SignAndTimemarkMaxThreadPoolSize}'
+        ContainerEnvEntry59: !Sub 'SpringCodecMaxInMemorySize=${SpringCodecMaxInMemorySize}'
+        ContainerEnvEntry60: !Sub 'PnSsSignAndTimemarkMetricsSchema=${PnSsSignAndTimemarkMetricsSchema}'
+        ContainerEnvEntry61: !Sub 'PnSsTransformationServiceMaxMessages=${PnSsTransformationServiceMaxMessages}'
+        ContainerEnvEntry62: !Sub 'PnSsTaskExecutionPoolCoreSize=${PnSsTaskExecutionPoolCoreSize}'
+        ContainerEnvEntry63: !Sub 'PnSsTaskExecutionPoolQueueCapacity=${PnSsTaskExecutionPoolQueueCapacity}'
+        ContainerEnvEntry64: !Sub 'PnSsQueueNameDummyTransformation=${PnSsQueueNameDummyTransformation}'
+        ContainerEnvEntry65: !Sub 'PnSsQueueNameSignAndTimemarkTransformation=${PnSsQueueNameSignAndTimemarkTransformation}'
+        ContainerEnvEntry66: !Sub 'PnSsQueueNameSignTransformation=${PnSsQueueNameSignTransformation}'
+        ContainerEnvEntry67: !Sub 'PnSsTransformationConfiguration=${PnSsTransformationConfiguration}'
+        ContainerEnvEntry68: !Sub 'SignMaxThreadPoolSize=${SignMaxThreadPoolSize}'
+        ContainerEnvEntry69: !Sub 'PN_CRON_ANALYZER=${PnCronAnalyzer}'
+        ContainerEnvEntry70: !Sub 'WIRE_TAP_LOG=${WireTapLogActivation}'
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds
@@ -542,12 +682,13 @@ Resources:
         TaskRoleManagedPolicyArn: !Ref PnSsManagedPolicy
         LogAlarmStrategyV1: !Ref LogAlarmStrategy
         EcsLogGroup: !Ref EcsLogGroup
-        LoadBalancingAlgorithm: round_robin
         AutoscalingThreshold: !Ref AutoscalingThreshold
         AutoscalingStrategy: REST-API
         MinTasksNumber: !Ref MinTasksNumber
         MaxTasksNumber: !Ref MaxTasksNumber
         JavaToolOptions: !Ref JavaToolOptions
+        EfsFilesystem: !Ref FargateEFSFileSystemID
+        MountEfs: !Ref MountEfs
         # HealthCheckPath:
 
   PnSsManagedPolicy:
@@ -578,6 +719,7 @@ Resources:
               - !Ref PnSsTableArnDocumenti
               - !Ref PnSsTableDocumentiStreamArn
               - !Ref PnSsTableArnScadenzaDocumenti
+              - !Ref PnSsTableArnTags
           - Sid: 'FullAccesStreamMetadataTable'
             Effect: Allow
             Action:
@@ -631,6 +773,10 @@ Resources:
               - 'sqs:SendMessage'
             Resource:
               - !Ref PnSsQueueArnStagingBucket
+              - !Ref PnSsQueueArnAvailability
+              - !Ref PnSsQueueArnSignAndTimemarkTransformation
+              - !Ref PnSsQueueArnSignTransformation
+              - !Ref PnSsQueueArnDummyTransformation
           - Effect: Allow
             Sid: 'ReadFromSecretsManagerFirmaPEC'
             Action:
@@ -653,6 +799,12 @@ Resources:
               - 'events:DescribeEventBus'
             Resource:
               - !Ref PnSsEventBusArnExternalNotification
+          - Sid: 'ReadParameterStore'
+            Effect: Allow
+            Action:
+              - 'ssm:GetParameter'
+            Resource:
+              - '*'
 
   #####    Staging Bucket Events Rule    #####
   PnSsEventRuleStagingBucket:
@@ -668,6 +820,7 @@ Resources:
           - !Ref AWS::Region
         detail-type:
           - 'Object Created'
+          - 'Object Tags Added'
         detail:
           bucket:
             name:
@@ -805,6 +958,7 @@ Resources:
           !Join
           - ','
           - - !Ref PnSsQueueArnStagingBucket
+            - !Ref PnSsQueueArnAvailability
             - !Ref PnSsQueueArnGestoreBucketInvoke
             - !Ref PnSsQueueArnGestoreBucketInvokeErrors
             - !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
@@ -1167,9 +1321,9 @@ Resources:
       SourceArn: !GetAtt PnSsEventRuleGestoreBucketConcurrencyHandler.Arn
 
   ######## Scadenza Documenti Lambda Handler  #########
-  
-  
-  
+
+
+
   PnSsScadenzaDocumentiLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1271,8 +1425,8 @@ Resources:
         S3Key: !Sub "${MicroserviceBucketBaseKey}/functions_zip/scadenzaDocumentiEventHandler.zip"
       Layers:
         - !Sub "arn:aws:lambda:${AWS::Region}:339249233099:layer:LambdaInsightsExtension:13"
-        
-        
+
+
   PnSsQueuePolicyScadenzaDocumentiDynamoStreamDLQ:
     Type: AWS::SQS::QueuePolicy
     Properties:

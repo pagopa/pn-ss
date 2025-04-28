@@ -22,6 +22,8 @@ tags:
     description: Scadenza documenti
   - name: userConfigurationInternal
     description: Anagrafica Client
+  - name: tagsInternal
+    description: Tags
 paths:
 
   ################################################################################################
@@ -628,6 +630,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserConfigurationResponse'
 
+  '/safestorage/internal/v1/tags/{tagKeyValue}':
+    get:
+      operationId: getTagsRelations
+      summary: Restituisce una serie di fileKey associate ad una singola coppia chiave-valore di un tag
+      tags:
+        - tagsInternal
+      parameters:
+        - $ref: '#/components/parameters/tagKeyValue'
+      responses:
+        '400':
+          description: >-
+            #### Bad request
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsRelationsResponse'
+              example:
+                tagsDto: null
+                error:
+                  code: 404
+                  description: Tags with key _TEST not found
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsRelationsResponse'
+
+  '/safestorage/internal/v1/documents/{documentKey}/tags':
+    put:
+      operationId: putTags
+      summary: Aggiorna i tag associati ad un documento nella tabella pn-SsDocumenti e le associazioni chiave-valore nella tabella pn-SsTags
+      tags:
+        - tagsInternal
+      parameters:
+        - $ref: '#/components/parameters/documentKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagsChanges'
+      responses:
+        '400':
+          description: >-
+            #### Bad request
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsResponse'
+
 components:
   parameters:
     typeId:
@@ -651,6 +707,13 @@ components:
       required: true
       schema:
         type: string
+    tagKeyValue:
+        name: tagKeyValue
+        description: Associazione chiave-valore del tag
+        in: path
+        required: true
+        schema:
+            type: string
 
   schemas:
     Error:
@@ -690,7 +753,6 @@ components:
           type: array
           items:
             type: string
-            enum: ['NONE', 'SIGN_AND_TIMEMARK']
         timeStamped:
           type: string
           enum: [ 'NONE', 'STANDARD' ]
@@ -748,6 +810,13 @@ components:
           format: date-time
           description: >-
             Timestamp dell'ultima variazione di stato del documento.
+        tags:
+          type: object
+          additionalProperties:
+              type: array
+              items:
+                type: string
+
 
     DocumentInput:
       allOf:
@@ -834,6 +903,12 @@ components:
           items:
             type: string
           description: Elenco dei tipi di documenti che il client è autorizzato a modificare.
+        canWriteTags:
+          type: boolean
+          description: Definisce se il client è autorizzato a scrivere i tag.
+        canReadTags:
+            type: boolean
+            description: Definisce se il client è autorizzato a leggere i tag.
         canExecutePatch:
           type: boolean
         signatureInfo:
@@ -852,6 +927,7 @@ components:
           $ref: '#/components/schemas/UserConfiguration'
         error:
           $ref: '#/components/schemas/Error'
+
     UserConfigurationChanges:
       type: object
       properties:
@@ -865,6 +941,12 @@ components:
           items:
             type: string
           description: Elenco dei tipi di documenti che il client è autorizzato a leggere.
+        canWriteTags:
+          type: boolean
+          description: Definisce se il client è autorizzato a scrivere i tag.
+        canReadTags:
+            type: boolean
+            description: Definisce se il client è autorizzato a leggere i tag.
         canModifyStatus:
           type: array
           items:
@@ -874,6 +956,62 @@ components:
           type: string
         signatureInfo:
           type: string
+
+    TagsRelationsDto:
+      type: object
+      properties:
+        tagKeyValue:
+          type: string
+        fileKeys:
+          type: array
+          items:
+            type: string
+
+    TagsDto:
+      type: object
+      properties:
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    TagsChanges:
+      type: object
+      properties:
+        SET:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Tags to be set
+        DELETE:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Tags to be deleted
+      required:
+        - fileKey
+
+    TagsRelationsResponse:
+      type: object
+      properties:
+        tagsRelationsDto:
+          $ref: '#/components/schemas/TagsRelationsDto'
+        error:
+          $ref: '#/components/schemas/Error'
+
+    TagsResponse:
+      type: object
+      properties:
+        tagsDto:
+          $ref: '#/components/schemas/TagsDto'
+        error:
+          $ref: '#/components/schemas/Error'
 
   securitySchemes:
     ApiKeyAuth:

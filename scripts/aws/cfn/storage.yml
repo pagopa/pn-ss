@@ -90,6 +90,7 @@ Resources:
       Description: A symmetric encryption KMS key AES-256-GCM
       KeySpec: SYMMETRIC_DEFAULT
       KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
       KeyPolicy:
         Version: 2012-10-17
         Statement:
@@ -179,6 +180,23 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
+  PnSsTableTags:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: 'pn-SsTags'
+      AttributeDefinitions:
+        - AttributeName: 'tagKeyValue'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'tagKeyValue'
+          KeyType: 'HASH'
+      BillingMode: 'PAY_PER_REQUEST'
+      TableClass: 'STANDARD'
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
   PnSsKmsBucket:
     Type: 'AWS::KMS::Key'
     Properties:
@@ -186,6 +204,9 @@ Resources:
       KeySpec: SYMMETRIC_DEFAULT
       KeyUsage: ENCRYPT_DECRYPT
       EnableKeyRotation: true
+      Tags:
+        - Key: "KeyType"
+          Value: "PnSsKmsBucket"
       KeyPolicy:
         Version: 2012-10-17
         Statement:
@@ -266,7 +287,7 @@ Resources:
                 Value: 'PN_AAR'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsLegalFacts'
             ExpirationInDays: 3655
             Status: 'Enabled'
@@ -275,7 +296,7 @@ Resources:
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsLogsArchiveAudit5Y'
             ExpirationInDays: 1830
             Status: 'Enabled'
@@ -337,7 +358,7 @@ Resources:
                 Value: 'PN_AAR'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 1825
           - Id: 'PnSsAar_expiry'
             Status: 'Enabled'
             ExpirationInDays: 3655
@@ -351,7 +372,7 @@ Resources:
                 Value: 'PN_LEGAL_FACTS'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 120
+                TransitionInDays: 365
           - Id: 'PnSsLegalFacts_expiry'
             Status: 'Enabled'
             ExpirationInDays: 3655
@@ -420,6 +441,20 @@ Resources:
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
+          - Id: 'PnSsPaperAttachments_freeze'
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_freeze'
+                Value: 'PN_PAPER_ATTACHMENT'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: 30
+          - Id: 'PnSsPaperAttachments_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: 365
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_PAPER_ATTACHMENT'
       NotificationConfiguration:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'
@@ -475,6 +510,8 @@ Resources:
             AbortIncompleteMultipartUpload: 
                 DaysAfterInitiation: 1
             Status: 'Enabled'
+      VersioningConfiguration:
+        Status: Enabled
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
@@ -498,6 +535,69 @@ Resources:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
         QueueName: 'pn-ss-staging-bucket-events-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        VisibilityTimeout: 300
+        QueueHasAlarm: 'false'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+
+  PnSsQueueAvailabilityStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-availability-events-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        VisibilityTimeout: 300
+        QueueHasAlarm: 'false'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+
+# La coda per la trasformazione DUMMY
+  PnSsQueueDummyTransformationStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-transformation-dummy-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        VisibilityTimeout: 300
+        QueueHasAlarm: 'false'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+
+# La coda per trasformazione SIGN_AND_TIMEMARK
+  PnSsQueueSignAndTimemarkTransformationStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-transformation-sign-and-timemark-queue'
+        SqsManagedSseEnabled: true
+        MaxReceiveCount: 10
+        HasDLQ: True
+        VisibilityTimeout: 300
+        QueueHasAlarm: 'false'
+        AlarmSNSTopicName: !Ref AlarmSNSTopicName
+
+# La coda per trasformazione SIGN
+  PnSsQueueSignTransformationStack:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
+      Parameters:
+        QueueName: 'pn-ss-transformation-sign-queue'
         SqsManagedSseEnabled: true
         MaxReceiveCount: 10
         HasDLQ: True
@@ -783,6 +883,14 @@ Outputs:
     Description: 'Nome tabella SS Scadenza Documenti'
     Value: !GetAtt PnSsTableScadenzaDocumenti.StreamArn
 
+  PnSsTableNameTags:
+    Description: 'Nome tabella contenente le fileKey associate ad una coppia chiave-valore di un tag'
+    Value: !Ref PnSsTableTags
+
+  PnSsTableArnTags:
+    Description: 'ARN tabella conteniente i tags'
+    Value: !GetAtt PnSsTableTags.Arn
+
   PnSsDocumentDeletionMode:
     Description: 'Modalità cancellazione da tabella scadenzaDocumenti'
     Value: !Ref PnSsDocumentDeletionMode
@@ -802,6 +910,38 @@ Outputs:
   PnSsStagingBucketArn:
     Description: 'ARN Bucket SS Staging'
     Value: !GetAtt PnSsStagingBucket.Arn
+
+  PnSsQueueNameDummyTransformation:
+    Description: 'Nome coda per la trasformazione dummy'
+    Value: !GetAtt PnSsQueueDummyTransformationStack.Outputs.QueueName
+
+  PnSsQueueArnDummyTransformation:
+    Description: 'ARN coda per la trasformazione dummy'
+    Value: !GetAtt PnSsQueueDummyTransformationStack.Outputs.QueueARN
+
+  PnSsQueueNameSignAndTimemarkTransformation:
+    Description: 'Nome coda per la trasformazione sign_and_timemark'
+    Value: !GetAtt PnSsQueueSignAndTimemarkTransformationStack.Outputs.QueueName
+
+  PnSsQueueArnSignAndTimemarkTransformation:
+    Description: 'ARN coda per la trasformazione sign_and_timemark'
+    Value: !GetAtt PnSsQueueSignAndTimemarkTransformationStack.Outputs.QueueARN
+
+  PnSsQueueNameSignTransformation:
+    Description: 'Nome coda per la trasformazione sign'
+    Value: !GetAtt PnSsQueueSignTransformationStack.Outputs.QueueName
+
+  PnSsQueueArnSignTransformation:
+    Description: 'ARN coda per la trasformazione sign'
+    Value: !GetAtt PnSsQueueSignTransformationStack.Outputs.QueueARN
+
+  PnSsQueueNameAvailability:
+    Description: 'Nome coda per notifiche disponibilità'
+    Value: !GetAtt PnSsQueueAvailabilityStack.Outputs.QueueName
+
+  PnSsQueueArnAvailability:
+    Description: 'ARN coda per notifiche disponibilità'
+    Value: !GetAtt PnSsQueueAvailabilityStack.Outputs.QueueARN
 
   PnSsQueueNameStagingBucket:
     Description: 'Nome coda per notifiche SS Staging Bucket'

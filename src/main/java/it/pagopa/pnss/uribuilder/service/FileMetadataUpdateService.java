@@ -14,9 +14,7 @@ import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.configuration.IgnoredUpdateMetadataConfig;
 import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.CustomLog;
@@ -36,6 +34,7 @@ import reactor.core.publisher.Flux;
 import software.amazon.awssdk.services.s3.model.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static it.pagopa.pnss.common.constant.Constant.DELETED;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @Service
@@ -95,11 +94,9 @@ public class FileMetadataUpdateService {
                 }))
                             .flatMap(object -> {
                                 Document document = (Document) object;
-                                String documentType = document.getDocumentType().getTipoDocumento();
-
                                 Mono<String> checkedStatus;
                                 if (logicalState != null && !logicalState.isBlank()) {
-                                    checkedStatus = checkLookUp(documentType, logicalState);
+                                   checkedStatus=getTechnicalState(document.getDocumentType(),logicalState);
                                 } else {
                                     checkedStatus = Mono.just("");
                                 }
@@ -218,10 +215,9 @@ public class FileMetadataUpdateService {
                             .doOnSuccess(operationResultCodeResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, UPDATE_METADATA, operationResultCodeResponse));
     }
 
-    private Mono<String> checkLookUp(String documentType, String logicalState) {
-        return docTypesClientCall.getdocTypes(documentType)
-                                 .retryWhen(gestoreRepositoryRetryStrategy)
-                                 .map(item -> item.getDocType().getStatuses().get(logicalState).getTechnicalState())//
+    private Mono<String> getTechnicalState(DocumentType documentType, String logicalState) {
+        return Mono.just(documentType)
+                                 .map(docType -> docType.getStatuses().get(logicalState).getTechnicalState())
                                  .onErrorResume(NullPointerException.class, e -> {
                                      String errorMsg =
                                              String.format("Status %s is not valid for DocumentType %s", logicalState, documentType);

@@ -1,5 +1,6 @@
 package it.pagopa;
 
+import it.pagopa.pn.commons.configs.listeners.TaskIdApplicationListener;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
@@ -18,9 +19,6 @@ import org.springframework.context.annotation.PropertySource;
 
 // BUCKET
 @PropertySource("classpath:bucket/bucket.properties")
-
-// QUEUE
-@PropertySource("classpath:queue/queue.properties")
 
 // EVENT STREAM
 @PropertySource("classpath:eventStream/dynamo-event-stream.properties")
@@ -43,10 +41,21 @@ import org.springframework.context.annotation.PropertySource;
 // IGNORED UPDATE METADATA
 @PropertySource("classpath:configuration/ignored-update-metadata.properties")
 
+// INDEXING
+@PropertySource("classpath:indexing/indexing.properties")
+
+// TRANSFORMATION
+@PropertySource("classpath:transformation/transformation.properties")
+
+// CLOUDWATCH
+@PropertySource("classpath:cloudwatch/cloudwatch.properties")
+
 public class TemplateApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(TemplateApplication.class, args);
+        SpringApplication app = new SpringApplication(TemplateApplication.class);
+        app.addListeners(new TaskIdApplicationListener());
+        app.run(args);
     }
 
 }

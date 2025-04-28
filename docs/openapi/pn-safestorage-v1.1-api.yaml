@@ -70,7 +70,9 @@ tags:
   - name: fileDownload
     description: Lettura file 
   - name: fileMetadataUpdate
-    description: Aggiornamento metadati file 
+    description: Aggiornamento metadati file
+  - name: additionalFileTags
+    description: Servizi di indicizzazione dei documenti
 paths:
   /status:
     get:
@@ -268,6 +270,8 @@ paths:
         contenuto del file. Il tempo massimo che può intercorrere tra le due invocazioni è ```pst```.
       parameters:
         - $ref: '#/components/parameters/clientIdHeader'
+        - $ref: '#/components/parameters/x-checksum-value'
+        - $ref: '#/components/parameters/x-checksum'
       requestBody:
         content:
           application/json:
@@ -377,6 +381,13 @@ paths:
           required: false
           schema:
             type: boolean
+        - name: tags
+          in: query
+          description: >-
+            Filtra i file basati sui tags specificati.
+          required: false
+          schema:
+            type: boolean
       responses:
         '200':
           description: OK
@@ -434,9 +445,9 @@ paths:
                   description: OK
                 '404':
                   description: SQS queue not found
-  
-  
-  
+
+
+
   ################################################################################################
   ###                                   AGGIORNA METADATI FILE                                 ###
   ################################################################################################
@@ -473,7 +484,159 @@ paths:
             - il parametro clientId è diverso dal client autenticato; <br/>
             - se il file identificato da fileKey non è ancora stato salvato; <br/>
             
-      
+    ################################################################################################
+    ###                                  TAG DOCUMENTI                                 ###
+    ################################################################################################
+  '/safe-storage/v1/files/{fileKey}/tags':
+    parameters:
+      - $ref: '#/components/parameters/fileKey'
+      - $ref: '#/components/parameters/clientIdHeader'
+    get:
+      operationId: additionalFileTagsGet
+      tags:
+        - additionalFileTags
+      summary: ottieni i tags associati ad un file tramite la fileKey
+      description: >-
+        Questa operazione rende possibile reperire i tag associati ad una singola fileKey.<br/>
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsGetResponse'
+
+        '404':
+          description: >-
+            Non trovato nessun tag per la fileKey.
+    post:
+      operationId: additionalFileTagsUpdate
+      tags:
+        - additionalFileTags
+      summary: aggiungi, elimina o aggiorna i tags associati ad un file tramite la fileKey
+      description: >-
+        Questa operazione rende possibile aggiungere, eliminare o aggiornare i tag associati ad una singola fileKey.<br/>
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdditionalFileTagsUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+        '400':
+          description: >-
+            Richiesta non validata correttamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+        '403':
+          description: >-
+            Non autorizzato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+        '404':
+          description: >-
+            Documento non trovato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+
+  /safe-storage/v1/files/tags:
+    get:
+      operationId: additionalFileTagsSearch
+      tags:
+        - additionalFileTags
+      summary: Ricerca le fileKey che hanno associato uno specifico tag
+      description: >-
+        L’API prevederà un elenco di query parameter scritti nella forma seguente: <br/>
+
+        /safe-storage/v1/files/tags?key_1=value_1&key_2=value_2 <br/>
+        
+        Il servizio provvederà a ricercare nella tabella pn-SsTags tutte le fileKey che
+        avranno un tag key_1 valorizzato a value_1, quindi eseguirà la stessa operazione
+        per key_2 e value_2 e risponderà con un elenco di fileKey che corrisponderà all'intersezione
+        dei due insiemi (and logico). Il parametro opzionale logic permetterà di specificare se avere
+        il comportamento di default (and) oppure ragionare facendo un or. L’operazione logica viene
+        applicata su tutte le chiavi passate (non sarà possibile applicare una logica con espressioni booleane complesse). <br/>
+        
+        La chiamata restituirà un 400 anche in cui venisse superato <br/>
+        un numero massimo di tag passabili in una singola richiesta (parametro configurabile). <br/>
+
+        La stessa API potrà essere invocata aggiungendo un parametro opzionale (tags, di default false) che consentirà di reperire, 
+        oltre all’elenco delle fileKey anche tutti i tag associati ad ognuna di esse. <br/>
+      parameters:
+        - $ref: '#/components/parameters/clientIdHeader'
+        - $ref: '#/components/parameters/logic'
+        - $ref: '#/components/parameters/tags'
+        - $ref: '#/components/parameters/tagParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsSearchResponse'
+        '400':
+          description: >-
+            Richiesta non validata correttamente o limite di tag della request superato.
+        '403':
+          description: >-
+            Non autorizzato in lettura sui tag.
+
+    post:
+      operationId: additionalFileTagsMassiveUpdate
+      tags:
+        - additionalFileTags
+      summary: aggiunge, elimina o aggiorna i tags associati alle filekeys inserite in un file.
+      description: >-
+        L'API prenderà in ingresso una request contenente delle fileKeys e dei tag in SET o DELETE ad esse associate.<br/>
+        
+        Il servizio provvederà a inserire/aggiornare nelle tabelle pn-SsTags e pn-SsDocuments i vari tag associati alle fileKey. 
+        La chiamata restituirà un 400 nel caso in cui si provassero a settare i tag per un numero di fileKey superiore a <br/>
+        un dato limite e nei casi in cui la request fosse generata con parametri errati, mentre restituirà un 200 nel caso <br/>
+        in cui venisse meno il rispetto di un vincolo su un risultato atteso, popolando l'elenco degli errori specificando <br/>
+        con 400 le fileKey relative.
+      parameters:
+        - $ref: '#/components/parameters/clientIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdditionalFileTagsMassiveUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsMassiveUpdateResponse'
+        '400':
+          description: >-
+            Richiesta non validata correttamente o numero di filekey massime superato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+        '403':
+          description: >-
+            Non autorizzato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdditionalFileTagsUpdateResponse'
+            
+
 
 components:
   parameters:
@@ -501,7 +664,48 @@ components:
       schema:
         type: string
       example: '8F7E/9A3B/1234/AB87'
-      
+    logic:
+      name: logic
+      description: La logica ('and' oppure 'or') da applicare al meccanismo di ricerca della additionalFileTagsSearch.
+      in: query
+      schema:
+        type: string
+        enum: [ and, or ]
+        example: and
+    tags:
+      name: tags
+      description: Booleano che indica se nella additionalFileTagsSearch bisogna ritornare, oltre all’elenco delle fileKey, anche tutti i tag associati ad ognuna di esse.
+      in: query
+      schema:
+        type: boolean
+      example: true
+    x-checksum-value:
+      name: x-checksum-value
+      description: Stringa che indica il valore del checksum
+      in: header
+      required: true
+      schema:
+        type: string
+    x-checksum:
+      name: x-checksum
+      description: Stringa che identifica l'algoritmo di checksum inserito per retrocompatibilità, ma che viene ignorato (viene dedotto dal tipo del file).
+      in: header
+      required: false
+      schema:
+        type: string
+    tagParams:
+      in: query
+      name: tagParams
+      description: >-
+        Una serie di query parameters che rappresentano le associazioni chiave-valore dei tag su cui basare la additionalFileTagsSearch.
+      schema:
+        type: object
+        additionalProperties:
+          type: string
+      style: form
+      explode: true
+
+
   schemas:
     FileCreationRequest:
       description: Richiesta di autorizzazione a caricare un nuovo file
@@ -527,6 +731,12 @@ components:
             lo stato del documento, ne definisce il tempo di permanenza all'interno 
             di _SafeStorage_.
           example: PRELOADED
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
 
     FileCreationResponse:
       description: Informazioni necessarie a caricare il contenuto di un file
@@ -570,6 +780,120 @@ components:
             download: 
               $ref: '#/components/schemas/FileDownloadInfo'
     
+
+    AdditionalFileTagsGetResponse:
+      description: Restituisce i tag associati ad una fileKey
+      allOf:
+        - $ref: '#/components/schemas/AdditionalFileTagsDto'
+        - type: object
+
+    AdditionalFileTagsUpdateRequest:
+      description: Aggiunge, elimina o aggiorna i tag associati ad una fileKey
+      type: object
+      properties:
+        SET:
+          $ref: '#/components/schemas/SetTags'
+        DELETE:
+          $ref: '#/components/schemas/DeleteTags'
+
+    SetTags:
+      description: >-
+        tags da settare o modificare
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
+
+    DeleteTags:
+      description: >-
+        tags da eliminare
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
+
+    AdditionalFileTagsUpdateResponse:
+      description: Informazioni necessarie per l'esito dell'operazione di update sui tag
+      type: object
+      properties:
+        resultCode:
+          type: string
+        resultDescription:
+          type: string
+
+    Tags:
+      type: object
+      properties:
+        fileKey:
+          type: string
+        SET:
+          $ref: '#/components/schemas/SetTags'
+        DELETE:
+          $ref: '#/components/schemas/DeleteTags'
+      required:
+        - fileKey
+
+    AdditionalFileTagsMassiveUpdateRequest:
+      description: Aggiunge, elimina o aggiorna i tag associati ad una fileKey
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tags'
+      required:
+          - tags
+
+    AdditionalFileTagsMassiveUpdateResponse:
+      description: Informazioni necessarie per l'esito dell'operazione di update sui tag
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+
+    ErrorDetail:
+       type: object
+       properties:
+         resultCode:
+           type: string
+         resultDescription:
+           type: string
+         fileKey:
+           type: array
+           items:
+             type: string
+
+    AdditionalFileTagsSearchResponse:
+      description: Esito della ricerca dei tag
+      type: object
+      properties:
+        fileKeys:
+          type: array
+          items:
+            type: object
+            properties:
+              fileKey:
+                type: string
+              tags:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+
+    AdditionalFileTagsDto:
+      type: object
+      properties:
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
 
     FileCreatedDto:
       description: >-
@@ -621,6 +945,19 @@ components:
           description: >-
             data e ora fino a cui il documento sarà garantito all'interno di _SafeStorage_. <br/>
             Può essere ritardata nel tempo, mai anticipata. Formattata con timezone secondo l'rfc 3339
+        tags:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: >-
+            Mappa di tag associati al documento. Ogni chiave è una stringa e ogni valore è un array di stringhe.
+          example:
+            key_1: [ "value_1", "value_7" ]
+            key_2: [ "value_2" ]
+            key_3: [ "value_3", "value_9", "value_8" ]
+            key_4: [ "value_4" ]
             
                   
     FileDownloadInfo:
@@ -666,6 +1003,8 @@ components:
       required:
         - name
         - canCreate
+        - canReadTags
+        - canWriteTags
         - canRead
         - destination
       properties:
@@ -683,6 +1022,12 @@ components:
           items: 
             type: string
           description: Elenco dei tipi di documenti che il client è autorizzato a creare.
+        canWriteTags:
+          type: boolean
+          description: Indica se il client è autorizzato a scrivere i tag sui file.
+        canReadTags:
+          type: boolean
+          description: Indica se il client è autorizzato a leggere i tag sui file.
         signatureInfo:
           type: object
           description: __DA DEFINIRE__ configurazioni necessarie per la firma digitale
@@ -750,7 +1095,6 @@ components:
           type: array
           items:
             type: string
-            enum: ['NONE', 'SIGN_AND_TIMEMARK']
         validations:
           description: lista di validazioni da applicare al documento 
           type: array

@@ -1,81 +1,53 @@
 package it.pagopa.pnss.configuration;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBStreams;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBStreamsClientBuilder;
-import com.amazonaws.services.dynamodbv2.streamsadapter.AmazonDynamoDBStreamsAdapterClient;
-import com.amazonaws.services.dynamodbv2.streamsadapter.StreamsWorkerFactory;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
-import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
 import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
-import it.pagopa.pnss.availabledocument.event.StreamsRecordProcessorFactory;
-import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
-import it.pagopa.pnss.configurationproperties.DynamoEventStreamName;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.handler.annotation.support.PayloadMethodArgumentResolver;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
+import software.amazon.awssdk.services.eventbridge.EventBridgeClientBuilder;
+import software.amazon.awssdk.services.eventbridge.EventBridgeAsyncClient;
+import software.amazon.awssdk.services.eventbridge.EventBridgeAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.SqsAsyncClientBuilder;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.SsmClientBuilder;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
+import software.amazon.awssdk.services.ssm.SsmAsyncClient;
+import software.amazon.awssdk.services.ssm.SsmAsyncClientBuilder;
 import java.net.URI;
-import java.net.URL;
 import java.util.List;
 
 @Configuration
 @Slf4j
 public class AwsConfiguration {
 
-    private final DynamoEventStreamName dynamoEventStreamName;
-    private final AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
     private final AwsConfigurationProperties awsConfigurationProperties;
-    private final WebClient genericWebClient = WebClient.builder().build();
 
     /*
      * Set in LocalStackTestConfig
@@ -96,21 +68,25 @@ public class AwsConfiguration {
     @Value("${test.aws.secretsmanager.endpoint:#{null}}")
     String secretsManagerLocalStackEndpoint;
 
+    @Value("${test.aws.eventbridge.endpoint:#{null}}")
+    String eventBridgeLocalStackEndpoint;
+
     @Value("${test.event.bridge:#{null}}")
     private String testEventBridge;
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
 
-    private static final DefaultAwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
+    @Value("${test.aws.cloudwatch.endpoint:#{null}}")
+    private String testAwsCloudwatchEndpoint;
+
+    @Value("${test.aws.ssm.endpoint:#{null}}")
+    private String testAwsSsmEndpoint;
+
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER = DefaultCredentialsProvider.create();
 
-    public AwsConfiguration(AwsConfigurationProperties awsConfigurationProperties, DynamoEventStreamName dynamoEventStreamName,
-                            AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName) {
+    public AwsConfiguration(AwsConfigurationProperties awsConfigurationProperties) {
         this.awsConfigurationProperties = awsConfigurationProperties;
-        this.dynamoEventStreamName = dynamoEventStreamName;
-        this.availabelDocumentEventBridgeName = availabelDocumentEventBridgeName;
-
     }
 
     //  <-- spring-cloud-starter-aws-messaging -->
@@ -213,6 +189,19 @@ public class AwsConfiguration {
     }
 
     @Bean
+    public SsmAsyncClient ssmAsyncClient() {
+        SsmAsyncClientBuilder ssmClient = SsmAsyncClient.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            ssmClient.endpointOverride(URI.create(testAwsSsmEndpoint));
+        }
+
+        return ssmClient.build();
+    }
+
+    @Bean
     public S3Presigner s3Presigner()
     {
         S3Presigner.Builder builder = S3Presigner.builder()
@@ -225,107 +214,52 @@ public class AwsConfiguration {
 
         return builder.build();
     }
+
+
     @Bean
-    public TaskExecutor taskExecutor() {
-        return new SimpleAsyncTaskExecutor(); // Or use another one of your liking
-    }
+    public EventBridgeClient eventBridgeClient() {
+        EventBridgeClientBuilder builder = EventBridgeClient.builder()
+                .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER)
+                .region(Region.of(awsConfigurationProperties.regionCode()));
 
-    // TODO: Rifare completamente questa parte riguardante la disponibilità documenti
-    @Bean
-
-    public CommandLineRunner schedulingRunner(@Qualifier("taskExecutor") TaskExecutor executor) {
-        return args -> {
-            AWSCredentialsProvider awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
-            AmazonDynamoDB amazonDynamoDB =
-                    AmazonDynamoDBClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonCloudWatch cloudWatchClient =
-                    AmazonCloudWatchClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonDynamoDBStreams dynamoDBStreamsClient =
-                    AmazonDynamoDBStreamsClientBuilder.standard().withRegion(DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id()).build();
-            AmazonDynamoDBStreamsAdapterClient adapterClient = new AmazonDynamoDBStreamsAdapterClient(dynamoDBStreamsClient);
-            //Get task identifier
-
-
-
-            String taskId = getTaskId();
-            log.debug("Task ID: {}", taskId);
-            KinesisClientLibConfiguration workerConfig = new KinesisClientLibConfiguration(dynamoEventStreamName.tableMetadata(),
-                                                                                           dynamoEventStreamName.documentName(),
-                                                                                           awsCredentialsProvider,
-                                                                                           taskId
-                                                                                                    )
-
-//            		.withMaxLeaseRenewalThreads(20)
-//            		.withMaxLeasesForWorker(5000)
-
-//                   Fix temporanea per non
-//                   fare andare in errore
-//                   EventBridge.
-//                   Questo stream Kinesis,
-//                   agganciato a
-//                   DynamoDbStreams,
-//                   notifica a EventBridge
-//                   determinati eventi
-//                   provenienti dalla
-//                   tabella documenti. Dato
-//                   che la pubblicazione su
-//                   EventBridge accetta massimo
-//                   10 elementi, il numero
-//                   di eventi Kinesis è
-//                   impostato anch'esso a 10
-            		.withMaxRecords(1000)
-            		.withIdleTimeBetweenReadsInMillis(1000)
-            		.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON);
-
-            IRecordProcessorFactory recordProcessorFactory =
-                    new StreamsRecordProcessorFactory(availabelDocumentEventBridgeName.disponibilitaDocumentiName());
-            Worker worker = StreamsWorkerFactory.createDynamoDbStreamsWorker(recordProcessorFactory,
-                                                                             workerConfig,
-                                                                             adapterClient,
-                                                                             amazonDynamoDB,
-                                                                             cloudWatchClient);
-            if (testEventBridge == null) {
-                executor.execute(worker);
-            }
-        };
-    }
-
-    private String getTaskId() {
-
-        String ecsMetadataUri = System.getenv("ECS_CONTAINER_METADATA_URI_V4");
-
-        if (ecsMetadataUri == null) {
-            log.error("ECS_CONTAINER_METADATA_URI_V4 environment variable not found.");
-            return "streams-worker";
+        if (eventBridgeLocalStackEndpoint != null) {
+            builder.endpointOverride(URI.create(eventBridgeLocalStackEndpoint));
         }
 
-
-        return genericWebClient.get()
-                .retrieve()
-                .bodyToMono(String.class)
-                .flatMap(response -> {
-                    ObjectMapper objectMapper = new ObjectMapper();
-                    try {
-                        JsonNode jsonNode = objectMapper.readTree(response);
-                        String taskArn = jsonNode.get("TaskARN").asText();
-                        String[] parts = taskArn.split("/");
-                        if (parts.length > 0) {
-                            return Mono.just(parts[parts.length - 1]);
-                        } else {
-                            log.error("Invalid TaskARN format");
-                            return Mono.just("streams-worker");
-                        }
-                   } catch (JsonProcessingException e) {
-                        log.error("Error while parsing JSON response", e);
-                        return Mono.just("streams-worker");
-                    }
-                })
-                .onErrorResume(throwable -> {
-                    log.error("Error while fetching container metadata", throwable);
-                    return Mono.just("streams-worker");
-                }).block();
+        return builder.build();
     }
+
+    @Bean
+    public CloudWatchAsyncClient cloudWatchAsyncClient() {
+        CloudWatchAsyncClientBuilder cloudWatchAsyncClientBuilder = CloudWatchAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsCloudwatchEndpoint != null) {
+            cloudWatchAsyncClientBuilder.endpointOverride(URI.create(testAwsCloudwatchEndpoint));
+        }
+
+        return cloudWatchAsyncClientBuilder.build();
+    }
+
+    @Bean
+    public SsmClient ssmClient() {
+        SsmClientBuilder ssmClientBuilder = SsmClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            ssmClientBuilder.endpointOverride(URI.create(testAwsSsmEndpoint));
+        }
+
+        return ssmClientBuilder.build();
+    }
+
+    @Bean
+    public EventBridgeAsyncClient eventBridgeAsyncClient() {
+        EventBridgeAsyncClientBuilder eventBridgeAsyncClientBuilder = EventBridgeAsyncClient.builder().credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER).region(Region.of(awsConfigurationProperties.regionCode()));
+
+        if (testAwsSsmEndpoint != null) {
+            eventBridgeAsyncClientBuilder.endpointOverride(URI.create(eventBridgeLocalStackEndpoint));
+        }
+
+        return eventBridgeAsyncClientBuilder.build();
+    }
+
 }
-
-
-

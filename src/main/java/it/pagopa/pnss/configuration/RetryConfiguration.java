@@ -4,9 +4,11 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
+import it.pagopa.pnss.common.exception.StateMachineServiceException;
 import it.pagopa.pnss.configurationproperties.DynamoRetryStrategyProperties;
 import it.pagopa.pnss.configurationproperties.GestoreRepositoryRetryStrategyProperties;
 import it.pagopa.pnss.configurationproperties.retry.S3RetryStrategyProperties;
+import it.pagopa.pnss.configurationproperties.retry.StateMachineRetryStrategyProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -25,14 +27,16 @@ import static it.pagopa.pnss.common.utils.LogUtils.RETRY_ATTEMPT;
 @Configuration
 @Slf4j
 public class RetryConfiguration {
+    private final DynamoRetryStrategyProperties dynamoRetryStrategyProperties;
+    private final GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties;
+    private final S3RetryStrategyProperties s3RetryStrategyProperties;
 
     @Autowired
-    private DynamoRetryStrategyProperties dynamoRetryStrategyProperties;
-    @Autowired
-    private GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties;
-    @Autowired
-    private S3RetryStrategyProperties s3RetryStrategyProperties;
-
+    public RetryConfiguration(DynamoRetryStrategyProperties dynamoRetryStrategyProperties, GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties, S3RetryStrategyProperties s3RetryStrategyProperties) {
+        this.dynamoRetryStrategyProperties = dynamoRetryStrategyProperties;
+        this.gestoreRepositoryRetryStrategyProperties = gestoreRepositoryRetryStrategyProperties;
+        this.s3RetryStrategyProperties = s3RetryStrategyProperties;
+    }
     private final Predicate<Throwable> isNotFound = throwable -> (throwable instanceof DocumentKeyNotPresentException) || (throwable instanceof IdClientNotFoundException)  || (throwable instanceof DocumentTypeNotPresentException);
 
     @Bean
@@ -58,6 +62,15 @@ public class RetryConfiguration {
                 .filter(S3Exception.class::isInstance)
                 .filter(Predicate.not(NoSuchKeyException.class::isInstance))
                 .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
+                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
+    }
+
+
+    @Bean
+    RetryBackoffSpec smRetryStrategy(StateMachineRetryStrategyProperties smRetryStrategyProperties) {
+        return Retry.backoff(smRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(smRetryStrategyProperties.minBackoff()))
+                .filter(StateMachineServiceException.class::isInstance)
+                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure().getCause()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }
 }

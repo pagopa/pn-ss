@@ -1,13 +1,10 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
-import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncClientDecorator;
 import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
-import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbEnhancedAsyncClientDecorator;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
 import it.pagopa.pnss.common.utils.LogUtils;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,16 +16,13 @@ import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
 import reactor.core.publisher.Mono;
-import reactor.util.retry.Retry;
 import reactor.util.retry.RetryBackoffSpec;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 import java.util.stream.Stream;
 
-import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
 import static it.pagopa.pnss.common.utils.LogUtils.INVOKING_METHOD;
 
 @Service
@@ -38,17 +32,16 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
     private final ObjectMapper objectMapper;
     private final DynamoDbAsyncTableDecorator<UserConfigurationEntity> userConfigurationEntityDynamoDbAsyncTable;
     private final RetryBackoffSpec dynamoRetryStrategy;
-
-    @Autowired
-    RepositoryManagerDynamoTableName managerDynamoTableName;
+    final RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy) {
+                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy, RepositoryManagerDynamoTableName managerDynamoTableName) {
         this.objectMapper = objectMapper;
         this.userConfigurationEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(
                 dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.anagraficaClientName(),
                         TableSchema.fromBean(UserConfigurationEntity.class)));
         this.dynamoRetryStrategy = dynamoRetryStrategy;
+        this.managerDynamoTableName = managerDynamoTableName;
     }
 
     private Mono<UserConfigurationEntity> getErrorIdClientNotFoundException(String name) {
@@ -110,28 +103,36 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
                    .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
                    .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
-                   .map(entityStored -> {
-                       if (userConfigurationChanges.getCanCreate() != null && !userConfigurationChanges.getCanCreate().isEmpty()) {
-                           entityStored.setCanCreate(userConfigurationChanges.getCanCreate());
-                       }
-                       if (userConfigurationChanges.getCanRead() != null && !userConfigurationChanges.getCanRead().isEmpty()) {
-                           entityStored.setCanRead(userConfigurationChanges.getCanRead());
-                       }
-                       if (userConfigurationChanges.getCanModifyStatus() != null && !userConfigurationChanges.getCanModifyStatus().isEmpty()) {
-                           entityStored.setCanModifyStatus(userConfigurationChanges.getCanModifyStatus());
-                       }
-                       if (userConfigurationChanges.getApiKey() != null && !userConfigurationChanges.getApiKey().isBlank()) {
-                           entityStored.setApiKey(userConfigurationChanges.getApiKey());
-                       }
-                       if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
-                           entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
-                       }
-                       return entityStored;
-                   })
+                   .map(entityStored -> applyUserConfigurationChanges(userConfigurationChanges, entityStored))
                    .zipWhen(userConfigurationUpdated -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
                            userConfigurationUpdated))).retryWhen(dynamoRetryStrategy)
                    .map(objects -> objectMapper.convertValue(objects.getT2(), UserConfiguration.class))
                    .doOnSuccess(userConfiguration -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL,PATCH_USER_CONFIGURATION, userConfiguration));
+    }
+
+    private static UserConfigurationEntity applyUserConfigurationChanges(UserConfigurationChanges userConfigurationChanges, UserConfigurationEntity entityStored) {
+        if (userConfigurationChanges.getCanCreate() != null && !userConfigurationChanges.getCanCreate().isEmpty()) {
+            entityStored.setCanCreate(userConfigurationChanges.getCanCreate());
+        }
+        if (userConfigurationChanges.getCanRead() != null && !userConfigurationChanges.getCanRead().isEmpty()) {
+            entityStored.setCanRead(userConfigurationChanges.getCanRead());
+        }
+        if (userConfigurationChanges.getCanModifyStatus() != null && !userConfigurationChanges.getCanModifyStatus().isEmpty()) {
+            entityStored.setCanModifyStatus(userConfigurationChanges.getCanModifyStatus());
+        }
+        if (userConfigurationChanges.getApiKey() != null && !userConfigurationChanges.getApiKey().isBlank()) {
+            entityStored.setApiKey(userConfigurationChanges.getApiKey());
+        }
+        if (userConfigurationChanges.getSignatureInfo() != null && !userConfigurationChanges.getSignatureInfo().isBlank()) {
+            entityStored.setSignatureInfo(userConfigurationChanges.getSignatureInfo());
+        }
+        if (userConfigurationChanges.getCanWriteTags() != null) {
+            entityStored.setCanWriteTags(userConfigurationChanges.getCanWriteTags());
+        }
+        if (userConfigurationChanges.getCanReadTags() != null) {
+            entityStored.setCanReadTags(userConfigurationChanges.getCanReadTags());
+        }
+        return entityStored;
     }
 
     @Override

@@ -59,8 +59,12 @@ public class MockPecUtils {
     public static void mockAltProvPdfSignatureV2Async(PnSignServiceImpl namirialSignProviderService,String resultType) {
         when(namirialSignProviderService.signPdfDocument(any(), any())).thenAnswer(invocation -> {
             switch (resultType) {
-                case RESP_OK:
-                    return Mono.just(new PnSignDocumentResponse());
+                case RESP_OK: {
+                    byte[] fileBytes = new byte[10];
+                    PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
+                    pnSignDocumentResponse.setSignedDocument(fileBytes);
+                    return Mono.just(pnSignDocumentResponse);
+                }
                 case RESP_TEMP:
                     return Mono.error(new PnSpapiTemporaryErrorException(TEMP_ERROR));
                 case RESP_PERM:
@@ -101,8 +105,12 @@ public class MockPecUtils {
     public static void mockAltProvXmlSignatureAsync(PnSignServiceImpl namirialSignProviderService, String resultType) {
         when(namirialSignProviderService.signXmlDocument(any(), any())).thenAnswer(invocation -> {
             switch (resultType) {
-                case RESP_OK:
-                    return Mono.just(new PnSignDocumentResponse());
+                case RESP_OK: {
+                    byte[] fileBytes = new byte[10];
+                    PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
+                    pnSignDocumentResponse.setSignedDocument(fileBytes);
+                    return Mono.just(pnSignDocumentResponse);
+                }
                 case RESP_TEMP:
                     return Mono.error(new PnSpapiTemporaryErrorException(TEMP_ERROR));
                 case RESP_PERM:
@@ -143,8 +151,12 @@ public class MockPecUtils {
     public static void mockAltProvPkcs7SignV2Async(PnSignServiceImpl namirialSignProviderService,String resultType) {
         when(namirialSignProviderService.pkcs7Signature(any(), any())).thenAnswer(invocation -> {
             switch (resultType) {
-                case RESP_OK:
-                    return Mono.just(new PnSignDocumentResponse());
+                case RESP_OK: {
+                    byte[] fileBytes = new byte[10];
+                    PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
+                    pnSignDocumentResponse.setSignedDocument(fileBytes);
+                    return Mono.just(pnSignDocumentResponse);
+                }
                 case RESP_TEMP:
                     return Mono.error(new PnSpapiTemporaryErrorException(RESP_TEMP));
                 case RESP_PERM:

@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>it.pagopa.pn</groupId>
         <artifactId>pn-parent</artifactId>
         <version>2.1.1</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <artifactId>pn-ss</artifactId>
-    <version>2.7.0-SNAPSHOT</version>
+    <version>2.13.1</version>
     <name>pn-ss</name>
     <description>A template for a PN Backend Microservice</description>
     <scm>
@@ -22,7 +23,7 @@
     <properties>
         <logbackjackson.version>0.1.5</logbackjackson.version>
         <sonar.coverage.exclusions>
-          src/test/java/**
+            src/test/java/**
         </sonar.coverage.exclusions>
     </properties>
 
@@ -31,7 +32,7 @@
         <dependency>
             <groupId>it.pagopa.pn</groupId>
             <artifactId>pn-commons</artifactId>
-            <version>2.2.4</version>
+            <version>2.8.0</version>
         </dependency>
 
         <dependency>
@@ -92,6 +93,12 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>apigateway</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>cloudwatch-metric-publisher</artifactId>
+        </dependency>
+
 
         <!-- https://mvnrepository.com/artifact/com.amazonaws/amazon-kinesis-client -->
         <dependency>
@@ -237,13 +244,27 @@
             <artifactId>logback-jackson</artifactId>
             <version>${logbackjackson.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>mockwebserver</artifactId>
+            <version>4.12.0</version>
+            <scope>test</scope>
+        </dependency>
         <!-- Finish SS WebClient dependencies -->
 
         <dependency>
-			<groupId>org.testcontainers</groupId>
-			<artifactId>localstack</artifactId>
-			<scope>test</scope>
-		</dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>localstack</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.tika</groupId>
@@ -251,15 +272,21 @@
             <version>2.7.0</version>
         </dependency>
 
+        <dependency>
+            <groupId>it.pagopa.pn.ss.dummy.sign</groupId>
+            <artifactId>pn-ss-dummy-sign</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
     </dependencies>
 
 
-	<build>
-		<plugins>
+    <build>
+        <plugins>
 
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <image>
                         <env>
@@ -267,7 +294,7 @@
                         </env>
                     </image>
                 </configuration>
-			</plugin>
+            </plugin>
 
             <plugin>
                 <groupId>org.apache.cxf</groupId>
@@ -280,7 +307,8 @@
                         <configuration>
                             <wsdlOptions>
                                 <wsdlOption>
-                                    <wsdl>${project.basedir}/src/main/resources/sign/aruba/wsdl/ArubaSignService.wsdl</wsdl>
+                                    <wsdl>${project.basedir}/src/main/resources/sign/aruba/wsdl/ArubaSignService.wsdl
+                                    </wsdl>
                                     <wsdlLocation>classpath:sign/aruba/wsdl/ArubaSignService.wsdl</wsdlLocation>
                                     <extraargs>
                                         <extraarg>-client</extraarg>
@@ -341,9 +369,11 @@
                                 <skipDefaultInterface>false</skipDefaultInterface>
                                 <useTags>true</useTags>
                                 <basePackage>${project.groupId}.safestorage.generated.openapi.server.v1</basePackage>
-                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto</modelPackage>
+                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto
+                                </modelPackage>
                                 <apiPackage>${project.groupId}.safestorage.generated.openapi.server.v1.api</apiPackage>
-                                <configPackage>${project.groupId}.safestorage.generated.openapi.server.v1.config</configPackage>
+                                <configPackage>${project.groupId}.safestorage.generated.openapi.server.v1.config
+                                </configPackage>
                             </configOptions>
                         </configuration>
                     </execution>
@@ -372,9 +402,11 @@
                                 <skipDefaultInterface>false</skipDefaultInterface>
                                 <useTags>true</useTags>
                                 <basePackage>${project.groupId}.safestorage.generated.openapi.server.v1</basePackage>
-                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto</modelPackage>
+                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto
+                                </modelPackage>
                                 <apiPackage>${project.groupId}.safestorage.generated.openapi.server.v1.api</apiPackage>
-                                <configPackage>${project.groupId}.safestorage.generated.openapi.server.v1.config</configPackage>
+                                <configPackage>${project.groupId}.safestorage.generated.openapi.server.v1.config
+                                </configPackage>
                             </configOptions>
                         </configuration>
                     </execution>
@@ -402,13 +434,41 @@
                                 <skipDefaultInterface>false</skipDefaultInterface>
                                 <useTags>true</useTags>
                                 <basePackage>${project.groupId}.safestorage.generated.openapi.server.v1</basePackage>
-                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto</modelPackage>
+                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto
+                                </modelPackage>
                                 <apiPackage>${project.groupId}.safestorage.generated.openapi.server.v1.api</apiPackage>
-                                <configPackage>${project.groupId}.safestorage.generated.openapi.server.config</configPackage>
+                                <configPackage>${project.groupId}.safestorage.generated.openapi.server.config
+                                </configPackage>
                             </configOptions>
                         </configuration>
                     </execution>
 
+                    <execution>
+                        <id>generate-transformation-dto</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <inputSpec>${project.basedir}/docs/openapi/pn-transformation-template.yaml</inputSpec>
+                            <generatorName>spring</generatorName>
+                            <library>spring-boot</library>
+                            <generateApiDocumentation>false</generateApiDocumentation>
+                            <generateApiTests>false</generateApiTests>
+                            <generateModelTests>false</generateModelTests>
+                            <configOptions>
+                                <delegatePattern>true</delegatePattern>
+                                <interfaceOnly>true</interfaceOnly>
+                                <annotationLibrary>none</annotationLibrary>
+                                <documentationProvider>source</documentationProvider>
+                                <openApiNullable>false</openApiNullable>
+                                <reactive>true</reactive>
+                                <skipDefaultInterface>false</skipDefaultInterface>
+                                <useTags>true</useTags>
+                                <modelPackage>${project.groupId}.safestorage.generated.openapi.server.v1.dto</modelPackage>
+                            </configOptions>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

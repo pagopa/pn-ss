@@ -2,6 +2,7 @@ package it.pagopa.pnss.uribuilder.rest.constant;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Singular;
 
 @AllArgsConstructor
 @Getter
@@ -11,4 +12,5 @@ public enum ResultCodeWithDescription {
 
     final String resultCode;
     final String description;
+
 }

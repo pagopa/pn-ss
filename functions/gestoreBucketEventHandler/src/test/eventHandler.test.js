@@ -48,6 +48,7 @@ describe("gestoreBucketEventHandler tests", function () {
       var expectedRequest = {
         documentKey: docKey,
         documentState: "staged",
+        lastStatusChangeTimestamp: NOW
       };
 
       var originalRequest;
@@ -82,6 +83,7 @@ describe("gestoreBucketEventHandler tests", function () {
       var expectedRequest = {
         documentKey: docKey,
         documentState: "staged",
+        lastStatusChangeTimestamp: NOW
       };
 
       var originalRequest;

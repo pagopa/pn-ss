@@ -567,6 +567,7 @@ TRANSFORMATION_CONFIG='{
                          "RASTER": "pn-ss-transformation-raster-queue"
                        }'
 
+
 ## LOGGING FUNCTIONS ##
 log() { echo "[pn-ss-init][$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 

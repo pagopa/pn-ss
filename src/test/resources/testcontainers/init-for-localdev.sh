@@ -14,7 +14,7 @@ cli_pager=$(aws configure get cli_pager)
 LAMBDAS_DEPLOY_SCRIPT=./lambdas_deploy.sh
 
 ## LOGGING FUNCTIONS ##
-log() { echo "[pn-ss-start][$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
+log() { echo "[pn-ss-init-for-localdev][$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 
 silent() {
   if [ "$VERBOSE" = false ]; then
@@ -55,15 +55,6 @@ deploy_lambdas() {
 }
 
 
-build_run(){
-  local curr_dir=$(pwd)
-  cd ..
-  if ! ( ./mvnw -Dspring-boot.run.jvmArguments=" -Djava.net.preferIPv4Stack=true -Dspring.profiles.active=$PROFILE -Daws.accessKeyId=$ACCESS_KEY -Daws.secretAccessKey=$SECRET_KEY -Daws.region=$REGION" spring-boot:run ); then
-  log "### Initialization failed ###"
-  return 1
-  fi
-  cd "$curr_dir" || return 1
-}
 
 load_dynamodb(){
   log "### Populating DynamoDB ###"
@@ -80,11 +71,29 @@ load_dynamodb(){
   { log "### Failed to populate pn-SmStates ###" ; return 1; }
 }
 
+execute_init(){
+  log "### Try to execute init.sh ###"
+  log "### Starting pn-ss init.sh ###" && \
+ ./init.sh || \
+  { log "### Failed to execute init.sh ###" ; return 1; }
+}
+
+build_run(){
+  local curr_dir=$(pwd)
+  cd ..
+  if ! ( ./mvnw -Dspring-boot.run.jvmArguments=" -Djava.net.preferIPv4Stack=true -Dspring.profiles.active=$PROFILE -Daws.accessKeyId=$ACCESS_KEY -Daws.secretAccessKey=$SECRET_KEY -Daws.region=$REGION" spring-boot:run ); then
+  log "### Initialization failed ###"
+  return 1
+  fi
+  cd "$curr_dir" || return 1
+}
+
 main(){
   log "### Starting pn-ss ###"
   aws configure set cli_pager ""
   local start_time=$(date +%s)
   verify_localstack && \
+  execute_init && \
   load_dynamodb && \
   deploy_lambdas && \
   build_run || \

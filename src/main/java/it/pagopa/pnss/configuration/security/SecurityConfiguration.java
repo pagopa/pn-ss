@@ -54,7 +54,7 @@ public class SecurityConfiguration {
             return userConfigurationClientCall.getUser(pagopaSafestorageCxId)
                     .onErrorResume(IdClientNotFoundException.class
                             , throwable -> {
-                                log.debug("IdClientNotFoundException {} - {}", pagopaSafestorageCxId, (apiKey == null ? "null" : apiKey));
+                                log.error("IdClientNotFoundException {} - {}", pagopaSafestorageCxId, (apiKey == null ? "null" : apiKey));
                                 return Mono.error(new ResponseStatusException(FORBIDDEN, String.format("Invalid %s header", xPagopaSafestorageCxId)));
                             })
                     .flatMap(userConfigurationResponse -> getKeyAuthenticationTokenMono(userConfigurationResponse, apiKey, pagopaSafestorageCxId));

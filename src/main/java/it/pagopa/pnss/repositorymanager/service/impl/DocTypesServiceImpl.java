@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.service.impl;
+package it.pagopa.pnss.repositorymanager.service.impl;ù
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +66,7 @@ public class DocTypesServiceImpl implements DocTypesService {
         return Mono.fromCompletionStage(docTypeEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(typeId).build()))
                    .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdDocTypeNotFoundException(typeId))
-                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
+                   .doOnError(DocumentTypeNotPresentException.class, throwable -> log.error(throwable.getMessage()))
                    .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentType.class))
                    .doOnSuccess(documentType -> log.info(SUCCESSFUL_OPERATION_LABEL, GET_DOC_TYPE, documentType));
     }

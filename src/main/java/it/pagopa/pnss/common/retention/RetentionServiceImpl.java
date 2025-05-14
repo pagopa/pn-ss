@@ -151,7 +151,7 @@ public class RetentionServiceImpl implements RetentionService {
     public Mono<Instant> getRetentionUntil(String authPagopaSafestorageCxId, String authApiKey, String documentKey, String documentState,
                                            String documentType, Instant dataCreazioneObjectForBucket)
             throws RetentionException {
-        log.debug(INVOKING_METHOD, GET_RETENTION_UNTIL, Stream.of(documentKey, documentState, documentType, dataCreazioneObjectForBucket).toList());
+        log.info(INVOKING_METHOD, GET_RETENTION_UNTIL, Stream.of(documentKey, documentState, documentType, dataCreazioneObjectForBucket).toList());
         // se manca anche solo un elemento di autenticazione, imposto le credenziali con "utente interno"
         if (authPagopaSafestorageCxId == null || authPagopaSafestorageCxId.isBlank() || authApiKey == null || authApiKey.isBlank()) {
             log.debug("getRetentionUntil() : almeno uno tra authPagopaSafestorageCxId e authApiKey non e' valorizzato, utilizzo le " +

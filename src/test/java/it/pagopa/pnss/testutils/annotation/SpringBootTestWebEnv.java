@@ -17,5 +17,4 @@ import java.lang.annotation.Target;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(LocalStackTestConfig.class)
 @ExtendWith(PnSsTestWatcher.class)
-@TestPropertySource(value = "classpath:/application-test.properties")
 public @interface SpringBootTestWebEnv {}

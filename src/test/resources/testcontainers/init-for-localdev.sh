@@ -3,7 +3,6 @@
 
 VERBOSE=false
 LOCALSTACK_ENDPOINT=http://localhost:4566
-FUNCTIONS_DIR=../functions
 REGION=eu-south-1
 PROFILE=local
 ACCESS_KEY=TEST
@@ -11,7 +10,6 @@ SECRET_KEY=TEST
 curr_dir=$(pwd)
 cli_pager=$(aws configure get cli_pager)
 
-LAMBDAS_DEPLOY_SCRIPT=./lambdas_deploy.sh
 
 ## LOGGING FUNCTIONS ##
 log() { echo "[pn-ss-init-for-localdev][$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
@@ -48,34 +46,45 @@ verify_localstack() {
 }
 
 deploy_lambdas() {
-  if ! $LAMBDAS_DEPLOY_SCRIPT $FUNCTIONS_DIR $REGION; then
-    log "### Failed to deploy lambdas ###"
-    return 1
-  fi
+  log "### Deploying lambdas ###"
+  bash <(curl -s https://raw.githubusercontent.com/pagopa/pn-ss/develop/scripts/lambdas_deploy.sh)
+
 }
-
-
 
 load_dynamodb(){
   log "### Populating DynamoDB ###"
+
+  local BASE_REPO="https://raw.githubusercontent.com/pagopa/pn-ss/develop"
+  local DYNAMO_SCRIPT_URL="$BASE_REPO/scripts/dynamoDBLoad.sh"
+  local ANAGRAFICA_URL="$BASE_REPO/scripts/localdev/AnagraficaClient.json"
+  local TIPO_DOC_URL="$BASE_REPO/scripts/localdev/TipoDocumenti.json"
+  local STATE_MACHINE_URL="$BASE_REPO/scripts/StateMachine.json"
+
   log "### Populating pn-SsAnagraficaClient ###" && \
-  ./dynamoDBLoad.sh -t "pn-SsAnagraficaClient" -i "localdev/AnagraficaClient.json" -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
-  { log "### Failed to populate pn-SsAnagraficaClient ###" ; return 1; }
+  curl -sL "$DYNAMO_SCRIPT_URL" | bash -s -- \
+    -t "pn-SsAnagraficaClient" \
+    -i <(curl -sL "$ANAGRAFICA_URL") \
+    -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
+  { log "### Failed to populate pn-SsAnagraficaClient ###"; return 1; }
 
   log "### Populating pn-SsTipologieDocumenti ###" && \
-  ./dynamoDBLoad.sh -t "pn-SsTipologieDocumenti" -i "localdev/TipoDocumenti.json"  -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
-  { log "### Failed to populate pn-SsTipologieDocumenti ###" ; return 1; }
+  curl -sL "$DYNAMO_SCRIPT_URL" | bash -s -- \
+    -t "pn-SsTipologieDocumenti" \
+    -i <(curl -sL "$TIPO_DOC_URL") \
+    -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
+  { log "### Failed to populate pn-SsTipologieDocumenti ###"; return 1; }
 
   log "### Populating pn-SmStates ###" && \
-  ./dynamoDBLoad.sh -t "pn-SmStates" -i "./StateMachine.json"  -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
-  { log "### Failed to populate pn-SmStates ###" ; return 1; }
+  curl -sL "$DYNAMO_SCRIPT_URL" | bash -s -- \
+    -t "pn-SmStates" \
+    -i <(curl -sL "$STATE_MACHINE_URL") \
+    -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
+  { log "### Failed to populate pn-SmStates ###"; return 1; }
 }
 
 execute_init(){
   log "### Try to execute init.sh ###"
-  log "### Starting pn-ss init.sh ###" && \
- ./init.sh || \
-  { log "### Failed to execute init.sh ###" ; return 1; }
+  bash <(curl -s https://raw.githubusercontent.com/pagopa/pn-ss/develop/src/test/resources/testcontainers/init.sh)
 }
 
 build_run(){

@@ -43,10 +43,10 @@ Parameters:
     Description: 'Nome della Lambda function che implementa la gestione delle scadenze dei documenti'
     Default: 'scadenzaDocumentiEventHandler'
 
-    PnSsGestoreBucketConcurrencyHandlerLambdaName:
-      Type: String
-      Description: 'Nome della lambda function che aggiorna la concorrenza del Gestore Bucket'
-      Default: 'gestoreBucketConcurrencyHandler'
+  PnSsGestoreBucketConcurrencyHandlerLambdaName:
+    Type: String
+    Description: 'Nome della lambda function che aggiorna la concorrenza del Gestore Bucket'
+    Default: 'gestoreBucketConcurrencyHandler'
 
   PnSsEventBusExternalNotificationName:
     Type: String 

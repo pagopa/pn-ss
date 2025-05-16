@@ -753,7 +753,21 @@ Resources:
               - 's3:RestoreObject'
             Resource:
               - !Ref PnSsBucketArn
-              - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
+              - !Join ['', [!Sub '${PnSsBucketArn}', '/*']]
+          - Effect: Allow
+            Action:
+              - 's3:List*'
+              - 's3:GetBucket*'
+              - 's3:GetObject*'
+              - 's3:*MultipartUpload*'
+              - 's3:*LifecycleConfiguration'
+              - 's3:*Replication*'
+              - 's3:Replicate*'
+              - 's3:PutBucket*'
+              - 's3:PutObject*'
+              - 's3:DeleteObject*'
+              - 's3:RestoreObject'
+            Resource:
               - !Ref PnSsStagingBucketArn
               - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
           - Effect: Allow
@@ -975,22 +989,6 @@ Resources:
           - ','
           - - !Ref PnSsBucketName
             - !Ref PnSsStagingBucketName
-
-  #####    Bucket + Queue Policies   #####
-  PnSsStagingBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref PnSsStagingBucketName
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Action:
-              - 's3:*'
-            Effect: Allow
-            Resource: !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
-            Principal:
-              AWS:
-                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
 
   PnSsQueuePolicyStagingBucket:
     Type: AWS::SQS::QueuePolicy

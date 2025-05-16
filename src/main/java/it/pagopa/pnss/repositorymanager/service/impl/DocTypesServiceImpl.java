@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.service.impl;ù
+package it.pagopa.pnss.repositorymanager.service.impl;
 
 import java.util.ArrayList;
 import java.util.List;

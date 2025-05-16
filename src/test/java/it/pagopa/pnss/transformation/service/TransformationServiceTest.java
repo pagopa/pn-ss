@@ -88,6 +88,7 @@ class TransformationServiceTest {
     private static final String SIGN_AND_TIMEMARK = "SIGN_AND_TIMEMARK";
     private static final String SIGN = "SIGN";
     private static final String DUMMY = "DUMMY";
+    private static final String QUEUE_NAME="queue";
 
 
     @BeforeEach
@@ -112,7 +113,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
-        var testMono = transformationService.handleS3Event(record);
+        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -130,7 +131,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
-        var testMono = transformationService.handleS3Event(record);
+        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -151,7 +152,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, lastTransformation));
-        var testMono = transformationService.handleS3Event(record);
+        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -177,7 +178,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, lastTransformation));
-        var testMono = transformationService.handleS3Event(record);
+        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -193,7 +194,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of("NONE"));
-        var testMono = transformationService.handleS3Event(record);
+        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).expectError(IllegalArgumentException.class).verify();
@@ -207,7 +208,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK));
-        var testMono = transformationService.handleS3Event(record);
+        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
@@ -225,7 +226,7 @@ class TransformationServiceTest {
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
         when(transformationConfig.getTransformationQueueName(SIGN_AND_TIMEMARK)).thenReturn("fake-queue");
-        var testMono = transformationService.handleS3Event(record);
+        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).expectError(SqsClientException.class).verify();
@@ -242,7 +243,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(SIGN_AND_TIMEMARK, bucket, contentType), true);
+        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(SIGN_AND_TIMEMARK, bucket, contentType), true,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
@@ -261,7 +262,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(SIGN, bucket, contentType), false);
+        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(SIGN, bucket, contentType), false,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
@@ -281,7 +282,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura);
+        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -302,7 +303,7 @@ class TransformationServiceTest {
 
         //WHEN
         when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception")));
-        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura);
+        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -320,7 +321,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType, "FAKE"), marcatura);
+        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType, "FAKE"), marcatura,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();

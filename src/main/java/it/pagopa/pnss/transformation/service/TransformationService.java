@@ -9,11 +9,11 @@ import it.pagopa.pnss.common.service.EventBridgeService;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.EventBridgeUtil;
 import it.pagopa.pnss.configuration.TransformationConfig;
+import it.pagopa.pnss.configuration.sqs.SqsTimeoutProvider;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.TransformationProperties;
 import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
-import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.transformation.utils.TransformationUtils;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +49,7 @@ public class TransformationService {
     private final EventBridgeService eventBridgeService;
     private final TransformationConfig transformationConfig;
     private final TransformationProperties props;
+    private final SqsTimeoutProvider sqsTimeoutProvider;
     @Value("${event.bridge.disponibilita-documenti-name}")
     private String disponibilitaDocumentiEventBridge;
 
@@ -59,6 +60,7 @@ public class TransformationService {
                                  SqsService sqsService,
                                  EventBridgeService eventBridgeService,
                                  TransformationConfig transformationConfig,
+                                 SqsTimeoutProvider sqsTimeoutProvider,
                                  TransformationProperties props) {
         this.s3Service = s3Service;
         this.pnSignService = pnSignService;
@@ -67,10 +69,11 @@ public class TransformationService {
         this.sqsService = sqsService;
         this.eventBridgeService = eventBridgeService;
         this.transformationConfig = transformationConfig;
+        this.sqsTimeoutProvider = sqsTimeoutProvider;
         this.props = props;
     }
 
-    public Mono<Void> handleS3Event(S3EventNotificationMessage message) {
+    public Mono<Void> handleS3Event(S3EventNotificationMessage message,String queueName) {
         log.debug(INVOKING_METHOD, HANDLE_S3_EVENT, message);
         String fileKey = message.getEventNotificationDetail().getObject().getKey();
         String sourceBucket = bucketNames.ssStageName();
@@ -90,8 +93,8 @@ public class TransformationService {
                                 Optional<Tag> tagOpt = response.tagSet().stream().filter(tag -> tag.key().startsWith(TRANSFORMATION_TAG_PREFIX)).findFirst();
                                 if (tagOpt.isEmpty())
                                     return publishTransformationOnQueue(fileKey, sourceBucket, transformations.get(0), docContentType).then();
-                                return handleObjectTag(fileKey, sourceBucket, tagOpt.get(), transformations, docContentType, document);
-                            });
+                                return  handleObjectTag(fileKey, sourceBucket, tagOpt.get(), transformations, docContentType, document);
+                            }).timeout(sqsTimeoutProvider.getTimeoutForQueue(queueName));
                 });
     }
 
@@ -188,7 +191,7 @@ public class TransformationService {
                 .then();
     }
 
-    public Mono<PutObjectResponse> signAndTimemarkTransformation(TransformationMessage transformationMessage, boolean marcatura) {
+    public Mono<PutObjectResponse> signAndTimemarkTransformation(TransformationMessage transformationMessage, boolean marcatura,String queueName) {
         log.debug(INVOKING_METHOD, SIGN_AND_TIMEMARK_TRANSFORMATION, Stream.of(transformationMessage, marcatura).toList());
         String fileKey = transformationMessage.getFileKey();
         String contentType = transformationMessage.getContentType();
@@ -200,6 +203,7 @@ public class TransformationService {
                     Tagging tagging = buildTransformationTagging(transformationType, OK);
                     return s3Service.putObject(fileKey, pnSignDocumentResponse.getSignedDocument(), contentType, bucketName, tagging);
                 })
+                .timeout(sqsTimeoutProvider.getTimeoutForQueue(queueName))
                 .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, SIGN_AND_TIMEMARK_TRANSFORMATION, result))
                 .onErrorResume(isPermanentException, error -> handlePermanentTransformationException(fileKey, bucketName, transformationType, error).then(Mono.empty()));
     }

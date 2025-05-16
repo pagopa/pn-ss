@@ -37,7 +37,7 @@ class TransformationHandlerTest {
         Acknowledgment acknowledgment = mock(Acknowledgment.class);
 
         //WHEN
-        when(transformationService.handleS3Event(any(S3EventNotificationMessage.class))).thenReturn(testPublisher.mono());
+        when(transformationService.handleS3Event(any(S3EventNotificationMessage.class),anyString())).thenReturn(testPublisher.mono());
 
         //THEN
         Assertions.assertDoesNotThrow(() -> transformationHandler.processAndPublishTransformation(S3_EVENT_NOTIFICATION, acknowledgment));
@@ -53,7 +53,7 @@ class TransformationHandlerTest {
         Acknowledgment acknowledgment = mock(Acknowledgment.class);
 
         //WHEN
-        when(transformationService.handleS3Event(any(S3EventNotificationMessage.class))).thenReturn(testPublisher.mono());
+        when(transformationService.handleS3Event(any(S3EventNotificationMessage.class),anyString())).thenReturn(testPublisher.mono());
 
         //THEN
         Assertions.assertDoesNotThrow(() -> transformationHandler.processAndPublishTransformation(S3_EVENT_NOTIFICATION, acknowledgment));
@@ -70,7 +70,7 @@ class TransformationHandlerTest {
         Acknowledgment acknowledgment = mock(Acknowledgment.class);
 
         //WHEN
-        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(true))).thenReturn(testPublisher.mono());
+        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(true),anyString())).thenReturn(testPublisher.mono());
 
         //THEN
         Assertions.assertDoesNotThrow(() -> transformationHandler.signAndTimemarkTransformationSubscriber(transformationMessage, acknowledgment));
@@ -86,7 +86,7 @@ class TransformationHandlerTest {
         Acknowledgment acknowledgment = mock(Acknowledgment.class);
 
         //WHEN
-        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(true))).thenReturn(testPublisher.mono());
+        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(true),anyString())).thenReturn(testPublisher.mono());
 
         //THEN
         Assertions.assertDoesNotThrow(() -> transformationHandler.signAndTimemarkTransformationSubscriber(transformationMessage, acknowledgment));
@@ -102,7 +102,7 @@ class TransformationHandlerTest {
         Acknowledgment acknowledgment = mock(Acknowledgment.class);
 
         //WHEN
-        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(false))).thenReturn(testPublisher.mono());
+        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(false),anyString())).thenReturn(testPublisher.mono());
 
         //THEN
         Assertions.assertDoesNotThrow(() -> transformationHandler.signTransformationSubscriber(createTransformationMessage(), acknowledgment));
@@ -118,7 +118,7 @@ class TransformationHandlerTest {
         Acknowledgment acknowledgment = mock(Acknowledgment.class);
 
         //WHEN
-        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(false))).thenReturn(testPublisher.mono());
+        when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(false),anyString())).thenReturn(testPublisher.mono());
 
         //THEN
         Assertions.assertDoesNotThrow(() -> transformationHandler.signTransformationSubscriber(transformationMessage, acknowledgment));

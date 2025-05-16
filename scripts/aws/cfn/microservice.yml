@@ -592,6 +592,11 @@ Parameters:
       - true
       - false
 
+  ApplicativeEnvFileChecksum:
+    Type: String
+    Default: ''
+    Description: 'Applicative environment variable file checksum'
+
   PnCronAnalyzer:
     Type: String
     Default: '-'
@@ -671,6 +676,7 @@ Resources:
         ContainerEnvEntry68: !Sub 'SignMaxThreadPoolSize=${SignMaxThreadPoolSize}'
         ContainerEnvEntry69: !Sub 'PN_CRON_ANALYZER=${PnCronAnalyzer}'
         ContainerEnvEntry70: !Sub 'WIRE_TAP_LOG=${WireTapLogActivation}'
+        ApplicativeEnvFileChecksum: !Ref ApplicativeEnvFileChecksum
         MappedPaths: '/safestorage/*,/safe-storage/*'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Ref VpcEgressSubnetsIds

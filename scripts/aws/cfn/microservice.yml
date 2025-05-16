@@ -1187,7 +1187,7 @@ Resources:
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
       LoggingConfig:
-        LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsGestoreBucketLambdaLogGroup}"
+        LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsGestoreBucketLambdaName}"
       MemorySize: 1024
       ReservedConcurrentExecutions: !Ref PnSsGestoreBucketMinReservedConcurrentExecutions
       Runtime: nodejs20.x

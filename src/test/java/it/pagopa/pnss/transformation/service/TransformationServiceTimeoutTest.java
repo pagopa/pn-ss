@@ -18,7 +18,6 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.provider.Arguments;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
@@ -27,17 +26,14 @@ import reactor.test.StepVerifier;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
-import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.PRELOADED;
-import static it.pagopa.pnss.common.constant.Constant.STAGED;
 import static it.pagopa.pnss.configurationproperties.TransformationProperties.OK;
 import static it.pagopa.pnss.configurationproperties.TransformationProperties.TRANSFORMATION_TAG_PREFIX;
 import static it.pagopa.pnss.transformation.utils.TransformationUtils.OBJECT_CREATED_PUT_EVENT;
@@ -80,69 +76,6 @@ class TransformationServiceTimeoutTest {
     void clean() {
         deleteObjectInBucket(FILE_KEY, bucketName.ssHotName());
         deleteObjectInBucket(FILE_KEY, bucketName.ssStageName());
-    }
-
-    @Test
-    void handleS3Event_FirstTransformation_ShortTimeout() {
-
-        when(sqsTimeoutProvider.getTimeoutForQueue(anyString())).thenReturn(Duration.ofMillis(2));
-        //GIVEN
-        String sourceBucket = bucketName.ssStageName();
-        String contentType = "application/pdf";
-        String nextTransformation = SIGN_AND_TIMEMARK;
-        S3EventNotificationMessage record = createS3Event(OBJECT_CREATED_PUT_EVENT);
-        TransformationMessage expectedMessage = createTransformationMessage(nextTransformation, sourceBucket, contentType);
-
-        //WHEN
-        mockGetDocument(contentType, STAGED, List.of(nextTransformation));
-        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
-
-        //THEN
-        StepVerifier.create(testMono)
-                .expectErrorMatches(throwable -> throwable instanceof TimeoutException)
-                .verify();
-    }
-
-    @Test
-    void handleS3Event_LongTimeout() {
-
-        when(sqsTimeoutProvider.getTimeoutForQueue(anyString())).thenReturn(Duration.ofSeconds(10));
-        //GIVEN
-        String sourceBucket = bucketName.ssStageName();
-        String contentType = "application/pdf";
-        String nextTransformation = SIGN_AND_TIMEMARK;
-        S3EventNotificationMessage record = createS3Event(OBJECT_CREATED_PUT_EVENT);
-        TransformationMessage expectedMessage = createTransformationMessage(nextTransformation, sourceBucket, contentType);
-
-        //WHEN
-        mockGetDocument(contentType, STAGED, List.of(nextTransformation));
-        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
-
-        //THEN
-        StepVerifier.create(testMono)
-                .expectComplete()
-                .verify();
-    }
-
-    @Test
-    void handleS3Event_NoTimeout() {
-
-        when(sqsTimeoutProvider.getTimeoutForQueue(anyString())).thenReturn(TIMEOUT_INACTIVE_DURATION);
-        //GIVEN
-        String sourceBucket = bucketName.ssStageName();
-        String contentType = "application/pdf";
-        String nextTransformation = SIGN_AND_TIMEMARK;
-        S3EventNotificationMessage record = createS3Event(OBJECT_CREATED_PUT_EVENT);
-        TransformationMessage expectedMessage = createTransformationMessage(nextTransformation, sourceBucket, contentType);
-
-        //WHEN
-        mockGetDocument(contentType, STAGED, List.of(nextTransformation));
-        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
-
-        //THEN
-        StepVerifier.create(testMono)
-                .expectComplete()
-                .verify();
     }
 
     @Test
@@ -275,14 +208,4 @@ class TransformationServiceTimeoutTest {
                 .build();
         return S3EventNotificationMessage.builder().detailType(eventName).eventNotificationDetail(detail).build();
     }
-
-    private S3EventNotificationMessage createS3Event(String eventName) {
-        return createS3Event(eventName, FILE_KEY);
-    }
-
-    private static Stream<Arguments> provideSignAndTimemarkArgs() {
-        return Stream.of(Arguments.of(SIGN_AND_TIMEMARK, true), Arguments.of(SIGN, false));
-    }
-
-
 }

@@ -29,8 +29,6 @@ public class TransformationHandler {
     private String signAndTimemarkQueueName;
     @Value("${pn.ss.transformation.queues.sign}")
     private String signQueueName;
-    @Value("${pn.ss.transformation.queues.staging}")
-    private String stagingQueueName;
 
     public TransformationHandler(TransformationService transformationService, TransformationProperties props) {
         this.transformationService = transformationService;
@@ -43,10 +41,9 @@ public class TransformationHandler {
         String fileKey = s3EventNotificationMessage.getEventNotificationDetail().getObject().getKey();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(PROCESS_TRANSFORMATION_EVENT);
-        String queueName= stagingQueueName;
 
         MDCUtils.addMDCToContextAndExecute(
-                transformationService.handleS3Event(s3EventNotificationMessage,queueName)
+                transformationService.handleS3Event(s3EventNotificationMessage)
                         .doOnSuccess(result -> {
                             log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT);
                             acknowledgment.acknowledge();

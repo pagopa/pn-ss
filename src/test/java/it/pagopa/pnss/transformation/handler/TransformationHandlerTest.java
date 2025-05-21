@@ -37,7 +37,7 @@ class TransformationHandlerTest {
         Acknowledgment acknowledgment = mock(Acknowledgment.class);
 
         //WHEN
-        when(transformationService.handleS3Event(any(S3EventNotificationMessage.class),anyString())).thenReturn(testPublisher.mono());
+        when(transformationService.handleS3Event(any(S3EventNotificationMessage.class))).thenReturn(testPublisher.mono());
 
         //THEN
         Assertions.assertDoesNotThrow(() -> transformationHandler.processAndPublishTransformation(S3_EVENT_NOTIFICATION, acknowledgment));
@@ -53,7 +53,7 @@ class TransformationHandlerTest {
         Acknowledgment acknowledgment = mock(Acknowledgment.class);
 
         //WHEN
-        when(transformationService.handleS3Event(any(S3EventNotificationMessage.class),anyString())).thenReturn(testPublisher.mono());
+        when(transformationService.handleS3Event(any(S3EventNotificationMessage.class))).thenReturn(testPublisher.mono());
 
         //THEN
         Assertions.assertDoesNotThrow(() -> transformationHandler.processAndPublishTransformation(S3_EVENT_NOTIFICATION, acknowledgment));

@@ -2,7 +2,7 @@ package it.pagopa.pnss.transformation.service;
 
 import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
-import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;;
+import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
@@ -10,8 +10,6 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.exception.SqsClientException;
 import it.pagopa.pnss.common.service.EventBridgeService;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
-import it.pagopa.pnss.transformation.exception.InvalidDocumentStateException;
-import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configuration.TransformationConfig;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -113,7 +111,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
-        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
+        var testMono = transformationService.handleS3Event(record);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -131,7 +129,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
-        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
+        var testMono = transformationService.handleS3Event(record);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -152,7 +150,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, lastTransformation));
-        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
+        var testMono = transformationService.handleS3Event(record);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -178,7 +176,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, lastTransformation));
-        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
+        var testMono = transformationService.handleS3Event(record);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -194,7 +192,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of("NONE"));
-        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
+        var testMono = transformationService.handleS3Event(record);
 
         //THEN
         StepVerifier.create(testMono).expectError(IllegalArgumentException.class).verify();
@@ -208,7 +206,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK));
-        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
+        var testMono = transformationService.handleS3Event(record);
 
         //THEN
         StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
@@ -226,7 +224,7 @@ class TransformationServiceTest {
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
         when(transformationConfig.getTransformationQueueName(SIGN_AND_TIMEMARK)).thenReturn("fake-queue");
-        var testMono = transformationService.handleS3Event(record,QUEUE_NAME);
+        var testMono = transformationService.handleS3Event(record);
 
         //THEN
         StepVerifier.create(testMono).expectError(SqsClientException.class).verify();

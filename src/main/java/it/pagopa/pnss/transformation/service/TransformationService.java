@@ -73,7 +73,7 @@ public class TransformationService {
         this.props = props;
     }
 
-    public Mono<Void> handleS3Event(S3EventNotificationMessage message,String queueName) {
+    public Mono<Void> handleS3Event(S3EventNotificationMessage message) {
         log.debug(INVOKING_METHOD, HANDLE_S3_EVENT, message);
         String fileKey = message.getEventNotificationDetail().getObject().getKey();
         String sourceBucket = bucketNames.ssStageName();
@@ -94,7 +94,7 @@ public class TransformationService {
                                 if (tagOpt.isEmpty())
                                     return publishTransformationOnQueue(fileKey, sourceBucket, transformations.get(0), docContentType).then();
                                 return  handleObjectTag(fileKey, sourceBucket, tagOpt.get(), transformations, docContentType, document);
-                            }).timeout(sqsTimeoutProvider.getTimeoutForQueue(queueName));
+                            });
                 });
     }
 

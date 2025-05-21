@@ -58,7 +58,7 @@ class SqsTimeoutProviderTest {
 
         timeoutProvider.initQueueTimeouts().block();
 
-        Assertions.assertEquals(timeoutProvider.getTimeoutForQueue("test-queue"),Duration.ofSeconds(27));
+        Assertions.assertEquals(timeoutProvider.getTimeoutForQueue("test-queue"),Duration.ofSeconds(3));
     }
 
     @Test

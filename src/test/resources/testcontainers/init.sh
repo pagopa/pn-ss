@@ -653,7 +653,7 @@ else
   echo "Created bucket: $bucket" || \
   { log "Failed to create bucket: $bucket"; return 1; }
 fi
-
+}
 
 
 load_to_s3(){

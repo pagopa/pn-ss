@@ -29,7 +29,6 @@ public class LocalStackTestConfig {
                             "/root/.aws/credentials", BindMode.READ_ONLY)
                     .withFileSystemBind(Paths.get("functions").toAbsolutePath().toString(),
                             "/tmp/pn-ss/lambda_import", BindMode.READ_ONLY)
-                    .withEnv("RUNNING_IN_DOCKER", "true")
                     .withNetworkAliases("localstack")
                     .withNetwork(Network.builder().build())
                     .waitingFor(Wait.forLogMessage(".*Initialization complete.*", 1))
@@ -47,6 +46,7 @@ public class LocalStackTestConfig {
         System.setProperty("aws.config.access.key", localStack.getAccessKey());
         System.setProperty("aws.config.secret.key", localStack.getSecretKey());
         System.setProperty("aws.config.default.region", localStack.getRegion());
+        System.setProperty("aws.region-code", localStack.getRegion());
         System.setProperty("aws.access.key", localStack.getAccessKey());
         System.setProperty("aws.secret.key", localStack.getSecretKey());
         System.setProperty("test.event.bridge", "true");

@@ -65,8 +65,6 @@ public class AwsConfiguration {
     @Value("${test.aws.sns.endpoint:#{null}}")
     String snsLocalStackEndpoint;
 
-    @Value("${test.aws.secretsmanager.endpoint:#{null}}")
-    String secretsManagerLocalStackEndpoint;
 
     @Value("${test.aws.eventbridge.endpoint:#{null}}")
     String eventBridgeLocalStackEndpoint;
@@ -287,19 +285,6 @@ public class AwsConfiguration {
 
         return eventBridgeAsyncClientBuilder.build();
     }
-    @Bean
-    public SecretsManagerClient secretsManagerClient() {
-        SecretsManagerClientBuilder secretsManagerClient = SecretsManagerClient.builder()
-                                                                               .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
 
-        if (secretsManagerLocalStackEndpoint != null) {
-            secretsManagerClient.endpointOverride(URI.create(secretsManagerLocalStackEndpoint));
-        }
-        if(regionCode != null) {
-            secretsManagerClient.region(Region.of(regionCode));
-        }
-
-        return secretsManagerClient.build();
-    }
 
 }

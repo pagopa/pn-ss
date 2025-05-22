@@ -6,7 +6,8 @@ start_time=$(date +%s)
 
 ## CONFIGURATION ##
 VERBOSE=false
-AWS_REGION="eu-south-1"
+AWS_PROFILE="default"
+AWS_REGION="us-east-1"
 LOCALSTACK_ENDPOINT="http://localhost:4566"
 
 ## DEFINITIONS ##
@@ -602,12 +603,14 @@ create_table() {
 
   if ! silent aws dynamodb describe-table --table-name "$table_name" \
                                    --endpoint-url "$LOCALSTACK_ENDPOINT" \
-                                   --region $AWS_REGION ; then
+                                   --profile "$AWS_PROFILE" \
+                                   --region "$AWS_REGION" ; then
     if ! silent aws dynamodb create-table --table-name "$table_name" \
                                    --attribute-definitions AttributeName="$pk",AttributeType=S \
                                    --key-schema AttributeName="$pk",KeyType=HASH \
                                    --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
-                                   --region $AWS_REGION \
+                                   --profile "$AWS_PROFILE" \
+                                   --region "$AWS_REGION" \
                                    --endpoint-url "$LOCALSTACK_ENDPOINT" ; then
       log "Failed to create DynamoDB table: $table_name"
       return 1
@@ -624,6 +627,7 @@ create_bucket(){
 
   if silent aws s3api head-bucket --bucket "$bucket" \
                            --region "$AWS_REGION" \
+                           --profile "$AWS_PROFILE" \
                            --endpoint-url "$LOCALSTACK_ENDPOINT"; then
     log "Bucket already exists: $bucket"
     return 0
@@ -632,6 +636,7 @@ create_bucket(){
   log "Creating bucket: $bucket"
   aws s3api create-bucket --bucket "$bucket" \
                           --region "$AWS_REGION"  \
+                          --profile "$AWS_PROFILE" \
                           --endpoint-url "$LOCALSTACK_ENDPOINT" \
                           --create-bucket-configuration LocationConstraint="$AWS_REGION" \
                           --object-lock-enabled-for-bucket && \
@@ -652,6 +657,7 @@ load_to_s3(){
   if silent aws s3api head-object --bucket "$bucket" \
                            --key "$s3_key" \
                            --region "$AWS_REGION" \
+                           --profile "$AWS_PROFILE" \
                            --endpoint-url "$LOCALSTACK_ENDPOINT"; then
     log "File already exists: $file; Skipping upload"
     return 0
@@ -663,7 +669,7 @@ load_to_s3(){
   fi
 
   log "Uploading file: $file"
-  silent aws s3 cp "$file" "s3://$bucket/$s3_key" --region "$AWS_REGION" \
+  silent aws s3 cp "$file" "s3://$bucket/$s3_key" --region "$AWS_REGION" --profile "$AWS_PROFILE" \
                                            --endpoint-url "$LOCALSTACK_ENDPOINT" && \
   log "Uploaded file: $file" || \
   { log "Failed to upload file: $file to s3://$bucket/$s3_key"; return 1; }
@@ -672,6 +678,7 @@ load_to_s3(){
   silent aws s3api head-object --bucket "$bucket" \
                         --key "$s3_key" \
                         --region "$AWS_REGION" \
+                        --profile "$AWS_PROFILE" \
                         --endpoint-url "$LOCALSTACK_ENDPOINT" || \
   { log "Failed to verify file: $file in s3://$bucket/$s3_key"; return 1; }
 
@@ -699,6 +706,7 @@ create_queue(){
   log "Creating queue: $queue"
 
   if silent aws sqs get-queue-url --queue-name "$queue" \
+                                  --profile "$AWS_PROFILE" \
                                   --region "$AWS_REGION"  \
                                   --endpoint-url "$LOCALSTACK_ENDPOINT"; then
     log "Queue already exists: $queue"
@@ -706,6 +714,7 @@ create_queue(){
   fi
 
   silent aws sqs create-queue --queue-name "$queue" \
+                        --profile "$AWS_PROFILE" \
                        --region "$AWS_REGION"  \
                        --endpoint-url "$LOCALSTACK_ENDPOINT" && \
   log "Created queue: $queue" || \
@@ -717,6 +726,7 @@ create_event_bus()
   local event_bus_name=$1
 
   silent aws events describe-event-bus \
+  --profile "$AWS_PROFILE" \
     --region "$AWS_REGION" \
     --endpoint-url "$LOCALSTACK_ENDPOINT" \
     --name $event_bus_name && \
@@ -724,6 +734,7 @@ create_event_bus()
     return 0
 
   aws events create-event-bus \
+   --profile "$AWS_PROFILE" \
     --region "$AWS_REGION" \
     --endpoint-url "$LOCALSTACK_ENDPOINT" \
     --name $event_bus_name && \
@@ -739,6 +750,7 @@ create_eventbridge_rule() {
      log "##### Event pattern not provided, using schedule expression #####"
       aws events put-rule \
         --endpoint-url="$LOCALSTACK_ENDPOINT" \
+        --profile "$AWS_PROFILE" \
         --region "$AWS_REGION" \
         --name $event_name \
         --schedule-expression "rate(1 minute)" \
@@ -749,6 +761,7 @@ create_eventbridge_rule() {
      log "##### Event pattern provided #####"
      aws events put-rule \
       --endpoint-url="$LOCALSTACK_ENDPOINT" \
+      --profile "$AWS_PROFILE" \
       --region "$AWS_REGION" \
       --name $event_name \
       --event-pattern "$event_pattern" \
@@ -766,6 +779,7 @@ create_ssm_parameter() {
   echo "Parameter value: $parameter_value"
 
   silent aws ssm get-parameter \
+  --profile "$AWS_PROFILE" \
     --region "$AWS_REGION" \
     --endpoint-url "$LOCALSTACK_ENDPOINT" \
     --name "$parameter_name" && \
@@ -774,6 +788,7 @@ create_ssm_parameter() {
 
   aws ssm put-parameter \
     --region "$AWS_REGION" \
+    --profile "$AWS_PROFILE" \
     --endpoint-url "$LOCALSTACK_ENDPOINT" \
     --name "$parameter_name" \
     --type String \
@@ -792,6 +807,7 @@ put_sqs_as_rule_target() {
 
   aws events put-targets \
     --region "$AWS_REGION" \
+    --profile "$AWS_PROFILE" \
     --endpoint-url "$LOCALSTACK_ENDPOINT" \
     --rule "$rule_name" \
     --targets "Id=${queue_name}-target,Arn=${queue_arn}"
@@ -847,6 +863,7 @@ initialize_sm(){
 
     if silent aws secretsmanager get-secret-value \
       --region "$AWS_REGION" \
+      --profile "$AWS_PROFILE" \
       --endpoint-url "$LOCALSTACK_ENDPOINT" \
       --secret-id "$secret_name"; then
       log "Secret already exists: $secret_name"
@@ -856,9 +873,11 @@ initialize_sm(){
    silent aws secretsmanager create-secret \
       --region "$AWS_REGION" \
       --endpoint-url "$LOCALSTACK_ENDPOINT" \
+      --profile "$AWS_PROFILE" \
       --name "$secret_name" && \
    silent aws secretsmanager put-secret-value \
       --region "$AWS_REGION" \
+      --profile "$AWS_PROFILE" \
       --endpoint-url "$LOCALSTACK_ENDPOINT" \
       --secret-id "$secret_name" \
       --secret-string "$secret_value" || \
@@ -879,7 +898,7 @@ initialize_event_bridge() {
     local pids=()
 
     # Creating EventBridge Rules
-    create_eventbridge_rule "PnSsEventRuleExternalNotifications" '{"source": ["GESTORE DISPONIBILITA"],"region": ["eu-south-1"],"account": ["000000000000"]}' &
+    create_eventbridge_rule "PnSsEventRuleExternalNotifications" '{"source": ["GESTORE DISPONIBILITA"],"region": ["us-east-1"],"account": ["000000000000"]}' &
     pids+=($!)
 
     create_eventbridge_rule "PnSsEventRuleStagingBucket" '{"source": ["aws.s3"],"detail-type": ["Object Created", "Object Tags Added"],"detail": {"bucket": {"name": ["pn-ss-storage-safestorage-staging"]}}}' &
@@ -908,10 +927,10 @@ cleanup() {
 get_queue_arn()
     {
     local queue_name=$1
-    queue_url=$(aws sqs get-queue-url --region $AWS_REGION --endpoint-url $LOCALSTACK_ENDPOINT --queue-name $queue_name --query "QueueUrl" --output text | tr -d '\r')
+    queue_url=$(aws sqs get-queue-url --profile $AWS_PROFILE --region $AWS_REGION --endpoint-url $LOCALSTACK_ENDPOINT --queue-name $queue_name --query "QueueUrl" --output text | tr -d '\r')
 
     if [[ $? -eq 0 ]]; then
-      queue_arn=$(aws sqs get-queue-attributes --region "$AWS_REGION" --endpoint-url "$LOCALSTACK_ENDPOINT" --queue-url "$queue_url" --attribute-names "QueueArn" --query "Attributes.QueueArn" --output text | tr -d '\r')
+      queue_arn=$(aws sqs get-queue-attributes --profile "$AWS_PROFILE" --region "$AWS_REGION" --endpoint-url "$LOCALSTACK_ENDPOINT" --queue-url "$queue_url" --attribute-names "QueueArn" --query "Attributes.QueueArn" --output text | tr -d '\r')
       if [[ $? -eq 0 ]]; then
         echo "$queue_arn"
       else
@@ -993,6 +1012,7 @@ buckets_configuration(){
         log "Configuring bucket: $bucket" && \
         silent aws s3api put-bucket-notification-configuration --bucket "$bucket" \
                                                       --notification-configuration "$pn_ss_storage_safestorage_staging_config" \
+                                                      --profile "$AWS_PROFILE" \
                                                       --region "$AWS_REGION" \
                                                       --endpoint-url "$LOCALSTACK_ENDPOINT" &
         pids+=($!)
@@ -1001,13 +1021,16 @@ buckets_configuration(){
         log "Configuring bucket: $bucket" && \
         (silent aws s3api put-object-lock-configuration --bucket "$bucket" \
                                                     --object-lock-configuration "$OBJECT_LOCK_CONFIG"  \
+                                                    --profile "$AWS_PROFILE" \
                                                     --region "$AWS_REGION"  \
                                                     --endpoint-url "$LOCALSTACK_ENDPOINT" && \
           silent aws s3api put-bucket-notification-configuration --bucket "$bucket" \
                                                       --notification-configuration "$pn_ss_storage_safestorage_config" \
+                                                      --profile "$AWS_PROFILE" \
                                                       --region "$AWS_REGION" \
                                                       --endpoint-url "$LOCALSTACK_ENDPOINT" && \
           silent aws s3api put-bucket-lifecycle-configuration --bucket "$bucket" \
+                                                      --profile "$AWS_PROFILE" \
                                                        --region "$AWS_REGION"  \
                                                        --lifecycle-configuration "$LIFECYCLE_RULE"  \
                                                        --endpoint-url "$LOCALSTACK_ENDPOINT" ) & \

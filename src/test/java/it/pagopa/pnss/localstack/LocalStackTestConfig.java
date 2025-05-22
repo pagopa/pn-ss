@@ -22,14 +22,14 @@ public class LocalStackTestConfig {
 
     static LocalStackContainer localStack =
             new LocalStackContainer(DockerImageName.parse("localstack/localstack:1.0.4"))
-                    .withServices(DYNAMODB)
+                    .withServices(SQS, DYNAMODB, SNS, SES, SECRETSMANAGER, CLOUDWATCH, SSM, S3)
                     .withClasspathResourceMapping("testcontainers/init.sh",
                             "/docker-entrypoint-initaws.d/make-storages.sh", BindMode.READ_ONLY)
                     .withClasspathResourceMapping("testcontainers/credentials",
                             "/root/.aws/credentials", BindMode.READ_ONLY)
                     .withFileSystemBind(Paths.get("functions").toAbsolutePath().toString(),
                             "/tmp/pn-ss/lambda_import", BindMode.READ_ONLY)
-                    .withEnv("AWS_DEFAULT_REGION", "eu-central-1")
+                    .withEnv("RUNNING_IN_DOCKER", "true")
                     .withNetworkAliases("localstack")
                     .withNetwork(Network.builder().build())
                     .waitingFor(Wait.forLogMessage(".*Initialization complete.*", 1))
@@ -37,11 +37,7 @@ public class LocalStackTestConfig {
 
     static {
         localStack.start();
-
-        System.setProperty("test.aws.region", localStack.getRegion());
-
-//      <-- Override spring-cloud-starter-aws-messaging endpoints for testing -->
-        System.setProperty("cloud.aws.sqs.endpoint", String.valueOf(localStack.getEndpointOverride(SQS)));
+        System.setProperty("aws.endpoint-url", localStack.getEndpointOverride(SQS).toString());
 
 //      <-- Override AWS services endpoint variables for testing -->
         System.setProperty("test.aws.sqs.endpoint", String.valueOf(localStack.getEndpointOverride(SQS)));
@@ -51,7 +47,6 @@ public class LocalStackTestConfig {
         System.setProperty("aws.config.access.key", localStack.getAccessKey());
         System.setProperty("aws.config.secret.key", localStack.getSecretKey());
         System.setProperty("aws.config.default.region", localStack.getRegion());
-        System.setProperty("aws.region", localStack.getRegion());
         System.setProperty("aws.access.key", localStack.getAccessKey());
         System.setProperty("aws.secret.key", localStack.getSecretKey());
         System.setProperty("test.event.bridge", "true");

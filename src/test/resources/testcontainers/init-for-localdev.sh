@@ -3,7 +3,8 @@
 
 VERBOSE=false
 LOCALSTACK_ENDPOINT=http://localhost:4566
-REGION=eu-south-1
+REGION=us-east-1
+AWS_PROFILE="default"
 PROFILE=local
 ACCESS_KEY=TEST
 SECRET_KEY=TEST
@@ -90,7 +91,7 @@ execute_init(){
 build_run(){
   local curr_dir=$(pwd)
   cd ..
-  if ! ( ./mvnw -Dspring-boot.run.jvmArguments=" -Djava.net.preferIPv4Stack=true -Dspring.profiles.active=$PROFILE -Daws.accessKeyId=$ACCESS_KEY -Daws.secretAccessKey=$SECRET_KEY -Daws.region=$REGION" spring-boot:run ); then
+  if ! ( ./mvnw -Dspring-boot.run.jvmArguments=" -Djava.net.preferIPv4Stack=true -Dspring.profiles.active=$PROFILE -Daws.accessKeyId=$ACCESS_KEY -Daws.secretAccessKey=$SECRET_KEY -Daws.region=us-east-1 -Daws.profile=default" spring-boot:run ); then
   log "### Initialization failed ###"
   return 1
   fi

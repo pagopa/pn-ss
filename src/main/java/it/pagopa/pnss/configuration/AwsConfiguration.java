@@ -29,6 +29,8 @@ import software.amazon.awssdk.services.eventbridge.EventBridgeAsyncClientBuilder
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
@@ -284,6 +286,20 @@ public class AwsConfiguration {
         }
 
         return eventBridgeAsyncClientBuilder.build();
+    }
+    @Bean
+    public SecretsManagerClient secretsManagerClient() {
+        SecretsManagerClientBuilder secretsManagerClient = SecretsManagerClient.builder()
+                                                                               .credentialsProvider(DEFAULT_CREDENTIALS_PROVIDER);
+
+        if (secretsManagerLocalStackEndpoint != null) {
+            secretsManagerClient.endpointOverride(URI.create(secretsManagerLocalStackEndpoint));
+        }
+        if(regionCode != null) {
+            secretsManagerClient.region(Region.of(regionCode));
+        }
+
+        return secretsManagerClient.build();
     }
 
 }

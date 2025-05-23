@@ -1,8 +1,11 @@
+#!/bin/bash
+COMMIT_ID=${1:-develop}
+
 VERBOSE=false
-LAMBDA_FUNCTIONS_PATH=$1
-AWS_REGION=$2
+LAMBDA_FUNCTIONS_FOLDER=functions
+AWS_REGION=us-east-1
 LOCALSTACK_ENDPOINT="http://localhost:4566"
-TMP_PATH="./tmp"
+TMP_PATH=$(mktemp -d)
 NODE_RUNTIME="nodejs20.x"
 lambdas=()
 
@@ -34,16 +37,12 @@ wait_for_pids() {
   return "$exit_code"
 }
 
-make_tmp_dir() {
-  mkdir -p "$TMP_PATH"
-}
-
 ## LAMBDA FUNCTIONS ##
 
 verify_fun_directory(){
   local fun=$1
   local expected=("index.js" "package.json")
-  local fun_path="$LAMBDA_FUNCTIONS_PATH/$fun"
+  local fun_path="$LAMBDA_FUNCTIONS_FOLDER/$fun"
   for file in "${expected[@]}"; do
     if [ ! -f "$fun_path/$file" ]; then
       log "Error: $fun_path/$file not found, not a valid Lambda"
@@ -53,9 +52,26 @@ verify_fun_directory(){
   done
 }
 
+# Copia le lambdas in una cartella temporanea, clonando parte del repository di pn-ss.
+copy_lambdas_to_tmp() {
+  log "Copying lambdas"
+  chmod -R 755 "$TMP_PATH"
+
+  local repo_url="https://github.com/pagopa/pn-ss.git"
+  log "Cloning repo into $TMP_PATH"
+  git clone "$repo_url" "$TMP_PATH" || { log "Clone failed"; exit 1; }
+  cd "$TMP_PATH" || { log "Cannot enter $TMP_PATH"; exit 1; }
+
+  log "Enabling sparse checkout for $LAMBDA_FUNCTIONS_FOLDER"
+  git sparse-checkout init --cone && \
+  git sparse-checkout set "$LAMBDA_FUNCTIONS_FOLDER" && \
+  git checkout "$COMMIT_ID" || { log "Checkout failed for $COMMIT_ID"; exit 1; }
+}
+
+
 get_functions(){
-  log "Getting Lambda Functions from $LAMBDA_FUNCTIONS_PATH"
-  for fun in "$LAMBDA_FUNCTIONS_PATH"/*; do
+  log "Getting Lambda Functions from $LAMBDA_FUNCTIONS_FOLDER"
+  for fun in "$LAMBDA_FUNCTIONS_FOLDER"/*; do
     if [ -d "$fun" ]; then
       fun_name=$(basename "$fun")
       if verify_fun_directory "$fun_name"; then
@@ -66,20 +82,10 @@ get_functions(){
   done
 }
 
-copy_directory_to_tmp() {
-  local fun=$1
-  log "Copying Directory $LAMBDA_FUNCTIONS_PATH/$fun to $TMP_PATH"
-  mkdir -p "$TMP_PATH"
-  if ! ( silent cp -r "$LAMBDA_FUNCTIONS_PATH/$fun" "$TMP_PATH" ); then
-    log "Error copying directory"
-    return 1
-  fi
-}
-
 install_dependencies() {
   local fun=$1
-  log "Installing npm dependencies for $fun at $TMP_PATH/$fun"
-  local fun_path="$TMP_PATH/$fun"
+  log "Installing npm dependencies for $fun at $LAMBDA_FUNCTIONS_FOLDER/$fun"
+  local fun_path="$LAMBDA_FUNCTIONS_FOLDER/$fun"
   curr_dir=$(pwd)
 
   if [ ! -d "$fun_path/node_modules" ]; then
@@ -98,8 +104,8 @@ install_dependencies() {
 
 zip_lambda() {
   local fun=$1
-  local fun_path="$TMP_PATH/$fun"
-  local zip_path="$TMP_PATH/$fun.zip"
+  local fun_path="$TMP_PATH/$LAMBDA_FUNCTIONS_FOLDER/$fun"
+  local zip_path="$TMP_PATH/$LAMBDA_FUNCTIONS_FOLDER/$fun.zip"
 
   log "Changing permissions for $fun_path"
 
@@ -148,7 +154,6 @@ deploy_lambda(){
 
 full_lambda_deploy(){
   local fun=$1
-  copy_directory_to_tmp $fun && \
   install_dependencies $fun && \
   zip_lambda $fun && \
   deploy_lambda $fun || \
@@ -178,7 +183,7 @@ configure_lambdas() {
 
     log "Waiting for Lambda $lambda to be ready"
 
-    silent aws lambda wait function-active-v2 --function-name "$lambda" \
+    silent aws lambda wait function-active --function-name "$lambda" \
                                        --region "$AWS_REGION" \
                                        --endpoint-url "$LOCALSTACK_ENDPOINT" || {
       log "Error waiting for Lambda $lambda to be ready";
@@ -233,17 +238,14 @@ configure_lambdas() {
 
 cleanup() {
   log "Cleaning up"
-  if [ -d "$TMP_PATH" ]; then
-    log "Removing temporary directory $TMP_PATH"
-    silent rm -rv "$TMP_PATH"
-  fi
+  rm -rf "$TMP_PATH"
   log "Cleanup complete"
 }
 
 main() {
   local start_time=$(date +%s)
   exit_code=0
-  make_tmp_dir && \
+  copy_lambdas_to_tmp && \
   deploy_lambdas && \
   configure_lambdas && \
   log "Lambdas deployed successfully" || \

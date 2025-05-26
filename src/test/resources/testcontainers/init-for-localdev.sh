@@ -44,9 +44,9 @@ populate_table() {
 
 load_dynamodb() {
   log "Populating DynamoDB"
-  local base="https://raw.githubusercontent.com/pagopa/pn-ss/$COMMIT_ID/scripts/localdev"
-  populate_table "pn-SsAnagraficaClient" "$base/AnagraficaClient.json"
-  populate_table "pn-SsTipologieDocumenti" "$base/TipoDocumenti.json"
+  local base="https://raw.githubusercontent.com/pagopa/pn-ss/$COMMIT_ID/scripts"
+  populate_table "pn-SsAnagraficaClient" "$base/localdev/AnagraficaClient.json"
+  populate_table "pn-SsTipologieDocumenti" "$base/localdev/TipoDocumenti.json"
   populate_table "pn-SmStates" "$base/StateMachine.json"
 }
 

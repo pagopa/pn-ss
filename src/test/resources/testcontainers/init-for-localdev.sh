@@ -62,7 +62,7 @@ main() {
   local start=$(date +%s)
 
   verify_localstack
-#  execute_init
+  execute_init
   load_dynamodb
   deploy_lambdas
 

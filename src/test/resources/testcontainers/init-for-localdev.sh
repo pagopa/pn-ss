@@ -10,7 +10,6 @@ AWS_PROFILE="default"
 PROFILE=local
 ACCESS_KEY=TEST
 SECRET_KEY=TEST
-CLI_PAGER=$(aws configure get cli_pager)
 
 # Logging
 log() { echo "[pn-ss-init][$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
@@ -39,7 +38,7 @@ populate_table() {
   tmpfile=$(mktemp)
   curl -sL "$url" > "$tmpfile"
   curl -sL "https://raw.githubusercontent.com/pagopa/pn-ss/$COMMIT_ID/scripts/dynamoDBLoad.sh" | \
-    bash -s -- -t "$table" -i "$tmpfile" -r "$REGION" -e "$LOCALSTACK_ENDPOINT" || \
+    bash -s -- -t "$table" -i "$tmpfile" -r "$REGION" -e "$LOCALSTACK_ENDPOINT" -j 20 || \
     log "Failed to populate $table"
 }
 
@@ -60,17 +59,15 @@ execute_init() {
 # Main
 main() {
   log "Starting pn-ss localdev configuration."
-  aws configure set cli_pager ""
   local start=$(date +%s)
 
   verify_localstack
-  execute_init
+#  execute_init
   load_dynamodb
   deploy_lambdas
 
   local duration=$(( $(date +%s) - start ))
   log "init-for-localdev.sh executed in ${duration}s"
-  aws configure set cli_pager "$CLI_PAGER"
 }
 
 main

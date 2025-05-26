@@ -648,7 +648,6 @@ else
                           --region "$AWS_REGION" \
                           --endpoint-url "$LOCALSTACK_ENDPOINT" \
                           --profile "$AWS_PROFILE" \
-                          --create-bucket-configuration LocationConstraint="$AWS_REGION" \
                           --object-lock-enabled-for-bucket && \
   echo "Created bucket: $bucket" || \
   { log "Failed to create bucket: $bucket"; return 1; }

@@ -204,7 +204,7 @@ configure_lambdas() {
 
   for lambda in "${lambdas[@]}"; do
      local env_string=""
-     env_file="$TMP_PATH/$lambda/localdev.env"
+     env_file="$TMP_PATH/$LAMBDA_FUNCTIONS_FOLDER/$lambda/localdev.env"
       if [ -f $env_file ]; then
         log "#### Found $env_file for Lambda $lambda"
         declare -A env_vars

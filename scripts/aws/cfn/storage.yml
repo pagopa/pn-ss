@@ -451,7 +451,7 @@ Resources:
                 TransitionInDays: 30
           - Id: 'PnSsPaperAttachments_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 365
+            ExpirationInDays: 120
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_PAPER_ATTACHMENT'

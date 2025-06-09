@@ -1186,6 +1186,8 @@ Resources:
       FunctionName: !Ref PnSsGestoreBucketLambdaName
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
+      LoggingConfig:
+        LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsGestoreBucketLambdaName}"
       MemorySize: 1024
       ReservedConcurrentExecutions: !Ref PnSsGestoreBucketMinReservedConcurrentExecutions
       Runtime: nodejs20.x
@@ -1266,6 +1268,8 @@ Resources:
       FunctionName: !Ref PnSsGestoreBucketConcurrencyHandlerLambdaName
       Description: 'SafeStorage Concurrency Handler for Gestore Bucket'
       Handler: index.handler
+      LoggingConfig:
+        LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsGestoreBucketConcurrencyHandlerLambdaName}"
       MemorySize: 256
       Runtime: nodejs20.x
       Role: !GetAtt PnSsGestoreBucketConcurrencyHandlerRole.Arn
@@ -1405,6 +1409,8 @@ Resources:
       FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
       Runtime: nodejs20.x
       Handler: "index.handler"
+      LoggingConfig:
+        LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsScadenzaDocumentiLambdaName}"
       Role: !GetAtt PnSsScadenzaDocumentiLambdaRole.Arn
       Timeout: 240
       VpcConfig:

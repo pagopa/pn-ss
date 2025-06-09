@@ -1,5 +1,5 @@
 const { mockClient } = require("aws-sdk-client-mock");
-const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3")
+const { S3Client, GetObjectCommand, ListObjectVersionsCommand } = require("@aws-sdk/client-s3")
 const proxyquire = require("proxyquire").noPreserveCache();
 const { expect } = require("chai");
 const fs = require("fs");
@@ -402,6 +402,11 @@ describe("gestoreBucketEventHandler tests", function () {
       documentState: "deleted",
     };
 
+    s3MockClient.on(ListObjectVersionsCommand).resolves({
+      IsTruncated: false,
+      Name: "bucket"
+    });
+
     var originalRequest;
     mocker.mock({
       url: PATHPATCH,
@@ -446,13 +451,12 @@ function createEvent(eventName, fileKey, fileSize, bucketName, eventTime) {
     ]
   }
 
-  var event = {
+  return {
     Records: [{
       body: JSON.stringify(eventBody),
       messageId: "messageId"
     }]
-  }
-  return event;
+  };
 }
 
 function createDocument(fileKey, checksumType) {

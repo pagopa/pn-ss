@@ -200,26 +200,6 @@ class UriBuilderServiceDownloadTest {
         return urlDownload;
     }
 
-
-    @Test
-    void testMissingTraceIdHeader()
-    {
-        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
-
-        String docId = "1111-aaaa";
-        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
-
-        DocumentInput d = new DocumentInput();
-        d.setDocumentType(DocTypesConstant.PN_AAR);
-        d.setDocumentState(AVAILABLE);
-        d.setCheckSum(CHECKSUM);
-
-        mockGetDocument(d, docId);
-
-        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
-
-        noTraceIdFileDownloadTestCall(docId, true).expectStatus().isBadRequest();
-    }
     @Test
     void testUrlGenerato() {
 

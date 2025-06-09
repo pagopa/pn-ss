@@ -83,7 +83,6 @@ exports.handleEvent = async (event) => {
                 jsonDocument.checkSum = hash.digest('base64');
                 console.log("File hashing done!")
               }
-              jsonDocument.lastStatusChangeTimestamp = bodyData.Records[0].eventTime;
 
             } catch (error) {
               console.log(error);
@@ -94,6 +93,7 @@ exports.handleEvent = async (event) => {
               //throw new Error(messageError);
             }
           }
+          jsonDocument.lastStatusChangeTimestamp = bodyData.Records[0].eventTime;
           console.log(jsonDocument);
           break;
         case "ObjectCreated:Copy":

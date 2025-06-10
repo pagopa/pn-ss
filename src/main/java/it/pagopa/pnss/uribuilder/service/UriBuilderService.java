@@ -304,7 +304,7 @@ public class UriBuilderService {
                                                        String documentState, String documentType, String contenType,
                                                        Map<String, String> secret, DocumentType.ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
 
-        log.debug(LogUtils.INVOKING_METHOD, SIGN_BUCKET, Stream.of(bucketName, documentKey, documentState, documentType, contenType, checksumType, checksumValue).toList());
+        log.info(LogUtils.INVOKING_METHOD, SIGN_BUCKET, Stream.of(bucketName, documentKey, documentState, documentType, contenType, checksumType, checksumValue).toList());
 
         if (queryParamPresignedUrlTraceId == null || queryParamPresignedUrlTraceId.isBlank()) {
             return Mono.error(new QueryParamException("Property \"queryParam.presignedUrl.traceId\" non impostata"));
@@ -341,7 +341,7 @@ public class UriBuilderService {
                                                                    .putObjectRequest(putObjectRequest)
                                                                    .build())
                 .flatMap(putObjectPresignRequest -> {
-                    log.debug(CLIENT_METHOD_INVOCATION, PRESIGN_PUT_OBJECT, putObjectPresignRequest);
+                    log.info(CLIENT_METHOD_INVOCATION, PRESIGN_PUT_OBJECT, putObjectPresignRequest);
                     return Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest))
                             .doOnNext(result -> log.debug(CLIENT_METHOD_RETURN, PRESIGN_PUT_OBJECT, result));
                 });
@@ -589,11 +589,11 @@ public class UriBuilderService {
                 .onErrorResume(AwsServiceException.class, ase ->
                 {
                     if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("RestoreAlreadyInProgress")) {
-                        log.debug(" Errore AMAZON RestoreAlreadyInProgress S3Exception", ase);
+                        log.error(" Errore AMAZON RestoreAlreadyInProgress S3Exception", ase);
                         return Mono.empty();
                     }
                     else if (ase.awsErrorDetails().errorCode().equalsIgnoreCase("NoSuchKey")) {
-                        log.debug(" Errore AMAZON NoSuchKey S3Exception ", ase);
+                        log.error(" Errore AMAZON NoSuchKey S3Exception ", ase);
                         return Mono.error(new S3BucketException.NoSuchKeyException(keyName));
                     } else {
                         log.error(" Errore AMAZON S3Exception", ase);

@@ -69,7 +69,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                 .flatMap(userConfigurationResponse -> {
                     if (Boolean.TRUE.equals(userConfigurationResponse.getUserConfiguration().getCanReadTags())) {
                         return documentClientCall.getDocument(fileKey)
-                                .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
+                                .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
                                 .flatMap(documentResponse -> {
                                     Map<String, List<String>> tags = documentResponse.getDocument().getTags();
                                     return removePrefixTags(tags);

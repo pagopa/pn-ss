@@ -56,7 +56,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
-                   .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
+                   .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
                    .map(userConfigurationEntity -> objectMapper.convertValue(userConfigurationEntity, UserConfiguration.class))
                    .doOnSuccess(userConfiguration -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, GET_USER_CONFIGURATION, userConfiguration));
     }
@@ -102,7 +102,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(name).build()))
                    .retryWhen(dynamoRetryStrategy)
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
-                   .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
+                   .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
                    .map(entityStored -> applyUserConfigurationChanges(userConfigurationChanges, entityStored))
                    .zipWhen(userConfigurationUpdated -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.updateItem(
                            userConfigurationUpdated))).retryWhen(dynamoRetryStrategy)
@@ -144,7 +144,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
 
         return Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.getItem(userConfigurationKey))
                    .switchIfEmpty(getErrorIdClientNotFoundException(name))
-                   .doOnError(IdClientNotFoundException.class, throwable -> log.debug(throwable.getMessage()))
+                   .doOnError(IdClientNotFoundException.class, throwable -> log.error(throwable.getMessage()))
                    .zipWhen(userConfigurationToDelete -> Mono.fromCompletionStage(userConfigurationEntityDynamoDbAsyncTable.deleteItem(
                             userConfigurationKey)))
                    .retryWhen(dynamoRetryStrategy)

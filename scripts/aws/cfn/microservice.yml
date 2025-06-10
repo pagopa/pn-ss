@@ -759,7 +759,21 @@ Resources:
               - 's3:RestoreObject'
             Resource:
               - !Ref PnSsBucketArn
-              - !Join [ '', [ !Sub '${PnSsBucketArn}' , '/*']]
+              - !Join ['', [!Sub '${PnSsBucketArn}', '/*']]
+          - Effect: Allow
+            Action:
+              - 's3:List*'
+              - 's3:GetBucket*'
+              - 's3:GetObject*'
+              - 's3:*MultipartUpload*'
+              - 's3:*LifecycleConfiguration'
+              - 's3:*Replication*'
+              - 's3:Replicate*'
+              - 's3:PutBucket*'
+              - 's3:PutObject*'
+              - 's3:DeleteObject*'
+              - 's3:RestoreObject'
+            Resource:
               - !Ref PnSsStagingBucketArn
               - !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
           - Effect: Allow
@@ -982,22 +996,6 @@ Resources:
           - - !Ref PnSsBucketName
             - !Ref PnSsStagingBucketName
 
-  #####    Bucket + Queue Policies   #####
-  PnSsStagingBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref PnSsStagingBucketName
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Action:
-              - 's3:*'
-            Effect: Allow
-            Resource: !Join [ '', [ !Sub '${PnSsStagingBucketArn}' , '/*']]
-            Principal:
-              AWS:
-                - !Join [ '', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/' , !GetAtt SafeStorageMicroservice.Outputs.TaskRoleName]]
-
   PnSsQueuePolicyStagingBucket:
     Type: AWS::SQS::QueuePolicy
     Properties:
@@ -1194,6 +1192,8 @@ Resources:
       FunctionName: !Ref PnSsGestoreBucketLambdaName
       Description: 'Pn SafeStorage Gestore Bucket'
       Handler: index.handler
+      LoggingConfig:
+        LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsGestoreBucketLambdaName}"
       MemorySize: 1024
       ReservedConcurrentExecutions: !Ref PnSsGestoreBucketMinReservedConcurrentExecutions
       Runtime: nodejs20.x
@@ -1274,6 +1274,8 @@ Resources:
       FunctionName: !Ref PnSsGestoreBucketConcurrencyHandlerLambdaName
       Description: 'SafeStorage Concurrency Handler for Gestore Bucket'
       Handler: index.handler
+      LoggingConfig:
+        LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsGestoreBucketConcurrencyHandlerLambdaName}"
       MemorySize: 256
       Runtime: nodejs20.x
       Role: !GetAtt PnSsGestoreBucketConcurrencyHandlerRole.Arn
@@ -1413,6 +1415,8 @@ Resources:
       FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
       Runtime: nodejs20.x
       Handler: "index.handler"
+      LoggingConfig:
+        LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsScadenzaDocumentiLambdaName}"
       Role: !GetAtt PnSsScadenzaDocumentiLambdaRole.Arn
       Timeout: 240
       VpcConfig:

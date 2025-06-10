@@ -163,7 +163,7 @@ public class StreamsRecordProcessor {
                 .filter(getItemResponse -> getItemResponse.hasItem() && getItemResponse.item().containsKey(CAN_READ_TAGS))
                 .map(getItemResponse -> getItemResponse.item().get(CAN_READ_TAGS).bool())
                 .defaultIfEmpty(false)
-                .doOnError(e -> log.debug(EXCEPTION_IN_PROCESS, METHOD_NAME, e))
+                .doOnError(e -> log.error(EXCEPTION_IN_PROCESS, METHOD_NAME, e))
                 .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, METHOD_NAME, result));
     }
 

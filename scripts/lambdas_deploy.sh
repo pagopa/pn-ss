@@ -61,10 +61,7 @@ copy_lambdas_to_tmp() {
   log "Cloning repo into $TMP_PATH"
   git clone "$repo_url" "$TMP_PATH" || { log "Clone failed"; exit 1; }
   cd "$TMP_PATH" || { log "Cannot enter $TMP_PATH"; exit 1; }
-
-  log "Enabling sparse checkout for $LAMBDA_FUNCTIONS_FOLDER"
-  git sparse-checkout init --cone && \
-  git sparse-checkout set "$LAMBDA_FUNCTIONS_FOLDER" && \
+  log "Checking out commit $COMMIT_ID"
   git checkout "$COMMIT_ID" || { log "Checkout failed for $COMMIT_ID"; exit 1; }
 }
 

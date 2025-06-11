@@ -244,7 +244,7 @@
                 <directory>config</directory>
                 <targetPath>config</targetPath>
                 <includes>
-                    <include>**/*</include>
+                    <include>application.properties</include>
                 </includes>
             </resource>
         </resources>

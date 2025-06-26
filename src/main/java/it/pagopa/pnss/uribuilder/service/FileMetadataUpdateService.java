@@ -221,7 +221,7 @@ public class FileMetadataUpdateService {
                                  .onErrorResume(NullPointerException.class, e -> {
                                      String errorMsg =
                                              String.format("Status %s is not valid for DocumentType %s", logicalState, documentType);
-                                     log.debug("NullPointerException: {}", errorMsg);
+                                     log.error("NullPointerException: {}", errorMsg);
                                      return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg));
                                  });
     }

@@ -96,7 +96,7 @@ public class SqsServiceImpl implements SqsService {
         var mdcContextMap = MDCUtils.retrieveMDCContextMap();
         return sqsRetryStrategy.doBeforeRetry(retrySignal -> {
             MDCUtils.enrichWithMDC(null, mdcContextMap);
-            log.debug(SHORT_RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage());
+            log.info(SHORT_RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage());
         });
     }
 

@@ -40,7 +40,7 @@ public class S3ServiceImpl implements S3Service {
         this.s3Presigner = s3Presigner;
         s3RetryStrategy = Retry.backoff(s3RetryStrategyProperties.maxAttempts(), Duration.ofSeconds(s3RetryStrategyProperties.minBackoff()))
                 .filter(S3Exception.class::isInstance)
-                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
+                .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }
 
@@ -65,7 +65,7 @@ public class S3ServiceImpl implements S3Service {
                                                                                            AsyncRequestBody.fromBytes(fileBytes))))
                    .doOnNext(putObjectResponse -> log.info(CLIENT_METHOD_RETURN, PUT_OBJECT, putObjectResponse))
                    .retryWhen(s3RetryStrategy)
-                   .doOnError(throwable -> log.warn(CLIENT_METHOD_RETURN_WITH_ERROR, PUT_OBJECT, throwable, throwable.getMessage()));
+                   .doOnError(throwable -> log.error(CLIENT_METHOD_RETURN_WITH_ERROR, PUT_OBJECT, throwable, throwable.getMessage()));
     }
 
     @Override
@@ -79,7 +79,7 @@ public class S3ServiceImpl implements S3Service {
         return Mono.fromCompletionStage(s3AsyncClient.deleteObject(builder -> builder.key(key).bucket(bucketName)))
                    .doOnNext(deleteObjectResponse -> log.info(CLIENT_METHOD_RETURN, DELETE_OBJECT, deleteObjectResponse))
                    .retryWhen(s3RetryStrategy)
-                   .doOnError(throwable -> log.warn(CLIENT_METHOD_RETURN_WITH_ERROR, DELETE_OBJECT, throwable, throwable.getMessage()));
+                   .doOnError(throwable -> log.error(CLIENT_METHOD_RETURN_WITH_ERROR, DELETE_OBJECT, throwable, throwable.getMessage()));
     }
 
     @Override
@@ -88,7 +88,7 @@ public class S3ServiceImpl implements S3Service {
         return Mono.fromCompletionStage(s3AsyncClient.restoreObject(builder -> builder.key(key).bucket(bucketName).restoreRequest(restoreRequest)))
                 .doOnNext(restoreObjectResponse -> log.info(CLIENT_METHOD_RETURN, RESTORE_OBJECT, restoreObjectResponse))
                 .retryWhen(s3RetryStrategy.filter(isRestoreAlreadyInProgress.negate()))
-                .doOnError(isRestoreAlreadyInProgress.negate(), throwable -> log.warn(CLIENT_METHOD_RETURN_WITH_ERROR, RESTORE_OBJECT, throwable, throwable.getMessage()));
+                .doOnError(isRestoreAlreadyInProgress.negate(), throwable -> log.error(CLIENT_METHOD_RETURN_WITH_ERROR, RESTORE_OBJECT, throwable, throwable.getMessage()));
     }
 
     @Override

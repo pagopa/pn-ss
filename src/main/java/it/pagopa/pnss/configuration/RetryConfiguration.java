@@ -43,7 +43,7 @@ public class RetryConfiguration {
     RetryBackoffSpec dynamoRetryStrategy() {
         return Retry.backoff(dynamoRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(dynamoRetryStrategyProperties.minBackoff()))
                 .filter(DynamoDbException.class::isInstance)
-                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
+                .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }
 
@@ -52,7 +52,7 @@ public class RetryConfiguration {
         return Retry.backoff(gestoreRepositoryRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(gestoreRepositoryRetryStrategyProperties.minBackoff()))
                 .filter(Predicate.not(isNotFound))
                 .filter(throwable -> throwable instanceof PatchDocumentException && ((PatchDocumentException) throwable).getStatusCode().is5xxServerError())
-                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
+                .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }
 
@@ -61,7 +61,7 @@ public class RetryConfiguration {
         return Retry.backoff(s3RetryStrategyProperties.maxAttempts(), Duration.ofSeconds(s3RetryStrategyProperties.minBackoff()))
                 .filter(S3Exception.class::isInstance)
                 .filter(Predicate.not(NoSuchKeyException.class::isInstance))
-                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
+                .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }
 
@@ -70,7 +70,7 @@ public class RetryConfiguration {
     RetryBackoffSpec smRetryStrategy(StateMachineRetryStrategyProperties smRetryStrategyProperties) {
         return Retry.backoff(smRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(smRetryStrategyProperties.minBackoff()))
                 .filter(StateMachineServiceException.class::isInstance)
-                .doBeforeRetry(retrySignal -> log.debug(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure().getCause()))
+                .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure().getCause()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }
 }

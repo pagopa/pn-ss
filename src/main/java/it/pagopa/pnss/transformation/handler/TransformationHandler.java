@@ -6,6 +6,7 @@ import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.service.TransformationService;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
@@ -24,6 +25,10 @@ public class TransformationHandler {
     private final TransformationService transformationService;
     private final Semaphore signAndTimemarkSemaphore;
     private final Semaphore signSemaphore;
+    @Value("${pn.ss.transformation.queues.sign-and-timemark}")
+    private String signAndTimemarkQueueName;
+    @Value("${pn.ss.transformation.queues.sign}")
+    private String signQueueName;
 
     public TransformationHandler(TransformationService transformationService, TransformationProperties props) {
         this.transformationService = transformationService;
@@ -36,6 +41,7 @@ public class TransformationHandler {
         String fileKey = s3EventNotificationMessage.getEventNotificationDetail().getObject().getKey();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(PROCESS_TRANSFORMATION_EVENT);
+
         MDCUtils.addMDCToContextAndExecute(
                 transformationService.handleS3Event(s3EventNotificationMessage)
                         .doOnSuccess(result -> {
@@ -49,7 +55,7 @@ public class TransformationHandler {
     @SqsListener(value = "${pn.ss.transformation.queues.sign-and-timemark}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     void signAndTimemarkTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgment acknowledgment) {
         acquireSemaphore(signAndTimemarkSemaphore);
-        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, true), acknowledgment, SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER)
+        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, true,signAndTimemarkQueueName), acknowledgment, SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER)
                 .doFinally(signalType -> signAndTimemarkSemaphore.release())
                 .subscribe();
     }
@@ -57,7 +63,7 @@ public class TransformationHandler {
     @SqsListener(value = "${pn.ss.transformation.queues.sign}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     void signTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgment acknowledgment) {
         acquireSemaphore(signSemaphore);
-        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, false), acknowledgment, SIGN_TRANSFORMATION_SUBSCRIBER)
+        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, false,signQueueName), acknowledgment, SIGN_TRANSFORMATION_SUBSCRIBER)
                 .doFinally(signalType -> signSemaphore.release())
                 .subscribe();
     }

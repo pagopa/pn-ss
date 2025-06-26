@@ -43,6 +43,11 @@ Parameters:
     Description: 'Nome della Lambda function che implementa la gestione delle scadenze dei documenti'
     Default: 'scadenzaDocumentiEventHandler'
 
+  PnSsGestoreBucketConcurrencyHandlerLambdaName:
+    Type: String
+    Description: 'Nome della lambda function che aggiorna la concorrenza del Gestore Bucket'
+    Default: 'gestoreBucketConcurrencyHandler'
+
   PnSsEventBusExternalNotificationName:
     Type: String 
     Description: 'Nome del Event Bus che raccoglie gli eventi del microservizio Gestore Disponibilita'
@@ -451,7 +456,7 @@ Resources:
                 TransitionInDays: 30
           - Id: 'PnSsPaperAttachments_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 365
+            ExpirationInDays: 120
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_PAPER_ATTACHMENT'
@@ -841,6 +846,25 @@ Resources:
         LogGroupRetention: !Ref LogRetention
         LogGroupPrefix: '/aws/lambda'
 
+  PnSsGestoreBucketLambdaLogGroup:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
+      Parameters:
+        LogGroupName: !Sub "${ProjectName}-${PnSsGestoreBucketLambdaName}"
+        LogGroupRetention: !Ref LogRetention
+        LogGroupPrefix: '/aws/lambda'
+
+  PnSsGestoreBucketConcurrencyHandlerLambdaLogGroup:
+    Type: AWS::CloudFormation::Stack
+    UpdateReplacePolicy: Retain
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/log-group.yaml"
+      Parameters:
+        LogGroupName: !Sub "${ProjectName}-${PnSsGestoreBucketConcurrencyHandlerLambdaName}"
+        LogGroupRetention: !Ref LogRetention
+        LogGroupPrefix: '/aws/lambda'
 
 Outputs:
   PnSsTableNameAnagraficaClient:
@@ -1018,6 +1042,10 @@ Outputs:
   PnSsGestoreBucketLambdaName:
     Description: 'Nome della Lambda function che implementa la funzionalità del Gestore Bucket'
     Value: !Ref PnSsGestoreBucketLambdaName
+
+  PnSsGestoreBucketConcurrencyHandlerLambdaName:
+    Description: 'Nome della Lambda function che aggiorna la concorrenza del Gestore Bucket'
+    Value: !Ref PnSsGestoreBucketConcurrencyHandlerLambdaName
 
   PnSsScadenzaDocumentiLambdaName:
     Description: 'Nome della Lambda function che implementa la gestione delle scadenze dei documenti'

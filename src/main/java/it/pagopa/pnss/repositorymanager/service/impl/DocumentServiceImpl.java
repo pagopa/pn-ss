@@ -94,7 +94,7 @@ public class DocumentServiceImpl implements DocumentService {
         log.debug(LogUtils.INVOKING_METHOD, GET_DOCUMENT, documentKey);
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
+                   .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
                    .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class));
     }
 
@@ -161,7 +161,7 @@ public class DocumentServiceImpl implements DocumentService {
 
         return Mono.defer(()-> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build())))
                 .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
-                .doOnError(DocumentKeyNotPresentException.class, throwable -> log.debug(throwable.getMessage()))
+                .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
                 .handle((documentEntity, sink) -> {
                     if (documentEntity.getDocumentState().equals(DELETED)) {
                         sink.error(new ResourceDeletedException.DocumentDeletedException(documentKey));
@@ -170,7 +170,7 @@ public class DocumentServiceImpl implements DocumentService {
                 .cast(DocumentEntity.class)
                 .flatMap(documentEntity -> {
                     if (hasBeenPatched(documentEntity, documentChanges)) {
-                        log.debug("Same changes have been already applied to document '{}'", documentKey);
+                        log.info("Same changes have been already applied to document '{}'", documentKey);
                         return Mono.just(documentEntity);
                     }
                     else if (documentChanges.getLastStatusChangeTimestamp() != null) {
@@ -283,7 +283,7 @@ public class DocumentServiceImpl implements DocumentService {
                     }
                 }
                 if (!statusFound) {
-                    log.debug("New status inserted is invalid for the documentType, DocumentLogicalState was not updated");
+                    log.info("New status inserted is invalid for the documentType, DocumentLogicalState was not updated");
                 }
             } else {
                 String sMsg = "Cannot read statuses of Document cause statuses is null, therefore new status inserted is invalid";

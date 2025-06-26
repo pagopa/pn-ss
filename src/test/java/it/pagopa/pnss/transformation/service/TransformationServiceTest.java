@@ -2,7 +2,7 @@ package it.pagopa.pnss.transformation.service;
 
 import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
-import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;;
+import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
@@ -10,8 +10,6 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.exception.SqsClientException;
 import it.pagopa.pnss.common.service.EventBridgeService;
 import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
-import it.pagopa.pnss.transformation.exception.InvalidDocumentStateException;
-import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configuration.TransformationConfig;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -88,6 +86,7 @@ class TransformationServiceTest {
     private static final String SIGN_AND_TIMEMARK = "SIGN_AND_TIMEMARK";
     private static final String SIGN = "SIGN";
     private static final String DUMMY = "DUMMY";
+    private static final String QUEUE_NAME="queue";
 
 
     @BeforeEach
@@ -242,7 +241,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(SIGN_AND_TIMEMARK, bucket, contentType), true);
+        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(SIGN_AND_TIMEMARK, bucket, contentType), true,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
@@ -261,7 +260,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(SIGN, bucket, contentType), false);
+        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(SIGN, bucket, contentType), false,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).expectNextMatches(PutObjectResponse.class::isInstance).verifyComplete();
@@ -281,7 +280,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura);
+        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -302,7 +301,7 @@ class TransformationServiceTest {
 
         //WHEN
         when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception")));
-        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura);
+        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).verifyComplete();
@@ -320,7 +319,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockSignCalls();
-        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType, "FAKE"), marcatura);
+        var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType, "FAKE"), marcatura,QUEUE_NAME);
 
         //THEN
         StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();

@@ -40,10 +40,9 @@ public class FileDownloadApiController implements FileDownloadApi {
 
         MDC.clear();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
+        String xTraceIdValue = exchange.getRequest().getQueryParams().getFirst(xTraceId);
+        xTraceIdValue = (xTraceIdValue == null) ? UUID.randomUUID().toString() : xTraceIdValue;
         log.logStartingProcess(GET_FILE);
-        // Nelle run di localdev, viene settato un traceId randomico
-        boolean isLocal = Arrays.asList(env.getActiveProfiles()).contains("local");
-        String xTraceIdValue = !isLocal ? exchange.getRequest().getHeaders().getFirst(xTraceId) : UUID.randomUUID().toString();
         return MDCUtils.addMDCToContextAndExecute(uriBuilderService.createUriForDownloadFile(fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly, tags)
                 .map(ResponseEntity::ok)
                 .doOnSuccess(result -> log.logEndingProcess(GET_FILE))

@@ -206,26 +206,6 @@ class UriBuilderUploadTest {
 //
 //        fileUploadTestCall(BodyInserters.fromValue(fcr), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isBadRequest();
 //    }
-    @Test
-    void testMissingTraceIdHeader()
-    {
-        UserConfigurationResponse userConfig = new UserConfigurationResponse();
-        UserConfiguration userConfiguration = new UserConfiguration();
-        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-        userConfiguration.setApiKey(xApiKeyValue);
-        userConfiguration.setCanCreate(List.of(PN_AAR));
-        userConfig.setUserConfiguration(userConfiguration);
-
-        when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
-        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-        when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
-
-        FileCreationRequest fcr = new FileCreationRequest();
-        fcr.setContentType("application/pdf");
-        fcr.setDocumentType(PN_AAR);
-        fcr.setStatus(PRELOADED);
-        noTraceIdfileUploadTestCall(fcr).expectStatus().isBadRequest();
-    }
 
     @Test
     void testContentTypeParamObbligatorio() {

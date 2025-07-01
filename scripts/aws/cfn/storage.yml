@@ -25,9 +25,9 @@ Parameters:
     Description: 'ARN of Pn Core Event Bus where to forward external notifications'
     Default: ''
     
-  # CdcKinesisSourceStreamArn:
-  #   Type: String
-  #   Description: 'Where to send CDC'
+  CdcKinesisSourceStreamArn:
+   Type: String
+   Description: 'Where to send CDC'
 
   SafeStorageBucketName:
     Type: String
@@ -199,6 +199,8 @@ Resources:
       TableClass: 'STANDARD'
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      KinesisStreamSpecification:
+        StreamArn: !Ref CdcKinesisSourceStreamArn
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 

@@ -71,6 +71,7 @@ public class EventBridgeUtil {
         message.setContentType(documentEntity.getContentType()!=null ? documentEntity.getContentType():null);
         message.setChecksum(documentEntity.getCheckSum()!=null ? documentEntity.getCheckSum():null);
         message.setClientShortCode(documentEntity.getClientShortCode()!=null ? documentEntity.getClientShortCode():null);
+        message.setDocumentType(documentEntity.getDocumentType().getTipoDocumento());
 
         try {
             String event = objMap.writeValueAsString(message);

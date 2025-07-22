@@ -1,6 +1,5 @@
 package it.pagopa.pnss.localstack;
 
-import it.pagopa.pnss.configurationproperties.AwsConfigurationProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -14,8 +13,8 @@ import java.net.URI;
 @TestConfiguration
 public class LocalStackClientConfig {
 
-    @Autowired
-    private AwsConfigurationProperties awsConfigurationProperties;
+    @Value("${test.aws.region-code:#{null}}")
+    String regionCode;
     @Value("${test.aws.s3.endpoint}")
     String s3LocalStackEndpoint;
 
@@ -23,7 +22,7 @@ public class LocalStackClientConfig {
     public S3Client s3TestClient() {
         return S3Client.builder()
                 .credentialsProvider(DefaultCredentialsProvider.create())
-                .region(Region.of(awsConfigurationProperties.regionCode()))
+                .region(Region.of(regionCode))
                 .endpointOverride(URI.create(s3LocalStackEndpoint))
                 .build();
     }

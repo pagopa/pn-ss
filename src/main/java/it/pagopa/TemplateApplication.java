@@ -9,10 +9,6 @@ import org.springframework.context.annotation.PropertySource;
 @SpringBootApplication
 @ConfigurationPropertiesScan
 
-//<-- COMMONS -->
-//AWS CONFIGURATION
-@PropertySource("classpath:commons/aws-configuration.properties")
-
 //<-- REPOSITORY MANAGER -->
 //DYNAMO TABLES
 @PropertySource("classpath:repositorymanager/repository-manager-dynamo-table.properties")

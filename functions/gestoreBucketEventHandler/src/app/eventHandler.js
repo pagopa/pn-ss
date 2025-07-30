@@ -115,22 +115,7 @@ exports.handleEvent = async (event) => {
           jsonDocument.documentState = "deleted";
           break;
         case "ObjectRemoved:Delete":
-          try {
-            const response = await s3.send(new ListObjectVersionsCommand({
-              Bucket: bucketName,
-              Prefix: jsonDocument.documentKey
-            }));
-            if (response.Versions == null && response.DeleteMarkers == null) {
-              console.log("All file versions have been removed. Setting document in 'deleted' status...")
-              jsonDocument.documentState = "deleted";
-            }
-          }
-          catch (error) {
-            const messageError = `* FATAL * Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}: ${error}`;
-            console.log(messageError);
-            batchItemFailures.push({ itemIdentifier: record.messageId });
-            return;
-          }
+          jsonDocument.documentState = "deleted";
           break;
         default:
           return;

@@ -1,7 +1,7 @@
 "use strict";
 
 const http = require(process.env.PnSsGestoreRepositoryProtocol);
-const { S3Client, GetObjectCommand, ListObjectVersionsCommand } = require("@aws-sdk/client-s3")
+const { S3Client, GetObjectCommand, ListObjectVersionsCommand } = require("@aws-sdk/client-s3");
 const crypto = require("crypto");
 
 const HOSTNAME = process.env.PnSsHostname;
@@ -115,23 +115,8 @@ exports.handleEvent = async (event) => {
           jsonDocument.documentState = "deleted";
           break;
         case "ObjectRemoved:Delete":
-          try {
-            const response = await s3.send(new ListObjectVersionsCommand({
-              Bucket: bucketName,
-              Prefix: jsonDocument.documentKey
-            }));
-            if (response.Versions == null && response.DeleteMarkers == null) {
-              console.log("All file versions have been removed. Setting document in 'deleted' status...")
-              jsonDocument.documentState = "deleted";
-            }
-          }
-          catch (error) {
-            const messageError = `* FATAL * Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}: ${error}`;
-            console.log(messageError);
-            batchItemFailures.push({ itemIdentifier: record.messageId });
-            return;
-          }
-          break;
+          console.log("Delete marker removed, skipping dynamodb update.")
+          return;
         default:
           return;
       }

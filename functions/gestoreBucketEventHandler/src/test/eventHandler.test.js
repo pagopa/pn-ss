@@ -397,34 +397,23 @@ describe("gestoreBucketEventHandler tests", function () {
     const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
 
     const docKey = "fileKey";
-    var event = createEvent(OBJECT_REMOVED_DELETE, docKey, "", "bucket", NOW);
-
-    var expectedRequest = {
-      documentKey: docKey,
-      documentState: "deleted",
-    };
+    const event = createEvent(OBJECT_REMOVED_DELETE, docKey, "", "bucket", NOW);
 
     s3MockClient.on(ListObjectVersionsCommand).resolves({
       IsTruncated: false,
-      Name: "bucket"
+      Name: "bucket",
     });
 
-    var originalRequest;
+    let patchCalled = false;
     mocker.mock({
       url: PATHPATCH,
-      response: function (requestInfo) {
-        originalRequest = requestInfo;
-        return {};
-      }
+      response: () => { patchCalled = true; return {}; },
     });
 
     const res = await lambda.handleEvent(event);
 
-    expect(JSON.parse(originalRequest.body)).to.deep.equal(expectedRequest);
-    expect(res).deep.equals({
-      batchItemFailures: [],
-    });
-
+    expect(patchCalled).to.be.false;
+    expect(res).to.deep.equal({ batchItemFailures: [] });
   });
 
   this.afterEach(() => {

@@ -117,6 +117,27 @@ exports.handleEvent = async (event) => {
         case "ObjectRemoved:Delete":
           console.log("Delete marker removed, skipping dynamodb update.")
           return;
+          // Left commented code for a future update - update the documentState when the last version is deleted.
+            /*
+          try {
+            const response = await s3.send(new ListObjectVersionsCommand({
+              Bucket: bucketName,
+              Prefix: jsonDocument.documentKey
+            }));
+            if (response.Versions == null && response.DeleteMarkers == null) {
+              console.log("All file versions have been removed. Setting document in 'deleted' status...")
+              jsonDocument.documentState = "deleted";
+            }  else {
+              return;
+            }
+          }
+          catch (error) {
+            const messageError = `* FATAL * Errore nella lavorazione dell'oggetto ${jsonDocument.documentKey} dal bucket ${bucketName}: ${error}`;
+            console.log(messageError);
+            batchItemFailures.push({ itemIdentifier: record.messageId });
+            return;
+          }
+          */
         default:
           return;
       }

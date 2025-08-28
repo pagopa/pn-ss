@@ -48,9 +48,7 @@ public final class Constant {
     public static final String DUMMY ="DUMMY";
 
     //digests
-    public static final String MD5_EMPTY_HEX = "d41d8cd98f00b204e9800998ecf8427e";
-    public static final String MD5_EMPTY_B64 = "1B2M2Y8AsgTpgAmY7PhCfg==";
-    public static final String SHA256_EMPTY_HEX = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-    public static final String SHA256_EMPTY_B64 = "47DEQpj8HBSa/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
+    public static final String MD5_EMPTY = "1B2M2Y8AsgTpgAmY7PhCfg==";
+    public static final String SHA256_EMPTY= "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 
 }

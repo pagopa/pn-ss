@@ -7,7 +7,6 @@ import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
-import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
 
@@ -29,7 +28,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 
 
 import java.util.*;
@@ -65,7 +63,7 @@ class UriBuilderUploadTest {
     private String xApiKey;
 
     @Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
-    private String X_PAGOPA_SAFESTORAGE_CX_ID;
+    private String xPagopaSafestorageCxId;
 
     @Value("${queryParam.presignedUrl.traceId:#{null}}")
     private String queryParamPresignedUrlTraceId;
@@ -76,15 +74,13 @@ class UriBuilderUploadTest {
     @Value("${file.upload.api.url}")
     private String urlPath;
 
-    private static final String xApiKeyValue = "apiKey_value";
-    private static final String xPagoPaSafestorageCxIdValue = "CLIENT_ID_123";
-    private static final String xChecksumValue = "checkSumValue";
+    private static final String X_API_KEY_VALUE = "apiKey_value";
+    private static final String X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE = "CLIENT_ID_123";
+    private static final String X_CHECKSUM_VALUE = "checkSumValue";
     private static final String X_QUERY_PARAM_URL_VALUE= "queryParamPresignedUrlTraceId_value";
     private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey").documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
     private static final DocumentResponse DOCUMENT_RESPONSE_TAGS = new DocumentResponse().document(new Document().documentKey("documentKey").tags(createTagsList()).documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
     private static final String IUN = "IUN";
-
-    private static DynamoDbTable<DocTypeEntity> dynamoDbTable;
 
     private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(FileCreationRequest fileCreationRequest)
     {
@@ -93,8 +89,8 @@ class UriBuilderUploadTest {
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(fileCreationRequest)
-                .header(X_PAGOPA_SAFESTORAGE_CX_ID, xPagoPaSafestorageCxIdValue)
-                .header(xApiKey, xApiKeyValue);
+                .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE);
     }
     private WebTestClient.ResponseSpec fileUploadTestCall(FileCreationRequest fileCreationRequest,String checksumValue) {
 
@@ -109,20 +105,6 @@ class UriBuilderUploadTest {
         return callRequestHeadersSpec(fileCreationRequest)
                 .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
                 .header("x-checksum-value", "checkumValueExample")
-                .exchange();
-    }
-
-    private WebTestClient.ResponseSpec noTraceIdfileUploadTestCall(FileCreationRequest fileCreationRequest) {
-
-        return callRequestHeadersSpec(fileCreationRequest)
-                .header(headerChecksumValue, xChecksumValue)
-                .exchange();
-    }
-
-    private WebTestClient.ResponseSpec noChecksumUploadTestCall(FileCreationRequest fileCreationRequest) {
-
-        return callRequestHeadersSpec(fileCreationRequest)
-                .header(queryParamPresignedUrlTraceId, X_QUERY_PARAM_URL_VALUE)
                 .exchange();
     }
 
@@ -214,8 +196,8 @@ class UriBuilderUploadTest {
 
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
-        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-        userConfiguration.setApiKey(xApiKeyValue);
+        userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+        userConfiguration.setApiKey(X_API_KEY_VALUE);
         userConfig.setUserConfiguration(userConfiguration);
 
         when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
@@ -225,7 +207,7 @@ class UriBuilderUploadTest {
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
 
-        fileUploadTestCall(fcr,xChecksumValue).expectStatus().isBadRequest();
+        fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isBadRequest();
     }
 
     @Test
@@ -233,8 +215,8 @@ class UriBuilderUploadTest {
 
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         UserConfiguration userConfiguration = new UserConfiguration();
-        userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-        userConfiguration.setApiKey(xApiKeyValue);
+        userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+        userConfiguration.setApiKey(X_API_KEY_VALUE);
         userConfig.setUserConfiguration(userConfiguration);
 
         when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
@@ -244,7 +226,7 @@ class UriBuilderUploadTest {
         fcr.setDocumentType(PN_AAR);
         fcr.setStatus("VALUE_FAULT");
 
-        fileUploadTestCall(fcr,xChecksumValue).expectStatus().isBadRequest();
+        fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isBadRequest();
     }
 
     @Test
@@ -255,7 +237,7 @@ class UriBuilderUploadTest {
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                                                                                  "User Not Found : ")));
 
-        fileUploadTestCall(fcr,xChecksumValue).expectStatus().isNotFound();
+        fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isNotFound();
     }
 
     @Nested
@@ -272,8 +254,8 @@ class UriBuilderUploadTest {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -299,7 +281,7 @@ class UriBuilderUploadTest {
             Mono<DocumentResponse> respDoc = Mono.just(docResp);
             Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
 
-            WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(fcr,xChecksumValue);
+            WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(fcr, X_CHECKSUM_VALUE);
             FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
                     responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
             FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
@@ -315,8 +297,8 @@ class UriBuilderUploadTest {
             fcr.setStatus("");
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(new ArrayList<>());
             userConfig.setUserConfiguration(userConfiguration);
 
@@ -331,7 +313,7 @@ class UriBuilderUploadTest {
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
 
-            fileUploadTestCall(fcr,xChecksumValue).expectStatus().isForbidden();
+            fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isForbidden();
         }
 
         @Test
@@ -358,8 +340,8 @@ class UriBuilderUploadTest {
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
 
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -389,7 +371,7 @@ class UriBuilderUploadTest {
             WebTestClient.ResponseSpec responseSpec;
 
             if(checksumValue.equals(DocumentType.ChecksumEnum.MD5)){
-                responseSpec = fileUploadTestCall(fcr,xChecksumValue);
+                responseSpec = fileUploadTestCall(fcr, X_CHECKSUM_VALUE);
             }else{
                 responseSpec = fileUploadTestCallNoHeader(fcr);
             }
@@ -404,8 +386,8 @@ class UriBuilderUploadTest {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -418,7 +400,7 @@ class UriBuilderUploadTest {
             fcr.setContentType("application/pdf");
             fcr.setDocumentType(PN_AAR);
             fcr.setStatus(PRELOADED);
-            fileUploadTestCall(fcr,xChecksumValue).expectStatus().isOk();
+            fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isOk();
         }
 
         @Test
@@ -426,8 +408,8 @@ class UriBuilderUploadTest {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -440,15 +422,15 @@ class UriBuilderUploadTest {
             fcr.setContentType("application/badContentType");
             fcr.setDocumentType(PN_AAR);
             fcr.setStatus(PRELOADED);
-            fileUploadTestCall(fcr,xChecksumValue).expectStatus().isOk();
+            fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isOk();
         }
         @Test
         void testUploadSignedPdfContentTypeTagsOk() {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -465,7 +447,7 @@ class UriBuilderUploadTest {
             fcr.setContentType("application/pdf");
             fcr.setDocumentType(PN_AAR);
             fcr.setStatus(PRELOADED);
-            fileUploadTestCall(fcr,xChecksumValue).expectStatus().isOk();
+            fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isOk();
             log.info("TAGS DOC {}", fcr);
         }
         @Test
@@ -474,8 +456,8 @@ class UriBuilderUploadTest {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -485,7 +467,7 @@ class UriBuilderUploadTest {
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
             when(tagsClientCall.putTags("documentKey",new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.just(new TagsResponse()));
 
-            fileUploadTestCall(fcr,xChecksumValue).expectStatus().isOk();
+            fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isOk();
         }
 
         @ParameterizedTest
@@ -495,8 +477,8 @@ class UriBuilderUploadTest {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -527,8 +509,8 @@ class UriBuilderUploadTest {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -537,7 +519,7 @@ class UriBuilderUploadTest {
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exceeded MaxTagsPerRequest limit")));
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exceeded MaxTagsPerRequest limit")));
 
-            fileUploadTestCall(fileCreationRequest,xChecksumValue)
+            fileUploadTestCall(fileCreationRequest, X_CHECKSUM_VALUE)
                     .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST);
         }
 
@@ -549,8 +531,8 @@ class UriBuilderUploadTest {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -565,7 +547,7 @@ class UriBuilderUploadTest {
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exceeded MaxValuesPerTagPerRequest limit for tag: " +exceedingKey)));
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exceeded MaxValuesPerTagPerRequest limit for tag: " + exceedingKey)));
 
-            fileUploadTestCall(fileCreationRequest,xChecksumValue)
+            fileUploadTestCall(fileCreationRequest, X_CHECKSUM_VALUE)
                     .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST);
         }
 
@@ -575,8 +557,8 @@ class UriBuilderUploadTest {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -586,7 +568,7 @@ class UriBuilderUploadTest {
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
             when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new PutTagsBadRequestException()));
 
-            fileUploadTestCall(fcr,xChecksumValue).expectStatus().isBadRequest();
+            fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isBadRequest();
         }
 
         @ParameterizedTest
@@ -597,8 +579,8 @@ class UriBuilderUploadTest {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(canWriteTags);
             userConfig.setUserConfiguration(userConfiguration);
@@ -608,7 +590,7 @@ class UriBuilderUploadTest {
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
             when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new PutTagsBadRequestException()));
 
-            fileUploadTestCall(fcr,xChecksumValue).expectStatus().isForbidden();
+            fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isForbidden();
         }
 
         @Test
@@ -617,8 +599,8 @@ class UriBuilderUploadTest {
 
             UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
-            userConfiguration.setName(xPagoPaSafestorageCxIdValue);
-            userConfiguration.setApiKey(xApiKeyValue);
+            userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
+            userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
             userConfig.setUserConfiguration(userConfiguration);
@@ -628,7 +610,7 @@ class UriBuilderUploadTest {
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
             when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new DocumentKeyNotPresentException("documentKey")));
 
-            fileUploadTestCall(fcr,xChecksumValue).expectStatus().isNotFound();
+            fileUploadTestCall(fcr, X_CHECKSUM_VALUE).expectStatus().isNotFound();
         }
 
         private Map<String, List<String>> generateRandomTagsWithMaxValuesExceeded() {
@@ -678,10 +660,8 @@ class UriBuilderUploadTest {
         }
         private static Stream<Arguments> provideInvalidChecksum() {
             return Stream.of(
-                    Arguments.of(MD5_EMPTY_HEX),
-                    Arguments.of(MD5_EMPTY_B64),
-                    Arguments.of(SHA256_EMPTY_HEX),
-                    Arguments.of(SHA256_EMPTY_B64)
+                    Arguments.of(MD5_EMPTY),
+                    Arguments.of(SHA256_EMPTY)
             );
         }
     }

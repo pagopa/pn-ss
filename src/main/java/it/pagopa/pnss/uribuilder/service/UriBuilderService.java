@@ -697,10 +697,7 @@ public class UriBuilderService {
     private static boolean isEmptyDigest(String digest) {
         if (digest == null) return false;
         String trimmedDigest = digest.trim();
-        return trimmedDigest.equals(MD5_EMPTY_B64)
-                || trimmedDigest.equalsIgnoreCase(MD5_EMPTY_HEX)
-                || trimmedDigest.equals(SHA256_EMPTY_B64)
-                || trimmedDigest.equalsIgnoreCase(SHA256_EMPTY_HEX);
+        return trimmedDigest.equals(MD5_EMPTY) || trimmedDigest.equals(SHA256_EMPTY);
     }
 
 }

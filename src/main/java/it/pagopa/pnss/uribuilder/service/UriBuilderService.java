@@ -25,7 +25,6 @@ import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -99,6 +98,7 @@ public class UriBuilderService {
     private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
     private final ThreadPoolTaskExecutor taskExecutor;
     private static final String AMAZONERROR = "Error AMAZON AmazonServiceException ";
+    private static final String EMPTY_FILE_NOT_ALLOWED = "Empty or invalid file";
     private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private static final String SEPARATORE = "~";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
@@ -137,6 +137,10 @@ public class UriBuilderService {
         log.debug(LogUtils.INVOKING_METHOD, CREATE_URI_FOR_UPLOAD_FILE, Stream.of(xPagopaSafestorageCxId, request, checksumValue, xTraceIdValue).toList());
         log.debug("TaskExecutor settings: maxPoolSize: {}, corePoolSize: {}, queueCapacity: {}", taskExecutor.getMaxPoolSize(), taskExecutor.getCorePoolSize(), taskExecutor.getQueueCapacity());
         log.debug("TaskExecutor threads info: activeCount: {}, queueSize: {}, poolSize: {}", taskExecutor.getActiveCount(), taskExecutor.getQueueSize(), taskExecutor.getPoolSize());
+
+        if(isEmptyDigest(checksumValue)){
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, EMPTY_FILE_NOT_ALLOWED);
+        }
 
         var contentType = request.getContentType();
         var documentType = request.getDocumentType();
@@ -688,6 +692,12 @@ public class UriBuilderService {
         } catch (MimeTypeException exception) {
             return "";
         }
+    }
+
+    private static boolean isEmptyDigest(String digest) {
+        if (digest == null) return false;
+        String trimmedDigest = digest.trim();
+        return trimmedDigest.equals(MD5_EMPTY) || trimmedDigest.equals(SHA256_EMPTY);
     }
 
 }

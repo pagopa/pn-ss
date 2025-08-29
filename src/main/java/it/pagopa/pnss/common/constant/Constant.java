@@ -46,4 +46,9 @@ public final class Constant {
     public static final String ARUBA ="ARUBA";
     public static final String NAMIRIAL ="NAMIRIAL";
     public static final String DUMMY ="DUMMY";
+
+    //digests
+    public static final String MD5_EMPTY = "1B2M2Y8AsgTpgAmY7PhCfg==";
+    public static final String SHA256_EMPTY= "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
+
 }

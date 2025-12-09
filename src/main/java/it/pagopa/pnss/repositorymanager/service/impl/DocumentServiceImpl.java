@@ -28,7 +28,6 @@ import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
-import org.apache.tika.utils.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -196,7 +195,8 @@ public class DocumentServiceImpl implements DocumentService {
                 .flatMap(documentEntityStored -> processDocumentEntity(documentEntityStored,oldState,documentChanges,documentKey))
             .flatMap(documentEntityStored -> {
                 if (!ignoredUpdateMetadataHandler.isToIgnore(documentKey) &&
-                        (!StringUtils.isBlank(documentChanges.getRetentionUntil()) || (documentChanges.getDocumentState() != null &&
+                        ((documentChanges.getRetentionUntil() != null && !(documentChanges.getRetentionUntil()).isBlank()) ||
+                                (documentChanges.getDocumentState() != null &&
                                 (documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
                                 documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))))) {
 
@@ -270,7 +270,7 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private static void updateDocumentState(DocumentEntity documentEntityStored, DocumentChanges documentChanges) {
-        if (!StringUtils.isBlank(documentChanges.getDocumentState())) {
+        if (documentChanges.getDocumentState() != null && !(documentChanges.getDocumentState()).isBlank()) {
             boolean statusFound = false;
             documentEntityStored.setDocumentState(documentChanges.getDocumentState());
 
@@ -293,7 +293,7 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private Mono<DocumentEntity> handleDocumentStatusTransition(DocumentEntity documentEntity,DocumentChanges documentChanges){
-        if (!StringUtils.isBlank(documentChanges.getDocumentState())) {
+        if (documentChanges.getDocumentState() != null && !(documentChanges.getDocumentState()).isBlank()) {
             var documentStatusChange = new DocumentStatusChange();
             documentStatusChange.setXPagopaExtchCxId(documentEntity.getClientShortCode());
             documentStatusChange.setProcessId("SS");

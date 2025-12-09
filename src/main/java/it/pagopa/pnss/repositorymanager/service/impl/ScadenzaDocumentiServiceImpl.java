@@ -12,7 +12,6 @@ import it.pagopa.pnss.repositorymanager.exception.InvalidRetentionException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.ScadenzaDocumentiService;
 import lombok.CustomLog;
-import org.apache.tika.utils.StringUtils;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -69,7 +68,7 @@ public class ScadenzaDocumentiServiceImpl implements ScadenzaDocumentiService {
                 .switchIfEmpty(Mono.error(new RepositoryManagerException("Input is null")))
                 .cast(ScadenzaDocumentiInput.class)
                 .flatMap(input -> {
-                    if (StringUtils.isBlank(input.getDocumentKey()) || input.getRetentionUntil() == null) {
+                    if (input.getRetentionUntil() == null || input.getDocumentKey().isBlank()) {
                         // controllo che il documentKey non sia vuoto
                         return Mono.error(new RepositoryManagerException("One of the attributes is null or empty"));
                     } else {

@@ -68,7 +68,7 @@ public class ScadenzaDocumentiServiceImpl implements ScadenzaDocumentiService {
                 .switchIfEmpty(Mono.error(new RepositoryManagerException("Input is null")))
                 .cast(ScadenzaDocumentiInput.class)
                 .flatMap(input -> {
-                    if (input.getRetentionUntil() == null || input.getDocumentKey().isBlank()) {
+                    if (input.getDocumentKey() == null || input.getDocumentKey().isBlank() || input.getRetentionUntil() == null) {
                         // controllo che il documentKey non sia vuoto
                         return Mono.error(new RepositoryManagerException("One of the attributes is null or empty"));
                     } else {

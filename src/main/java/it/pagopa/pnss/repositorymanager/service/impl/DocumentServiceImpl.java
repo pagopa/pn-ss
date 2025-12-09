@@ -195,10 +195,10 @@ public class DocumentServiceImpl implements DocumentService {
                 .flatMap(documentEntityStored -> processDocumentEntity(documentEntityStored,oldState,documentChanges,documentKey))
             .flatMap(documentEntityStored -> {
                 if (!ignoredUpdateMetadataHandler.isToIgnore(documentKey) &&
-                        ((documentChanges.getDocumentState() != null &&
+                        ((documentChanges.getRetentionUntil() != null && !(documentChanges.getRetentionUntil()).isBlank()) ||
+                                (documentChanges.getDocumentState() != null &&
                                 (documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
-                                documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))) ||
-                                !(documentChanges.getRetentionUntil()).isBlank())) {
+                                documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))))) {
 
 		                   return retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId,
 		                           authApiKey,

@@ -304,9 +304,15 @@ Parameters:
     Type: String
     Description: 'Days parameter for restoring of Staging Buckets objects in Glacier archive'
 
-  PresignedUrlMinutesLifespan:
-    Type: String
-    Description: 'Minuti di validità dei pre-signed url prima della scadenza'
+  DurationMinutesUpload:
+    Type: Number
+    Description: 'Minuti di validità dei pre-signed url prima della scadenza per Upload'
+    Default: 60
+
+  DurationMinutesDownload:
+    Type: Number
+    Description: 'Minuti di validità dei pre-signed url prima della scadenza per Download'
+    Default: 60
 
   PnVPCDefaultSecurityGroup:
     Type: String
@@ -631,7 +637,8 @@ Resources:
         ContainerEnvEntry10: !Sub 'PnSsTableDocumentiStreamArn=${PnSsTableDocumentiStreamArn}'
         ContainerEnvEntry11: !Sub 'PnSsTableDocumentiStreamMetadatiTable=${PnSsTableDocumentiStreamMetadatiTable}'
         ContainerEnvEntry12: !Sub 'PnSsQueueNameStagingBucket=${PnSsQueueNameStagingBucket}'
-        ContainerEnvEntry20: !Sub 'pst=${PresignedUrlMinutesLifespan}'
+        ContainerEnvEntry19: !Sub 'DurationMinutesUpload=${DurationMinutesUpload}'
+        ContainerEnvEntry20: !Sub 'DurationMinutesDownload=${DurationMinutesDownload}'
         ContainerEnvEntry21: !Sub 'stayHotTime=${PnSsUriBuilderstayHotTime}'
         ContainerEnvEntry22: 'PnSsBucketLockRetentionMode=GOVERNANCE'
         ContainerEnvEntry23: !Sub 'PnSsPreloadedDocsRetentionDays=${PnSsPreloadedDocsRetentionDays}'

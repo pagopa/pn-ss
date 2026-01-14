@@ -109,6 +109,7 @@ public class TransformationService {
     }
 
 
+    // Lasciato per evitare problemi di compilazione, verrà rimosso nel prossimo step e sostituito con handleNextTransformation
     /*
      * Conclude il processo di trasformazione:
      *     - Determina il tipo di trasformazione attuale rimuovendo il prefisso "Transformation-" dal tag
@@ -133,6 +134,58 @@ public class TransformationService {
                 .then();
     }
 
+    /*
+     * Nuova gestione della catena di trasformazioni, sostuisce il vecchio "endTransformation".
+     * Non viene quindi interrotto il flusso alla prima trasformazione da applicare, ma
+     * viene controllato se ci sono altre trasformazioni da applicare dal documentType.
+     * Ogni trasformazione viene pubblicata sulla coda, ma SOLO alla fine di tutte le trasformazioni
+     * viene caricato il file nel bucket finale di destinazione:
+     *  - Determina il tipo di trasformazione attuale rimuovendo il prefisso "Transformation-" dal tag
+     *  - Verifica se la trasformazione è presente nella lista delle trasformazioni previste
+     *  - Verifica se è presente un'ulteriore trasformazione dopo quella corrente:
+     *      - Se si, controlla se è già presente un file con la stessa trasformazione con tag OK sul bucket finale
+     *        (meccanismo di idempotenza) e pubblica la trasformazione sulla coda. Il "ciclo" ricomincia
+     *      - Se no, verifica che il file sia già nel bucket finale:
+     *          - Se si, lo rimuove dal bucket temporaneo
+     *          - Se no, lo carica nel bucket finale e poi lo rimuove dal bucket temporaneo
+     */
+    private Mono<Void> handleNextTransformation(String tagKey, String fileKey, String sourceBucket, List<String> transformations, String docContentType) {
+        String transformationType = tagKey.replace(TRANSFORMATION_TAG_PREFIX, "");
+        return Mono.just(transformationType)
+                .filter(transformations::contains)
+                .switchIfEmpty(Mono.fromRunnable(() -> log.warn("Transformation {} is not recognized in the transformation list.", transformationType)))
+                .flatMap(currentTransformation -> {
+                    int currentIndex = transformations.indexOf(currentTransformation);
+                    int nextIndex = currentIndex + 1;
+                    log.info("Transformation={} completed for file {}", currentTransformation, fileKey);
+                    // esiste una trasformazione successiva?
+                    if (nextIndex < transformations.size()) {
+                        String nextTransformation = transformations.get(nextIndex);
+                        log.info("Next transformation {} detected for file {}", nextTransformation, fileKey);
+                        // richiamiamo canBeTransformed per garantire idempotenza in caso di doppio tag OK, controlliamo quindi se già è presente nel bucket finale
+                        return canBeTransformed(fileKey, sourceBucket, nextTransformation)
+                                .flatMap(canTransform -> {
+                                    if (Boolean.TRUE.equals(canTransform)) {
+                                        log.info("Publishing next transformation {} for file {}", nextTransformation, fileKey);
+                                        return publishTransformationOnQueue(fileKey, sourceBucket, nextTransformation, docContentType);
+                                    }
+                                    log.info("Skipping transformation {} for file {} already processed", nextTransformation, fileKey);
+                                    return Mono.empty();
+                                });
+                    }
+                    // se non ci sono altre trasformazioni nella catena
+                    log.info("Last transformation {} completed for file {}", currentTransformation, fileKey);
+                    return isAlreadyInBucket(fileKey)
+                            .flatMap(isInFinalBucket -> {
+                                if (Boolean.TRUE.equals(isInFinalBucket)) {
+                                    log.info("File {} already in final bucket, removing from staging", fileKey);
+                                    return removeObjectFromStagingBucket(fileKey, sourceBucket);
+                                }
+                                log.info("Uploading file {} to final bucket", fileKey);
+                                return uploadToFinalBucket(fileKey, docContentType, sourceBucket);
+                            });
+                }).then();
+    }
 
     // Invio sulla coda di trasformazione
     private Mono<SendMessageResponse> publishTransformationOnQueue(String fileKey, String sourceBucket,

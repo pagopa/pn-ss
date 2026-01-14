@@ -214,8 +214,8 @@ paths:
           - _signatureInfo_: informazioni necessarie per firmare digitalmente, per conto <br/>
             del client, i file caricati. <br/>
           - _destination_: informazioni necessarie a notificare eventi al client.
-          - _durationSecondsUpload_: tempo di scadenza (in secondi) della presigned url generata specifica per l'operazione di Upload di un documento
-          - _durationSecondsDownload_: tempo di scadenza (in secondi) della presigned url generata specifica per l'operazione di Download di un documento
+          - _durationMinutesUpload_: tempo di scadenza (in minuti) della presigned url generata specifica per l'operazione di Upload di un documento
+          - _durationMinutesDownload_: tempo di scadenza (in minuti) della presigned url generata specifica per l'operazione di Download di un documento
       tags:
         - cfg
       parameters:
@@ -1044,12 +1044,12 @@ components:
             sqsUrl:
               type: string
               description: URL della coda SQS a cui contattare il client
-        durationSecondsUpload:
+        durationMinutesUpload:
           type: number
-          description: Scadenza dell'URL in secondi per l'operazione di upload
-        durationSecondsDownload:
+          description: Scadenza dell'URL in minuti per l'operazione di upload
+        durationMinutesDownload:
           type: number
-          description: Scadenza dell'URL in secondi per l'operazione di download
+          description: Scadenza dell'URL in minuti per l'operazione di download
 
     DocumentTypesConfigurations: 
       type: object

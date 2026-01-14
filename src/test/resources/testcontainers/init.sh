@@ -37,6 +37,7 @@ SQS_QUEUES=(
   "pn-ss-transformation-sign-and-timemark-queue"
   "pn-ss-transformation-sign-queue"
   "pn-ss-transformation-raster-queue"
+  "pn-ss-transformation-normalizer-queue"
 )
 
 DYNAMODB_TABLES=(
@@ -565,7 +566,8 @@ TRANSFORMATION_CONFIG='{
                          "DUMMY": "pn-ss-transformation-dummy-queue",
                          "SIGN_AND_TIMEMARK": "pn-ss-transformation-sign-and-timemark-queue",
                          "SIGN": "pn-ss-transformation-sign-queue",
-                         "RASTER": "pn-ss-transformation-raster-queue"
+                         "RASTER": "pn-ss-transformation-raster-queue",
+                         "NORMALIZATION": "pn-ss-transformation-normalizer-queue"
                        }'
 
 

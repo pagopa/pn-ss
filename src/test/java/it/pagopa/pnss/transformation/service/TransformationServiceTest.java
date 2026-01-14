@@ -27,11 +27,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -49,6 +51,8 @@ import static it.pagopa.pnss.configurationproperties.TransformationProperties.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static it.pagopa.pnss.transformation.utils.TransformationUtils.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -86,6 +90,8 @@ class TransformationServiceTest {
     private static final String SIGN_AND_TIMEMARK = "SIGN_AND_TIMEMARK";
     private static final String SIGN = "SIGN";
     private static final String DUMMY = "DUMMY";
+    private static final String RASTERIZATION = "RASTER";
+    private static final String NORMALIZATION = "NORMALIZATION";
     private static final String QUEUE_NAME="queue";
 
 
@@ -372,6 +378,45 @@ class TransformationServiceTest {
         StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
     }
 
+    //questo test è SOLO per il metodo handleNextTransformation, non testa tutto il flusso ne i tag, ma solo la catena
+    @ParameterizedTest
+    @MethodSource("handleNextTransformationArgs")
+    void handleNextTransformation_Chain_Ok(List<String> transformations, String currentTransformation) {
+        //GIVEN
+        String sourceBucket = bucketName.ssStageName();
+        String contentType = "application/pdf";
+        int currentIndex = transformations.indexOf(currentTransformation);
+        boolean isLastTransformation = currentIndex == transformations.size() - 1;
+
+        putObjectInBucket(FILE_KEY, sourceBucket, new byte[10]);
+
+        // WHEN
+        Mono<Void> transformationMono = invokeHandleNextTransformation(TRANSFORMATION_TAG_PREFIX + currentTransformation, FILE_KEY, sourceBucket, transformations, contentType);
+        //THEN
+        // nessun errore nella creazione dell'oggetto
+        StepVerifier.create(transformationMono).verifyComplete();
+        if (!isLastTransformation) {
+            // controlla che sia stato pubblicato il messaggio della prossima trasformazione
+            ArgumentCaptor<TransformationMessage> messageCaptor = ArgumentCaptor.forClass(TransformationMessage.class);
+            verify(sqsService, times(1)).send(any(), messageCaptor.capture());
+
+            TransformationMessage sentMessage = messageCaptor.getValue();
+            assertNotNull(sentMessage);
+            assertEquals(transformations.get(currentIndex + 1), sentMessage.getTransformationType());
+
+            // il file non deve essere caricato nel bucket finale (solo alla fine dell'ultima)
+            verify(s3Service, never()).putObject(any(), any(), any(), eq(bucketName.ssHotName()));
+        } else {
+            // ultima trasformazione: il file deve essere caricato nel bucket finale
+            verify(s3Service, times(1)).putObject(eq(FILE_KEY), any(), eq(contentType), eq(bucketName.ssHotName()));
+        }
+    }
+
+
+    private Mono<Void> invokeHandleNextTransformation(String tagKey, String fileKey, String sourceBucket, List<String> transformations, String contentType) {
+        return ReflectionTestUtils.invokeMethod(transformationService, "handleNextTransformation", tagKey, fileKey, sourceBucket, transformations, contentType);
+    }
+
     private TransformationMessage createTransformationMessage(String transformationType, String bucketName, String contentType, String fileKey) {
         it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage transformationMessage = new it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage();
         transformationMessage.setFileKey(fileKey);
@@ -447,6 +492,13 @@ class TransformationServiceTest {
     private static Stream<Arguments> provideSignAndTimemarkArgs() {
         return Stream.of(Arguments.of(SIGN_AND_TIMEMARK, true), Arguments.of(SIGN, false));
     }
+
+    static Stream<Arguments> handleNextTransformationArgs() {
+        List<String> chain = List.of(RASTERIZATION, NORMALIZATION, DUMMY, SIGN_AND_TIMEMARK);
+        return chain.stream().map(current -> Arguments.of(chain, current));
+    }
+
+
 
 
 }

@@ -7,6 +7,7 @@ import it.pagopa.pnss.transformation.model.dto.S3BucketOriginDetail;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.transformation.service.TransformationService;
+import it.pagopa.pnss.transformation.utils.TransformationUtils;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -31,7 +32,6 @@ public class TransformationHandler {
     private final Semaphore signAndTimemarkSemaphore;
     private final Semaphore signSemaphore;
     private final S3Service s3Service;
-    private static final String EVENT_OBJECT_CREATED_PUT = "PutObject";
     @Value("${pn.ss.transformation.queues.sign-and-timemark}")
     private String signAndTimemarkQueueName;
     @Value("${pn.ss.transformation.queues.sign}")
@@ -63,7 +63,7 @@ public class TransformationHandler {
         String eventName = s3EventNotificationMessage.getEventNotificationDetail().getReason();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(PROCESS_TRANSFORMATION_EVENT);
-        Mono<Boolean> shouldSkipProcess = (EVENT_OBJECT_CREATED_PUT.equals(eventName != null ? eventName : ""))
+        Mono<Boolean> shouldSkipProcess = (TransformationUtils.PUT_OBJECT_REASON.equals(eventName != null ? eventName : ""))
                 ? hasMultipleVersions(bucketName, fileKey)
                 : Mono.just(false);
         MDCUtils.addMDCToContextAndExecute(

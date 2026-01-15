@@ -577,6 +577,7 @@ class UriBuilderServiceDownloadTest {
         userConfiguration.setApiKey(X_API_KEY_VALUE);
         userConfiguration.setCanReadTags(true);
         userConfiguration.setCanRead(Collections.singletonList(PN_AAR));
+        userConfiguration.setDurationMinutesDownload(new BigDecimal(45));
         userConfig.setUserConfiguration(userConfiguration);
 
         DocumentInput d = new DocumentInput();

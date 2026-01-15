@@ -59,6 +59,9 @@ public class UriBuilderService {
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
 
+    @Value("${uri.builder.presigned.url.duration.minutes.download}")
+    BigDecimal durationMinutesDownload;
+
     @Value("${uri.builder.stay.Hot.Bucket.tyme.days}")
     Integer stayHotTime;
 
@@ -155,20 +158,20 @@ public class UriBuilderService {
                 .flatMap(validatedRequest -> {
                     // Verifica dei permessi di creazione
                     return validationField(contentType, documentType, xTraceIdValue).then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
-                            .retryWhen(gestoreRepositoryRetryStrategy)
-                            .handle((userConfiguration, synchronousSink) -> {
-                                if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
-                                    synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                            String.format("Client '%s' does not have privilege to create document type '%s'",
-                                                    xPagopaSafestorageCxId, documentType)));
-                                }  else if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty() && !Boolean.TRUE.equals(userConfiguration.getUserConfiguration().getCanWriteTags())) {
-                                    synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                            String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
-                                } else {
-                                    synchronousSink.next(userConfiguration);
-                                }
-                            })
-                               .flatMap(userConfiguration -> {
+                                    .retryWhen(gestoreRepositoryRetryStrategy)
+                                    .handle((userConfiguration, synchronousSink) -> {
+                                        if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
+                                            synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                                    String.format("Client '%s' does not have privilege to create document type '%s'",
+                                                            xPagopaSafestorageCxId, documentType)));
+                                        }  else if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty() && !Boolean.TRUE.equals(userConfiguration.getUserConfiguration().getCanWriteTags())) {
+                                            synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                                    String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
+                                        } else {
+                                            synchronousSink.next(userConfiguration);
+                                        }
+                                    })
+                                    .flatMap(userConfiguration -> {
                                         // Creazione del documento con o senza tags
                                         var fileExtension = getFileExtension(contentType);
                                         var documentKeyTmp = String.format("%s%s",
@@ -224,19 +227,19 @@ public class UriBuilderService {
         if(tags == null) {
             tags = Collections.emptyMap();
         }
-            // Verifica MaxTagsPerRequest
-            if (tags.size() > indexingConfiguration.getIndexingLimits().getMaxTagsPerRequest()) {
-                return Mono.error(new IndexingLimitException("MaxTagsPerRequest", tags.size(), indexingConfiguration.getIndexingLimits().getMaxTagsPerRequest()));
-            }
-
-            // Verifica MaxValuesPerTagPerRequest
-            for (Map.Entry<String, List<String>> entry : tags.entrySet()) {
-                if (entry.getValue().size() > indexingConfiguration.getIndexingLimits().getMaxValuesPerTagPerRequest()) {
-                    return Mono.error(new IndexingLimitException("MaxValuesPerTagPerRequest", entry.getValue().size(), indexingConfiguration.getIndexingLimits().getMaxValuesPerTagPerRequest()));
-                }
-            }
-            return Mono.just(request);
+        // Verifica MaxTagsPerRequest
+        if (tags.size() > indexingConfiguration.getIndexingLimits().getMaxTagsPerRequest()) {
+            return Mono.error(new IndexingLimitException("MaxTagsPerRequest", tags.size(), indexingConfiguration.getIndexingLimits().getMaxTagsPerRequest()));
         }
+
+        // Verifica MaxValuesPerTagPerRequest
+        for (Map.Entry<String, List<String>> entry : tags.entrySet()) {
+            if (entry.getValue().size() > indexingConfiguration.getIndexingLimits().getMaxValuesPerTagPerRequest()) {
+                return Mono.error(new IndexingLimitException("MaxValuesPerTagPerRequest", entry.getValue().size(), indexingConfiguration.getIndexingLimits().getMaxValuesPerTagPerRequest()));
+            }
+        }
+        return Mono.just(request);
+    }
 
 
     private Mono<Boolean> validationField(String contentType, String documentType, String xTraceIdValue) {
@@ -315,35 +318,35 @@ public class UriBuilderService {
         }
 
         return Mono.just(checksumType)
-                   .flatMap(checksumTypeToEvaluate -> {
+                .flatMap(checksumTypeToEvaluate -> {
 
-                       PutObjectRequest.Builder putObjectRequest = PutObjectRequest.builder()
-                               .bucket(bucketName)
-                               .key(documentKey)
-                               .contentType(contenType)
-                               .metadata(secret)
-                               .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
-                                       queryParamPresignedUrlTraceId,
-                                       xTraceIdValue));
+                    PutObjectRequest.Builder putObjectRequest = PutObjectRequest.builder()
+                            .bucket(bucketName)
+                            .key(documentKey)
+                            .contentType(contenType)
+                            .metadata(secret)
+                            .overrideConfiguration(awsRequestOverrideConfiguration -> awsRequestOverrideConfiguration.putRawQueryParameter(
+                                    queryParamPresignedUrlTraceId,
+                                    xTraceIdValue));
 
-                       if (ChecksumEnum.MD5.name().equals(checksumTypeToEvaluate.name())) {
-                           return Mono.just(putObjectRequest.contentMD5(checksumValue)
-                                                            .build());
-                       } else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank() && secret != null &&
-                                  ChecksumEnum.SHA256.name().equals(checksumTypeToEvaluate.name())) {
-                           return Mono.just(putObjectRequest.checksumSHA256(checksumValue)
-                                                            .build());
-                       }else if (ChecksumEnum.NONE.name().equals(checksumTypeToEvaluate.name())){
-                           return Mono.just(putObjectRequest.build());
-                       }else {
-                            return Mono.error(new ChecksumException(
-                                   "Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
-                       }
-                   })
-                   .map(putObjectRequest -> PutObjectPresignRequest.builder()
-                                                                   .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
-                                                                   .putObjectRequest(putObjectRequest)
-                                                                   .build())
+                    if (ChecksumEnum.MD5.name().equals(checksumTypeToEvaluate.name())) {
+                        return Mono.just(putObjectRequest.contentMD5(checksumValue)
+                                .build());
+                    } else if (headerChecksumSha256 != null && !headerChecksumSha256.isBlank() && secret != null &&
+                            ChecksumEnum.SHA256.name().equals(checksumTypeToEvaluate.name())) {
+                        return Mono.just(putObjectRequest.checksumSHA256(checksumValue)
+                                .build());
+                    }else if (ChecksumEnum.NONE.name().equals(checksumTypeToEvaluate.name())){
+                        return Mono.just(putObjectRequest.build());
+                    }else {
+                        return Mono.error(new ChecksumException(
+                                "Non e' stato possibile impostare il ChecksumValue nella PutObjectRequest"));
+                    }
+                })
+                .map(putObjectRequest -> PutObjectPresignRequest.builder()
+                        .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
+                        .putObjectRequest(putObjectRequest)
+                        .build())
                 .flatMap(putObjectPresignRequest -> {
                     log.info(CLIENT_METHOD_INVOCATION, PRESIGN_PUT_OBJECT, putObjectPresignRequest);
                     return Mono.just(s3Presigner.presignPutObject(putObjectPresignRequest))
@@ -380,10 +383,16 @@ public class UriBuilderService {
                 .flatMap(tuple -> {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
                     Document document = tuple.getT2();
-                    return handleDocumentState(document, userConfigurationResponse);
+
+                    // Recuperiamo la durata dalla configurazione utente per il download
+                    BigDecimal finalDurationDownload = userConfigurationResponse.getUserConfiguration().getDurationMinutesDownload() != null
+                            ? userConfigurationResponse.getUserConfiguration().getDurationMinutesDownload()
+                            : this.durationMinutesDownload;
+
+                    return handleDocumentState(document, userConfigurationResponse)
+                            .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly, finalDurationDownload)
+                                    .flatMap(fileDownloadResponse -> setFileTags(tags, doc.getDocumentKey(), xPagopaSafestorageCxId, fileDownloadResponse)));
                 })
-                .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly)
-                        .flatMap(fileDownloadResponse -> setFileTags(tags, doc.getDocumentKey(), xPagopaSafestorageCxId, fileDownloadResponse)))
                 .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))
                 .onErrorResume(InvalidConfigurationException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, throwable.getMessage())))
                 .doOnSuccess(fileDownloadResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_DOWNLOAD_FILE, fileDownloadResponse));
@@ -535,13 +544,13 @@ public class UriBuilderService {
     }
 
     @NotNull
-    private Mono<FileDownloadResponse> getFileDownloadResponse(String fileKey, String xTraceIdValue, Document doc, Boolean metadataOnly) {
+    private Mono<FileDownloadResponse> getFileDownloadResponse(String fileKey, String xTraceIdValue, Document doc, Boolean metadataOnly, BigDecimal finalDurationDownload) {
         final String GET_FILE_DOWNLOAD_RESPONSE = "UriBuilderService.getFileDownloadResponse()";
 
         log.debug(LogUtils.INVOKING_METHOD, GET_FILE_DOWNLOAD_RESPONSE, Stream.of(fileKey, xTraceIdValue, doc, metadataOnly).toList());
         // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
         // non viene creata e viene ritornato un Mono.empty()
-        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly)
+        return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly, finalDurationDownload)
                 .map(fileDownloadInfo -> new FileDownloadResponse().download(fileDownloadInfo))
                 .switchIfEmpty(Mono.just(new FileDownloadResponse()))
                 .map(fileDownloadResponse -> {
@@ -569,12 +578,12 @@ public class UriBuilderService {
         return Mono.just(true);
     }
 
-    public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly ) throws S3BucketException.NoSuchKeyException{
+    public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly, BigDecimal finalDurationDownload ) throws S3BucketException.NoSuchKeyException{
         log.debug(LogUtils.INVOKING_METHOD, "UriBuilderService.createFileDownloadInfo()", metadataOnly);
         if (Boolean.TRUE.equals(metadataOnly))
             return Mono.empty();
         if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
-            return getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue);
+            return getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue, finalDurationDownload);
         } else {
             return recoverDocumentFromBucket(bucketName.ssHotName(), fileKey);
         }
@@ -627,7 +636,7 @@ public class UriBuilderService {
                 });
     }
 
-    private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String keyName, String xTraceIdValue) throws S3BucketException.NoSuchKeyException {
+    private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String keyName, String xTraceIdValue, BigDecimal finalDurationDownload) throws S3BucketException.NoSuchKeyException {
 
         log.debug(LogUtils.INVOKING_METHOD, GET_PRESIGNED_URL, Stream.of(bucketName, keyName, xTraceIdValue).toList());
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
@@ -638,7 +647,7 @@ public class UriBuilderService {
                         xTraceIdValue))
                 .build();
 
-         return s3Service.presignGetObject(getObjectRequest, Duration.ofMinutes(Long.parseLong(duration)))
+        return s3Service.presignGetObject(getObjectRequest, Duration.ofMinutes(finalDurationDownload.longValue()))
                 .map(presignedRequest -> new FileDownloadInfo().url(presignedRequest.url().toString()))
                 //Eccezioni S3
                 .onErrorResume(S3Exception.class, ase ->

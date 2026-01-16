@@ -1046,9 +1046,11 @@ components:
               description: URL della coda SQS a cui contattare il client
         durationMinutesUpload:
           type: number
+          format: decimal32
           description: Scadenza dell'URL in minuti per l'operazione di upload
         durationMinutesDownload:
           type: number
+          format: decimal32
           description: Scadenza dell'URL in minuti per l'operazione di download
 
     DocumentTypesConfigurations: 

@@ -162,24 +162,24 @@ public class UriBuilderService {
                         .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
                             .retryWhen(gestoreRepositoryRetryStrategy)
                             .flatMap(userConfiguration -> {
-                                var config = userConfiguration.getUserConfiguration();
-                                if (!config.getCanCreate().contains(documentType)) {
+                                //var config = userConfiguration.getUserConfiguration();
+                                if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
                                     return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
                                             String.format("Client '%s' does not have privilege to create document type '%s'",
                                                     xPagopaSafestorageCxId, documentType)));
                                 }
                                 if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty()
-                                        && !Boolean.TRUE.equals(config.getCanWriteTags())) {
+                                        && !Boolean.TRUE.equals(userConfiguration.getUserConfiguration().getCanWriteTags())) {
                                     return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
                                             String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
                                 }
                                 // Calcolo Durata (Portandola nello scope del flatMap)
-                                BigDecimal finalDurationUpload = (config.getDurationMinutesUpload() != null)
-                                        ? config.getDurationMinutesUpload()
+                                BigDecimal finalDurationUpload = (userConfiguration.getUserConfiguration().getDurationMinutesUpload() != null)
+                                        ? userConfiguration.getUserConfiguration().getDurationMinutesUpload()
                                         : this.durationMinutesUpload;
-                                log.info("createUriForUploadFile - name: ", config.getApiKey());
-                                log.info("createUriForUploadFile - finalDurationUpload: ", finalDurationUpload);
-                                log.info("createUriForUploadFile - this.durationMinutesUpload: ", this.durationMinutesUpload);
+                                log.info("createUriForUploadFile - name: {}", userConfiguration.getUserConfiguration().getApiKey());
+                                log.info("createUriForUploadFile - finalDurationUpload: {}", finalDurationUpload);
+                                log.info("createUriForUploadFile - this.durationMinutesUpload: {}", this.durationMinutesUpload);
                                 // Creazione del documento con o senza tags
                                 var fileExtension = getFileExtension(contentType);
                                 var documentKeyTmp = String.format("%s%s",
@@ -283,7 +283,7 @@ public class UriBuilderService {
     private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue, BigDecimal finalDurationUpload) {
 
         log.debug(LogUtils.INVOKING_METHOD + ARG, BUILDS_UPLOAD_URL, document, checksumValue);
-        log.info("buildsUploadUrl - finalDurationUpload: ", finalDurationUpload);
+        log.info("buildsUploadUrl - finalDurationUpload: {}", finalDurationUpload);
         var documentType = document.getDocumentType();
         var documentState = document.getDocumentState();
         var documentKey = document.getDocumentKey();
@@ -319,7 +319,7 @@ public class UriBuilderService {
                                                        String checksumValue, String xTraceIdValue, BigDecimal finalDurationUpload) {
 
         log.info(LogUtils.INVOKING_METHOD, SIGN_BUCKET, Stream.of(bucketName, documentKey, documentState, documentType, contenType, checksumType, checksumValue).toList());
-        log.info("signBucket - finalDurationUpload: ", finalDurationUpload);
+        log.info("signBucket - finalDurationUpload: {}", finalDurationUpload);
 
         if (queryParamPresignedUrlTraceId == null || queryParamPresignedUrlTraceId.isBlank()) {
             return Mono.error(new QueryParamException("Property \"queryParam.presignedUrl.traceId\" non impostata"));

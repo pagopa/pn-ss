@@ -72,7 +72,7 @@ class UriBuilderServiceDownloadTest {
     private static final String X_QUERY_PARAM_URL_VALUE= "queryParamPresignedUrlTraceId_value";
 
     private static final UserConfigurationResponse USER_CONFIGURATION_RESPONSE =
-            new UserConfigurationResponse().userConfiguration(new UserConfiguration().apiKey(X_API_KEY_VALUE));
+            new UserConfigurationResponse().userConfiguration(new UserConfiguration().apiKey(X_API_KEY_VALUE).durationMinutesDownload(15));
 
     private final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private static final String SEPARATORE = "~";
@@ -186,7 +186,7 @@ class UriBuilderServiceDownloadTest {
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
         userConfiguration.setApiKey(X_API_KEY_VALUE);
-        userConfiguration.setDurationMinutesDownload(new BigDecimal(15));
+        userConfiguration.setDurationMinutesDownload(15);
         UserConfigurationResponse userConfig = new UserConfigurationResponse();
         userConfig.setUserConfiguration(userConfiguration);
 
@@ -279,7 +279,7 @@ class UriBuilderServiceDownloadTest {
 
         RestoreObjectResponse restoreObjectResponse = RestoreObjectResponse.builder().build();
         when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.just(restoreObjectResponse));
-        BigDecimal durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
+        Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("createFileDownloadInfoOk - durationDownload: ", durationDownload);
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false, durationDownload);
         StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
@@ -298,7 +298,7 @@ class UriBuilderServiceDownloadTest {
         HeadObjectResponse headObjectResponse = (HeadObjectResponse) HeadObjectResponse.builder().sdkHttpResponse(sdkHttpResponse).build();
         when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(headObjectResponse));
         when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
-        BigDecimal durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
+        Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("recoverDocumentFromBucketRestoreAlreadyInProgress - durationDownload: ", durationDownload);
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false, durationDownload);
         StepVerifier.create(testMono)
@@ -315,7 +315,7 @@ class UriBuilderServiceDownloadTest {
         when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(headObjectResponse));
         when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
 
-        BigDecimal durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
+        Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("recoverDocumentFromBucketRestoreAlreadyInProgressWithNegativeElapsedTime - durationDownload: ", durationDownload);
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false, durationDownload);
         StepVerifier.create(testMono)
@@ -328,7 +328,7 @@ class UriBuilderServiceDownloadTest {
         AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("NoSuchKey").build();
         when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()));
 
-        BigDecimal durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
+        Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("recoverDocumentFromBucketNoSuchKey - durationDownload: ", durationDownload);
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false, durationDownload);
         StepVerifier.create(testMono).expectError(S3BucketException.NoSuchKeyException.class).verify();
@@ -340,7 +340,7 @@ class UriBuilderServiceDownloadTest {
         AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("Errore Generico").build();
         when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).statusCode(500).build()));
 
-        BigDecimal durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
+        Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("recoverDocumentFromBucketError - durationDownload: ", durationDownload);
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false, durationDownload);
         StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
@@ -352,7 +352,7 @@ class UriBuilderServiceDownloadTest {
         SdkClientException sdkClientException = new SdkClientException("SdkClientException");
         when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(sdkClientException));
 
-        BigDecimal durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
+        Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("recoverDocumentFromBucketSdkClientException - durationDownload: ", durationDownload);
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", FREEZED, false, durationDownload);
         StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
@@ -364,7 +364,7 @@ class UriBuilderServiceDownloadTest {
         AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("NoSuchKey").build();
         Mockito.doReturn(Mono.error(S3Exception.builder().awsErrorDetails(awsErrorDetails).build())).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
 
-        BigDecimal durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
+        Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("getPresignedUrlNoSuchKey - durationDownload: ", durationDownload);
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", AVAILABLE, false, durationDownload);
         StepVerifier.create(testMono).expectError(S3BucketException.NoSuchKeyException.class).verify();
@@ -376,7 +376,7 @@ class UriBuilderServiceDownloadTest {
         AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("Errore Generico").errorMessage("Errore Generico").build();
         Mockito.doReturn(Mono.error(S3Exception.builder().awsErrorDetails(awsErrorDetails).statusCode(500).build())).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
 
-        BigDecimal durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
+        Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("getPresignedUrlError - durationDownload: ", durationDownload);
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", AVAILABLE, false, durationDownload);
         StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
@@ -388,7 +388,7 @@ class UriBuilderServiceDownloadTest {
         SdkClientException sdkClientException = new SdkClientException("SdkClientException");
         Mockito.doReturn(Mono.error(sdkClientException)).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
 
-        BigDecimal durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
+        Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("getPresignedUrlSdkClientException - durationDownload: ", durationDownload);
         var testMono = uriBuilderService.createFileDownloadInfo("fileKey", "xTraceIdValue", AVAILABLE, false, durationDownload);
         StepVerifier.create(testMono).expectError(ResponseStatusException.class).verify();
@@ -464,7 +464,7 @@ class UriBuilderServiceDownloadTest {
     @Test
     void testDocumentMissingFromBucketStaged() {
 
-        BigDecimal durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
+        Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("testDocumentMissingFromBucketStaged - durationDownload: ", durationDownload);
         doThrow(new S3BucketException.NoSuchKeyException("")).when(uriBuilderService).createFileDownloadInfo(any(), any(), any(), anyBoolean(),durationDownload);
 
@@ -577,7 +577,7 @@ class UriBuilderServiceDownloadTest {
         userConfiguration.setApiKey(X_API_KEY_VALUE);
         userConfiguration.setCanReadTags(true);
         userConfiguration.setCanRead(Collections.singletonList(PN_AAR));
-        userConfiguration.setDurationMinutesDownload(new BigDecimal(45));
+        userConfiguration.setDurationMinutesDownload(15);
         userConfig.setUserConfiguration(userConfiguration);
 
         DocumentInput d = new DocumentInput();
@@ -620,7 +620,7 @@ class UriBuilderServiceDownloadTest {
         userConfiguration.setApiKey(X_API_KEY_VALUE);
         userConfiguration.setCanReadTags(true);
         userConfiguration.setCanRead(Collections.singletonList(PN_AAR));
-        userConfiguration.setDurationMinutesDownload(new BigDecimal(45));
+        userConfiguration.setDurationMinutesDownload(15);
         userConfig.setUserConfiguration(userConfiguration);
 
         DocumentInput d = new DocumentInput();

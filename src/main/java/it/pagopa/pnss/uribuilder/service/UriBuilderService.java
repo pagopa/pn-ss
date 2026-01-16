@@ -60,7 +60,7 @@ public class UriBuilderService {
     String duration;
 
     @Value("${uri.builder.presigned.url.duration.minutes.download}")
-    BigDecimal durationMinutesDownload;
+    Integer durationMinutesDownload;
 
     @Value("${uri.builder.stay.Hot.Bucket.tyme.days}")
     Integer stayHotTime;
@@ -384,10 +384,15 @@ public class UriBuilderService {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
                     Document document = tuple.getT2();
 
+                    if(userConfigurationResponse != null && userConfigurationResponse.getUserConfiguration()!= null)
+                        log.info("createUriForDownloadFile - getDurationMinutesDownload(): {}", userConfigurationResponse.getUserConfiguration().getDurationMinutesDownload());
+
                     // Recuperiamo la durata dalla configurazione utente per il download
-                    BigDecimal finalDurationDownload = userConfigurationResponse.getUserConfiguration().getDurationMinutesDownload() != null
-                            ? userConfigurationResponse.getUserConfiguration().getDurationMinutesDownload()
+                    Integer finalDurationDownload = (userConfigurationResponse.getUserConfiguration().getDurationMinutesDownload() != null)
+                            ? (userConfigurationResponse.getUserConfiguration().getDurationMinutesDownload())
                             : this.durationMinutesDownload;
+                    log.info("createUriForDownloadFile - finalDurationDownload: {}", finalDurationDownload);
+                    log.info("createUriForDownloadFile - this.durationMinutesDownload: {}", this.durationMinutesDownload);
 
                     return handleDocumentState(document, userConfigurationResponse)
                             .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly, finalDurationDownload)
@@ -544,10 +549,12 @@ public class UriBuilderService {
     }
 
     @NotNull
-    private Mono<FileDownloadResponse> getFileDownloadResponse(String fileKey, String xTraceIdValue, Document doc, Boolean metadataOnly, BigDecimal finalDurationDownload) {
+    private Mono<FileDownloadResponse> getFileDownloadResponse(String fileKey, String xTraceIdValue, Document doc, Boolean metadataOnly, Integer finalDurationDownload) {
         final String GET_FILE_DOWNLOAD_RESPONSE = "UriBuilderService.getFileDownloadResponse()";
 
         log.debug(LogUtils.INVOKING_METHOD, GET_FILE_DOWNLOAD_RESPONSE, Stream.of(fileKey, xTraceIdValue, doc, metadataOnly).toList());
+        log.info("getFileDownloadResponse - finalDurationDownload: {}", finalDurationDownload);
+
         // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
         // non viene creata e viene ritornato un Mono.empty()
         return createFileDownloadInfo(fileKey, xTraceIdValue, doc.getDocumentState(), metadataOnly, finalDurationDownload)
@@ -578,8 +585,9 @@ public class UriBuilderService {
         return Mono.just(true);
     }
 
-    public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly, BigDecimal finalDurationDownload ) throws S3BucketException.NoSuchKeyException{
+    public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly, Integer finalDurationDownload ) throws S3BucketException.NoSuchKeyException{
         log.debug(LogUtils.INVOKING_METHOD, "UriBuilderService.createFileDownloadInfo()", metadataOnly);
+        log.info("createFileDownloadInfo - finalDurationDownload: {}", finalDurationDownload);
         if (Boolean.TRUE.equals(metadataOnly))
             return Mono.empty();
         if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
@@ -636,9 +644,10 @@ public class UriBuilderService {
                 });
     }
 
-    private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String keyName, String xTraceIdValue, BigDecimal finalDurationDownload) throws S3BucketException.NoSuchKeyException {
+    private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String keyName, String xTraceIdValue, Integer finalDurationDownload) throws S3BucketException.NoSuchKeyException {
 
         log.debug(LogUtils.INVOKING_METHOD, GET_PRESIGNED_URL, Stream.of(bucketName, keyName, xTraceIdValue).toList());
+        log.info("getPresignedUrl - finalDurationDownload: {}", finalDurationDownload);
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(keyName)

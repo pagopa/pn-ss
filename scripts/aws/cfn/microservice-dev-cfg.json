@@ -1,8 +1,8 @@
 {
   "Parameters": {
     "PnSsUriBuilderstayHotTime": "7",
-    "DurationMinutesUpload": 60,
-    "DurationMinutesDownload": 60,
+    "DurationMinutesUpload": "60",
+    "DurationMinutesDownload": "60",
     "PnSsGestoreRepositoryProtocol" : "http",
     "PnSsGestoreRepositoryPort" : "8080",
     "PnSsGestoreRepositoryPathGetDocument" : "/safestorage/internal/v1/documents",

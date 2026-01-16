@@ -177,7 +177,9 @@ public class UriBuilderService {
                                 BigDecimal finalDurationUpload = (config.getDurationMinutesUpload() != null)
                                         ? config.getDurationMinutesUpload()
                                         : this.durationMinutesUpload;
-
+                                log.info("createUriForUploadFile - name: ", config.getApiKey());
+                                log.info("createUriForUploadFile - finalDurationUpload: ", finalDurationUpload);
+                                log.info("createUriForUploadFile - this.durationMinutesUpload: ", this.durationMinutesUpload);
                                 // Creazione del documento con o senza tags
                                 var fileExtension = getFileExtension(contentType);
                                 var documentKeyTmp = String.format("%s%s",
@@ -281,7 +283,7 @@ public class UriBuilderService {
     private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue, BigDecimal finalDurationUpload) {
 
         log.debug(LogUtils.INVOKING_METHOD + ARG, BUILDS_UPLOAD_URL, document, checksumValue);
-
+        log.info("buildsUploadUrl - finalDurationUpload: ", finalDurationUpload);
         var documentType = document.getDocumentType();
         var documentState = document.getDocumentState();
         var documentKey = document.getDocumentKey();
@@ -317,6 +319,7 @@ public class UriBuilderService {
                                                        String checksumValue, String xTraceIdValue, BigDecimal finalDurationUpload) {
 
         log.info(LogUtils.INVOKING_METHOD, SIGN_BUCKET, Stream.of(bucketName, documentKey, documentState, documentType, contenType, checksumType, checksumValue).toList());
+        log.info("signBucket - finalDurationUpload: ", finalDurationUpload);
 
         if (queryParamPresignedUrlTraceId == null || queryParamPresignedUrlTraceId.isBlank()) {
             return Mono.error(new QueryParamException("Property \"queryParam.presignedUrl.traceId\" non impostata"));

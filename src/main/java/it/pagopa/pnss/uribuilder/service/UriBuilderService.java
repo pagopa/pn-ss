@@ -60,7 +60,7 @@ public class UriBuilderService {
     String duration;
 
     @Value("${uri.builder.presigned.url.duration.minutes.upload}")
-    BigDecimal durationMinutesUpload;
+    Integer durationMinutesUpload;
 
     @Value("${uri.builder.stay.Hot.Bucket.tyme.days}")
     Integer stayHotTime;
@@ -163,6 +163,12 @@ public class UriBuilderService {
                             .retryWhen(gestoreRepositoryRetryStrategy)
                             .flatMap(userConfiguration -> {
                                 //var config = userConfiguration.getUserConfiguration();
+                                log.info("DEBUG - UserConfigurationResponse: {}", userConfiguration);
+                                log.info("DEBUG - UserConfiguration: {}", userConfiguration.getUserConfiguration());
+                                if (userConfiguration.getUserConfiguration() != null) {
+                                    log.info("DEBUG - durationMinutesUpload Value: {}", userConfiguration.getUserConfiguration().getDurationMinutesUpload());
+                                }
+
                                 if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
                                     return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
                                             String.format("Client '%s' does not have privilege to create document type '%s'",
@@ -174,7 +180,7 @@ public class UriBuilderService {
                                             String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
                                 }
                                 // Calcolo Durata (Portandola nello scope del flatMap)
-                                BigDecimal finalDurationUpload = (userConfiguration.getUserConfiguration().getDurationMinutesUpload() != null)
+                                Integer finalDurationUpload = (userConfiguration.getUserConfiguration().getDurationMinutesUpload() != null)
                                         ? userConfiguration.getUserConfiguration().getDurationMinutesUpload()
                                         : this.durationMinutesUpload;
                                 log.info("createUriForUploadFile - name: {}", userConfiguration.getUserConfiguration().getApiKey());
@@ -280,7 +286,7 @@ public class UriBuilderService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue, BigDecimal finalDurationUpload) {
+    private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue, Integer finalDurationUpload) {
 
         log.debug(LogUtils.INVOKING_METHOD + ARG, BUILDS_UPLOAD_URL, document, checksumValue);
         log.info("buildsUploadUrl - finalDurationUpload: {}", finalDurationUpload);
@@ -316,7 +322,7 @@ public class UriBuilderService {
     private Mono<PresignedPutObjectRequest> signBucket(String bucketName, String documentKey,
                                                        String documentState, String documentType, String contenType,
                                                        Map<String, String> secret, DocumentType.ChecksumEnum checksumType,
-                                                       String checksumValue, String xTraceIdValue, BigDecimal finalDurationUpload) {
+                                                       String checksumValue, String xTraceIdValue, Integer finalDurationUpload) {
 
         log.info(LogUtils.INVOKING_METHOD, SIGN_BUCKET, Stream.of(bucketName, documentKey, documentState, documentType, contenType, checksumType, checksumValue).toList());
         log.info("signBucket - finalDurationUpload: {}", finalDurationUpload);

@@ -199,7 +199,7 @@ class UriBuilderUploadTest {
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
         userConfiguration.setApiKey(X_API_KEY_VALUE);
-        userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+        userConfiguration.setDurationMinutesUpload(45);
         userConfig.setUserConfiguration(userConfiguration);
 
         when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
@@ -219,7 +219,7 @@ class UriBuilderUploadTest {
         UserConfiguration userConfiguration = new UserConfiguration();
         userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
         userConfiguration.setApiKey(X_API_KEY_VALUE);
-        userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+        userConfiguration.setDurationMinutesUpload(45);
         userConfig.setUserConfiguration(userConfiguration);
 
         when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
@@ -261,7 +261,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
@@ -304,7 +304,7 @@ class UriBuilderUploadTest {
             userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(new ArrayList<>());
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
@@ -349,7 +349,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
@@ -396,7 +396,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
@@ -419,7 +419,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
@@ -441,7 +441,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             String tagValue = "ABCDEF";
@@ -469,7 +469,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
@@ -491,7 +491,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
@@ -524,7 +524,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
@@ -547,7 +547,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             String exceedingKey = tags.entrySet().stream()
@@ -574,7 +574,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
@@ -597,7 +597,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(canWriteTags);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
@@ -618,7 +618,7 @@ class UriBuilderUploadTest {
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_AAR));
             userConfiguration.setCanWriteTags(true);
-            userConfiguration.setDurationMinutesUpload(new BigDecimal(45));
+            userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));

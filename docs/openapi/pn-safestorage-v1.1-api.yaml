@@ -1045,10 +1045,12 @@ components:
               type: string
               description: URL della coda SQS a cui contattare il client
         durationMinutesUpload:
-          type: number
+          type: integer
+          format: int32
           description: Scadenza dell'URL in minuti per l'operazione di upload
         durationMinutesDownload:
-          type: number
+          type: integer
+          format: int32
           description: Scadenza dell'URL in minuti per l'operazione di download
 
     DocumentTypesConfigurations: 

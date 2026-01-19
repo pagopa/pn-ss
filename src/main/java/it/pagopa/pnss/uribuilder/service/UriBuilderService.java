@@ -59,6 +59,9 @@ public class UriBuilderService {
     @Value("${uri.builder.presigned.url.duration.minutes}")
     String duration;
 
+    @Value("${uri.builder.presigned.url.duration.minutes.upload}")
+    Integer durationMinutesUpload;
+
     @Value("${uri.builder.stay.Hot.Bucket.tyme.days}")
     Integer stayHotTime;
 
@@ -149,72 +152,82 @@ public class UriBuilderService {
         var secret = new ArrayList<String>();
         secret.add(generateSecret());
         var metadata = new HashMap<String, String>();
-        metadata.put("secret", secret.toString());
+        var secretString = secret.toString();
+        metadata.put("secret", secretString);
 
         return validateLimits(request)
-                .flatMap(validatedRequest -> {
+                .flatMap(validatedRequest ->
                     // Verifica dei permessi di creazione
-                    return validationField(contentType, documentType, xTraceIdValue).then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
+                     validationField(contentType, documentType, xTraceIdValue)
+                        .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
                             .retryWhen(gestoreRepositoryRetryStrategy)
-                            .handle((userConfiguration, synchronousSink) -> {
+                            .flatMap(userConfiguration -> {
+                                //var config = userConfiguration.getUserConfiguration();
+                                log.info("DEBUG - UserConfigurationResponse: {}", userConfiguration);
+                                log.info("DEBUG - UserConfiguration: {}", userConfiguration.getUserConfiguration());
+                                if (userConfiguration.getUserConfiguration() != null) {
+                                    log.info("DEBUG - durationMinutesUpload Value: {}", userConfiguration.getUserConfiguration().getDurationMinutesUpload());
+                                }
+
                                 if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
-                                    synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                    return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
                                             String.format("Client '%s' does not have privilege to create document type '%s'",
                                                     xPagopaSafestorageCxId, documentType)));
-                                }  else if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty() && !Boolean.TRUE.equals(userConfiguration.getUserConfiguration().getCanWriteTags())) {
-                                    synchronousSink.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                            String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
-                                } else {
-                                    synchronousSink.next(userConfiguration);
                                 }
-                            })
-                               .flatMap(userConfiguration -> {
-                                        // Creazione del documento con o senza tags
-                                        var fileExtension = getFileExtension(contentType);
-                                        var documentKeyTmp = String.format("%s%s",
-                                                GenerateRandoKeyFile.getInstance().createKeyName(documentType),
-                                                fileExtension);
-                                        DocumentInput documentInput = new DocumentInput().contentType(request.getContentType())
-                                                .documentKey(documentKeyTmp)
-                                                .documentState(initialNewDocumentState)
-                                                .clientShortCode(xPagopaSafestorageCxId)
-                                                .documentType(request.getDocumentType());
+                                if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty()
+                                        && !Boolean.TRUE.equals(userConfiguration.getUserConfiguration().getCanWriteTags())) {
+                                    return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                            String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
+                                }
+                                // Calcolo Durata (Portandola nello scope del flatMap)
+                                Integer finalDurationUpload = (userConfiguration.getUserConfiguration().getDurationMinutesUpload() != null)
+                                        ? userConfiguration.getUserConfiguration().getDurationMinutesUpload()
+                                        : this.durationMinutesUpload;
+                                log.info("createUriForUploadFile - name: {}", userConfiguration.getUserConfiguration().getApiKey());
+                                log.info("createUriForUploadFile - finalDurationUpload: {}", finalDurationUpload);
+                                log.info("createUriForUploadFile - this.durationMinutesUpload: {}", this.durationMinutesUpload);
+                                // Creazione del documento con o senza tags
+                                var fileExtension = getFileExtension(contentType);
+                                var documentKeyTmp = String.format("%s%s",
+                                            GenerateRandoKeyFile.getInstance().createKeyName(documentType), fileExtension);
 
-                                        return documentClientCall.postDocument(documentInput)
-                                                .retryWhen(Retry.max(10)
-                                                        .filter(DocumentkeyPresentException.class::isInstance)
-                                                        .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
-                                                            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Non è stato possibile produrre una chiave per user " + xPagopaSafestorageCxId);
-                                                        }))
-                                                .flatMap(insertedDocument -> buildsUploadUrl(insertedDocument.getDocument(),
-                                                        checksumValue, metadata, xTraceIdValue)
-                                                        .flatMap(presignedPutObjectRequest -> {
-                                                            if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty()) {
-                                                                // Chiamata a putTags usando documentKey ottenuto da postDocument
-                                                                TagsChanges tagsChanges = new TagsChanges().SET(validatedRequest.getTags());
-                                                                return tagsClientCall.putTags(insertedDocument.getDocument().getDocumentKey(), tagsChanges)
-                                                                        .doOnSuccess(tagsResponse -> log.info("PutTags successful for document key: {}", insertedDocument.getDocument().getDocumentKey()))
-                                                                        .map(tagsResponse -> {
-                                                                            FileCreationResponse response = new FileCreationResponse();
-                                                                            response.setKey(insertedDocument.getDocument().getDocumentKey());
-                                                                            response.setSecret(secret.toString());
-                                                                            response.setUploadUrl(presignedPutObjectRequest.url().toString());
-                                                                            response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest().method()));
-                                                                            return response;
-                                                                        });
-                                                            } else {
-                                                                // Nessun tag da scrivere
-                                                                FileCreationResponse response = new FileCreationResponse();
-                                                                response.setKey(insertedDocument.getDocument().getDocumentKey());
-                                                                response.setSecret(secret.toString());
-                                                                response.setUploadUrl(presignedPutObjectRequest.url().toString());
-                                                                response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest().method()));
-                                                                return Mono.just(response);
-                                                            }
-                                                        }));
-                                    }))
-                            .doOnSuccess(fileCreationResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_UPLOAD_FILE, fileCreationResponse));
-                });
+                                DocumentInput documentInput = new DocumentInput().contentType(request.getContentType())
+                                        .documentKey(documentKeyTmp)
+                                        .documentState(initialNewDocumentState)
+                                        .clientShortCode(xPagopaSafestorageCxId)
+                                        .documentType(request.getDocumentType());
+
+                                //Esecuzione Logica di Creazione
+                                return documentClientCall.postDocument(documentInput)
+                                        .retryWhen(Retry.max(10)
+                                                .filter(DocumentkeyPresentException.class::isInstance)
+                                                .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
+                                                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Non è stato possibile produrre una chiave per user " + xPagopaSafestorageCxId);
+                                                }))
+                                        .flatMap(insertedDocument -> buildsUploadUrl(insertedDocument.getDocument(),
+                                                checksumValue, metadata, xTraceIdValue, finalDurationUpload)
+                                                .flatMap(presignedPutObjectRequest -> {
+                                                    FileCreationResponse response = new FileCreationResponse();
+                                                    response.setKey(insertedDocument.getDocument().getDocumentKey());
+                                                    response.setSecret(secretString);
+                                                    response.setUploadUrl(presignedPutObjectRequest.url().toString());
+                                                    response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest().method()));
+
+                                                    if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty()) {
+                                                        // Chiamata a putTags usando documentKey ottenuto da postDocument
+                                                        TagsChanges tagsChanges = new TagsChanges().SET(validatedRequest.getTags());
+                                                        return tagsClientCall.putTags(insertedDocument.getDocument().getDocumentKey(), tagsChanges)
+                                                                .doOnSuccess(tagsResponse -> log.info("PutTags successful for document key: {}", insertedDocument.getDocument().getDocumentKey()))
+                                                                .thenReturn(response);
+                                                    } else {
+                                                        // Nessun tag da scrivere
+                                                        return Mono.just(response);
+                                                    }
+                                                }));
+                            })
+                        )
+                        .doOnSuccess(fileCreationResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_UPLOAD_FILE, fileCreationResponse))
+                );
     }
 
 
@@ -273,10 +286,10 @@ public class UriBuilderService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue) {
+    private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue, Integer finalDurationUpload) {
 
         log.debug(LogUtils.INVOKING_METHOD + ARG, BUILDS_UPLOAD_URL, document, checksumValue);
-
+        log.info("buildsUploadUrl - finalDurationUpload: {}", finalDurationUpload);
         var documentType = document.getDocumentType();
         var documentState = document.getDocumentState();
         var documentKey = document.getDocumentKey();
@@ -292,7 +305,8 @@ public class UriBuilderService {
                         secret,
                         checksumType,
                         checksumValue,
-                        xTraceIdValue))
+                        xTraceIdValue,
+                        finalDurationUpload))
 
                 .onErrorResume(ChecksumException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         throwable.getMessage())))
@@ -304,11 +318,14 @@ public class UriBuilderService {
 
     }
 
+    //Upload
     private Mono<PresignedPutObjectRequest> signBucket(String bucketName, String documentKey,
                                                        String documentState, String documentType, String contenType,
-                                                       Map<String, String> secret, DocumentType.ChecksumEnum checksumType, String checksumValue, String xTraceIdValue) {
+                                                       Map<String, String> secret, DocumentType.ChecksumEnum checksumType,
+                                                       String checksumValue, String xTraceIdValue, Integer finalDurationUpload) {
 
         log.info(LogUtils.INVOKING_METHOD, SIGN_BUCKET, Stream.of(bucketName, documentKey, documentState, documentType, contenType, checksumType, checksumValue).toList());
+        log.info("signBucket - finalDurationUpload: {}", finalDurationUpload);
 
         if (queryParamPresignedUrlTraceId == null || queryParamPresignedUrlTraceId.isBlank()) {
             return Mono.error(new QueryParamException("Property \"queryParam.presignedUrl.traceId\" non impostata"));
@@ -341,7 +358,7 @@ public class UriBuilderService {
                        }
                    })
                    .map(putObjectRequest -> PutObjectPresignRequest.builder()
-                                                                   .signatureDuration(Duration.ofMinutes(Long.parseLong(duration)))
+                                                                   .signatureDuration(Duration.ofMinutes(finalDurationUpload.longValue()))
                                                                    .putObjectRequest(putObjectRequest)
                                                                    .build())
                 .flatMap(putObjectPresignRequest -> {

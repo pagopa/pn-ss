@@ -102,36 +102,10 @@ public class TransformationService {
         log.debug(INVOKING_METHOD, HANDLE_OBJ_TAG, Stream.of(fileKey, sourceBucket, tag, transformations, docContentType, document).toList());
         String tagState = tag.value();
         return switch (tagState) {
-            case OK -> endTransformation(tag.key(), fileKey, sourceBucket, transformations, docContentType);
+            case OK -> handleNextTransformation(tag.key(), fileKey, sourceBucket, transformations, docContentType);
             case ERROR -> sendUnavailabilityEvent(fileKey, sourceBucket, document);
             default -> Mono.error(new InvalidTransformationStateException.StatusNotRecognizedException(tagState));
         };
-    }
-
-
-    // Lasciato per evitare problemi di compilazione, verrà rimosso nel prossimo step e sostituito con handleNextTransformation
-    /*
-     * Conclude il processo di trasformazione:
-     *     - Determina il tipo di trasformazione attuale rimuovendo il prefisso "Transformation-" dal tag
-     *     - Verifica se la trasformazione è presente nella lista delle trasformazioni previste
-     *     - Se la trasformazione è stata completata:
-     *          - Verifica se il file è già nel bucket finale
-     *          - Se si, lo rimuove dal bucket temporaneo
-     *          - Se no, lo carica nel bucket finale e poi lo rimuove dal bucket temporaneo
-     */
-    private Mono<Void> endTransformation(String tagKey, String fileKey, String sourceBucket, List<String> transformations, String docContentType) {
-        String transformationType = tagKey.replace(TRANSFORMATION_TAG_PREFIX, "");
-        return Mono.just(transformationType)
-                .filter(transformations::contains)
-                .switchIfEmpty(Mono.fromRunnable(() -> log.warn("Transformation {} is not recognized in the transformation list.", transformationType)))
-                .flatMap(currentTransformation -> {
-                    log.debug("Transformation completed for file: {}", fileKey);
-                    return isAlreadyInBucket(fileKey)
-                            .flatMap(isInFinalBucket -> Boolean.TRUE.equals(isInFinalBucket) ?
-                                    removeObjectFromStagingBucket(fileKey, sourceBucket) :
-                                    uploadToFinalBucket(fileKey, docContentType, sourceBucket));
-                })
-                .then();
     }
 
     /*

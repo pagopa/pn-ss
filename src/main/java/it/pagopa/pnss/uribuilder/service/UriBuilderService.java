@@ -56,9 +56,6 @@ import static it.pagopa.pnss.common.utils.LogUtils.*;
 @CustomLog
 public class UriBuilderService {
 
-    @Value("${uri.builder.presigned.url.duration.minutes}")
-    String duration;
-
     @Value("${uri.builder.presigned.url.duration.minutes.download}")
     Integer durationMinutesDownload;
 
@@ -159,77 +156,74 @@ public class UriBuilderService {
 
         return validateLimits(request)
                 .flatMap(validatedRequest ->
-                    // Verifica dei permessi di creazione
-                     validationField(contentType, documentType, xTraceIdValue)
-                        .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
-                            .retryWhen(gestoreRepositoryRetryStrategy)
-                            .flatMap(userConfiguration -> {
-                                //var config = userConfiguration.getUserConfiguration();
-                                log.info("DEBUG - UserConfigurationResponse: {}", userConfiguration);
-                                log.info("DEBUG - UserConfiguration: {}", userConfiguration.getUserConfiguration());
-                                if (userConfiguration.getUserConfiguration() != null) {
-                                    log.info("DEBUG - durationMinutesUpload Value: {}", userConfiguration.getUserConfiguration().getDurationMinutesUpload());
-                                }
+                        // Verifica dei permessi di creazione
+                        validationField(contentType, documentType, xTraceIdValue)
+                                .then(userConfigurationClientCall.getUser(xPagopaSafestorageCxId)
+                                        .retryWhen(gestoreRepositoryRetryStrategy)
+                                        .flatMap(userConfiguration -> {
+                                            log.debug("DEBUG - UserConfiguration: {}", userConfiguration.getUserConfiguration());
+                                            if (userConfiguration.getUserConfiguration() != null) {
+                                                log.debug("DEBUG - durationMinutesUpload Value: {}", userConfiguration.getUserConfiguration().getDurationMinutesUpload());
+                                            }
 
-                                if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
-                                    return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                            String.format("Client '%s' does not have privilege to create document type '%s'",
-                                                    xPagopaSafestorageCxId, documentType)));
-                                }
-                                if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty()
-                                        && !Boolean.TRUE.equals(userConfiguration.getUserConfiguration().getCanWriteTags())) {
-                                    return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                            String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
-                                }
-                                // Calcolo Durata (Portandola nello scope del flatMap)
-                                Integer finalDurationUpload = (userConfiguration.getUserConfiguration().getDurationMinutesUpload() != null)
-                                        ? userConfiguration.getUserConfiguration().getDurationMinutesUpload()
-                                        : this.durationMinutesUpload;
-                                log.info("createUriForUploadFile - name: {}", userConfiguration.getUserConfiguration().getApiKey());
-                                log.info("createUriForUploadFile - finalDurationUpload: {}", finalDurationUpload);
-                                log.info("createUriForUploadFile - this.durationMinutesUpload: {}", this.durationMinutesUpload);
-                                // Creazione del documento con o senza tags
-                                var fileExtension = getFileExtension(contentType);
-                                var documentKeyTmp = String.format("%s%s",
-                                            GenerateRandoKeyFile.getInstance().createKeyName(documentType), fileExtension);
+                                            if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
+                                                return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                                        String.format("Client '%s' does not have privilege to create document type '%s'",
+                                                                xPagopaSafestorageCxId, documentType)));
+                                            }
+                                            if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty()
+                                                    && !Boolean.TRUE.equals(userConfiguration.getUserConfiguration().getCanWriteTags())) {
+                                                return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                                        String.format("Client '%s' does not have privilege to write tags", xPagopaSafestorageCxId)));
+                                            }
+                                            // Calcolo Durata (Portandola nello scope del flatMap)
+                                            Integer finalDurationUpload = (userConfiguration.getUserConfiguration().getDurationMinutesUpload() != null)
+                                                    ? userConfiguration.getUserConfiguration().getDurationMinutesUpload()
+                                                    : this.durationMinutesUpload;
+                                            log.debug("createUriForUploadFile - name: {}", userConfiguration.getUserConfiguration().getApiKey());
+                                            log.debug("createUriForUploadFile - finalDurationUpload: {}", finalDurationUpload);
+                                            // Creazione del documento con o senza tags
+                                            var fileExtension = getFileExtension(contentType);
+                                            var documentKeyTmp = String.format("%s%s",
+                                                    GenerateRandoKeyFile.getInstance().createKeyName(documentType), fileExtension);
 
-                                DocumentInput documentInput = new DocumentInput().contentType(request.getContentType())
-                                        .documentKey(documentKeyTmp)
-                                        .documentState(initialNewDocumentState)
-                                        .clientShortCode(xPagopaSafestorageCxId)
-                                        .documentType(request.getDocumentType());
+                                            DocumentInput documentInput = new DocumentInput().contentType(request.getContentType())
+                                                    .documentKey(documentKeyTmp)
+                                                    .documentState(initialNewDocumentState)
+                                                    .clientShortCode(xPagopaSafestorageCxId)
+                                                    .documentType(request.getDocumentType());
 
-                                //Esecuzione Logica di Creazione
-                                return documentClientCall.postDocument(documentInput)
-                                        .retryWhen(Retry.max(10)
-                                                .filter(DocumentkeyPresentException.class::isInstance)
-                                                .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
-                                                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Non è stato possibile produrre una chiave per user " + xPagopaSafestorageCxId);
-                                                }))
-                                        .flatMap(insertedDocument -> buildsUploadUrl(insertedDocument.getDocument(),
-                                                checksumValue, metadata, xTraceIdValue, finalDurationUpload)
-                                                .flatMap(presignedPutObjectRequest -> {
-                                                    FileCreationResponse response = new FileCreationResponse();
-                                                    response.setKey(insertedDocument.getDocument().getDocumentKey());
-                                                    response.setSecret(secret.toString());
-                                                    response.setUploadUrl(presignedPutObjectRequest.url().toString());
-                                                    response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest().method()));
+                                            //Esecuzione Logica di Creazione
+                                            return documentClientCall.postDocument(documentInput)
+                                                    .retryWhen(Retry.max(10)
+                                                            .filter(DocumentkeyPresentException.class::isInstance)
+                                                            .onRetryExhaustedThrow((retrySpec, retrySignal) -> {
+                                                                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Non è stato possibile produrre una chiave per user " + xPagopaSafestorageCxId);
+                                                            }))
+                                                    .flatMap(insertedDocument -> buildsUploadUrl(insertedDocument.getDocument(),
+                                                            checksumValue, metadata, xTraceIdValue, finalDurationUpload)
+                                                            .flatMap(presignedPutObjectRequest -> {
+                                                                FileCreationResponse response = new FileCreationResponse();
+                                                                response.setKey(insertedDocument.getDocument().getDocumentKey());
+                                                                response.setSecret(secret.toString());
+                                                                response.setUploadUrl(presignedPutObjectRequest.url().toString());
+                                                                response.setUploadMethod(extractUploadMethod(presignedPutObjectRequest.httpRequest().method()));
 
-                                                    if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty()) {
-                                                        // Chiamata a putTags usando documentKey ottenuto da postDocument
-                                                        TagsChanges tagsChanges = new TagsChanges().SET(validatedRequest.getTags());
-                                                        return tagsClientCall.putTags(insertedDocument.getDocument().getDocumentKey(), tagsChanges)
-                                                                .doOnSuccess(tagsResponse -> log.info("PutTags successful for document key: {}", insertedDocument.getDocument().getDocumentKey()))
-                                                                .thenReturn(response);
-                                                    } else {
-                                                        // Nessun tag da scrivere
-                                                        return Mono.just(response);
-                                                    }
-                                                }));
-                            })
-                        )
-                )
-                .doOnSuccess(fileCreationResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_UPLOAD_FILE, fileCreationResponse));
+                                                                if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty()) {
+                                                                    // Chiamata a putTags usando documentKey ottenuto da postDocument
+                                                                    TagsChanges tagsChanges = new TagsChanges().SET(validatedRequest.getTags());
+                                                                    return tagsClientCall.putTags(insertedDocument.getDocument().getDocumentKey(), tagsChanges)
+                                                                            .doOnSuccess(tagsResponse -> log.info("PutTags successful for document key: {}", insertedDocument.getDocument().getDocumentKey()))
+                                                                            .thenReturn(response);
+                                                                } else {
+                                                                    // Nessun tag da scrivere
+                                                                    return Mono.just(response);
+                                                                }
+                                                            }));
+                                        })
+                                )
+                                .doOnSuccess(fileCreationResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_UPLOAD_FILE, fileCreationResponse))
+                );
     }
 
 

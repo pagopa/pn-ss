@@ -72,7 +72,7 @@ class UriBuilderServiceDownloadTest {
     private static final String X_QUERY_PARAM_URL_VALUE= "queryParamPresignedUrlTraceId_value";
 
     private static final UserConfigurationResponse USER_CONFIGURATION_RESPONSE =
-            new UserConfigurationResponse().userConfiguration(new UserConfiguration().apiKey(X_API_KEY_VALUE).durationMinutesDownload(15));
+            new UserConfigurationResponse().userConfiguration(new UserConfiguration().apiKey(X_API_KEY_VALUE).durationMinutesDownload(45));
 
     private final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private static final String SEPARATORE = "~";
@@ -202,7 +202,17 @@ class UriBuilderServiceDownloadTest {
 
     @Test
     void testUrlGenerato() {
-
+/*
+        doReturn(Mono.just(new FileDownloadResponse()))
+                .when(uriBuilderService)
+                .createUriForDownloadFile(
+                        anyString(),   // fileKey
+                        anyString(),   // xPagopaSafestorageCxId
+                        anyString(),   // xTraceIdValue
+                        any(),         // metadataOnly (usiamo any() perché è un Boolean oggetto)
+                        any()          // tags (usiamo any() perché è un Boolean oggetto)
+                );
+*/
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
 
         String docId = "1111-aaaa";
@@ -217,13 +227,17 @@ class UriBuilderServiceDownloadTest {
 
         var now = Instant.now();
 
-        when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class)))
+        //when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class)))
+          //      .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
+        when(documentClientCall.patchDocument(eq(defaultInternalClientIdValue), eq(defaultInternalApiKeyValue), eq(docId), any(DocumentChanges.class)))
                 .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
         when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
-        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(now).build()));
-        when(documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, docId, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(now))))
-                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
+        //when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(now).build()));
+        //when(documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, docId, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(now))))
+          //      .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
 
+        doReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(now).build()))
+                .when(s3Service).headObject(anyString(), anyString());
 
         fileDownloadTestCall(docId, false).expectStatus().isOk();
     }
@@ -466,7 +480,7 @@ class UriBuilderServiceDownloadTest {
 
         Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
         log.info("testDocumentMissingFromBucketStaged - durationDownload: ", durationDownload);
-        doThrow(new S3BucketException.NoSuchKeyException("")).when(uriBuilderService).createFileDownloadInfo(any(), any(), any(), anyBoolean(),durationDownload);
+        doThrow(new S3BucketException.NoSuchKeyException("")).when(uriBuilderService).createFileDownloadInfo(any(), any(), any(), anyBoolean(), eq(durationDownload));
 
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
 

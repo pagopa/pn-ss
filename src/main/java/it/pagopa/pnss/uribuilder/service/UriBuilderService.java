@@ -394,18 +394,14 @@ public class UriBuilderService {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
                     Document document = tuple.getT2();
 
-                    if(userConfigurationResponse != null && userConfigurationResponse.getUserConfiguration()!= null)
-                        log.info("createUriForDownloadFile - getDurationMinutesDownload(): {}", userConfigurationResponse.getUserConfiguration().getDurationMinutesDownload());
-
                     // Recuperiamo la durata dalla configurazione utente per il download
-                    Integer finalDurationDownload = (userConfigurationResponse.getUserConfiguration().getDurationMinutesDownload() != null)
-                            ? (userConfigurationResponse.getUserConfiguration().getDurationMinutesDownload())
-                            : this.durationMinutesDownload;
-                    log.info("createUriForDownloadFile - finalDurationDownload: {}", finalDurationDownload);
-                    log.info("createUriForDownloadFile - this.durationMinutesDownload: {}", this.durationMinutesDownload);
+                    Integer finalDurationDownload = Optional.ofNullable(userConfigurationResponse.getUserConfiguration())
+                            .map(UserConfiguration::getDurationMinutesDownload)
+                            .orElse(this.durationMinutesDownload);
+                    log.info("Download Config - Final Duration Download: {} (Default was: {})", finalDurationDownload, this.durationMinutesDownload);
 
                     return handleDocumentState(document, userConfigurationResponse)
-                            .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, metadataOnly != null && metadataOnly, finalDurationDownload)
+                            .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, Boolean.TRUE.equals(metadataOnly), finalDurationDownload)
                                     .flatMap(fileDownloadResponse -> setFileTags(tags, doc.getDocumentKey(), xPagopaSafestorageCxId, fileDownloadResponse)));
                 })
                 .onErrorResume(S3BucketException.NoSuchKeyException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Document is missing from bucket")))

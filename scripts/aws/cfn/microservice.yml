@@ -305,14 +305,12 @@ Parameters:
     Description: 'Days parameter for restoring of Staging Buckets objects in Glacier archive'
 
   DurationMinutesUpload:
-    type: integer
-    format: int32
+    type: Number
     Description: 'Minuti di validità dei pre-signed url prima della scadenza per Upload'
     Default: 60
 
   DurationMinutesDownload:
-    type: integer
-    format: int32
+    type: Number
     Description: 'Minuti di validità dei pre-signed url prima della scadenza per Download'
     Default: 60
 

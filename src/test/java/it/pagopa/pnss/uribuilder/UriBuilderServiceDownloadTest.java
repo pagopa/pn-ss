@@ -202,17 +202,7 @@ class UriBuilderServiceDownloadTest {
 
     @Test
     void testUrlGenerato() {
-/*
-        doReturn(Mono.just(new FileDownloadResponse()))
-                .when(uriBuilderService)
-                .createUriForDownloadFile(
-                        anyString(),   // fileKey
-                        anyString(),   // xPagopaSafestorageCxId
-                        anyString(),   // xTraceIdValue
-                        any(),         // metadataOnly (usiamo any() perché è un Boolean oggetto)
-                        any()          // tags (usiamo any() perché è un Boolean oggetto)
-                );
-*/
+
         when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(USER_CONFIGURATION_RESPONSE));
 
         String docId = "1111-aaaa";

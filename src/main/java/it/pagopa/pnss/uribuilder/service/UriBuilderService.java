@@ -180,8 +180,7 @@ public class UriBuilderService {
                                             Integer finalDurationUpload = (userConfiguration.getUserConfiguration().getDurationMinutesUpload() != null)
                                                     ? userConfiguration.getUserConfiguration().getDurationMinutesUpload()
                                                     : this.durationMinutesUpload;
-                                            log.debug("createUriForUploadFile - name: {}", userConfiguration.getUserConfiguration().getApiKey());
-                                            log.debug("createUriForUploadFile - finalDurationUpload: {}", finalDurationUpload);
+                                            log.debug("Upload Config - Final Duration Upload: {} (Default was: {})", finalDurationUpload, this.durationMinutesUpload);
                                             // Creazione del documento con o senza tags
                                             var fileExtension = getFileExtension(contentType);
                                             var documentKeyTmp = String.format("%s%s",
@@ -398,7 +397,7 @@ public class UriBuilderService {
                     Integer finalDurationDownload = Optional.ofNullable(userConfigurationResponse.getUserConfiguration())
                             .map(UserConfiguration::getDurationMinutesDownload)
                             .orElse(this.durationMinutesDownload);
-                    log.info("Download Config - Final Duration Download: {} (Default was: {})", finalDurationDownload, this.durationMinutesDownload);
+                    log.debug("Download Config - Final Duration Download: {} (Default was: {})", finalDurationDownload, this.durationMinutesDownload);
 
                     return handleDocumentState(document, userConfigurationResponse)
                             .flatMap(doc -> getFileDownloadResponse(fileKey, xTraceIdValue, doc, Boolean.TRUE.equals(metadataOnly), finalDurationDownload)

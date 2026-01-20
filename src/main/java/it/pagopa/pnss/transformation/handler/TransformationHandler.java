@@ -63,13 +63,14 @@ public class TransformationHandler {
         String eventName = s3EventNotificationMessage.getEventNotificationDetail().getReason();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(PROCESS_TRANSFORMATION_EVENT);
+        log.info("S3EventNotificationMessage received in processAndPublishTransformation = {}", s3EventNotificationMessage);
         Mono<Boolean> shouldSkipProcess = (TransformationUtils.PUT_OBJECT_REASON.equals(eventName != null ? eventName : ""))
                 ? hasMultipleVersions(bucketName, fileKey)
                 : Mono.just(false);
         MDCUtils.addMDCToContextAndExecute(
                 shouldSkipProcess.flatMap(shouldSkipTransformation -> {
                             if (shouldSkipTransformation) {
-                                log.info("File {} has multiple versions. Skipping transformation.", fileKey);
+                                log.info("File {} has multiple versions. Ignoring event.", fileKey);
                                 acknowledgment.acknowledge();
                                 return Mono.empty();
                             }

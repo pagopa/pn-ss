@@ -162,9 +162,6 @@ public class UriBuilderService {
                                         .retryWhen(gestoreRepositoryRetryStrategy)
                                         .flatMap(userConfiguration -> {
                                             log.debug("DEBUG - UserConfiguration: {}", userConfiguration.getUserConfiguration());
-                                            if (userConfiguration.getUserConfiguration() != null) {
-                                                log.debug("DEBUG - durationMinutesUpload Value: {}", userConfiguration.getUserConfiguration().getDurationMinutesUpload());
-                                            }
 
                                             if (!userConfiguration.getUserConfiguration().getCanCreate().contains(documentType)) {
                                                 return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -284,7 +281,7 @@ public class UriBuilderService {
     private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue, Integer finalDurationUpload) {
 
         log.debug(LogUtils.INVOKING_METHOD + ARG, BUILDS_UPLOAD_URL, document, checksumValue);
-        log.info("buildsUploadUrl - finalDurationUpload: {}", finalDurationUpload);
+
         var documentType = document.getDocumentType();
         var documentState = document.getDocumentState();
         var documentKey = document.getDocumentKey();
@@ -320,7 +317,6 @@ public class UriBuilderService {
                                                        String checksumValue, String xTraceIdValue, Integer finalDurationUpload) {
 
         log.info(LogUtils.INVOKING_METHOD, SIGN_BUCKET, Stream.of(bucketName, documentKey, documentState, documentType, contenType, checksumType, checksumValue).toList());
-        log.info("signBucket - finalDurationUpload: {}", finalDurationUpload);
 
         if (queryParamPresignedUrlTraceId == null || queryParamPresignedUrlTraceId.isBlank()) {
             return Mono.error(new QueryParamException("Property \"queryParam.presignedUrl.traceId\" non impostata"));
@@ -392,6 +388,7 @@ public class UriBuilderService {
                 .flatMap(tuple -> {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
                     Document document = tuple.getT2();
+                    log.debug("DEBUG - userConfigurationResponses: {}", userConfigurationResponse.getUserConfiguration());
 
                     // Recuperiamo la durata dalla configurazione utente per il download
                     Integer finalDurationDownload = Optional.ofNullable(userConfigurationResponse.getUserConfiguration())
@@ -558,7 +555,6 @@ public class UriBuilderService {
         final String GET_FILE_DOWNLOAD_RESPONSE = "UriBuilderService.getFileDownloadResponse()";
 
         log.debug(LogUtils.INVOKING_METHOD, GET_FILE_DOWNLOAD_RESPONSE, Stream.of(fileKey, xTraceIdValue, doc, metadataOnly).toList());
-        log.info("getFileDownloadResponse - finalDurationDownload: {}", finalDurationDownload);
 
         // Creazione della FileDownloadInfo. Se metadataOnly=true, la FileDownloadInfo
         // non viene creata e viene ritornato un Mono.empty()
@@ -592,7 +588,7 @@ public class UriBuilderService {
 
     public Mono<FileDownloadInfo> createFileDownloadInfo(String fileKey, String xTraceIdValue, String status, boolean metadataOnly, Integer finalDurationDownload ) throws S3BucketException.NoSuchKeyException{
         log.debug(LogUtils.INVOKING_METHOD, "UriBuilderService.createFileDownloadInfo()", metadataOnly);
-        log.info("createFileDownloadInfo - finalDurationDownload: {}", finalDurationDownload);
+
         if (Boolean.TRUE.equals(metadataOnly))
             return Mono.empty();
         if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
@@ -652,7 +648,7 @@ public class UriBuilderService {
     private Mono<FileDownloadInfo> getPresignedUrl(String bucketName, String keyName, String xTraceIdValue, Integer finalDurationDownload) throws S3BucketException.NoSuchKeyException {
 
         log.debug(LogUtils.INVOKING_METHOD, GET_PRESIGNED_URL, Stream.of(bucketName, keyName, xTraceIdValue).toList());
-        log.info("getPresignedUrl - finalDurationDownload: {}", finalDurationDownload);
+
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(keyName)

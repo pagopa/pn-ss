@@ -45,40 +45,21 @@ public class TransformationHandler {
         this.s3Service = s3Service;
     }
 
-    /*
-     * Gestisce un evento S3 ricevuto dalla coda SQS e decide se avviare o meno
-     * il processo di trasformazione associato al file.
-     * Per gli eventi di tipo PutObject viene verificata la presenza di più versioni
-     * dello stesso file nel bucket:
-     * - se il file ha più versioni, il processo di trasformazione viene saltato
-     *   e il messaggio SQS viene confermato immediatamente;
-     * - se il file ha una sola versione, viene avviata la trasformazione.
-     */
+
     @SqsListener(value = "${pn.ss.transformation.queues.staging}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
     void processAndPublishTransformation(S3EventNotificationMessage s3EventNotificationMessage, Acknowledgment acknowledgment) {
         String fileKey = s3EventNotificationMessage.getEventNotificationDetail().getObject().getKey();
-        String bucketName = Optional.ofNullable(s3EventNotificationMessage.getEventNotificationDetail().getS3BucketOriginDetail())
-                .map(S3BucketOriginDetail::getName)
-                .orElse("");
-        String eventName = s3EventNotificationMessage.getEventNotificationDetail().getReason();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(PROCESS_TRANSFORMATION_EVENT);
         log.info("S3EventNotificationMessage received in processAndPublishTransformation = {}", s3EventNotificationMessage);
-        Mono<Boolean> shouldSkipProcess = (TransformationUtils.PUT_OBJECT_REASON.equals(eventName != null ? eventName : ""))
-                ? hasMultipleVersions(bucketName, fileKey)
-                : Mono.just(false);
         MDCUtils.addMDCToContextAndExecute(
-                shouldSkipProcess.flatMap(shouldSkipTransformation -> {
-                            if (shouldSkipTransformation) {
-                                log.info("File {} has multiple versions. Ignoring event.", fileKey);
-                                acknowledgment.acknowledge();
-                                return Mono.empty();
-                            }
-                            return transformationService.handleS3Event(s3EventNotificationMessage)
-                                    .doOnSuccess(r -> acknowledgment.acknowledge());
+                transformationService.handleS3Event(s3EventNotificationMessage)
+                        .doOnSuccess(result -> {
+                            log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT);
+                            acknowledgment.acknowledge();
                         })
-                        .doOnError(e -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, e.getMessage()))
-                        .doFinally(s -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT))).subscribe();
+                        .doOnError(throwable -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, throwable.getMessage()))
+        ).subscribe();
     }
 
     @SqsListener(value = "${pn.ss.transformation.queues.sign-and-timemark}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
@@ -122,22 +103,7 @@ public class TransformationHandler {
         }
     }
 
-    /*
-     * Controlla quante versioni ci sono per un file sul bucket.
-     * Se ci sono v>1:
-     * - vuol dire che sono state fatte più trasformazioni
-     */
-    private Mono<Boolean> hasMultipleVersions(String bucketName, String key) {
-        if(bucketName == null || bucketName.isEmpty()) {
-            log.info("Skipping check on multiple versions for file {}, bucketName is null", key);
-            return Mono.just(Boolean.FALSE);
-        }
-        return s3Service.listObjectVersions(key, bucketName)
-                .map(response ->
-                        response.versions().stream()
-                                .filter(v -> v.key().equals(key))
-                                .count() > 1);
-    }
+
 
 
 }

@@ -92,7 +92,7 @@ public class TransformationService {
                             .flatMap(response -> {
                                 Optional<Tag> tagOpt = response.tagSet().stream().filter(tag -> tag.key().startsWith(TRANSFORMATION_TAG_PREFIX)).findFirst();
                                 if (tagOpt.isEmpty())
-                                    return publishTransformationOnQueue(fileKey, sourceBucket, transformations.get(0), docContentType).then();
+                                    return markInProgressAndPublishTransformationOnQueue(fileKey, sourceBucket, transformations.get(0), docContentType).then();
                                 return  handleObjectTag(fileKey, sourceBucket, tagOpt.get(), transformations, docContentType, document);
                             });
                 });
@@ -102,6 +102,10 @@ public class TransformationService {
         log.debug(INVOKING_METHOD, HANDLE_OBJ_TAG, Stream.of(fileKey, sourceBucket, tag, transformations, docContentType, document).toList());
         String tagState = tag.value();
         return switch (tagState) {
+            case TRANSFORMATION_IN_PROGRESS -> {
+                log.info("Skipping processing for file {}: transformation {} is IN_PROGRESS", fileKey, tag.key());
+                yield Mono.empty();
+            }
             case OK -> handleNextTransformation(tag.key(), fileKey, sourceBucket, transformations, docContentType);
             case ERROR -> sendUnavailabilityEvent(fileKey, sourceBucket, document);
             default -> Mono.error(new InvalidTransformationStateException.StatusNotRecognizedException(tagState));
@@ -159,7 +163,7 @@ public class TransformationService {
                 .flatMap(canTransform -> {
                     if (Boolean.TRUE.equals(canTransform)) {
                         log.info("Publishing next transformation {} for file {}", nextTransformation, fileKey);
-                        return publishTransformationOnQueue(fileKey, sourceBucket, nextTransformation, docContentType);
+                        return markInProgressAndPublishTransformationOnQueue(fileKey, sourceBucket, nextTransformation, docContentType);
                     }
                     log.info("Skipping transformation {} for file {} already processed", nextTransformation, fileKey);
                     return Mono.empty();
@@ -183,24 +187,26 @@ public class TransformationService {
                 }).then();
     }
 
-    // Invio sulla coda di trasformazione
-    private Mono<SendMessageResponse> publishTransformationOnQueue(String fileKey, String sourceBucket,
-                                                                   String transformationType,
-                                                                   String docContentType) {
-        log.debug(INVOKING_METHOD, PUBLISH_TRANSFORMATION_ON_QUEUE, Stream.of(fileKey, sourceBucket, transformationType, docContentType).toList());
+    //Aggiunge un tag Transformation-XXX=inProgress e poi fa la pubblicazione sulla coda
+    private Mono<SendMessageResponse> markInProgressAndPublishTransformationOnQueue(String fileKey, String sourceBucket, String transformationType, String docContentType) {
+        log.debug(INVOKING_METHOD, MARK_IN_PROGRESS_AND_PUBLISH_TRANSFORMATION, Stream.of(fileKey, sourceBucket, transformationType, docContentType).toList());
+        log.info("Marking transformation {} as IN_PROGRESS for file {}", transformationType, fileKey);
+        String tagKey = TRANSFORMATION_TAG_PREFIX + transformationType;
+        return s3Service.putObjectTagging(sourceBucket, fileKey, Tagging.builder().tagSet(Tag.builder().key(tagKey).value(TRANSFORMATION_IN_PROGRESS).build()).build())
+                .then(Mono.defer(() -> {
+                    TransformationMessage message = new TransformationMessage();
+                    message.setFileKey(fileKey);
+                    message.setBucketName(sourceBucket);
+                    message.setContentType(docContentType);
+                    message.setTransformationType(transformationType);
 
-        TransformationMessage message = new TransformationMessage();
-        message.setFileKey(fileKey);
-        message.setBucketName(sourceBucket);
-        message.setContentType(docContentType);
-        message.setTransformationType(transformationType);
+                    String queueName = transformationConfig.getTransformationQueueName(transformationType);
+                    log.info("Sending transformation {} to queue {}", transformationType, queueName);
 
-        String queueName = transformationConfig.getTransformationQueueName(transformationType);
-        log.info("Trasformation event {} sending to queue {}", transformationType, queueName);
-
-        return sqsService.send(queueName, message);
+                    return sqsService.send(queueName, message);
+                })
+        );
     }
-
 
     private Mono<DeleteObjectsResponse> uploadToFinalBucket(String fileKey, String contentType, String sourceBucket) {
         log.debug(INVOKING_METHOD, UPLOAD_FINAL_BUCKET, Stream.of(fileKey, contentType, sourceBucket).toList());

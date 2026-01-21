@@ -26,6 +26,7 @@ public class TransformationUtils {
     public static final String OBJECT_CREATED_PUT_EVENT = "Object Created";
     public static final String OBJECT_TAGGING_PUT_EVENT = "Object Tags Added";
     public static final String PUT_OBJECT_REASON = "PutObject";
+    public static final String TRANSFORMATION_IN_PROGRESS = "inProgress";
     public static final List<Class<? extends Throwable>> PERMANENT_TRASNFORMATION_EXCEPTIONS = List.of(PnSpapiPermanentErrorException.class);
     public static final Predicate<Throwable> isPermanentException = e -> PERMANENT_TRASNFORMATION_EXCEPTIONS.contains(e.getClass());
 

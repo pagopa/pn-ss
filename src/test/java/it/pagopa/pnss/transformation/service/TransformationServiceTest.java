@@ -117,6 +117,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
+        when(s3Service.putObjectTagging(anyString(), anyString(), any())).thenReturn(Mono.empty());
         var testMono = transformationService.handleS3Event(record);
 
         //THEN
@@ -135,6 +136,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
+        when(s3Service.putObjectTagging(anyString(), anyString(), any())).thenReturn(Mono.empty());
         var testMono = transformationService.handleS3Event(record);
 
         //THEN
@@ -198,6 +200,7 @@ class TransformationServiceTest {
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of("NONE"));
+        when(s3Service.putObjectTagging(anyString(), anyString(), any())).thenReturn(Mono.empty());
         var testMono = transformationService.handleS3Event(record);
 
         //THEN
@@ -230,6 +233,7 @@ class TransformationServiceTest {
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(nextTransformation));
         when(transformationConfig.getTransformationQueueName(SIGN_AND_TIMEMARK)).thenReturn("fake-queue");
+        when(s3Service.putObjectTagging(anyString(), anyString(), any())).thenReturn(Mono.empty());
         var testMono = transformationService.handleS3Event(record);
 
         //THEN
@@ -391,6 +395,7 @@ class TransformationServiceTest {
         putObjectInBucket(FILE_KEY, sourceBucket, new byte[10]);
 
         // WHEN
+        when(s3Service.putObjectTagging(anyString(), anyString(), any())).thenReturn(Mono.empty());
         Mono<Void> transformationMono = invokeHandleNextTransformation(TRANSFORMATION_TAG_PREFIX + currentTransformation, FILE_KEY, sourceBucket, transformations, contentType);
         //THEN
         // nessun errore nella creazione dell'oggetto

@@ -106,7 +106,7 @@ public class LogUtils {
     public static final String HANDLE_S3_EVENT = "TransformationService.handleS3Event()";
     public static final String HANDLE_OBJ_TAG = "TransformationService.handleObjectTag()";
     public static final String UPLOAD_FINAL_BUCKET = "TransformationService.uploadToFinalBucket()";
-    public static final String PUBLISH_TRANSFORMATION_ON_QUEUE = "TransformationService.publishTransformationOnQueue()";
+    public static final String MARK_IN_PROGRESS_AND_PUBLISH_TRANSFORMATION = "TransformationService.markInProgressAndPublishTransformationOnQueue()";
     public static final String SIGN_AND_TIMEMARK_TRANSFORMATION = "TransformationService.signAndTimemarkTransformation()";
     public static final String DUMMY_TRANSFORMATION = "TransformationService.dummyTransformation()";
     public static final String TRANSFORMATION_CONFIG = "TransformationConfig";

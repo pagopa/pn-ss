@@ -279,6 +279,7 @@ public class TransformationService {
         return s3Service.getObjectTagging(key, bucketName)
                 .flatMapIterable(GetObjectTaggingResponse::tagSet)
                 .filter(tag -> tag.key().equals(TRANSFORMATION_TAG_PREFIX + transformation))
+                .filter(tag -> "OK".equals(tag.value()))
                 .next()
                 .doOnNext(tag -> log.debug("Found tag {} for key '{}'. Skipping {} transformation.", tag, key, transformation))
                 .map(tag -> false)

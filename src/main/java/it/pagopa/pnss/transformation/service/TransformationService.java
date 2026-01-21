@@ -192,7 +192,7 @@ public class TransformationService {
         log.debug(INVOKING_METHOD, MARK_IN_PROGRESS_AND_PUBLISH_TRANSFORMATION, Stream.of(fileKey, sourceBucket, transformationType, docContentType).toList());
         log.info("Marking transformation {} as IN_PROGRESS for file {}", transformationType, fileKey);
         String tagKey = TRANSFORMATION_TAG_PREFIX + transformationType;
-        return s3Service.putObjectTagging(sourceBucket, fileKey, Tagging.builder().tagSet(Tag.builder().key(tagKey).value(TRANSFORMATION_IN_PROGRESS).build()).build())
+        return s3Service.putObjectTagging(fileKey, sourceBucket, Tagging.builder().tagSet(Tag.builder().key(tagKey).value(TRANSFORMATION_IN_PROGRESS).build()).build())
                 .then(Mono.defer(() -> {
                     TransformationMessage message = new TransformationMessage();
                     message.setFileKey(fileKey);

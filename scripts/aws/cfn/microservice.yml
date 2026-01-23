@@ -1196,7 +1196,7 @@ Resources:
         LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsGestoreBucketLambdaName}"
       MemorySize: 1024
       ReservedConcurrentExecutions: !Ref PnSsGestoreBucketMinReservedConcurrentExecutions
-      Runtime: nodejs20.x
+      Runtime: nodejs24.x
       Role: !GetAtt PnSsGestoreBucketRole.Arn
       Timeout: 240
       DeadLetterConfig:
@@ -1277,7 +1277,7 @@ Resources:
       LoggingConfig:
         LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsGestoreBucketConcurrencyHandlerLambdaName}"
       MemorySize: 256
-      Runtime: nodejs20.x
+      Runtime: nodejs24.x
       Role: !GetAtt PnSsGestoreBucketConcurrencyHandlerRole.Arn
       Timeout: 240
       ReservedConcurrentExecutions: 1
@@ -1413,7 +1413,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Ref PnSsScadenzaDocumentiLambdaName
-      Runtime: nodejs20.x
+      Runtime: nodejs24.x
       Handler: "index.handler"
       LoggingConfig:
         LogGroup: !Sub "/aws/lambda/${ProjectName}-${PnSsScadenzaDocumentiLambdaName}"

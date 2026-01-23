@@ -22,4 +22,9 @@ components:
           type: string
         contentType:
           type: string
+        retry:
+          type: integer
+          format: int32
+          description: Numero di retry del messaggio, per gestire eventuali eccezioni
+
 

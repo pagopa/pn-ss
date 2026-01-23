@@ -16,6 +16,7 @@ import it.pagopa.pnss.transformation.exception.InvalidTransformationStateExcepti
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.utils.TransformationUtils;
 import lombok.CustomLog;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -262,6 +263,7 @@ public class TransformationService {
                 })
                 .timeout(sqsTimeoutProvider.getTimeoutForQueue(queueName))
                 .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, SIGN_AND_TIMEMARK_TRANSFORMATION, result))
+                .onErrorResume(isPapiTemporaryException, error -> handleTemporaryTransformationException(transformationMessage, fileKey, bucketName, transformationType, error).then(Mono.empty()))
                 .onErrorResume(isPermanentException, error -> handlePermanentTransformationException(fileKey, bucketName, transformationType, error).then(Mono.empty()));
     }
 
@@ -291,6 +293,20 @@ public class TransformationService {
     private Mono<PutObjectTaggingResponse> handlePermanentTransformationException(String fileKey, String bucketName, String transformationType, Throwable throwable) {
         log.error(EXCEPTION_IN_TRANSFORMATION, transformationType, throwable);
         return s3Service.putObjectTagging(fileKey, bucketName, buildTransformationTagging(transformationType, ERROR));
+    }
+
+    //devo fare in modo di leggere il messaggio e aggiungere un metadata RETRY, se becco una PnSpapiTemporaryErrorException incremento fino al massimo (10) altrimenti la marco come error
+    private Mono<PutObjectTaggingResponse> handleTemporaryTransformationException(TransformationMessage transformationMessage, String fileKey, String bucketName, String transformationType, Throwable throwable) {
+            int retry = Optional.ofNullable(transformationMessage.getRetry()).orElse(0);
+            if (retry < TRANSFORMATION_MAX_RETRY) {
+                transformationMessage.setRetry(retry + 1);
+                log.warn("PnSpapiTemporaryErrorException received retry {}/{} for fileKey={}", retry + 1, TRANSFORMATION_MAX_RETRY, fileKey, throwable);
+                // ripubblica il messaggio su SQS con retry
+                return sqsService.send(transformationConfig.getTransformationQueueName(transformationType), transformationMessage).then(Mono.empty());
+            }
+            //max retry raggiunto
+            log.error("Max retry exceeded for fileKey={}", fileKey, throwable);
+            return handlePermanentTransformationException(fileKey, bucketName, transformationType, throwable);
     }
 
     private Mono<PnSignDocumentResponse> signDocument(String fileKey, String contentType, String bucketName, boolean marcatura) {

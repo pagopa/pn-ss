@@ -218,7 +218,7 @@ class TransformationServiceTest {
         var testMono = transformationService.handleS3Event(record);
 
         //THEN
-        StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
+        StepVerifier.create(testMono).verifyComplete();
     }
 
     @Test

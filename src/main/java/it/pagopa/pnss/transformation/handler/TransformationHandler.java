@@ -58,11 +58,7 @@ public class TransformationHandler {
                         .doOnSuccess(result -> {
                             log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT);
                             acknowledgment.acknowledge();
-                        }).onErrorResume(NoSuchKeyException.class, e -> {
-                            log.info("Ignoring S3 Object Tags Added event for key {} because object no longer exists in staging bucket", fileKey);
-                            return Mono.empty();
-                        })
-                        .doOnError(throwable -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, throwable.getMessage()))
+                        }).doOnError(throwable -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, throwable.getMessage()))
         ).subscribe();
     }
 

@@ -83,7 +83,6 @@ public class TransformationService {
             log.info("Skipping processing transformation for key {} with event type: {}", fileKey, eventType);
             return Mono.empty();
         }
-
         return documentClientCall.getDocument(fileKey)
                 .flatMap(document -> {
                     List<String> transformations = document.getDocument().getDocumentType().getTransformations();
@@ -94,6 +93,9 @@ public class TransformationService {
                                 if (tagOpt.isEmpty())
                                     return markInProgressAndPublishTransformationOnQueue(fileKey, sourceBucket, transformations.get(0), docContentType).then();
                                 return  handleObjectTag(fileKey, sourceBucket, tagOpt.get(), transformations, docContentType, document);
+                            }).onErrorResume(NoSuchKeyException.class, e -> {
+                                log.info("Ignoring S3 Object Tags Added event for key {} because object no longer exists in staging bucket",fileKey);
+                                return Mono.empty();
                             });
                 });
     }

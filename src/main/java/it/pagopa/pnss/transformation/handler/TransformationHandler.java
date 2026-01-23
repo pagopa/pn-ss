@@ -18,6 +18,7 @@ import org.slf4j.MDC;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.ListObjectVersionsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectVersionsResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
@@ -57,6 +58,9 @@ public class TransformationHandler {
                         .doOnSuccess(result -> {
                             log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT);
                             acknowledgment.acknowledge();
+                        }).onErrorResume(NoSuchKeyException.class, e -> {
+                            log.info("Ignoring S3 Object Tags Added event for key {} because object no longer exists in staging bucket", fileKey);
+                            return Mono.empty();
                         })
                         .doOnError(throwable -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, throwable.getMessage()))
         ).subscribe();

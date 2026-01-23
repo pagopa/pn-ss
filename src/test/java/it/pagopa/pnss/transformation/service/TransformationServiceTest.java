@@ -40,6 +40,8 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
+
+import java.util.Objects;
 import java.util.stream.Stream;
 import java.time.Duration;
 import java.time.Instant;
@@ -293,7 +295,7 @@ class TransformationServiceTest {
         var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura,QUEUE_NAME);
 
         //THEN
-        StepVerifier.create(testMono).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(Objects::nonNull).verifyComplete();
         verify(s3Service).getObject(FILE_KEY, bucket);
         verifyPnSignProviderCalls(contentType, marcatura);
         verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());

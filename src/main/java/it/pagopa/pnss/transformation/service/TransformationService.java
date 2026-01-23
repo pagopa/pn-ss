@@ -256,11 +256,17 @@ public class TransformationService {
         String bucketName = transformationMessage.getBucketName();
         String transformationType = transformationMessage.getTransformationType();
         return signDocument(fileKey, contentType, bucketName, marcatura)
-                .filterWhen(unused -> canBeTransformed(fileKey, bucketName, transformationType))
-                .flatMap(pnSignDocumentResponse -> {
-                    Tagging tagging = buildTransformationTagging(transformationType, OK);
-                    return s3Service.putObject(fileKey, pnSignDocumentResponse.getSignedDocument(), contentType, bucketName, tagging);
-                })
+                .flatMap(pnSignDocumentResponse ->
+                        canBeTransformed(fileKey, bucketName, transformationType)
+                                .flatMap(canTransform -> {
+                                    if (canTransform) {
+                                        Tagging tagging = buildTransformationTagging(transformationType, OK);
+                                        return s3Service.putObject(fileKey, pnSignDocumentResponse.getSignedDocument(), contentType, bucketName, tagging);
+                                    } else {
+                                        return Mono.empty();
+                                    }
+                                })
+                )
                 .timeout(sqsTimeoutProvider.getTimeoutForQueue(queueName))
                 .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, SIGN_AND_TIMEMARK_TRANSFORMATION, result))
                 .onErrorResume(isPapiTemporaryException, error -> handleTemporaryTransformationException(transformationMessage, fileKey, bucketName, transformationType, error).then(Mono.empty()))

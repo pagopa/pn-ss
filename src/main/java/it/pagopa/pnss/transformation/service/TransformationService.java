@@ -256,11 +256,17 @@ public class TransformationService {
         String bucketName = transformationMessage.getBucketName();
         String transformationType = transformationMessage.getTransformationType();
         return signDocument(fileKey, contentType, bucketName, marcatura)
-                .filterWhen(unused -> canBeTransformed(fileKey, bucketName, transformationType))
-                .flatMap(pnSignDocumentResponse -> {
-                    Tagging tagging = buildTransformationTagging(transformationType, OK);
-                    return s3Service.putObject(fileKey, pnSignDocumentResponse.getSignedDocument(), contentType, bucketName, tagging);
-                })
+                .flatMap(pnSignDocumentResponse ->
+                        canBeTransformed(fileKey, bucketName, transformationType)
+                                .flatMap(canTransform -> {
+                                    if (!canTransform) {
+                                        //serve per propagare la catena ed eventuali errori
+                                        return Mono.just(PutObjectResponse.builder().build());
+                                    }
+                                    Tagging tagging = buildTransformationTagging(transformationType, OK);
+                                    return s3Service.putObject(fileKey, pnSignDocumentResponse.getSignedDocument(), contentType, bucketName, tagging);
+                                })
+                )
                 .timeout(sqsTimeoutProvider.getTimeoutForQueue(queueName))
                 .doOnSuccess(result -> log.debug(SUCCESSFUL_OPERATION_LABEL, SIGN_AND_TIMEMARK_TRANSFORMATION, result))
                 .onErrorResume(isPapiTemporaryException, error -> handleTemporaryTransformationException(transformationMessage, fileKey, bucketName, transformationType, error).then(Mono.empty()))
@@ -297,16 +303,18 @@ public class TransformationService {
 
     //devo fare in modo di leggere il messaggio e aggiungere un metadata RETRY, se becco una PnSpapiTemporaryErrorException incremento fino al massimo (10) altrimenti la marco come error
     private Mono<PutObjectTaggingResponse> handleTemporaryTransformationException(TransformationMessage transformationMessage, String fileKey, String bucketName, String transformationType, Throwable throwable) {
-            int retry = Optional.ofNullable(transformationMessage.getRetry()).orElse(0);
-            if (retry < TRANSFORMATION_MAX_RETRY) {
-                transformationMessage.setRetry(retry + 1);
-                log.warn("PnSpapiTemporaryErrorException received retry {}/{} for fileKey={}", retry + 1, TRANSFORMATION_MAX_RETRY, fileKey, throwable);
-                // ripubblica il messaggio su SQS con retry
-                return sqsService.send(transformationConfig.getTransformationQueueName(transformationType), transformationMessage).then(Mono.empty());
-            }
-            //max retry raggiunto
-            log.error("Max retry exceeded for fileKey={}", fileKey, throwable);
-            return handlePermanentTransformationException(fileKey, bucketName, transformationType, throwable);
+        log.info("Invoking handleTemporaryTransformationException for fileKey={} and transformationMessage={}", fileKey, transformationMessage);
+        int retry = transformationMessage.getRetry();
+        log.info("TransformationMessage has retry={}", retry);
+        if (retry < TRANSFORMATION_MAX_RETRY) {
+            transformationMessage.setRetry(retry + 1);
+            log.info("PnSpapiTemporaryErrorException received retry {}/{} for fileKey={}", retry + 1, TRANSFORMATION_MAX_RETRY, fileKey, throwable);
+            return sqsService.send(transformationConfig.getTransformationQueueName(transformationType), transformationMessage)
+                    .then(Mono.empty());
+        }
+        //max retry raggiunto
+        log.error("Max retry exceeded for fileKey={}", fileKey, throwable);
+        return handlePermanentTransformationException(fileKey, bucketName, transformationType, throwable);
     }
 
     private Mono<PnSignDocumentResponse> signDocument(String fileKey, String contentType, String bucketName, boolean marcatura) {

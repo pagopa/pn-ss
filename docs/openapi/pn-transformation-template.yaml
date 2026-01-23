@@ -25,6 +25,7 @@ components:
         retry:
           type: integer
           format: int32
+          default: 0
           description: Numero di retry del messaggio, per gestire eventuali eccezioni
 
 

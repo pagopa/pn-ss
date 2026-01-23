@@ -295,7 +295,7 @@ class TransformationServiceTest {
         var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura,QUEUE_NAME);
 
         //THEN
-        StepVerifier.create(testMono).expectNextMatches(Objects::nonNull).verifyComplete();
+        StepVerifier.create(testMono).verifyComplete();
         verify(s3Service).getObject(FILE_KEY, bucket);
         verifyPnSignProviderCalls(contentType, marcatura);
         verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());

@@ -282,7 +282,7 @@ public class TransformationService {
                     .then(Mono.empty());
         } else {
             //fallback generico
-            return Mono.error(new IllegalStateException("Unknown SignResult type"));
+            return handlePermanentTransformationException(fileKey, bucketName, transformationType, new IllegalStateException("Unknown SignResult type")).then(Mono.empty());
         }
     }
 

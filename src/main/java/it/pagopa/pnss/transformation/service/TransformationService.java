@@ -17,6 +17,7 @@ import it.pagopa.pnss.transformation.exception.InvalidTransformationStateExcepti
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.utils.TransformationUtils;
 import lombok.CustomLog;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -275,12 +276,26 @@ public class TransformationService {
     }
 
     private Mono<PutObjectResponse> handleSignError(TransformationMessage transformationMessage, String fileKey, String bucketName, String transformationType, Throwable error) {
-        log.info("Invoking handleSignError for fileKey {}", fileKey);
-        if (isPapiTemporaryException.test(error)) {
-            log.info("Temporary error found for fileKey={}", fileKey);
-           return handleTemporaryTransformationException(transformationMessage, fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
+        log.info("Invoking handleSignError for fileKey={} for error cause {}, message={}", fileKey, error.getCause() != null ? error.getCause().toString() : "none", error.getMessage());
+        Throwable root = ExceptionUtils.getRootCause(error);
+        log.info("Root cause class canonicalName: {}, message: {}", root.getClass().getCanonicalName(), root.getMessage());
+        log.info("Error class: {}", error.getClass());
+        log.info("Error message: {}", error.getMessage());
+        log.info("Full stack trace for debugging:", error);
+        if (error.getCause() != null) {
+            log.info("Cause class error: {}", error.getCause().getClass().getCanonicalName());
+            log.info("Cause message error: {}", error.getCause().getMessage());
         } else {
-            log.info("Permanent error found for fileKey={}", fileKey, error);
+            log.info("No cause found");
+        }
+        if (isPapiTemporaryException.test(error)) {
+            log.info("Temporary error={} found for fileKey={}",error.getMessage(), fileKey);
+           return handleTemporaryTransformationException(transformationMessage, fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
+        } else if(isPermanentException.test(error)){
+            log.info("Permanent error found for fileKey={}", fileKey);
+            return handlePermanentTransformationException(fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
+        } else{
+            log.info("Unknown error={} found for fileKey={} proceeding to invoke default permanentException", error.getMessage(), fileKey);
             return handlePermanentTransformationException(fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
         }
     }

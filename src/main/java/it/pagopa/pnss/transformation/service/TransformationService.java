@@ -277,17 +277,6 @@ public class TransformationService {
 
     private Mono<PutObjectResponse> handleSignError(TransformationMessage transformationMessage, String fileKey, String bucketName, String transformationType, Throwable error) {
         log.info("Invoking handleSignError for fileKey={} for error cause {}, message={}", fileKey, error.getCause() != null ? error.getCause().toString() : "none", error.getMessage());
-        Throwable root = ExceptionUtils.getRootCause(error);
-        log.info("Root cause class canonicalName: {}, message: {}", root.getClass().getCanonicalName(), root.getMessage());
-        log.info("Error class: {}", error.getClass());
-        log.info("Error message: {}", error.getMessage());
-        log.info("Full stack trace for debugging:", error);
-        if (error.getCause() != null) {
-            log.info("Cause class error: {}", error.getCause().getClass().getCanonicalName());
-            log.info("Cause message error: {}", error.getCause().getMessage());
-        } else {
-            log.info("No cause found");
-        }
         if (isPermanentException.test(error)) {
             log.info("Permanent error found for fileKey={}", fileKey);
             return handlePermanentTransformationException(fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
@@ -325,7 +314,7 @@ public class TransformationService {
         return s3Service.putObjectTagging(fileKey, bucketName, buildTransformationTagging(transformationType, ERROR));
     }
 
-    //LONG RETRY: fare in modo di leggere il messaggio e aggiungere un metadata RETRY, se becco una PnSpapiTemporaryErrorException incremento fino al massimo (10) altrimenti la marco come error
+    //LONG RETRY: fare in modo di leggere il messaggio e aggiungere un metadata RETRY, se becco una PnSpapiTemporaryErrorException o MaxRetry incremento fino al massimo (10) altrimenti la marco come error
     private Mono<PutObjectTaggingResponse> handleTemporaryTransformationException(TransformationMessage transformationMessage, String fileKey, String bucketName, String transformationType, Throwable throwable) {
         log.info("Invoking handleTemporaryTransformationException for fileKey={} and transformationMessage={}", fileKey, transformationMessage);
         int retry = transformationMessage.getRetry();

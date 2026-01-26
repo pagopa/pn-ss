@@ -32,10 +32,6 @@ public class TransformationUtils {
     public static final int TRANSFORMATION_MAX_RETRY = 10;
     public static final List<Class<? extends Throwable>> PERMANENT_TRANSFORMATION_EXCEPTIONS = List.of(PnSpapiPermanentErrorException.class);
     public static final Predicate<Throwable> isPermanentException = e -> PERMANENT_TRANSFORMATION_EXCEPTIONS.contains(e.getClass());
-    public static final List<Class<? extends Throwable>> TEMPORARY_TRANSFORMATION_EXCEPTIONS = List.of(PnSpapiTemporaryErrorException.class);
-    public static final Predicate<Throwable> isPapiTemporaryException = e ->
-            ExceptionUtils.getThrowableList(e).stream()
-                    .anyMatch(t -> TEMPORARY_TRANSFORMATION_EXCEPTIONS.contains(t.getClass()));
 
     private TransformationUtils() {
         throw new IllegalStateException("TransformationUtils is a utility class");

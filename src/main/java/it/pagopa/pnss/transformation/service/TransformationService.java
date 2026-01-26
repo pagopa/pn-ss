@@ -271,8 +271,8 @@ public class TransformationService {
                                 })
                 )
                 .timeout(sqsTimeoutProvider.getTimeoutForQueue(queueName))
-                .onErrorResume(t -> handleSignError(transformationMessage, fileKey, bucketName, transformationType, t))
-                .doOnSuccess(v -> log.debug("Successfully completed signAndTimemarkTransformation for fileKey={}", fileKey));
+                .onErrorResume(err -> handleSignError(transformationMessage, fileKey, bucketName, transformationType, err))
+                .doOnSuccess(resp -> log.debug("Successfully completed signAndTimemarkTransformation for fileKey={}", fileKey));
     }
 
     private Mono<PutObjectResponse> handleSignError(TransformationMessage transformationMessage, String fileKey, String bucketName, String transformationType, Throwable error) {
@@ -288,15 +288,12 @@ public class TransformationService {
         } else {
             log.info("No cause found");
         }
-        if (isPapiTemporaryException.test(error)) {
-            log.info("Temporary error={} found for fileKey={}",error.getMessage(), fileKey);
-           return handleTemporaryTransformationException(transformationMessage, fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
-        } else if(isPermanentException.test(error)){
+        if (isPermanentException.test(error)) {
             log.info("Permanent error found for fileKey={}", fileKey);
             return handlePermanentTransformationException(fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
-        } else{
-            log.info("Unknown error={} found for fileKey={} proceeding to invoke default permanentException", error.getMessage(), fileKey);
-            return handlePermanentTransformationException(fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
+        } else {
+            log.info("Error={} found for fileKey={} proceeding to invoke temporaryException", error.getMessage(), fileKey);
+            return handleTemporaryTransformationException(transformationMessage,fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
         }
     }
 
@@ -328,14 +325,14 @@ public class TransformationService {
         return s3Service.putObjectTagging(fileKey, bucketName, buildTransformationTagging(transformationType, ERROR));
     }
 
-    //devo fare in modo di leggere il messaggio e aggiungere un metadata RETRY, se becco una PnSpapiTemporaryErrorException incremento fino al massimo (10) altrimenti la marco come error
+    //LONG RETRY: fare in modo di leggere il messaggio e aggiungere un metadata RETRY, se becco una PnSpapiTemporaryErrorException incremento fino al massimo (10) altrimenti la marco come error
     private Mono<PutObjectTaggingResponse> handleTemporaryTransformationException(TransformationMessage transformationMessage, String fileKey, String bucketName, String transformationType, Throwable throwable) {
         log.info("Invoking handleTemporaryTransformationException for fileKey={} and transformationMessage={}", fileKey, transformationMessage);
         int retry = transformationMessage.getRetry();
         log.info("TransformationMessage has retry={}", retry);
         if (retry < TRANSFORMATION_MAX_RETRY) {
             transformationMessage.setRetry(retry + 1);
-            log.info("PnSpapiTemporaryErrorException received retry {}/{} for fileKey={}", retry + 1, TRANSFORMATION_MAX_RETRY, fileKey, throwable);
+            log.info("TemporaryErrorException received retry {}/{} for fileKey={}", retry + 1, TRANSFORMATION_MAX_RETRY, fileKey, throwable);
             return sqsService.send(transformationConfig.getTransformationQueueName(transformationType), transformationMessage)
                     .then(Mono.empty());
         }

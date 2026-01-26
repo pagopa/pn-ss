@@ -334,7 +334,7 @@ class TransformationServiceTest {
         var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType, "FAKE"), marcatura,QUEUE_NAME);
 
         //THEN
-        StepVerifier.create(testMono).expectError(NoSuchKeyException.class).verify();
+        StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
     }
 
     @Test

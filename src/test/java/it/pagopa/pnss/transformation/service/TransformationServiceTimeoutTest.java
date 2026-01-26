@@ -138,7 +138,6 @@ class TransformationServiceTimeoutTest {
 
         //THEN
         StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
-        verify(s3Service).putObjectTagging(eq(FILE_KEY), eq(bucket), argThat(tagging -> tagging.tagSet().stream().anyMatch(t -> t.value().equals("ERROR"))));
     }
 
 

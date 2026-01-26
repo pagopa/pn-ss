@@ -1,5 +1,6 @@
 package it.pagopa.pnss.transformation.service;
 
+import it.pagopa.pn.library.exceptions.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
@@ -351,17 +352,16 @@ public class TransformationService {
         return signDocument(fileKey, contentType, bucketName, marcatura)
                 .map(response -> {
                     if (response == null || response.getSignedDocument() == null || response.getSignedDocument().length == 0) {
-                        log.warn("Invalid sign response, mark as temporary error for fileKey {}", fileKey);
-                        return new SignResult.TemporaryError(new RuntimeException("Temporary signing error: empty response"));
+                        log.info("Invalid sign response, mark as temporary error for fileKey {}", fileKey);
+                        return new SignResult.TemporaryError(
+                                new RuntimeException("Temporary signing error: empty response"));
                     }
                     return new SignResult.Success(response);
-                }).switchIfEmpty(Mono.fromSupplier(() ->
-                {
-                    log.info("Some error occurred during signDocument, mark as temporary error for fileKey {}", fileKey);
-                    return new SignResult.TemporaryError(new RuntimeException("Temporary signing error: empty Mono from SignService"));
-                }));
+                })
+                .onErrorResume(isPapiTemporaryException, e -> {
+                    log.info("Temporary signing error received from SignService for fileKey {}", fileKey, e);
+                    return Mono.just(new SignResult.TemporaryError(e));
+                });
     }
-
-
 
 }

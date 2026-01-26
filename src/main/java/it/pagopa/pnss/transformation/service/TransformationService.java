@@ -277,7 +277,7 @@ public class TransformationService {
                         }
                     });
         } else if (signResult instanceof SignResult.TemporaryError tempError) {
-            return handleTemporaryTransformationException(transformationMessage, fileKey, bucketName, transformationType, tempError.message())
+            return handleTemporaryTransformationException(transformationMessage, fileKey, bucketName, transformationType, tempError.cause())
                     .then(Mono.empty());
         } else {
             //fallback generico
@@ -351,14 +351,17 @@ public class TransformationService {
         return signDocument(fileKey, contentType, bucketName, marcatura)
                 .map(response -> {
                     if (response == null || response.getSignedDocument() == null || response.getSignedDocument().length == 0) {
-                        // fallimento temporaneo
-                        log.info("Wrapped signDocument response is null or signedDocument is null, mark SignResult as temporary error for fileKey {}", fileKey);
+                        log.warn("Invalid sign response, mark as temporary error for fileKey {}", fileKey);
                         return new SignResult.TemporaryError(new RuntimeException("Temporary signing error: empty response"));
-                    } else {
-                        log.info("Wrapped signDocument response is ok, mark SignResult as success for fileKey {}", fileKey);
-                        return new SignResult.Success(response);
                     }
-                });
+                    return new SignResult.Success(response);
+                }).switchIfEmpty(Mono.fromSupplier(() ->
+                {
+                    log.info("Some error occurred during signDocument, mark as temporary error for fileKey {}", fileKey);
+                    return new SignResult.TemporaryError(new RuntimeException("Temporary signing error: empty Mono from SignService"));
+                }));
     }
+
+
 
 }

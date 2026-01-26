@@ -34,7 +34,8 @@ info:
       - SafeStorage deve garantire la validità della marcatura temporale nel tempo. <br/>
     
     #### Parametri di runtime:
-      - pst: il tempo (secondi o minuti) in cui un presigned URL rimane valido.
+      - DurationMinutesUpload: il tempo (minuti) in cui un presigned URL rimane valido per l'upload.
+      - DurationMinutesDownload: il tempo (minuti) in cui un presigned URL rimane valido per il download.
       - stayHotTime: quanto tempo un file che era stato archiviato e poi richiamato rimane "hot"
         prima di essere nuovamente archiviato.
 
@@ -48,8 +49,9 @@ info:
       1. Invocare GET al path '/safe-storage/v1/files/{fileKey}' (operation id: getFile ) <br/>
       2. Il file può essere hot (pronto al download) o cold (minuti o ore per il recupero del file)<br/>
       3.
-         1. Se il fle è _hot_ la risposta contiene un url di download da usare entro ```pst``` (tempo 
-            validità presigned url); `pst` è parametro di installazione di SafeStorage.
+         1. Se il fle è _hot_ la risposta contiene un url di download da usare entro ```DurationMinutesDownload``` (tempo 
+            validità presigned url in minuti); `DurationMinutesDownload` è parametro di installazione di SafeStorage e specifico per ogni client 
+            censito in DynamoDB nella tabella di Anagrafica Client.
          2. Se il file è _cold_ la risposta contiene un indicazione del tempo necessario a 
             renderlo _hot_. <br/>
             Solo in questo caso, quando il file sarà pronto, verrà inserito un messaggio in una coda 
@@ -212,6 +214,8 @@ paths:
           - _signatureInfo_: informazioni necessarie per firmare digitalmente, per conto <br/>
             del client, i file caricati. <br/>
           - _destination_: informazioni necessarie a notificare eventi al client.
+          - _durationMinutesUpload_: tempo di scadenza (in minuti) della presigned url generata specifica per l'operazione di Upload di un documento
+          - _durationMinutesDownload_: tempo di scadenza (in minuti) della presigned url generata specifica per l'operazione di Download di un documento
       tags:
         - cfg
       parameters:
@@ -267,7 +271,9 @@ paths:
       description: >-
         Questa operazione chiede la generazione di un URL per caricare un nuovo file. 
         Dovrà essere seguita da una chiamata all'URL generato che servirà a caricare l'effettivo 
-        contenuto del file. Il tempo massimo che può intercorrere tra le due invocazioni è ```pst```.
+        contenuto del file. Il tempo massimo (in minuti) che può intercorrere tra le due invocazioni è ```DurationMinutesUpload```.
+        `DurationMinutesUpload` è parametro di installazione di SafeStorage e specifico per ogni client 
+        censito in DynamoDB nella tabella di Anagrafica Client.
       parameters:
         - $ref: '#/components/parameters/clientIdHeader'
         - $ref: '#/components/parameters/x-checksum-value'
@@ -1038,6 +1044,14 @@ components:
             sqsUrl:
               type: string
               description: URL della coda SQS a cui contattare il client
+        durationMinutesUpload:
+          type: integer
+          format: int32
+          description: Scadenza dell'URL in minuti per l'operazione di upload
+        durationMinutesDownload:
+          type: integer
+          format: int32
+          description: Scadenza dell'URL in minuti per l'operazione di download
 
     DocumentTypesConfigurations: 
       type: object

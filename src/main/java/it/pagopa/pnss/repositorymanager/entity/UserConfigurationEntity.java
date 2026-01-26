@@ -25,6 +25,8 @@ public class UserConfigurationEntity extends DocumentVersion {
 	private String signatureInfo; // da verificare il tipo
 	private UserConfigurationDestinationEntity destination;  // ok
 	private String apiKey; // ok
+	private Integer durationMinutesUpload;
+	private Integer durationMinutesDownload;
 	
 	@DynamoDbPartitionKey
 	public String getName() {

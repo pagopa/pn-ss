@@ -920,6 +920,15 @@ components:
             sqsUrl:
               type: string
               description: URL della coda SQS a cui contattare il client
+        durationMinutesUpload:
+          type: integer
+          format: int32
+          description: Scadenza dell'URL in minuti per l'operazione di upload
+        durationMinutesDownload:
+          type: integer
+          format: int32
+          description: Scadenza dell'URL in minuti per l'operazione di download
+
     UserConfigurationResponse:
       type: object
       properties:

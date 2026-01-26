@@ -295,7 +295,7 @@ class TransformationServiceTest {
         var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura,QUEUE_NAME);
 
         //THEN
-        StepVerifier.create(testMono).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(Objects::nonNull).verifyComplete();
         verify(s3Service).getObject(FILE_KEY, bucket);
         verifyPnSignProviderCalls(contentType, marcatura);
         verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());
@@ -316,7 +316,7 @@ class TransformationServiceTest {
         var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura,QUEUE_NAME);
 
         //THEN
-        StepVerifier.create(testMono).verifyComplete();
+        StepVerifier.create(testMono).expectNextMatches(Objects::nonNull).verifyComplete();
         verify(s3Service).getObject(FILE_KEY, bucket);
         verify(s3Service).putObjectTagging(FILE_KEY, bucket, expectedTagging);
         verify(s3Service, never()).putObject(anyString(), any(), anyString(), anyString(), any());

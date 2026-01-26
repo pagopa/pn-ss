@@ -256,36 +256,34 @@ public class TransformationService {
         String contentType = transformationMessage.getContentType();
         String bucketName = transformationMessage.getBucketName();
         String transformationType = transformationMessage.getTransformationType();
-        return wrapSignDocument(fileKey, contentType, bucketName, marcatura)
-                .flatMap(signResult -> handleSignResult(signResult, transformationMessage,fileKey, bucketName, contentType, transformationType))
+        return signDocument(fileKey, contentType, bucketName, marcatura)
+                .flatMap(pnSignDocumentResponse ->
+                        canBeTransformed(fileKey, bucketName, transformationType)
+                                .flatMap(canTransform -> {
+                                    if (canTransform) {
+                                        Tagging tagging = buildTransformationTagging(transformationType, OK);
+                                        return s3Service.putObject(fileKey, pnSignDocumentResponse.getSignedDocument(), contentType, bucketName, tagging);
+                                    } else {
+                                        log.info("File {} already transformed, skipping.", fileKey);
+                                        return Mono.just(PutObjectResponse.builder().build()); // placeholder per tipo coerente
+                                    }
+                                })
+                )
                 .timeout(sqsTimeoutProvider.getTimeoutForQueue(queueName))
-                .onErrorResume(isPermanentException, error -> handlePermanentTransformationException(fileKey, bucketName, transformationType, error).then(Mono.empty()))
-                .doOnSuccess(result ->
-                        log.debug(SUCCESSFUL_OPERATION_LABEL, SIGN_AND_TIMEMARK_TRANSFORMATION, result));
+                .onErrorResume(t -> handleSignError(transformationMessage, fileKey, bucketName, transformationType, t))
+                .doOnSuccess(v -> log.debug("Successfully completed signAndTimemarkTransformation for fileKey={}", fileKey));
     }
 
-    private Mono<PutObjectResponse> handleSignResult(SignResult signResult, TransformationMessage transformationMessage, String fileKey, String bucketName, String contentType, String transformationType) {
-        //se la firma è ok
-        if (signResult instanceof SignResult.Success success) {
-            PnSignDocumentResponse response = success.response();
-            return canBeTransformed(fileKey, bucketName, transformationType)
-                    .flatMap(canTransform -> {
-                        if (canTransform) {
-                            Tagging tagging = buildTransformationTagging(transformationType, OK);
-                            return s3Service.putObject(fileKey, response.getSignedDocument(), contentType, bucketName, tagging);
-                        } else {
-                            return Mono.empty();
-                        }
-                    });
-        } else if (signResult instanceof SignResult.TemporaryError tempError) {
-            return handleTemporaryTransformationException(transformationMessage, fileKey, bucketName, transformationType, tempError.cause())
-                    .then(Mono.empty());
+    private Mono<PutObjectResponse> handleSignError(TransformationMessage transformationMessage, String fileKey, String bucketName, String transformationType, Throwable error) {
+        log.info("Invoking handleSignError for fileKey {}", fileKey);
+        if (isPapiTemporaryException.test(error)) {
+            log.info("Temporary error found for fileKey={}", fileKey);
+           return handleTemporaryTransformationException(transformationMessage, fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
         } else {
-            //fallback generico
-            return handlePermanentTransformationException(fileKey, bucketName, transformationType, new IllegalStateException("Unknown SignResult type")).then(Mono.empty());
+            log.info("Permanent error found for fileKey={}", fileKey, error);
+            return handlePermanentTransformationException(fileKey, bucketName, transformationType, error).then(Mono.just(PutObjectResponse.builder().build()));
         }
     }
-
 
     public Mono<PutObjectTaggingResponse> dummyTransformation(TransformationMessage transformationMessage) {
         log.debug(INVOKING_METHOD, DUMMY_TRANSFORMATION, transformationMessage);
@@ -346,28 +344,5 @@ public class TransformationService {
 
                 });
     }
-
-    private Mono<SignResult> wrapSignDocument(String fileKey, String contentType, String bucketName, boolean marcatura) {
-        log.info("Invoking signDocument wrapped for fileKey {}", fileKey);
-        return signDocument(fileKey, contentType, bucketName, marcatura)
-                .map(response -> {
-                    if (response == null || response.getSignedDocument() == null || response.getSignedDocument().length == 0) {
-                        log.info("Empty sign response, mark as temporary error for fileKey {}", fileKey);
-                        return new SignResult.TemporaryError(new RuntimeException("Temporary signing error: empty response"));
-                    }
-                    return new SignResult.Success(response);
-                })
-                .onErrorResume(t -> {
-                    // ogni temporary
-                    if (t instanceof PnSpapiTemporaryErrorException ||
-                            (t.getCause() != null && t.getCause() instanceof PnSpapiTemporaryErrorException)) {
-                        log.info("Temporary signing error received from SignService for fileKey {}", fileKey, t);
-                        return Mono.just(new SignResult.TemporaryError(t));
-                    }
-                    // tutti gli altri errori rilanciati
-                    return Mono.error(t);
-                });
-    }
-
 
 }

@@ -352,16 +352,22 @@ public class TransformationService {
         return signDocument(fileKey, contentType, bucketName, marcatura)
                 .map(response -> {
                     if (response == null || response.getSignedDocument() == null || response.getSignedDocument().length == 0) {
-                        log.info("Invalid sign response, mark as temporary error for fileKey {}", fileKey);
-                        return new SignResult.TemporaryError(
-                                new RuntimeException("Temporary signing error: empty response"));
+                        log.info("Empty sign response, mark as temporary error for fileKey {}", fileKey);
+                        return new SignResult.TemporaryError(new RuntimeException("Temporary signing error: empty response"));
                     }
                     return new SignResult.Success(response);
                 })
-                .onErrorResume(isPapiTemporaryException, e -> {
-                    log.info("Temporary signing error received from SignService for fileKey {}", fileKey, e);
-                    return Mono.just(new SignResult.TemporaryError(e));
+                .onErrorResume(t -> {
+                    // ogni temporary
+                    if (t instanceof PnSpapiTemporaryErrorException ||
+                            (t.getCause() != null && t.getCause() instanceof PnSpapiTemporaryErrorException)) {
+                        log.info("Temporary signing error received from SignService for fileKey {}", fileKey, t);
+                        return Mono.just(new SignResult.TemporaryError(t));
+                    }
+                    // tutti gli altri errori rilanciati
+                    return Mono.error(t);
                 });
     }
+
 
 }

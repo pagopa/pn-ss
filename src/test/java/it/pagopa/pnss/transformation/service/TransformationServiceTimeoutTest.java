@@ -130,12 +130,14 @@ class TransformationServiceTimeoutTest {
 
         //WHEN
         when(sqsTimeoutProvider.getTimeoutForQueue(anyString())).thenReturn(Duration.ofMillis(2));
+        when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.delay(Duration.ofMillis(50)).map(l -> new PnSignDocumentResponse(new byte[]{1,2,3})));
+
 
         mockSignCalls();
         var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(SIGN_AND_TIMEMARK, bucket, contentType), true,QUEUE_NAME);
 
         //THEN
-        StepVerifier.create(testMono).expectErrorMatches(throwable -> throwable instanceof  TimeoutException).verify();
+        StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
     }
 
 

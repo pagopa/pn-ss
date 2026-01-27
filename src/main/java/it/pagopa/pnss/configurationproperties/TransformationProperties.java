@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "pn.ss.transformation")
 public class TransformationProperties {
 
-    public  static final String TRANSFORMATION_TAG_PREFIX = "Transformation-";
+    public static final String TRANSFORMATION_TAG_PREFIX = "Transformation-";
     public static final String OK = "OK";
     public static final String ERROR = "ERROR";
 

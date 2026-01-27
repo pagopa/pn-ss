@@ -1,6 +1,7 @@
 package it.pagopa.pnss.transformation.utils;
 
 import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
+import it.pagopa.pn.library.exceptions.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.CurrentStatus;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
@@ -8,6 +9,7 @@ import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import lombok.CustomLog;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.Tag;
@@ -26,8 +28,10 @@ public class TransformationUtils {
     public static final String OBJECT_CREATED_PUT_EVENT = "Object Created";
     public static final String OBJECT_TAGGING_PUT_EVENT = "Object Tags Added";
     public static final String PUT_OBJECT_REASON = "PutObject";
-    public static final List<Class<? extends Throwable>> PERMANENT_TRASNFORMATION_EXCEPTIONS = List.of(PnSpapiPermanentErrorException.class);
-    public static final Predicate<Throwable> isPermanentException = e -> PERMANENT_TRASNFORMATION_EXCEPTIONS.contains(e.getClass());
+    public static final String TRANSFORMATION_IN_PROGRESS = "inProgress";
+    public static final int TRANSFORMATION_MAX_RETRY = 10;
+    public static final List<Class<? extends Throwable>> PERMANENT_TRANSFORMATION_EXCEPTIONS = List.of(PnSpapiPermanentErrorException.class);
+    public static final Predicate<Throwable> isPermanentException = e -> PERMANENT_TRANSFORMATION_EXCEPTIONS.contains(e.getClass());
 
     private TransformationUtils() {
         throw new IllegalStateException("TransformationUtils is a utility class");

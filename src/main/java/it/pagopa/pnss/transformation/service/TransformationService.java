@@ -28,6 +28,7 @@ import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -94,7 +95,7 @@ public class TransformationService {
                             .flatMap(response -> {
                                 Optional<Tag> tagOpt = response.tagSet().stream().filter(tag -> tag.key().startsWith(TRANSFORMATION_TAG_PREFIX)).findFirst();
                                 if (tagOpt.isEmpty())
-                                    return markInProgressAndPublishTransformationOnQueue(fileKey, sourceBucket, transformations.get(0), docContentType).then();
+                                    return markInProgressAndPublishTransformationOnQueue(fileKey, sourceBucket, transformations.get(0), docContentType, transformations).then();
                                 return  handleObjectTag(fileKey, sourceBucket, tagOpt.get(), transformations, docContentType, document);
                             }).onErrorResume(NoSuchKeyException.class, e -> {
                                 log.info("Ignoring S3 Object Tags Added event for key {} because object no longer exists in staging bucket",fileKey);
@@ -151,7 +152,7 @@ public class TransformationService {
         log.info("Transformation={} completed for file {}", currentTransformation, fileKey);
         // esiste una trasformazione successiva?
         if (nextIndex < transformations.size()) {
-            return handleNextInChain(transformations.get(nextIndex), fileKey, sourceBucket, docContentType);
+            return handleNextInChain(transformations.get(nextIndex), fileKey, sourceBucket, docContentType, transformations);
         }
         // se non ci sono altre trasformazioni nella catena
         return handleLastTransformation(fileKey, sourceBucket, docContentType);
@@ -161,14 +162,14 @@ public class TransformationService {
      * Gestisce la prossima trasformazione nella catena.
      * Controlla se la trasformazione può essere eseguita (idempotenza) e pubblica il messaggio sulla coda se necessario senza inviarlo al bucket finale
      */
-    private Mono<Void> handleNextInChain(String nextTransformation, String fileKey, String sourceBucket, String docContentType) {
+    private Mono<Void> handleNextInChain(String nextTransformation, String fileKey, String sourceBucket, String docContentType, List<String> transformations) {
         log.info("Next transformation {} detected for file {}", nextTransformation, fileKey);
         // richiamiamo canBeTransformed per garantire idempotenza in caso di doppio tag OK, controlliamo quindi se già è presente nel bucket finale
         return canBeTransformed(fileKey, sourceBucket, nextTransformation)
                 .flatMap(canTransform -> {
                     if (Boolean.TRUE.equals(canTransform)) {
                         log.info("Publishing next transformation {} for file {}", nextTransformation, fileKey);
-                        return markInProgressAndPublishTransformationOnQueue(fileKey, sourceBucket, nextTransformation, docContentType);
+                        return markInProgressAndPublishTransformationOnQueue(fileKey, sourceBucket, nextTransformation, docContentType, transformations);
                     }
                     log.info("Skipping transformation {} for file {} already processed", nextTransformation, fileKey);
                     return Mono.empty();
@@ -193,11 +194,20 @@ public class TransformationService {
     }
 
     //Aggiunge un tag Transformation-XXX=inProgress e poi fa la pubblicazione sulla coda
-    private Mono<SendMessageResponse> markInProgressAndPublishTransformationOnQueue(String fileKey, String sourceBucket, String transformationType, String docContentType) {
+    private Mono<SendMessageResponse> markInProgressAndPublishTransformationOnQueue(String fileKey, String sourceBucket, String transformationType, String docContentType, List<String>transformations) {
         log.debug(INVOKING_METHOD, MARK_IN_PROGRESS_AND_PUBLISH_TRANSFORMATION, Stream.of(fileKey, sourceBucket, transformationType, docContentType).toList());
         log.info("Marking transformation {} as IN_PROGRESS for file {}", transformationType, fileKey);
-        String tagKey = TRANSFORMATION_TAG_PREFIX + transformationType;
-        return s3Service.putObjectTagging(fileKey, sourceBucket, Tagging.builder().tagSet(Tag.builder().key(tagKey).value(TRANSFORMATION_IN_PROGRESS).build()).build())
+        List<Tag> tagSet = new ArrayList<>();
+        for (String t : transformations) {
+            if (t.equals(transformationType)) {
+                tagSet.add(Tag.builder().key(TRANSFORMATION_TAG_PREFIX + t).value(TRANSFORMATION_IN_PROGRESS).build());
+                break; // la trasformazione corrente è inProgress, tutte le successive non vengono taggate (ancora)
+            } else {
+                tagSet.add(Tag.builder().key(TRANSFORMATION_TAG_PREFIX + t).value(OK).build());
+            }
+        }
+        log.info("FileKey {} has this tagSet= {}", fileKey, tagSet);
+        return s3Service.putObjectTagging(fileKey, sourceBucket, Tagging.builder().tagSet(tagSet).build())
                 .then(Mono.defer(() -> {
                     TransformationMessage message = new TransformationMessage();
                     message.setFileKey(fileKey);

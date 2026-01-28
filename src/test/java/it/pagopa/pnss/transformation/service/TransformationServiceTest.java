@@ -419,6 +419,36 @@ class TransformationServiceTest {
         }
     }
 
+    @Test
+    void handleS3Event_TagSetAppliedCorrectly() {
+        // GIVEN
+        String sourceBucket = bucketName.ssStageName();
+        String contentType = "application/pdf";
+        List<String> transformations = List.of("DUMMY", "NORMALIZATION", "SIGN");
+        String currentTransformation = "NORMALIZATION";
+        TransformationMessage expectedMessage = createTransformationMessage(currentTransformation, sourceBucket, contentType);
+        S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
+        Tag existingTag = Tag.builder().key("Transformation-DUMMY").value("OK").build();
+        s3TestClient.putObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket).tagging(Tagging.builder().tagSet(existingTag).build()));
+        mockGetDocument(contentType, STAGED, transformations);
+        // WHEN
+        var testMono = transformationService.handleS3Event(record);
+        StepVerifier.create(testMono).verifyComplete();
+
+        var appliedTags = s3TestClient.getObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket)).tagSet();
+        log.info("appliesTag = {}",appliedTags);
+        // THEN
+        verify(sqsService).send(any(), eq(expectedMessage));
+
+        //verifiche per il tag set applicato sia corretto: DUMMY=OK, NORMALIZATION=IN_PROGRESS, SIGN non presente
+        assertEquals(2, appliedTags.size(), "Devono esserci solo 2 tag");
+        assertEquals("Transformation-DUMMY", appliedTags.get(0).key());
+        assertEquals("OK", appliedTags.get(0).value());
+        assertEquals("Transformation-NORMALIZATION", appliedTags.get(1).key());
+        assertEquals(TRANSFORMATION_IN_PROGRESS, appliedTags.get(1).value());
+    }
+
+
 
     private Mono<Void> invokeHandleNextTransformation(String tagKey, String fileKey, String sourceBucket, List<String> transformations, String contentType) {
         return ReflectionTestUtils.invokeMethod(transformationService, "handleNextTransformation", tagKey, fileKey, sourceBucket, transformations, contentType);

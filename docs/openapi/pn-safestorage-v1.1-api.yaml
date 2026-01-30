@@ -646,6 +646,15 @@ paths:
 
 components:
   parameters:
+
+    ApiKeyHeader:
+      name: x-api-key
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9\\-_]{20,40}$'
+
     clientIdPath: 
       name: clientId
       description: Identificativo del sistema client
@@ -653,6 +662,7 @@ components:
       required: true
       schema:
         type: string
+        pattern: '^[A-Za-z0-9\-]{1,30}$'
       example: pn-delivery-push
     clientIdHeader: 
       name: x-pagopa-safestorage-cx-id
@@ -661,6 +671,7 @@ components:
       required: true
       schema:
         type: string
+        pattern: '^[a-z0-9\-]{10,30}$'
       example: pn-delivery-push
     fileKey: 
       name: fileKey
@@ -669,7 +680,9 @@ components:
       required: true
       schema:
         type: string
-      example: '8F7E/9A3B/1234/AB87'
+        pattern: '^[A-Za-z0-9._\-]{1,256}$'
+        example: 'PN_NOTIFICATION_ATTACHMENTS-d048319861a64591ad13ffb336da08ad.pdf'
+
     logic:
       name: logic
       description: La logica ('and' oppure 'or') da applicare al meccanismo di ricerca della additionalFileTagsSearch.
@@ -692,6 +705,7 @@ components:
       required: true
       schema:
         type: string
+        pattern: '^([A-Za-z0-9+/]{22}==|[A-Za-z0-9+/]{43}=)$'
     x-checksum:
       name: x-checksum
       description: Stringa che identifica l'algoritmo di checksum inserito per retrocompatibilità, ma che viene ignorato (viene dedotto dal tipo del file).
@@ -699,6 +713,8 @@ components:
       required: false
       schema:
         type: string
+        enum: [ 'MD5', 'SHA256']
+
     tagParams:
       in: query
       name: tagParams
@@ -708,6 +724,7 @@ components:
         type: object
         additionalProperties:
           type: string
+          pattern: '^[A-Za-z0-9_\-]{1,256}$'
       style: form
       explode: true
 
@@ -730,12 +747,15 @@ components:
           description: >-
             Il tipo di documento da caricare; definisce diritti di accesso e tempo 
             di permanenza del file all'interno di _SafeStorage_
+          pattern: '^PN_[A-Z0-9_]{1,50}$'
           example: 'PN_NOTIFICATION_ATTACHMENTS'
         status:
           type: string
           description: >-
             lo stato del documento, ne definisce il tempo di permanenza all'interno 
             di _SafeStorage_.
+          nullable: true
+          pattern: "^$|^[A-Za-z0-9_]{0,20}$"
           example: PRELOADED
         tags:
           type: object
@@ -743,6 +763,7 @@ components:
             type: array
             items:
               type: string
+              pattern: '^[A-Za-z0-9_\-]{1,256}$'
 
     FileCreationResponse:
       description: Informazioni necessarie a caricare il contenuto di un file
@@ -810,7 +831,7 @@ components:
         type: array
         items:
           type: string
-
+          pattern: '^[A-Za-z0-9_]{1,256}$'
     DeleteTags:
       description: >-
         tags da eliminare
@@ -819,7 +840,7 @@ components:
         type: array
         items:
           type: string
-
+          pattern: '^[A-Za-z0-9_]{1,256}$'
     AdditionalFileTagsUpdateResponse:
       description: Informazioni necessarie per l'esito dell'operazione di update sui tag
       type: object
@@ -834,6 +855,7 @@ components:
       properties:
         fileKey:
           type: string
+          pattern: '^[A-Za-z0-9/._-]{1,256}$'
         SET:
           $ref: '#/components/schemas/SetTags'
         DELETE:
@@ -990,6 +1012,7 @@ components:
         status:
           type: string
           description: Lo stato del documento
+          pattern: '^[A-Za-z0-9_]{3,20}$'
           example: ATTACHED
         retentionUntil:
           type: string
@@ -1197,6 +1220,7 @@ components:
       type: apiKey
       in: header
       name: x-api-key
+
 
 security:
   - ApiKeyAuth: [] # use the same name as under securitySchemes

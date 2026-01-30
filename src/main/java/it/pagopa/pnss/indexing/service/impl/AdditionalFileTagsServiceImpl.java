@@ -3,7 +3,7 @@ package it.pagopa.pnss.indexing.service.impl;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsDto;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsSearchResponseFileKeys;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsSearchResponseFileKeysInner;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
@@ -21,6 +21,7 @@ import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import lombok.CustomLog;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -51,7 +52,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                                          IndexingConfiguration indexingConfiguration,
                                          DocumentClientCall documentClientCall,
                                          UserConfigurationClientCall userConfigurationClientCall,
-                                         RetryBackoffSpec gestoreRepositoryRetryStrategy) {
+                                         @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy) {
         this.tagsClientCall = tagsClientCall;
         this.indexingConfiguration = indexingConfiguration;
         this.documentClientCall = documentClientCall;
@@ -351,10 +352,10 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
      * @param logic the search logic to apply
      * @param tags the option to retrieve fileKeys with or without tags
      * @param queryParams the query parameters
-     * @return Mono<List<AdditionalFileTagsSearchResponseFileKeys>> the mono containing the list of fileKeys with or without tags
+     * @return Mono<List<AdditionalFileTagsSearchResponseFileKeysInner>> the mono containing the list of fileKeys with or without tags
      */
     @Override
-    public Mono<List<AdditionalFileTagsSearchResponseFileKeys>> searchTags(String xPagopaSafestorageCxId, String logic, Boolean tags, Map<String, String> queryParams) {
+    public Mono<List<AdditionalFileTagsSearchResponseFileKeysInner>> searchTags(String xPagopaSafestorageCxId, String logic, Boolean tags, Map<String, String> queryParams) {
         log.debug(INVOKING_METHOD, SEARCH_TAGS, Stream.of(xPagopaSafestorageCxId, logic, tags, queryParams).toList());
         var reducingFunction = getLogicFunction(logic);
         return userConfigurationClientCall.getUser(xPagopaSafestorageCxId).handle((userConfigurationResponse, sink) -> {
@@ -368,7 +369,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                 .reduce(reducingFunction)
                 .onErrorResume(EmptyIntersectionException.class, throwable -> Mono.just(new HashSet<>()))
                 .flatMapMany(Flux::fromIterable)
-                .map(fileKey -> new AdditionalFileTagsSearchResponseFileKeys().fileKey(fileKey))
+                .map(fileKey -> new AdditionalFileTagsSearchResponseFileKeysInner().fileKey(fileKey))
                 .flatMap(fileKey -> {
                     if (Boolean.TRUE.equals(tags)) {
                         return documentClientCall.getDocument(fileKey.getFileKey()).map(documentResponse -> {

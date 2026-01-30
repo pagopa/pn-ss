@@ -8,6 +8,7 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -21,6 +22,7 @@ import java.time.Instant;
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @CustomLog
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ScadenzaDocumentiInternalApiControllerTest {
 
     @Autowired
@@ -30,8 +32,13 @@ public class ScadenzaDocumentiInternalApiControllerTest {
     private static final String DOCUMENT_KEY = "documentKey";
     private static final long SECONDS_TO_ADD = 31536000;
 
+    @Autowired
+    private DynamoDbEnhancedClient enhancedClient;
+    @Autowired
+    private RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName;
+
     @BeforeAll
-    public static void setup(@Autowired DynamoDbEnhancedClient enhancedClient, @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+    public void setup() {
         log.info("execute insertScadenzaDocumenti()");
         DynamoDbTable<ScadenzaDocumentiEntity> dynamoTable = enhancedClient.table(gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(ScadenzaDocumentiEntity.class));
         ScadenzaDocumentiEntity scadenzaDocumenti = new ScadenzaDocumentiEntity();

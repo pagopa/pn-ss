@@ -42,8 +42,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -81,7 +81,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
     private BucketName bucketName;
 	@Autowired
 	private S3Client s3TestClient;
-	@SpyBean
+	@MockitoSpyBean
 	private S3Service s3Service;
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
@@ -101,11 +101,11 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 	private static DocumentChanges documentChanges;
 	private static DynamoDbTable<DocumentEntity> dynamoDbTable;
 
-	@MockBean
+	@MockitoBean
 	private CallMacchinaStati callMacchinaStati;
-	@MockBean
+	@MockitoBean
 	private RetentionService retentionService;
-	@MockBean
+	@MockitoBean
 	private UserConfigurationClientCall userConfigurationClientCall;
 	@Autowired
 	private DocumentInternalApiController documentInternalApiController;

@@ -6,11 +6,10 @@ import it.pagopa.pnss.common.exception.StateMachineServiceException;
 import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import lombok.CustomLog;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientRequestException;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.RetryBackoffSpec;
 
@@ -23,7 +22,7 @@ public class CallMacchinaStatiImpl implements CallMacchinaStati {
     private final RetryBackoffSpec smRetryStrategy;
     private static final String CLIENT_ID_QUERY_PARAM = "clientId";
 
-    public CallMacchinaStatiImpl(WebClient stateMachineWebClient, StateMachineEndpointProperties stateMachineEndpointProperties, RetryBackoffSpec smRetryStrategy) {
+    public CallMacchinaStatiImpl(@Qualifier("stateMachineWebClient") WebClient stateMachineWebClient, StateMachineEndpointProperties stateMachineEndpointProperties, @Qualifier("smRetryStrategy") RetryBackoffSpec smRetryStrategy) {
         this.stateMachineWebClient = stateMachineWebClient;
         this.stateMachineEndpointProperties = stateMachineEndpointProperties;
         this.smRetryStrategy = smRetryStrategy;
@@ -40,7 +39,7 @@ public class CallMacchinaStatiImpl implements CallMacchinaStati {
                         .build(documentStatusChange.getProcessId(),
                                 documentStatusChange.getCurrentStatus()))
                 .retrieve()
-                .onStatus(HttpStatus::is5xxServerError, clientResponse -> clientResponse.createException().map(throwable -> new StateMachineServiceException(throwable.getMessage(), throwable)))
+                .onStatus(HttpStatusCode::is5xxServerError, clientResponse -> clientResponse.createException().map(throwable -> new StateMachineServiceException(throwable.getMessage(), throwable)))
                 .bodyToMono(MacchinaStatiValidateStatoResponseDto.class)
                 .flatMap(macchinaStatiValidateStatoResponseDto -> {
                     if (!macchinaStatiValidateStatoResponseDto.isAllowed()) {

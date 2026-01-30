@@ -8,7 +8,6 @@ import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.JsonUtils;
 import it.pagopa.pnss.configurationproperties.retry.SqsRetryStrategyProperties;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

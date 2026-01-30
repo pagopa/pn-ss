@@ -19,8 +19,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -44,9 +44,9 @@ import static org.mockito.Mockito.*;
 @SpringBootTestWebEnv
 @CustomLog
 class TransformationServiceTimeoutTest {
-    @SpyBean
+    @MockitoSpyBean
     private TransformationService transformationService;
-    @MockBean
+    @MockitoBean
     private DocumentClientCall documentClientCall;
     @Autowired
     private BucketName bucketName;
@@ -54,11 +54,11 @@ class TransformationServiceTimeoutTest {
     private S3Client s3TestClient;
     @Autowired
     AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
-    @SpyBean
+    @MockitoSpyBean
     private S3Service s3Service;
-    @SpyBean
+    @MockitoSpyBean
     private PnSignProviderService pnSignProviderService;
-    @SpyBean
+    @MockitoSpyBean
     private SqsTimeoutProvider sqsTimeoutProvider;
     private final String FILE_KEY = "FILE_KEY";
     private static final String SIGN_AND_TIMEMARK = "SIGN_AND_TIMEMARK";
@@ -160,7 +160,7 @@ class TransformationServiceTimeoutTest {
         var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())))
                 .tipoDocumento(DocTypesConstant.PN_AAR)
                 .checksum(DocumentType.ChecksumEnum.MD5);
-        var document = new Document().documentType(documentType1);
+        var document = new DocumentResponseDocument().documentType(documentType1);
         document.setDocumentKey(FILE_KEY);
         document.setContentType(contentType);
         document.getDocumentType().setTransformations(transformations);

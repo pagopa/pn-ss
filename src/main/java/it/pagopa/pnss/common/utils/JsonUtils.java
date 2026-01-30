@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pnss.common.exception.JsonStringToObjectException;
 import org.springframework.stereotype.Component;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.Validation;
-import javax.validation.Validator;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import java.util.List;
 import java.util.Set;
 
@@ -33,7 +33,7 @@ public class JsonUtils {
 
     /**
      * Convert a json string into an object of a given class.
-     * This method validates the object with the javax Validator.
+     * This method validates the object with the jakarta Validator.
      *
      * @param <T>        the type parameter
      * @param jsonString the json string
@@ -58,7 +58,7 @@ public class JsonUtils {
 
     /**
      * Convert a json string into a type of given type reference.
-     * This method validates the object with the javax Validator.
+     * This method validates the object with the jakarta Validator.
      *
      * @param <T>        the type parameter
      * @param jsonString the json string

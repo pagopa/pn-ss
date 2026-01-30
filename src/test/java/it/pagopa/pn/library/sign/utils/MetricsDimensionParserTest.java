@@ -13,13 +13,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-@SpringBootTestWebEnv
+//@SpringBootTestWebEnv --> Non è necessario Caricare tutto il contesto Spring per testare un ObjectMapper
 @CustomLog
 class MetricsDimensionParserTest {
 
     private final MetricsDimensionParser metricsDimensionParser = new MetricsDimensionParser();
-    @Autowired
-    private ObjectMapper objectMapper;
+    //@Autowired
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     void testParseSignDimensionJsonOk() throws IOException {

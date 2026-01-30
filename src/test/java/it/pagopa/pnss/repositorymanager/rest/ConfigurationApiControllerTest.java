@@ -9,15 +9,12 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguratio
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationDestination;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationResponse;
 import lombok.CustomLog;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -33,11 +30,16 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @CustomLog
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ConfigurationApiControllerTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
-	
+	@Autowired
+	private DynamoDbEnhancedClient dynamoDbEnhancedClient;
+	@Autowired
+	private RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName;
+
 	@Value("${header.x-api-key:#{null}}")
 	private String xApiKey;
 	@Value("${header.x-pagopa-safestorage-cx-id:#{null}}")
@@ -50,7 +52,7 @@ public class ConfigurationApiControllerTest {
 	
 	private static Mono<UserConfigurationResponse> userConfigurationResponse;
 	
-    @MockBean
+    @MockitoBean
     UserConfigurationClientCall userConfigurationClientCall;
 	
 	private static final String BASE_PATH_CONFIGURATIONS_USER_CONF = "/safe-storage/v1/configurations/clients/";
@@ -67,8 +69,7 @@ public class ConfigurationApiControllerTest {
     }
 	
     @BeforeAll
-    public static void insertDefaultUserConfiguration(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-    		@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) 
+    public  void insertDefaultUserConfiguration()
     {
     	log.info("execute insertDefaultUserConfiguration()");
         dynamoDbTable = dynamoDbEnhancedClient.table(

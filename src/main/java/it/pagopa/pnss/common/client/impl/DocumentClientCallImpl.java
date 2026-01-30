@@ -1,15 +1,13 @@
 package it.pagopa.pnss.common.client.impl;
 
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentInput;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,7 +36,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
 
     private final WebClient ssWebClient;
 
-    public DocumentClientCallImpl(WebClient ssWebClient) {
+    public DocumentClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient) {
         this.ssWebClient = ssWebClient;
     }
 
@@ -84,7 +82,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
     }
 
     @Override
-    public ResponseEntity<Document> deleteDocument(String keyFile) throws IdClientNotFoundException {
+    public ResponseEntity<DocumentResponseDocument> deleteDocument(String keyFile) throws IdClientNotFoundException {
         return null;
     }
 

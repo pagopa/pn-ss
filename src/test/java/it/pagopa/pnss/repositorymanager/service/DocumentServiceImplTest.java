@@ -14,12 +14,9 @@ import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.impl.DocumentServiceImpl;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -40,14 +37,20 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
 @CustomLog
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class DocumentServiceImplTest {
 
     @Autowired
     private DocumentServiceImpl documentServiceImpl;
     @Autowired
     private static DynamoDbTable<DocTypeEntity> docTypeDynamoDbTable;
-    @MockBean
-    private static CallMacchinaStati callMacchinaStati;
+    @Autowired
+    private DynamoDbEnhancedClient dynamoDbEnhancedClient;
+    @Autowired
+    private RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName;
+
+    @MockitoBean
+    private  CallMacchinaStati callMacchinaStati;
     private static DynamoDbTable<DocumentEntity> documentDynamoDbTable;
 
     private static final String T1 = "T1";
@@ -59,8 +62,7 @@ public class DocumentServiceImplTest {
 
 
     @BeforeAll
-    public static void insertDefaultDocuments(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+    public void insertDefaultDocuments() {
         docTypeDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
         insertDocTypeEntities(generateDocTypeEntity(T1), generateDocTypeEntity(T2));
         documentDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
@@ -68,8 +70,7 @@ public class DocumentServiceImplTest {
     }
 
     @AfterAll
-    public static void deleteDefaultDocuments(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+    public void deleteDefaultDocuments() {
         docTypeDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
         deleteDocTypeEntities(generateDocTypeEntity(T1), generateDocTypeEntity(T2));
         documentDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
@@ -80,28 +81,28 @@ public class DocumentServiceImplTest {
     @Test
     void insertDocumentTest() {
         DocumentInput documentInput = generateDocumentInput(KEY3);
-        Mono<Document> result = Mono.fromCallable(() -> documentServiceImpl.insertDocument(documentInput)).flatMap(mono -> mono);
+        Mono<DocumentResponseDocument> result = Mono.fromCallable(() -> documentServiceImpl.insertDocument(documentInput)).flatMap(mono -> mono);
         StepVerifier.create(result).expectNextCount(1).verifyComplete();
     }
 
     @Test
     void insertDocumentItemAlreadyPresentTest() {
         DocumentInput documentInput = generateDocumentInput(ALREADY_PRESENT);
-        Mono<Document> secondInsert = Mono.fromCallable(() -> documentServiceImpl.insertDocument(documentInput)).flatMap(mono -> mono);
+        Mono<DocumentResponseDocument> secondInsert = Mono.fromCallable(() -> documentServiceImpl.insertDocument(documentInput)).flatMap(mono -> mono);
         StepVerifier.create(secondInsert).verifyError(ItemAlreadyPresent.class);
 
     }
 
     @Test
     void insertDocumentNullTest() {
-        Mono<Document> result = Mono.fromCallable(() -> documentServiceImpl.insertDocument(null)).flatMap(mono -> mono);
+        Mono<DocumentResponseDocument> result = Mono.fromCallable(() -> documentServiceImpl.insertDocument(null)).flatMap(mono -> mono);
         StepVerifier.create(result).verifyError(RepositoryManagerException.class);
     }
 
     @Test
     void insertDocumentTestDocumentKeyNullTest() {
         DocumentInput documentInput = generateDocumentInput(null);
-        Mono<Document> result = Mono.fromCallable(() -> documentServiceImpl.insertDocument(documentInput)).flatMap(mono -> mono);
+        Mono<DocumentResponseDocument> result = Mono.fromCallable(() -> documentServiceImpl.insertDocument(documentInput)).flatMap(mono -> mono);
         StepVerifier.create(result).verifyError(RepositoryManagerException.class);
     }
 
@@ -166,7 +167,7 @@ public class DocumentServiceImplTest {
     void convertAndStoreDocumentEntity() {
         DocumentInput documentInput = generateDocumentInput(KEY);
         DocumentType documentType = generateDocumentType();
-        Document document = generateDocument();
+        DocumentResponseDocument document = generateDocument();
 
         Mono<DocumentEntity> result = ReflectionTestUtils.invokeMethod(documentServiceImpl, "convertAndStoreDocumentEntity", documentInput, documentType, document);
 
@@ -221,8 +222,8 @@ public class DocumentServiceImplTest {
                         .allowedStatusTransitions(List.of(ATTACHED))));
     }
 
-    private Document generateDocument() {
-        return new Document()
+    private DocumentResponseDocument generateDocument() {
+        return new DocumentResponseDocument()
                 .documentType(generateDocumentType())
                 .documentKey("documentKey")
                 .documentState("documentState")

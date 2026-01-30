@@ -25,6 +25,7 @@ import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -110,7 +111,10 @@ public class UriBuilderService {
     final RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService, RetryBackoffSpec gestoreRepositoryRetryStrategy, ThreadPoolTaskExecutor taskExecutor, IndexingConfiguration indexingConfiguration, RepositoryManagerDynamoTableName managerDynamoTableName) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner,
+                             @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService,
+                             @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy, ThreadPoolTaskExecutor taskExecutor,
+                             IndexingConfiguration indexingConfiguration, RepositoryManagerDynamoTableName managerDynamoTableName) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
@@ -278,7 +282,7 @@ public class UriBuilderService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue, Integer finalDurationUpload) {
+    private Mono<PresignedPutObjectRequest> buildsUploadUrl(DocumentResponseDocument document, String checksumValue, Map<String, String> secret, String xTraceIdValue, Integer finalDurationUpload) {
 
         log.debug(LogUtils.INVOKING_METHOD + ARG, BUILDS_UPLOAD_URL, document, checksumValue);
 
@@ -310,7 +314,6 @@ public class UriBuilderService {
 
     }
 
-    //Upload
     private Mono<PresignedPutObjectRequest> signBucket(String bucketName, String documentKey,
                                                        String documentState, String documentType, String contenType,
                                                        Map<String, String> secret, DocumentType.ChecksumEnum checksumType,
@@ -387,7 +390,7 @@ public class UriBuilderService {
                 })
                 .flatMap(tuple -> {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
-                    Document document = tuple.getT2();
+                    DocumentResponseDocument document = tuple.getT2();
                     log.debug("DEBUG - userConfigurationResponses: {}", userConfigurationResponse.getUserConfiguration());
 
                     // Recuperiamo la durata dalla configurazione utente per il download
@@ -405,7 +408,7 @@ public class UriBuilderService {
                 .doOnSuccess(fileDownloadResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_DOWNLOAD_FILE, fileDownloadResponse));
     }
 
-    private Mono<Document> checkDocumentPermissions(List<String> canRead, Document document, String xPagopaSafestorageCxId, boolean canReadTags, Boolean tags) {
+    private Mono<DocumentResponseDocument> checkDocumentPermissions(List<String> canRead, DocumentResponseDocument document, String xPagopaSafestorageCxId, boolean canReadTags, Boolean tags) {
         var documentType = document.getDocumentType();
         if (!canRead.contains(documentType.getTipoDocumento())) {
             return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -424,7 +427,7 @@ public class UriBuilderService {
         }
     }
 
-    private Mono<Document> handleDocumentState(Document document, UserConfigurationResponse userConfigurationResponse) {
+    private Mono<DocumentResponseDocument> handleDocumentState(DocumentResponseDocument document, UserConfigurationResponse userConfigurationResponse) {
         boolean isBooked = document.getDocumentState().equalsIgnoreCase(BOOKED);
         boolean hasRetentionUntilNull = StringUtils.isBlank(document.getRetentionUntil());
 
@@ -448,7 +451,8 @@ public class UriBuilderService {
                     .filter(documentChanges -> !isBooked || canExecutePatch(getFileWithPatchConfiguration, userConfigurationResponse.getUserConfiguration()))
                     .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
                             .retryWhen(gestoreRepositoryRetryStrategy)
-                            .map(DocumentResponse::getDocument))
+                            .map(DocumentResponse::getDocument)
+                    )
                     .defaultIfEmpty(document);
         } else {
             return Mono.just(document);
@@ -517,7 +521,7 @@ public class UriBuilderService {
         return key;
     }
 
-    private DocumentChanges fixBookedDocument(Document document, HeadObjectResponse hor) {
+    private DocumentChanges fixBookedDocument(DocumentResponseDocument document, HeadObjectResponse hor) {
 
         DocumentChanges documentChanges = new DocumentChanges();
 
@@ -551,7 +555,7 @@ public class UriBuilderService {
     }
 
     @NotNull
-    private Mono<FileDownloadResponse> getFileDownloadResponse(String fileKey, String xTraceIdValue, Document doc, Boolean metadataOnly, Integer finalDurationDownload) {
+    private Mono<FileDownloadResponse> getFileDownloadResponse(String fileKey, String xTraceIdValue, DocumentResponseDocument doc, Boolean metadataOnly, Integer finalDurationDownload) {
         final String GET_FILE_DOWNLOAD_RESPONSE = "UriBuilderService.getFileDownloadResponse()";
 
         log.debug(LogUtils.INVOKING_METHOD, GET_FILE_DOWNLOAD_RESPONSE, Stream.of(fileKey, xTraceIdValue, doc, metadataOnly).toList());

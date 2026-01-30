@@ -1,9 +1,6 @@
 package it.pagopa.pnss.common.client.impl;
 
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentInput;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,7 +59,7 @@ class DocumentClientCallImplTest {
     void getDocumentSuccessTest() {
         String keyFile = "testKey";
         DocumentResponse expectedResponse = new DocumentResponse();
-        expectedResponse.setDocument(new Document());
+        expectedResponse.setDocument(new DocumentResponseDocument());
 
         when(ssWebClient.get()).thenAnswer(invocation -> requestHeadersUriSpec); // get simulation
         when(requestHeadersUriSpec.uri(anyString())).thenAnswer(invocation -> requestHeadersSpec); // set uri simulation
@@ -97,7 +94,7 @@ class DocumentClientCallImplTest {
     void postDocumentSuccessTest() {
         DocumentInput documentInput = new DocumentInput();
         DocumentResponse expectedResponse = new DocumentResponse();
-        expectedResponse.setDocument(new Document());
+        expectedResponse.setDocument(new DocumentResponseDocument());
 
         when(ssWebClient.post()).thenAnswer(invocation -> requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenAnswer(invocation -> requestBodySpec);
@@ -138,7 +135,7 @@ class DocumentClientCallImplTest {
         String keyFile = "testKey";
         DocumentChanges documentChanges = new DocumentChanges();
         DocumentResponse expectedResponse = new DocumentResponse();
-        expectedResponse.setDocument(new Document());
+        expectedResponse.setDocument(new DocumentResponseDocument());
 
         when(ssWebClient.patch()).thenAnswer(invocation -> requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenAnswer(invocation -> requestBodySpec);

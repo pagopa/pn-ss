@@ -21,8 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -58,19 +58,19 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	@Autowired
 	private BucketName bucketName;
 
-	@MockBean
+	@MockitoBean
 	private UserConfigurationClientCall userConfigurationClientCall;
 
-	@SpyBean
+	@MockitoSpyBean
 	private S3Service s3Service;
 
-	@SpyBean
+	@MockitoSpyBean
 	private ScadenzaDocumentiClientCall scadenzaDocumentiClientCall;
 
-	@MockBean
+	@MockitoBean
 	private DocumentClientCall documentClientCall;
 
-	@MockBean
+	@MockitoBean
 	private DocTypesClientCall docTypesClientCall;
 
 	@Value("${header.x-api-key:#{null}}")
@@ -123,7 +123,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	void testErrorStatus() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
 				DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1).documentState(BOOKED);
+		var document = new DocumentResponseDocument().documentType(documentType1).documentState(BOOKED);
         var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
@@ -140,7 +140,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	void testErrorTechnicalStatus() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
 				DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1).documentState(BOOKED);
+		var document = new DocumentResponseDocument().documentType(documentType1).documentState(BOOKED);
         var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
@@ -161,7 +161,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 		when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userWhoCannotEdit));
 
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(SAVED, new CurrentStatus()))).tipoDocumento(DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1).documentState(BOOKED);
+		var document = new DocumentResponseDocument().documentType(documentType1).documentState(BOOKED);
         var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
@@ -179,7 +179,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	void testErrorLookUpStatus() {
 		var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus()))).tipoDocumento(
 				DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1).documentState(BOOKED);
+		var document = new DocumentResponseDocument().documentType(documentType1).documentState(BOOKED);
         var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 
@@ -195,7 +195,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	void testFileMetadataUpdateOk() {
 		Map<String, CurrentStatus> statuses = Map.ofEntries(Map.entry(SAVED, new CurrentStatus().technicalState(AVAILABLE).storage("storageType")));
 		var documentType1 = new DocumentType().statuses(statuses).tipoDocumento(DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1).documentState(BOOKED);
+		var document = new DocumentResponseDocument().documentType(documentType1).documentState(BOOKED);
         var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
@@ -210,7 +210,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 
 		Map<String, CurrentStatus> statuses = Map.ofEntries(Map.entry(SAVED, new CurrentStatus().technicalState(AVAILABLE).storage("storageType")));
 		var documentType1 = new DocumentType().statuses(statuses).tipoDocumento(DocTypesConstant.PN_AAR);
-		var document = new Document().documentState(AVAILABLE).documentType(documentType1);
+		var document = new DocumentResponseDocument().documentState(AVAILABLE).documentType(documentType1);
 		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
@@ -241,7 +241,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	void testFileMetadataUpdateStatusDeleted() {
 		Map<String, CurrentStatus> statuses = Map.ofEntries(Map.entry(SAVED, new CurrentStatus().technicalState(AVAILABLE).storage("storageType")));
 		var documentType1 = new DocumentType().statuses(statuses).tipoDocumento(DocTypesConstant.PN_AAR);
-		var document = new Document().documentType(documentType1).documentState(DELETED);
+		var document = new DocumentResponseDocument().documentType(documentType1).documentState(DELETED);
 		var documentResponse = new DocumentResponse().document(document);
 		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
 		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.error(new PatchDocumentException("Document deleted", HttpStatus.GONE)));

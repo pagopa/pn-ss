@@ -2,10 +2,7 @@ package it.pagopa.pnss.repositorymanager.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentInput;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.constant.*;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.model.dto.DocumentStateDto;
@@ -88,24 +85,24 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Mono<Document> getDocument(String documentKey) {
+    public Mono<DocumentResponseDocument> getDocument(String documentKey) {
         final String GET_DOCUMENT = "DocumentService.getDocument()";
         log.debug(LogUtils.INVOKING_METHOD, GET_DOCUMENT, documentKey);
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.getItem(Key.builder().partitionValue(documentKey).build()))
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error(throwable.getMessage()))
-                   .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, Document.class));
+                   .map(docTypeEntity -> objectMapper.convertValue(docTypeEntity, DocumentResponseDocument.class));
     }
 
     @Override
-    public Mono<Document> insertDocument(DocumentInput documentInput) {
+    public Mono<DocumentResponseDocument> insertDocument(DocumentInput documentInput) {
         final String INSERT_DOCUMENT = "DocumentService.insertDocument()";
         log.debug(LogUtils.INVOKING_METHOD, INSERT_DOCUMENT, documentInput);
 
         final String DOCUMENT_INPUT = "DocumentInput";
 
         log.logChecking(DOCUMENT_INPUT);
-        Document resp = new Document();
+        DocumentResponseDocument resp = new DocumentResponseDocument();
         if (documentInput == null) {
             String errorMsg = "Document is null";
             log.logCheckingOutcome(DOCUMENT_INPUT, false, errorMsg);
@@ -136,7 +133,7 @@ public class DocumentServiceImpl implements DocumentService {
                       .thenReturn(resp);
     }
 
-    private @NotNull Mono<Void> convertAndStoreDocumentEntity(DocumentInput documentInput, DocumentType o, Document resp) {
+    private @NotNull Mono<Void> convertAndStoreDocumentEntity(DocumentInput documentInput, DocumentType o, DocumentResponseDocument resp) {
         resp.setDocumentType(o);
         resp.setDocumentKey(documentInput.getDocumentKey());
         resp.setDocumentState(documentInput.getDocumentState());
@@ -151,7 +148,7 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Mono<Document> patchDocument(String documentKey, DocumentChanges documentChanges, String authPagopaSafestorageCxId,
+    public Mono<DocumentResponseDocument> patchDocument(String documentKey, DocumentChanges documentChanges, String authPagopaSafestorageCxId,
                                         String authApiKey) {
         final String PATCH_DOCUMENT = "DocumentService.patchDocument()";
         log.debug(LogUtils.INVOKING_METHOD, PATCH_DOCUMENT, Stream.of(documentKey, documentChanges, authPagopaSafestorageCxId).toList());
@@ -183,7 +180,7 @@ public class DocumentServiceImpl implements DocumentService {
                     }
                     return executePatch(documentEntity, documentChanges, oldState, documentKey, authPagopaSafestorageCxId, authApiKey);
                 })
-                .map(documentEntity -> objectMapper.convertValue(documentEntity, Document.class))
+                .map(documentEntity -> objectMapper.convertValue(documentEntity, DocumentResponseDocument.class))
                 .doOnSuccess(documentEntity -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentEntity));
     }
 
@@ -324,7 +321,7 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Mono<Document> deleteDocument(String documentKey) {
+    public Mono<DocumentResponseDocument> deleteDocument(String documentKey) {
         final String DELETE_DOCUMENT = "DocumentService.deleteDocument()";
         log.debug(LogUtils.INVOKING_METHOD, DELETE_DOCUMENT, documentKey);
         Key typeKey = Key.builder().partitionValue(documentKey).build();
@@ -333,7 +330,7 @@ public class DocumentServiceImpl implements DocumentService {
                    .switchIfEmpty(getErrorIdDocNotFoundException(documentKey))
                    .doOnError(DocumentKeyNotPresentException.class, throwable -> log.error("Error in DocumentServiceImpl.deleteDocument(): DocumentKeyNotPresentException - '{}'", throwable.getMessage()))
                    .zipWhen(documentToDelete -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.deleteItem(typeKey)))
-                   .map(objects -> objectMapper.convertValue(objects.getT2(), Document.class))
+                   .map(objects -> objectMapper.convertValue(objects.getT2(), DocumentResponseDocument.class))
                    .doOnSuccess(documentType -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, DELETE_DOCUMENT, documentType));
     }
 

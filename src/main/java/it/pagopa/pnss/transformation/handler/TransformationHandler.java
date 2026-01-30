@@ -1,8 +1,8 @@
 package it.pagopa.pnss.transformation.handler;
 
-import io.awspring.cloud.messaging.listener.Acknowledgment;
-import io.awspring.cloud.messaging.listener.SqsMessageDeletionPolicy;
-import io.awspring.cloud.messaging.listener.annotation.SqsListener;
+import io.awspring.cloud.sqs.annotation.SqsListenerAcknowledgementMode;
+import io.awspring.cloud.sqs.listener.acknowledgement.Acknowledgement;
+import io.awspring.cloud.sqs.annotation.SqsListener;
 import it.pagopa.pnss.transformation.model.dto.S3BucketOriginDetail;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -47,52 +47,95 @@ public class TransformationHandler {
     }
 
 
-    @SqsListener(value = "${pn.ss.transformation.queues.staging}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
-    void processAndPublishTransformation(S3EventNotificationMessage s3EventNotificationMessage, Acknowledgment acknowledgment) {
+    @SqsListener(value = "${pn.ss.transformation.queues.staging}", acknowledgementMode = SqsListenerAcknowledgementMode.MANUAL)
+    void processAndPublishTransformation(S3EventNotificationMessage s3EventNotificationMessage, Acknowledgement acknowledgment) {
         String fileKey = s3EventNotificationMessage.getEventNotificationDetail().getObject().getKey();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
         log.logStartingProcess(PROCESS_TRANSFORMATION_EVENT);
         log.info("S3EventNotificationMessage received in processAndPublishTransformation = {}", s3EventNotificationMessage);
-        MDCUtils.addMDCToContextAndExecute(
+        //MDCUtils.addMDCToContextAndExecute(
                 transformationService.handleS3Event(s3EventNotificationMessage)
                         .doOnSuccess(result -> {
                             log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT);
                             acknowledgment.acknowledge();
-                        }).doOnError(throwable -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, throwable.getMessage()))
-        ).subscribe();
+                        })
+                        .onErrorResume(throwable -> {
+                            log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, throwable.getMessage());
+                            return Mono.empty();
+                        })
+        //).subscribe();
+                        .block();
     }
 
-    @SqsListener(value = "${pn.ss.transformation.queues.sign-and-timemark}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
-    void signAndTimemarkTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgment acknowledgment) {
+    @SqsListener(value = "${pn.ss.transformation.queues.sign-and-timemark}", acknowledgementMode = SqsListenerAcknowledgementMode.MANUAL)
+    void signAndTimemarkTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgement acknowledgment) {
         acquireSemaphore(signAndTimemarkSemaphore);
-        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, true,signAndTimemarkQueueName), acknowledgment, SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER)
-                .doFinally(signalType -> signAndTimemarkSemaphore.release())
-                .subscribe();
+        try {
+            log.info("Inizio processamento signAndTimemark per messaggio: {}", transformationMessage);
+            consumeTransformationMessage(transformationMessage, message ->
+                            transformationService.signAndTimemarkTransformation(message, true, signAndTimemarkQueueName),
+                    acknowledgment, SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER
+            )
+                    //.doFinally(signalType -> signAndTimemarkSemaphore.release())
+                    //.subscribe();
+                    .onErrorResume(throwable -> {
+                        log.error("Errore durante signAndTimemark: {}", throwable.getMessage());
+                        return Mono.empty();
+                    })
+                    .block();
+        } finally {
+            // 4. Rilascio del semaforo SEMPRE, anche in caso di errore
+            signAndTimemarkSemaphore.release();
+            log.info("Semaforo rilasciato per signAndTimemark");
+        }
     }
 
-    @SqsListener(value = "${pn.ss.transformation.queues.sign}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
-    void signTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgment acknowledgment) {
+    @SqsListener(value = "${pn.ss.transformation.queues.sign}", acknowledgementMode = SqsListenerAcknowledgementMode.MANUAL)
+    void signTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgement acknowledgment) {
         acquireSemaphore(signSemaphore);
-        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, false,signQueueName), acknowledgment, SIGN_TRANSFORMATION_SUBSCRIBER)
-                .doFinally(signalType -> signSemaphore.release())
-                .subscribe();
+        try {
+            consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, false,signQueueName), acknowledgment, SIGN_TRANSFORMATION_SUBSCRIBER)
+                //.doFinally(signalType -> signSemaphore.release())
+                //.subscribe();
+                    .onErrorResume(throwable -> {
+                        log.error("Errore durante signTransformation: {}", throwable.getMessage());
+                        return Mono.empty();
+                    })
+                    .block();
+
+        } finally {
+            signSemaphore.release();
+            log.info("Semaforo rilasciato per signTransformation");
+        }
     }
 
-    @SqsListener(value = "${pn.ss.transformation.queues.dummy}", deletionPolicy = SqsMessageDeletionPolicy.NEVER)
-    void dummyTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgment acknowledgment) {
-        consumeTransformationMessage(transformationMessage, transformationService::dummyTransformation, acknowledgment, DUMMY_TRANSFORMATION_SUBSCRIBER).subscribe();
+    @SqsListener(value = "${pn.ss.transformation.queues.dummy}", acknowledgementMode = SqsListenerAcknowledgementMode.MANUAL)
+    void dummyTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgement acknowledgment) {
+        consumeTransformationMessage(transformationMessage, transformationService::dummyTransformation, acknowledgment, DUMMY_TRANSFORMATION_SUBSCRIBER)
+                //.subscribe();
+                .onErrorResume(throwable -> {
+                    log.error("Errore durante dummyTransformation: {}", throwable.getMessage());
+                    return Mono.empty(); // Assorbe l'errore per completare il block() in sicurezza
+                })
+                .block(); // Aspetta che il processo e l'acknowledgement siano conclusi
     }
 
-    private Mono<?> consumeTransformationMessage(TransformationMessage transformationMessage, Function<TransformationMessage, Mono<?>> transformationFunction, Acknowledgment acknowledgment, String op) {
+    private Mono<?> consumeTransformationMessage(TransformationMessage transformationMessage, Function<TransformationMessage, Mono<?>> transformationFunction, Acknowledgement acknowledgment, String op) {
         MDCUtils.clearMDCKeys();
         MDC.put(MDC_CORR_ID_KEY, transformationMessage.getFileKey());
         log.logStartingProcess(op);
         return MDCUtils.addMDCToContextAndExecute(transformationFunction.apply(transformationMessage)
-                .doOnSuccess(result -> {
+                .flatMap(result -> {
                     log.logEndingProcess(op);
+                    // Convertiamo l'acknowledge (void) in un segnale reattivo
                     acknowledgment.acknowledge();
+                    return Mono.empty();
                 })
-                .doOnError(throwable -> log.logEndingProcess(op, false, throwable.getMessage())));
+                .doOnError(throwable -> {
+                    log.logEndingProcess(op, false, throwable.getMessage());
+                })
+                .then()
+        );
     }
 
     private void acquireSemaphore(Semaphore semaphore) {

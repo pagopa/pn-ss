@@ -1,13 +1,17 @@
 package it.pagopa.pnss.common.service;
 
 
+import io.awspring.cloud.autoconfigure.sqs.SqsAutoConfiguration;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.transformation.model.dto.S3EventNotificationDetail;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
+import it.pagopa.pnss.transformation.model.dto.S3Object;
 import lombok.CustomLog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -18,6 +22,7 @@ import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
+@EnableAutoConfiguration(exclude={SqsAutoConfiguration.class})
 @CustomLog
 class SqsServiceTest {
     @Autowired
@@ -64,6 +69,7 @@ class SqsServiceTest {
     void deleteMessageFromQueue() {
         SendMessageResponse sendMessageResponse = sendMessageToQueue().block();
         assert sendMessageResponse != null : "sendMessageResponse is null";
+
         Message received = sqsService.getMessages(signQueueName, S3EventNotificationMessage.class, MAX_MESSAGES).filter(sqsMessageWrapper -> sqsMessageWrapper.getMessage().messageId().equals(sendMessageResponse.messageId())).blockFirst().getMessage();
         assert received != null : "received is null";
 
@@ -81,6 +87,9 @@ class SqsServiceTest {
 
     private Mono<SendMessageResponse> sendMessageToQueue() {
         S3EventNotificationMessage createdS3ObjectDto = new S3EventNotificationMessage();
+        S3Object obj = S3Object.builder().key("fileKey").build();
+        S3EventNotificationDetail detail = S3EventNotificationDetail.builder().object(obj).build();
+        createdS3ObjectDto.setEventNotificationDetail(detail);
         return sqsService.send(signQueueName, createdS3ObjectDto);
 
     }

@@ -11,10 +11,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.CurrentStatus;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypeResponse;
 import lombok.CustomLog;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.http.HttpStatus;
@@ -31,10 +28,15 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient
 @CustomLog
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class DocTypeInternalApiControllerTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
+	@Autowired
+	private DynamoDbEnhancedClient dynamoDbEnhancedClient;
+	@Autowired
+	private RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName;
 
 	private static final String BASE_PATH = "/safestorage/internal/v1/doctypes";
 	private static final String BASE_PATH_WITH_PARAM = String.format("%s/{typeId}", BASE_PATH);
@@ -56,8 +58,7 @@ public class DocTypeInternalApiControllerTest {
 	}
 
 	@BeforeAll
-	public static void insertDefaultDocType(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-			@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+	public void insertDefaultDocType() {
 		log.info("execute insertDefaultDocType()");
 		dynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(),
 				TableSchema.fromBean(DocTypeEntity.class));

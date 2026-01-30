@@ -43,7 +43,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 		this.documentService = documentService;
 	}
 
-	private DocumentResponse getResponse(Document document) {
+	private DocumentResponse getResponse(DocumentResponseDocument document) {
 		DocumentResponse response = new DocumentResponse();
 		response.setDocument(document);
 		return response;

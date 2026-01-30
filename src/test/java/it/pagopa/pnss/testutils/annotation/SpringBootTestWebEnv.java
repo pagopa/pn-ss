@@ -19,5 +19,12 @@ import java.lang.annotation.Target;
 @Import(LocalStackTestConfig.class)
 @ExtendWith(PnSsTestWatcher.class)
 @ActiveProfiles("test")
-@TestPropertySource("classpath:application-test.properties")
+//@TestPropertySource("classpath:application-test.properties")
+@TestPropertySource(
+        locations = "classpath:application-test.properties",
+        properties = {
+                "spring.main.web-application-type=reactive",
+                "spring.main.allow-bean-definition-overriding=true"
+        }
+)
 public @interface SpringBootTestWebEnv {}

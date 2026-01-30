@@ -1,15 +1,19 @@
 package it.pagopa.pnss.configuration;
 
+//import com.fasterxml.jackson.databind.ObjectMapper;
+//import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
+//import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.awspring.cloud.messaging.config.QueueMessageHandlerFactory;
-import io.awspring.cloud.messaging.listener.support.AcknowledgmentHandlerMethodArgumentResolver;
+import io.awspring.cloud.sqs.config.SqsMessageListenerContainerFactory;
+import io.awspring.cloud.sqs.listener.acknowledgement.handler.AcknowledgementMode;
+import io.awspring.cloud.sqs.support.converter.SqsMessagingMessageConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.converter.MappingJackson2MessageConverter;
-import org.springframework.messaging.handler.annotation.support.PayloadMethodArgumentResolver;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+//import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+//import org.springframework.messaging.handler.annotation.support.PayloadMethodArgumentResolver;
+//import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -29,8 +33,8 @@ import software.amazon.awssdk.services.eventbridge.EventBridgeAsyncClientBuilder
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
+//import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+//import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.sns.SnsAsyncClient;
 import software.amazon.awssdk.services.sns.SnsAsyncClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
@@ -41,7 +45,6 @@ import software.amazon.awssdk.services.ssm.SsmClientBuilder;
 import software.amazon.awssdk.services.ssm.SsmAsyncClient;
 import software.amazon.awssdk.services.ssm.SsmAsyncClientBuilder;
 import java.net.URI;
-import java.util.List;
 
 @Configuration
 @Slf4j
@@ -86,21 +89,61 @@ public class AwsConfiguration {
 
     //  <-- spring-cloud-starter-aws-messaging -->
 
+//   defaultSqsListenerContainerFactory senza il converter
+//    @Bean
+//    public SqsMessageListenerContainerFactory<Object> defaultSqsListenerContainerFactory(
+//            SqsAsyncClient sqsAsyncClient) {
+//        return SqsMessageListenerContainerFactory
+//                .builder()
+//                .sqsAsyncClient(sqsAsyncClient)
+//                .configure(options -> options
+//                        // Sostituisce la logica del DeletionPolicy.NEVER che usavi prima
+//                        .acknowledgementMode(AcknowledgementMode.MANUAL)
+//                )
+//                // Il sistema rileva automaticamente ObjectMapper e Validator bean
+//                .build();
+//    }
+
+
+//    @Bean
+//    public QueueMessageHandlerFactory queueMessageHandlerFactory(ObjectMapper objectMapper, LocalValidatorFactoryBean validator) {
+//
+//        final var queueMessageHandlerFactory = new QueueMessageHandlerFactory();
+//        final var converter = new MappingJackson2MessageConverter();
+//
+//        converter.setObjectMapper(objectMapper);
+//        converter.setStrictContentTypeMatch(false);
+//
+//        final var acknowledgmentResolver = new AcknowledgmentHandlerMethodArgumentResolver("Acknowledgment");
+//
+//        queueMessageHandlerFactory.setArgumentResolvers(List.of(acknowledgmentResolver,
+//                                                                new PayloadMethodArgumentResolver(converter, validator)));
+//
+//        return queueMessageHandlerFactory;
+//    }
+
     @Bean
-    public QueueMessageHandlerFactory queueMessageHandlerFactory(ObjectMapper objectMapper, LocalValidatorFactoryBean validator) {
-
-        final var queueMessageHandlerFactory = new QueueMessageHandlerFactory();
-        final var converter = new MappingJackson2MessageConverter();
-
+    public SqsMessagingMessageConverter sqsMessagingMessageConverter(ObjectMapper objectMapper) {
+        // Sostituisce la logica del MappingJackson2MessageConverter
+        SqsMessagingMessageConverter converter = new SqsMessagingMessageConverter();
         converter.setObjectMapper(objectMapper);
-        converter.setStrictContentTypeMatch(false);
+        return converter;
+    }
 
-        final var acknowledgmentResolver = new AcknowledgmentHandlerMethodArgumentResolver("Acknowledgment");
+    @Bean
+    public SqsMessageListenerContainerFactory<Object> defaultSqsListenerContainerFactory(
+            SqsAsyncClient sqsAsyncClient,
+            SqsMessagingMessageConverter sqsMessagingMessageConverter) {
 
-        queueMessageHandlerFactory.setArgumentResolvers(List.of(acknowledgmentResolver,
-                                                                new PayloadMethodArgumentResolver(converter, validator)));
-
-        return queueMessageHandlerFactory;
+        return SqsMessageListenerContainerFactory
+                .builder()
+                .sqsAsyncClient(sqsAsyncClient)
+                .configure(options -> options
+                        .acknowledgementMode(AcknowledgementMode.MANUAL)
+                        // Configura il convertitore qui dentro
+                        .messageConverter(sqsMessagingMessageConverter)
+                )
+                .build();
     }
 
 //  <-- AWS SDK for Java v2 -->

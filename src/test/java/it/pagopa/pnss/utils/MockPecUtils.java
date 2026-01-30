@@ -7,8 +7,8 @@ import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pnss.transformation.wsdl.*;
 import reactor.core.publisher.Mono;
 
-import javax.xml.ws.AsyncHandler;
-import javax.xml.ws.Response;
+import jakarta.xml.ws.AsyncHandler;
+import jakarta.xml.ws.Response;
 
 import java.util.concurrent.CompletableFuture;
 

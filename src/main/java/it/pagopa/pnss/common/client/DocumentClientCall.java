@@ -1,9 +1,6 @@
 package it.pagopa.pnss.common.client;
 
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentInput;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
@@ -20,5 +17,5 @@ public interface DocumentClientCall {
     		String authPagopaSafestorageCxId, String authApiKey, 
     		String keyFile, DocumentChanges document) throws DocumentKeyNotPresentException;
     
-    ResponseEntity<Document> deleteDocument(String keyFile) throws IdClientNotFoundException;
+    ResponseEntity<DocumentResponseDocument> deleteDocument(String keyFile) throws IdClientNotFoundException;
 }

@@ -2,7 +2,7 @@ package it.pagopa.pnss.indexing.service;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsDto;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsSearchResponseFileKeys;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.AdditionalFileTagsSearchResponseFileKeysInner;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -16,7 +16,7 @@ public interface AdditionalFileTagsService {
 
     Mono<AdditionalFileTagsDto> getDocumentTags(String fileKey, String clientId);
 
-    Mono<List<AdditionalFileTagsSearchResponseFileKeys>> searchTags(String xPagopaSafestorageCxId, String logic, Boolean tags, Map<String, String> queryParams);
+    Mono<List<AdditionalFileTagsSearchResponseFileKeysInner>> searchTags(String xPagopaSafestorageCxId, String logic, Boolean tags, Map<String, String> queryParams);
 
     Mono<AdditionalFileTagsMassiveUpdateResponse> postMassiveTags(AdditionalFileTagsMassiveUpdateRequest request, String cxId);
 

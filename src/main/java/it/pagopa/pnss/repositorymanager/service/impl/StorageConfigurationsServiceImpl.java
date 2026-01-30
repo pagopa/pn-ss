@@ -6,6 +6,7 @@ import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.RetryBackoffSpec;
@@ -27,7 +28,7 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
     private final RetryBackoffSpec s3RetryStrategy;
     private final BucketName bucketName;
 
-    public StorageConfigurationsServiceImpl(S3Service s3Service, RetryBackoffSpec s3RetryStrategy, BucketName bucketName) {
+    public StorageConfigurationsServiceImpl(S3Service s3Service, @Qualifier("s3RetryStrategy") RetryBackoffSpec s3RetryStrategy, BucketName bucketName) {
         this.s3Service = s3Service;
         this.s3RetryStrategy = s3RetryStrategy;
         this.bucketName = bucketName;

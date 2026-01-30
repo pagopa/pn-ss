@@ -5,6 +5,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguratio
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
 import it.pagopa.pnss.common.utils.LogUtils;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,7 +36,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
     final RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy, RepositoryManagerDynamoTableName managerDynamoTableName) {
+                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, @Qualifier("dynamoRetryStrategy") RetryBackoffSpec dynamoRetryStrategy, RepositoryManagerDynamoTableName managerDynamoTableName) {
         this.objectMapper = objectMapper;
         this.userConfigurationEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(
                 dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.anagraficaClientName(),

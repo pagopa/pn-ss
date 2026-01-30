@@ -6,7 +6,7 @@ import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.impl.S3ServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.services.s3.model.*;
@@ -23,7 +23,7 @@ class StorageConfigurationsServiceImplTest {
     @Autowired
     StorageConfigurationsServiceImpl storageConfigurationsService;
 
-    @SpyBean
+    @MockitoSpyBean
     S3ServiceImpl s3Service;
 
     @Test

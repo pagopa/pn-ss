@@ -47,12 +47,12 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         dtc.setName(docType.getTipoDocumento() != null ? docType.getTipoDocumento() : null);
         dtc.setInitialStatus(docType.getInitialStatus());
         if (docType.getStatuses() != null && !docType.getStatuses().isEmpty()) {
-            Map<String, DocumentTypeConfigurationStatuses> statuses = new HashMap<>();
+            Map<String, DocumentTypeConfigurationStatusesValue> statuses = new HashMap<>();
             dtc.setStatuses(statuses);
             Set<String> keySet = docType.getStatuses().keySet();
             keySet.forEach(key -> {
                 CurrentStatus dtCurrentStatus = docType.getStatuses().get(key);
-                DocumentTypeConfigurationStatuses dtcStatues = new DocumentTypeConfigurationStatuses();
+                DocumentTypeConfigurationStatusesValue dtcStatues = new DocumentTypeConfigurationStatusesValue();
                 dtcStatues.setStorage(dtCurrentStatus.getStorage());
                 dtcStatues.setAllowedStatusTransitions(dtCurrentStatus.getAllowedStatusTransitions());
                 dtc.getStatuses().put(key, dtcStatues);

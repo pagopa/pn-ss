@@ -15,9 +15,10 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -34,19 +35,23 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class DocumentsConfigsServiceImplTest {
 
     @Autowired
     StorageConfigurationsServiceImpl storageConfigurationsService;
     @Autowired
     DocumentsConfigsServiceImpl documentsConfigsService;
-    @SpyBean
+    @MockitoSpyBean
     S3Service s3Service;
     private static DynamoDbTable<DocTypeEntity> docTypeDynamoDbTable;
+    @Autowired
+    private DynamoDbEnhancedClient dynamoDbEnhancedClient;
+    @Autowired
+    private RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName;
 
     @BeforeAll
-    public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+    public void insertDefaultDocument() {
         docTypeDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
         insertDocTypeEntities(createDocTypeEntity("T1"), createDocTypeEntity("T2"));
     }

@@ -9,6 +9,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.utils.LogUtils;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,7 +39,7 @@ public class DocTypesServiceImpl implements DocTypesService {
     final RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public DocTypesServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy, RepositoryManagerDynamoTableName managerDynamoTableName) {
+                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, @Qualifier("dynamoRetryStrategy") RetryBackoffSpec dynamoRetryStrategy, RepositoryManagerDynamoTableName managerDynamoTableName) {
         this.objectMapper = objectMapper;
         this.dynamoRetryStrategy = dynamoRetryStrategy;
         this.docTypeEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.tipologieDocumentiName(),

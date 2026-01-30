@@ -1,6 +1,5 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.OperationResultCodeResponse;
@@ -19,6 +18,7 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -51,7 +51,7 @@ public class FileMetadataUpdateService {
     private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
 
     public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                                     DocTypesClientCall docTypesClientCall, RetryBackoffSpec gestoreRepositoryRetryStrategy,
+                                     DocTypesClientCall docTypesClientCall, @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy,
                                      S3Service s3Service, BucketName bucketName, ScadenzaDocumentiClientCall scadenzaDocumentiClientCall,
                                      IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler) {
         this.userConfigClientCall = userConfigurationClientCall;
@@ -93,7 +93,7 @@ public class FileMetadataUpdateService {
                     }
                 }))
                             .flatMap(object -> {
-                                Document document = (Document) object;
+                                DocumentResponseDocument document = (DocumentResponseDocument) object;
                                 Mono<String> checkedStatus;
                                 if (logicalState != null && !logicalState.isBlank()) {
                                    checkedStatus=getTechnicalState(document.getDocumentType(),logicalState);
@@ -103,7 +103,7 @@ public class FileMetadataUpdateService {
                                 return Mono.zipDelayError(Mono.just(document),  checkedStatus);
                             }).flatMap(objects -> {
 
-                    Document document = objects.getT1();
+                    DocumentResponseDocument document = objects.getT1();
                     DocumentType documentType = document.getDocumentType();
                     String technicalStatus = objects.getT2();
                     DocumentChanges documentChanges = new DocumentChanges();

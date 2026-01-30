@@ -1,6 +1,7 @@
 package it.pagopa.pnss.common.rest.call.download;
 
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -14,7 +15,7 @@ public class DownloadCallImpl implements DownloadCall {
 
     private final WebClient genericWebClient;
 
-    public DownloadCallImpl(WebClient genericWebClient) {
+    public DownloadCallImpl(@Qualifier("genericWebClient") WebClient genericWebClient) {
         this.genericWebClient = genericWebClient;
     }
 

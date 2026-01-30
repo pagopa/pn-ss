@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
@@ -26,11 +26,12 @@ import static org.mockito.Mockito.*;
 @TestPropertySource(properties = {
         "pn.ss.sqs.timeout.percent=10",
         "pn.ss.sqs.timeout.managedQueues=test-queue",
-        "pn.ss.sqs.timeout.default-seconds=86400"
+        "pn.ss.sqs.timeout.default-seconds=86400",
+        "spring.cloud.aws.sqs.enabled=false"
 })
 class SqsTimeoutProviderTest {
 
-    @MockBean
+    @MockitoBean
     private SqsAsyncClient sqsAsyncClient;
     @Autowired
     private SqsTimeoutProvider timeoutProvider;
@@ -49,7 +50,13 @@ class SqsTimeoutProviderTest {
 
     @BeforeEach
     void setField(){
-        ReflectionTestUtils.setField(timeoutProvider,"sqsAsyncClient",sqsAsyncClient);
+        //ReflectionTestUtils.setField(timeoutProvider,"sqsAsyncClient",sqsAsyncClient);
+        // Simula una risposta valida per qualsiasi richiesta di URL della coda
+        // per evitare che Spring Cloud AWS fallisca lo startup
+        when(sqsAsyncClient.getQueueUrl(any(GetQueueUrlRequest.class)))
+                .thenReturn(CompletableFuture.completedFuture(
+                        GetQueueUrlResponse.builder().queueUrl("http://localhost:4566/000000000000/mock-queue").build()
+                ));
     }
 
     @Test
@@ -73,7 +80,7 @@ class SqsTimeoutProviderTest {
 
         isolatedProvider.initQueueTimeouts().block();
 
-        Assertions.assertEquals(TIMEOUT_INACTIVE_DURATION, timeoutProvider.getTimeoutForQueue("test-queue"));
+        Assertions.assertEquals(TIMEOUT_INACTIVE_DURATION, isolatedProvider.getTimeoutForQueue("test-queue"));
     }
 
 

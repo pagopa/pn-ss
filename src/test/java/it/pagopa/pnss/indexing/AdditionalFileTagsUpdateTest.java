@@ -16,7 +16,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
@@ -47,9 +47,9 @@ class AdditionalFileTagsUpdateTest {
     private WebTestClient webTestClient;
     private static final String PATH_WITH_PARAM = "/safe-storage/v1/files/{fileKey}/tags";
     private static final String PATH_NO_PARAM = "/safe-storage/v1/files/tags";
-    @MockBean
+    @MockitoBean
     private UserConfigurationClientCall userConfigurationClientCall;
-    @MockBean
+    @MockitoBean
     private TagsClientCall tagsClientCall;
     private static final String X_API_KEY_VALUE = "apiKey_value";
     private static final String X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE = "CLIENT_ID_123";

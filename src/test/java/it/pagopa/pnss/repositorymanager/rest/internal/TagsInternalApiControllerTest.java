@@ -36,19 +36,24 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient(timeout = "50000")
 @CustomLog
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TagsInternalApiControllerTest {
     @Value("${test.aws.s3.endpoint:#{null}}")
     String testAwsS3Endpoint;
     @Autowired
     private WebTestClient webTestClient;
+    @Autowired
+    private DynamoDbEnhancedClient dynamoDbEnhancedClient;
+    @Autowired
+    private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
+
     private static DynamoDbTable<TagsRelationsEntity> tagsEntityDynamoDbAsyncTable;
     private static DynamoDbTable<DocumentEntity> documentEntityDynamoDbAsyncTable;
     private static final String PUT_TAGS_PATH = "/safestorage/internal/v1/documents/{documentKey}/tags";
 
 
     @BeforeAll
-    public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
+    public void insertDefaultDocument() {
         tagsEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.tagsName(), TableSchema.fromBean(TagsRelationsEntity.class));
         documentEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
         GetTagsTest.insertTagEntity();

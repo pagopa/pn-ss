@@ -6,8 +6,9 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocument
 import it.pagopa.pnss.common.client.ScadenzaDocumentiClientCall;
 import it.pagopa.pnss.common.client.exception.ScadenzaDocumentiCallException;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -20,7 +21,7 @@ public class ScadenzaDocumentiClientCallImpl implements ScadenzaDocumentiClientC
     @Value("${gestore.repository.anagrafica.internal.scadenza.documenti.post}")
     private String scadenzaDocumentiEndpointPost;
 
-    public ScadenzaDocumentiClientCallImpl(WebClient ssWebClient) {
+    public ScadenzaDocumentiClientCallImpl( @Qualifier("ssWebClient") WebClient ssWebClient) {
         this.ssWebClient = ssWebClient;
     }
 
@@ -30,7 +31,7 @@ public class ScadenzaDocumentiClientCallImpl implements ScadenzaDocumentiClientC
                 .uri(scadenzaDocumentiEndpointPost)
                 .bodyValue(scadenzaDocumentiInput)
                 .retrieve()
-                .onStatus(HttpStatus::isError, clientResponse -> clientResponse.bodyToMono(ScadenzaDocumentiResponse.class)
+                .onStatus(HttpStatusCode::isError, clientResponse -> clientResponse.bodyToMono(ScadenzaDocumentiResponse.class)
                         .flatMap(scadenzaDocumentiResponse -> {
                             Error error = scadenzaDocumentiResponse.getError();
                             if (error != null) {

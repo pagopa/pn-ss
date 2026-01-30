@@ -11,6 +11,7 @@ import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -54,7 +55,7 @@ public class RetentionServiceImpl implements RetentionService {
     private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.systemDefault());
     private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
 
-    public RetentionServiceImpl(ConfigurationApiCall configurationApiCall, BucketName bucketName, RetryBackoffSpec gestoreRepositoryRetryStrategy,S3Service s3Service) {
+    public RetentionServiceImpl(ConfigurationApiCall configurationApiCall, BucketName bucketName, @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy, S3Service s3Service) {
         this.configurationApiCall = configurationApiCall;
         this.bucketName = bucketName;
         this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;

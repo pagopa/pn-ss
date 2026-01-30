@@ -14,6 +14,7 @@ import lombok.CustomLog;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.NullSource;
@@ -21,7 +22,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
@@ -43,6 +44,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient(timeout = "36000")
 @CustomLog
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class
 AdditionalFileTagsGetTest {
 
@@ -56,10 +58,15 @@ AdditionalFileTagsGetTest {
     @Autowired
     private WebTestClient webTestClient;
     private static final String GET_PATH_WITH_PARAM = "/safe-storage/v1/files/{fileKey}/tags";
-    @MockBean
+    @MockitoBean
     private UserConfigurationClientCall userConfigurationClientCall;
-    @MockBean
+    @MockitoBean
     private DocumentClientCall documentClientCall;
+
+    @Autowired
+    private RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName;
+    @Autowired
+    private DynamoDbEnhancedClient dynamoDbEnhancedClient;
 
     private static DynamoDbTable<DocumentEntity> dynamoDbTable;
     private static final String DOCTYPE_ID_LEGAL_FACTS = "PN_NOTIFICATION_ATTACHMENTS";
@@ -127,11 +134,11 @@ AdditionalFileTagsGetTest {
     }
 
     @BeforeAll
-    public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+    public void insertDefaultDocument() {
         log.info("execute insertDefaultDocument()");
+        String tableName = gestoreRepositoryDynamoDbTableName.documentiName();
         dynamoDbTable = dynamoDbEnhancedClient.table(
-                gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+                tableName, TableSchema.fromBean(DocumentEntity.class));
         insertDocumentEntityWithTags(PARTITION_ID_ENTITY_TAGS);
 
     }
@@ -139,7 +146,7 @@ AdditionalFileTagsGetTest {
 
     @Test
     void getItemWithTags() {
-        Document document1 = new Document();
+        DocumentResponseDocument document1 = new DocumentResponseDocument();
         document1.setDocumentKey(PARTITION_ID_DEFAULT_TAGS);
         document1.setTags(createTagsList());
 
@@ -165,7 +172,7 @@ AdditionalFileTagsGetTest {
     @ParameterizedTest
     @NullAndEmptySource
     void getItemWithoutTags(Map<String, List<String>> tagsMap) {
-        Document document1 = new Document();
+        DocumentResponseDocument document1 = new DocumentResponseDocument();
         document1.setDocumentKey(PARTITION_ID_DEFAULT_TAGS);
         document1.setTags(tagsMap);
 

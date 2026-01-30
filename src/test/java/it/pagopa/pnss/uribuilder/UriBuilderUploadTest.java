@@ -20,7 +20,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.FluxExchangeResult;
@@ -48,16 +49,16 @@ class UriBuilderUploadTest {
     @Autowired
     private WebTestClient webClient;
 
-    @MockBean
+    @MockitoBean
     private DocTypesClientCall docTypesClientCall;
 
-    @MockBean
+    @MockitoBean
     private UserConfigurationClientCall userConfigurationClientCall;
 
-    @MockBean
+    @MockitoBean
     private DocumentClientCall documentClientCall;
 
-    @MockBean
+    @MockitoBean
     private TagsClientCall tagsClientCall;
 
     @Value("${header.x-api-key:#{null}}")
@@ -79,8 +80,8 @@ class UriBuilderUploadTest {
     private static final String X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE = "CLIENT_ID_123";
     private static final String X_CHECKSUM_VALUE = "checkSumValue";
     private static final String X_QUERY_PARAM_URL_VALUE= "queryParamPresignedUrlTraceId_value";
-    private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new Document().documentKey("documentKey").documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
-    private static final DocumentResponse DOCUMENT_RESPONSE_TAGS = new DocumentResponse().document(new Document().documentKey("documentKey").tags(createTagsList()).documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
+    private static final DocumentResponse DOCUMENT_RESPONSE = new DocumentResponse().document(new DocumentResponseDocument().documentKey("documentKey").documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
+    private static final DocumentResponse DOCUMENT_RESPONSE_TAGS = new DocumentResponse().document(new DocumentResponseDocument().documentKey("documentKey").tags(createTagsList()).documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
     private static final String IUN = "IUN";
 
     private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(FileCreationRequest fileCreationRequest)
@@ -276,7 +277,7 @@ class UriBuilderUploadTest {
             Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
 
             DocumentResponse docResp = new DocumentResponse();
-            Document document = new Document();
+            DocumentResponseDocument document = new DocumentResponseDocument();
             document.setDocumentKey("keyFile");
             DocumentType documentTypeDoc = new DocumentType();
             documentTypeDoc.setChecksum(DocumentType.ChecksumEnum.MD5);
@@ -365,7 +366,7 @@ class UriBuilderUploadTest {
             Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
 
             DocumentResponse docResp = new DocumentResponse();
-            Document document = new Document();
+            DocumentResponseDocument document = new DocumentResponseDocument();
             document.setDocumentKey("keyFile");
             DocumentType documentTypeDoc = new DocumentType();
             documentTypeDoc.setChecksum((checksumValue));

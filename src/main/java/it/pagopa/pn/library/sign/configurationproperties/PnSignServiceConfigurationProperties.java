@@ -6,7 +6,7 @@ import org.joda.time.DateTime;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.Pattern;
 import java.util.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;

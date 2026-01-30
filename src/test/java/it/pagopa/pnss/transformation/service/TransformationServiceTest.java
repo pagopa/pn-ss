@@ -30,9 +30,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -62,9 +62,9 @@ import static org.mockito.Mockito.*;
 @CustomLog
 class TransformationServiceTest {
 
-    @SpyBean
+    @MockitoSpyBean
     private TransformationService transformationService;
-    @MockBean
+    @MockitoBean
     private DocumentClientCall documentClientCall;
     @Autowired
     private BucketName bucketName;
@@ -74,17 +74,17 @@ class TransformationServiceTest {
     private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
     @Autowired
     AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
-    @SpyBean
+    @MockitoSpyBean
     private SqsService sqsService;
-    @SpyBean
+    @MockitoSpyBean
     private S3Service s3Service;
     @Autowired
     private SqsAsyncClient sqsAsyncClient;
-    @SpyBean
+    @MockitoSpyBean
     private TransformationConfig transformationConfig;
-    @SpyBean
+    @MockitoSpyBean
     private EventBridgeService eventBridgeService;
-    @SpyBean
+    @MockitoSpyBean
     private PnSignProviderService pnSignProviderService;
     @Value("${pn.ss.transformation.dummy-delay}")
     private Integer dummyDelay;
@@ -368,7 +368,7 @@ class TransformationServiceTest {
         var testMono = transformationService.dummyTransformation(createTransformationMessage(DUMMY, bucket, null));
 
         //THEN
-        StepVerifier.create(testMono).verifyComplete();
+        StepVerifier.create(testMono).expectNextCount(0).verifyComplete();
         verify(s3Service, never()).putObjectTagging(anyString(), anyString(), any());
     }
 
@@ -471,7 +471,7 @@ class TransformationServiceTest {
         var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())))
                 .tipoDocumento(DocTypesConstant.PN_AAR)
                 .checksum(DocumentType.ChecksumEnum.MD5);
-        var document = new Document().documentType(documentType1);
+        var document = new DocumentResponseDocument().documentType(documentType1);
         document.setDocumentKey(FILE_KEY);
         document.setContentType(contentType);
         document.getDocumentType().setTransformations(transformations);

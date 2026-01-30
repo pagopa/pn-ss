@@ -7,6 +7,7 @@ import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import lombok.CustomLog;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -30,7 +31,7 @@ public class ConfigurationApiCallImpl implements ConfigurationApiCall {
     @Value("${gestore.repository.configuration.api.documents.config}")
     private String configurationApiDocumentsConfigClientEndpoint;
 
-    public ConfigurationApiCallImpl(WebClient ssWebClient) {
+    public ConfigurationApiCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient) {
         this.ssWebClient = ssWebClient;
     }
 

@@ -9,6 +9,7 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
 import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -35,7 +36,7 @@ public class TagsClientCallImpl implements TagsClientCall {
 
     private final WebClient ssWebClient;
 
-    public TagsClientCallImpl(WebClient ssWebClient) {
+    public TagsClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient) {
         this.ssWebClient = ssWebClient;
     }
 

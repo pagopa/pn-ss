@@ -28,6 +28,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -671,7 +672,7 @@ public class UriBuilderService {
                         return Mono.error(new S3BucketException.NoSuchKeyException(keyName));
                     } else {
                         log.error(" Errore AMAZON S3Exception", ase);
-                        return Mono.error(new ResponseStatusException(HttpStatus.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));
+                        return Mono.error(new ResponseStatusException(HttpStatusCode.valueOf(ase.statusCode()), AMAZONERROR + "- " + ase.awsErrorDetails().errorMessage()));
                     }
                 })
                 //Eccezioni dell'SDK

@@ -10,6 +10,7 @@ import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -46,7 +47,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
         return ssWebClient.get()
                           .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
                           .retrieve()
-                          .onStatus(HttpStatus.NOT_FOUND::equals, clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
+                          .onStatus(status -> status.isSameCodeAs(HttpStatus.NOT_FOUND), clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
                           .bodyToMono(DocumentResponse.class);
     }
 
@@ -57,7 +58,7 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                           .uri(anagraficaDocumentiClientEndpointPost)
                           .bodyValue(document)
                           .retrieve()
-                          .onStatus(CONFLICT::equals,
+                          .onStatus(status -> status.isSameCodeAs(CONFLICT),
                                     clientResponse -> Mono.error(new DocumentkeyPresentException(document.getDocumentKey())))
                           .bodyToMono(DocumentResponse.class);
     }
@@ -73,10 +74,10 @@ public class DocumentClientCallImpl implements DocumentClientCall {
                           .header(xApiKey, authApiKey)
                           .bodyValue(document)
                           .retrieve()
-                          .onStatus(status -> status.equals(BAD_REQUEST) || status.equals(GONE), clientResponse -> clientResponse.bodyToMono(DocumentResponse.class)
-                                  .map(documentResponse -> new PatchDocumentException(documentResponse.getError().getDescription(), HttpStatus.valueOf(documentResponse.getError().getCode())))
+                          .onStatus(status -> status.isSameCodeAs(BAD_REQUEST) || status.isSameCodeAs(GONE), clientResponse -> clientResponse.bodyToMono(DocumentResponse.class)
+                                  .map(documentResponse -> new PatchDocumentException(documentResponse.getError().getDescription(), HttpStatusCode.valueOf(Integer.parseInt(documentResponse.getError().getCode()))))
                                   .flatMap(Mono::error))
-                         .onStatus(NOT_FOUND::equals,
+                         .onStatus(status -> status.isSameCodeAs(HttpStatus.NOT_FOUND),
                                     clientResponse -> Mono.error(new DocumentKeyNotPresentException(keyFile)))
                           .bodyToMono(DocumentResponse.class);
     }

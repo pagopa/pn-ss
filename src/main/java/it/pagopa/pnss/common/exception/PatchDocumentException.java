@@ -3,7 +3,7 @@ package it.pagopa.pnss.common.exception;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 
 @AllArgsConstructor
 @Getter
@@ -11,6 +11,6 @@ import org.springframework.http.HttpStatus;
 public class PatchDocumentException extends RuntimeException {
 
     private final String message;
-    private final HttpStatus statusCode;
+    private final HttpStatusCode statusCode;
 
 }

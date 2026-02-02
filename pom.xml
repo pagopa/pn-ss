@@ -215,6 +215,11 @@
             <version>3.0.2</version>
         </dependency>
         <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>5.0.0</version> <!-- Use the appropriate version for your project -->
+        </dependency>
+        <dependency>
             <groupId>jakarta.jws</groupId>
             <artifactId>jakarta.jws-api</artifactId>
             <version>3.0.0</version>

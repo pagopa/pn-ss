@@ -9,22 +9,23 @@ import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.*;
 import it.pagopa.pnss.common.exception.IndexingLimitException;
+import it.pagopa.pnss.common.exception.InvalidConfigurationException;
 import it.pagopa.pnss.common.exception.RestoreRequestDateNotFound;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.common.exception.InvalidConfigurationException;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.S3Service;
-import lombok.CustomLog;
 import it.pagopa.pnss.uribuilder.rest.constant.GetFilePatchConfiguration;
+import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -110,7 +111,7 @@ public class UriBuilderService {
     final RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService, RetryBackoffSpec gestoreRepositoryRetryStrategy, ThreadPoolTaskExecutor taskExecutor, IndexingConfiguration indexingConfiguration, RepositoryManagerDynamoTableName managerDynamoTableName) {
+                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService, @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy, ThreadPoolTaskExecutor taskExecutor, IndexingConfiguration indexingConfiguration, RepositoryManagerDynamoTableName managerDynamoTableName) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
@@ -278,7 +279,7 @@ public class UriBuilderService {
         return FileCreationResponse.UploadMethodEnum.PUT;
     }
 
-    private Mono<PresignedPutObjectRequest> buildsUploadUrl(Document document, String checksumValue, Map<String, String> secret, String xTraceIdValue, Integer finalDurationUpload) {
+    private Mono<PresignedPutObjectRequest> buildsUploadUrl(DocumentResponseDocument document, String checksumValue, Map<String, String> secret, String xTraceIdValue, Integer finalDurationUpload) {
 
         log.debug(LogUtils.INVOKING_METHOD + ARG, BUILDS_UPLOAD_URL, document, checksumValue);
 
@@ -387,7 +388,7 @@ public class UriBuilderService {
                 })
                 .flatMap(tuple -> {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
-                    Document document = tuple.getT2();
+                    Document document = toDomain(tuple.getT2());
                     log.debug("DEBUG - userConfigurationResponses: {}", userConfigurationResponse.getUserConfiguration());
 
                     // Recuperiamo la durata dalla configurazione utente per il download
@@ -405,7 +406,7 @@ public class UriBuilderService {
                 .doOnSuccess(fileDownloadResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, CREATE_URI_FOR_DOWNLOAD_FILE, fileDownloadResponse));
     }
 
-    private Mono<Document> checkDocumentPermissions(List<String> canRead, Document document, String xPagopaSafestorageCxId, boolean canReadTags, Boolean tags) {
+    private Mono<DocumentResponseDocument> checkDocumentPermissions(List<String> canRead, DocumentResponseDocument document, String xPagopaSafestorageCxId, boolean canReadTags, Boolean tags) {
         var documentType = document.getDocumentType();
         if (!canRead.contains(documentType.getTipoDocumento())) {
             return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -449,6 +450,7 @@ public class UriBuilderService {
                     .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
                             .retryWhen(gestoreRepositoryRetryStrategy)
                             .map(DocumentResponse::getDocument))
+                    .map(this::toDomain)
                     .defaultIfEmpty(document);
         } else {
             return Mono.just(document);
@@ -717,6 +719,20 @@ public class UriBuilderService {
         if (digest == null) return false;
         String trimmedDigest = digest.trim();
         return trimmedDigest.equals(MD5_EMPTY) || trimmedDigest.equals(SHA256_EMPTY);
+    }
+
+    private Document toDomain(DocumentResponseDocument responseDoc) {
+        Document doc = new Document();
+        doc.setDocumentKey(responseDoc.getDocumentKey());
+        doc.setContentType(responseDoc.getContentType());
+        doc.setDocumentState(responseDoc.getDocumentState());
+        doc.setDocumentLogicalState(responseDoc.getDocumentLogicalState());
+        doc.setClientShortCode(responseDoc.getClientShortCode());
+        doc.setRetentionUntil(responseDoc.getRetentionUntil());
+        doc.setCheckSum(responseDoc.getCheckSum());
+        doc.setContentLenght(responseDoc.getContentLenght());
+        doc.setDocumentType(responseDoc.getDocumentType());
+        return doc;
     }
 
 }

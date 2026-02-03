@@ -22,10 +22,10 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
@@ -37,6 +37,7 @@ import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.*;
+
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -47,7 +48,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import static it.pagopa.pnss.common.DocTypesConstant.*;
+import static it.pagopa.pnss.common.DocTypesConstant.PN_AAR;
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -87,19 +88,19 @@ class UriBuilderServiceDownloadTest {
     @Autowired
     private WebTestClient webClient;
 
-    @MockBean
+    @MockitoBean
     UserConfigurationClientCall userConfigurationClientCall;
 
-    @MockBean
+    @MockitoBean
     DocumentClientCall documentClientCall;
 
-    @MockBean
+    @MockitoBean
     DocTypesClientCall docTypesClientCall;
 
-    @SpyBean
+    @MockitoSpyBean
     S3Service s3Service;
 
-    @SpyBean
+    @MockitoSpyBean
     UriBuilderService uriBuilderService;
 
     @Value("${test.aws.s3.endpoint:#{null}}")
@@ -115,7 +116,7 @@ class UriBuilderServiceDownloadTest {
     @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
     private String defaultInternalClientIdValue;
 
-    private static final DocumentResponse DOCUMENT_RESPONSE_TAGS = new DocumentResponse().document(new Document().documentKey("documentKey").tags(createTagsList()).documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
+    private static final DocumentResponse DOCUMENT_RESPONSE_TAGS = new DocumentResponse().document(new DocumentResponseDocument().documentKey("documentKey").tags(createTagsList()).documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5)));
 
 
     private WebTestClient.RequestHeadersSpec callRequestHeadersSpec(String requestIdx, Boolean metadataOnly, String clientId, String apiKey, Boolean tags)
@@ -220,7 +221,7 @@ class UriBuilderServiceDownloadTest {
         //when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any(DocumentChanges.class)))
           //      .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
         when(documentClientCall.patchDocument(eq(defaultInternalClientIdValue), eq(defaultInternalApiKeyValue), eq(docId), any(DocumentChanges.class)))
-                .thenReturn(Mono.just(new DocumentResponse().document(new Document().documentKey(docId))));
+                .thenReturn(Mono.just(new DocumentResponse().document(new DocumentResponseDocument().documentKey(docId))));
         when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
         //when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(now).build()));
         //when(documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, docId, new DocumentChanges().retentionUntil(DATE_TIME_FORMATTER.format(now))))
@@ -679,7 +680,7 @@ class UriBuilderServiceDownloadTest {
 
     private void mockGetDocument(DocumentInput d, String docId) {
         DocumentResponse documentResponse = new DocumentResponse();
-        Document doc = new Document();
+        DocumentResponseDocument doc = new DocumentResponseDocument();
         DocumentType type = new DocumentType();
         type.setTipoDocumento(d.getDocumentType());
         type.setChecksum(DocumentType.ChecksumEnum.MD5);
@@ -693,7 +694,7 @@ class UriBuilderServiceDownloadTest {
         doReturn(docRespEntity).when(documentClientCall).getDocument(docId);
     }   private void mockGetDocumentTags(DocumentInput d, String docId) {
         DocumentResponse documentResponse = new DocumentResponse();
-        Document doc = new Document();
+        DocumentResponseDocument doc = new DocumentResponseDocument();
         DocumentType type = new DocumentType();
         type.setTipoDocumento(d.getDocumentType());
         type.setChecksum(DocumentType.ChecksumEnum.MD5);

@@ -1,6 +1,5 @@
 package it.pagopa.pnss.transformation.service;
 
-import it.pagopa.pn.library.exceptions.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
@@ -17,8 +16,6 @@ import it.pagopa.pnss.transformation.exception.InvalidTransformationStateExcepti
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.utils.TransformationUtils;
 import lombok.CustomLog;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -34,7 +31,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;
-import static it.pagopa.pnss.common.utils.LogUtils.SUCCESSFUL_OPERATION_LABEL;
 import static it.pagopa.pnss.configurationproperties.TransformationProperties.*;
 import static it.pagopa.pnss.transformation.utils.TransformationUtils.*;
 import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;

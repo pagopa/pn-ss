@@ -2,8 +2,8 @@ package it.pagopa.pnss.configuration;
 
 import it.pagopa.pnss.common.exception.FileNotModifiedException;
 import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;

@@ -671,7 +671,7 @@ components:
       required: true
       schema:
         type: string
-        pattern: '^[a-z0-9\-]{10,30}$'
+        pattern: '^[a-zA-Z0-9\-_]{10,30}$'
       example: pn-delivery-push
     fileKey: 
       name: fileKey
@@ -831,7 +831,7 @@ components:
         type: array
         items:
           type: string
-          pattern: '^[A-Za-z0-9_]{1,256}$'
+          pattern: '^[A-Za-z0-9_-]{1,256}$'
     DeleteTags:
       description: >-
         tags da eliminare
@@ -840,7 +840,7 @@ components:
         type: array
         items:
           type: string
-          pattern: '^[A-Za-z0-9_]{1,256}$'
+          pattern: '^[A-Za-z0-9_-]{1,256}$'
     AdditionalFileTagsUpdateResponse:
       description: Informazioni necessarie per l'esito dell'operazione di update sui tag
       type: object

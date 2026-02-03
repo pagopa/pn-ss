@@ -1,19 +1,5 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
-import static it.pagopa.pnss.common.constant.Constant.*;
-import static org.mockito.Mockito.*;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-
-import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigDecimal;
-import java.time.DateTimeException;
-import java.time.OffsetDateTime;
-import java.util.*;
-import java.util.stream.Stream;
-
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
@@ -24,12 +10,17 @@ import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
+import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
+import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
+import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
-import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
-import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
+import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
+import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -42,19 +33,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
-import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
-import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
-import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -64,8 +50,21 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigDecimal;
+import java.time.DateTimeException;
+import java.time.OffsetDateTime;
+import java.util.*;
+import java.util.stream.Stream;
+
+import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient(timeout = "36000")
@@ -81,7 +80,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
     private BucketName bucketName;
 	@Autowired
 	private S3Client s3TestClient;
-	@SpyBean
+	@MockitoSpyBean
 	private S3Service s3Service;
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
@@ -101,11 +100,11 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 	private static DocumentChanges documentChanges;
 	private static DynamoDbTable<DocumentEntity> dynamoDbTable;
 
-	@MockBean
+	@MockitoBean
 	private CallMacchinaStati callMacchinaStati;
-	@MockBean
+	@MockitoBean
 	private RetentionService retentionService;
-	@MockBean
+	@MockitoBean
 	private UserConfigurationClientCall userConfigurationClientCall;
 	@Autowired
 	private DocumentInternalApiController documentInternalApiController;

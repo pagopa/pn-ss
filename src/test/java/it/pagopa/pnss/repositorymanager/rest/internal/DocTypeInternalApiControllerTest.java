@@ -1,17 +1,12 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.CurrentStatus;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypeResponse;
+import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
+import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,12 +16,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
-import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient

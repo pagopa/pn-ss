@@ -6,6 +6,7 @@ import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.RetryBackoffSpec;
@@ -13,11 +14,15 @@ import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationR
 import software.amazon.awssdk.services.s3.model.LifecycleRule;
 import software.amazon.awssdk.services.s3.model.Tag;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static it.pagopa.pnss.common.constant.Constant.STORAGE_EXPIRY;
 import static it.pagopa.pnss.common.constant.Constant.STORAGE_FREEZE;
-import static it.pagopa.pnss.common.utils.LogUtils.*;
+import static it.pagopa.pnss.common.utils.LogUtils.INVOKING_METHOD;
+import static it.pagopa.pnss.common.utils.LogUtils.SUCCESSFUL_OPERATION_LABEL;
 
 @Service
 @CustomLog
@@ -27,7 +32,7 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
     private final RetryBackoffSpec s3RetryStrategy;
     private final BucketName bucketName;
 
-    public StorageConfigurationsServiceImpl(S3Service s3Service, RetryBackoffSpec s3RetryStrategy, BucketName bucketName) {
+    public StorageConfigurationsServiceImpl(S3Service s3Service, @Qualifier("s3RetryStrategy") RetryBackoffSpec s3RetryStrategy, BucketName bucketName) {
         this.s3Service = s3Service;
         this.s3RetryStrategy = s3RetryStrategy;
         this.bucketName = bucketName;

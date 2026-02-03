@@ -1,20 +1,19 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
-import it.pagopa.pnss.common.utils.LogUtils;
-import lombok.CustomLog;
-import org.springframework.stereotype.Service;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
+import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -35,7 +34,7 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
     final RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, RetryBackoffSpec dynamoRetryStrategy, RepositoryManagerDynamoTableName managerDynamoTableName) {
+                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, @Qualifier("dynamoRetryStrategy") RetryBackoffSpec dynamoRetryStrategy, RepositoryManagerDynamoTableName managerDynamoTableName) {
         this.objectMapper = objectMapper;
         this.userConfigurationEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(
                 dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.anagraficaClientName(),

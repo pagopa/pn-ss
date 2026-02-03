@@ -10,12 +10,14 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.*;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
@@ -28,7 +30,8 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
@@ -38,10 +41,10 @@ class RetentionServiceTest {
     @Autowired
     private RetentionServiceImpl retentionService;
 
-    @MockBean
+    @MockitoBean
     private ConfigurationApiCall configurationApiCall;
 
-    @SpyBean
+    @MockitoSpyBean
     S3Service s3Service;
 
     @ParameterizedTest
@@ -60,7 +63,7 @@ class RetentionServiceTest {
         DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
         dtc.setName("PN_NOTIFICATION_ATTACHMENTS");
 
-        DocumentTypeConfigurationStatuses documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatuses();
+        DocumentTypeConfigurationStatusesValue documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatusesValue();
         documentTypeConfigurationStatuses.setStorage("AVAILABLE");
         dtc.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
 
@@ -87,7 +90,7 @@ class RetentionServiceTest {
         DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
         dtc.setName("PN_NOTIFICATION_ATTACHMENTS");
 
-        DocumentTypeConfigurationStatuses documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatuses();
+        DocumentTypeConfigurationStatusesValue documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatusesValue();
         dtc.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
 
         StorageConfiguration sc = new StorageConfiguration();
@@ -189,7 +192,7 @@ class RetentionServiceTest {
         DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
         dtc.setName("PN_NOTIFICATION_ATTACHMENTS");
 
-        DocumentTypeConfigurationStatuses documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatuses();
+        DocumentTypeConfigurationStatusesValue documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatusesValue();
         documentTypeConfigurationStatuses.setStorage("AVAILABLE");
         dtc.setStatuses(Map.of("AVAILABLE", documentTypeConfigurationStatuses));
 

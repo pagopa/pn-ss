@@ -2,12 +2,12 @@ package it.pagopa.pn.library.sign.service.impl;
 
 import com.namirial.sign.library.service.PnSignServiceImpl;
 import it.pagopa.pn.library.exceptions.PnSpapiTemporaryErrorException;
+import it.pagopa.pn.library.sign.PnSignServiceManager;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignRetryStrategyProperties;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
 import it.pagopa.pn.library.sign.exception.MaxRetryExceededException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.PnSignService;
-import it.pagopa.pn.library.sign.PnSignServiceManager;
 import it.pagopa.pn.ss.dummy.sign.service.PnDummySignServiceImpl;
 import it.pagopa.pnss.common.service.impl.CloudWatchMetricsService;
 import lombok.CustomLog;
@@ -20,7 +20,7 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 
 import static it.pagopa.pn.library.sign.pojo.SignatureType.*;
-import static it.pagopa.pnss.common.constant.Constant.*;
+import static it.pagopa.pnss.common.constant.Constant.DUMMY;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @Service("pnSignService")

@@ -16,8 +16,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -40,7 +40,7 @@ public class DocumentsConfigsServiceImplTest {
     StorageConfigurationsServiceImpl storageConfigurationsService;
     @Autowired
     DocumentsConfigsServiceImpl documentsConfigsService;
-    @SpyBean
+    @MockitoSpyBean
     S3Service s3Service;
     private static DynamoDbTable<DocTypeEntity> docTypeDynamoDbTable;
 

@@ -4,12 +4,16 @@ import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.DocumentInternalApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Error;
+import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
+import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.exception.ResourceDeletedException;
+import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -17,12 +21,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
-import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
-import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
-import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+
 import java.time.DateTimeException;
 
 import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKING_RETRY;
@@ -45,7 +46,17 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 
 	private DocumentResponse getResponse(Document document) {
 		DocumentResponse response = new DocumentResponse();
-		response.setDocument(document);
+		DocumentResponseDocument responseDocument = new DocumentResponseDocument();
+		responseDocument.setDocumentKey(document.getDocumentKey());
+		responseDocument.setContentType(document.getContentType());
+		responseDocument.setDocumentState(document.getDocumentState());
+		responseDocument.setDocumentLogicalState(document.getDocumentLogicalState());
+		responseDocument.setClientShortCode(document.getClientShortCode());
+		responseDocument.setRetentionUntil(document.getRetentionUntil());
+		responseDocument.setCheckSum(document.getCheckSum());
+		responseDocument.setContentLenght(document.getContentLenght());
+		responseDocument.setDocumentType(document.getDocumentType());
+		response.setDocument(responseDocument);
 		return response;
 	}
 

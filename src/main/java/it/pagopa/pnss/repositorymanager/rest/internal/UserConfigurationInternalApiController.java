@@ -1,23 +1,20 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.UserConfigurationInternalApi;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Error;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationResponse;
-import it.pagopa.pnss.common.utils.LogUtils;
+import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
+import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
-
-import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
-import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
-import it.pagopa.pnss.repositorymanager.service.UserConfigurationService;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Error;
 import reactor.core.publisher.Mono;
 
 @RestController

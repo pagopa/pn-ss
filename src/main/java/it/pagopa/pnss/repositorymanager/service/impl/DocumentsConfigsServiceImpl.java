@@ -1,25 +1,18 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Stream;
-
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
-import it.pagopa.pnss.common.utils.LogUtils;
-import lombok.CustomLog;
-import org.springframework.stereotype.Service;
-
 import it.pagopa.pnss.common.client.dto.LifecycleRuleDTO;
+import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.repositorymanager.service.DocumentsConfigsService;
 import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+
+import java.util.*;
 
 import static it.pagopa.pnss.common.utils.LogUtils.SUCCESSFUL_OPERATION_LABEL;
 
@@ -47,12 +40,12 @@ public class DocumentsConfigsServiceImpl implements DocumentsConfigsService {
         dtc.setName(docType.getTipoDocumento() != null ? docType.getTipoDocumento() : null);
         dtc.setInitialStatus(docType.getInitialStatus());
         if (docType.getStatuses() != null && !docType.getStatuses().isEmpty()) {
-            Map<String, DocumentTypeConfigurationStatuses> statuses = new HashMap<>();
+            Map<String, DocumentTypeConfigurationStatusesValue> statuses = new HashMap<>();
             dtc.setStatuses(statuses);
             Set<String> keySet = docType.getStatuses().keySet();
             keySet.forEach(key -> {
                 CurrentStatus dtCurrentStatus = docType.getStatuses().get(key);
-                DocumentTypeConfigurationStatuses dtcStatues = new DocumentTypeConfigurationStatuses();
+                DocumentTypeConfigurationStatusesValue dtcStatues = new DocumentTypeConfigurationStatusesValue();
                 dtcStatues.setStorage(dtCurrentStatus.getStorage());
                 dtcStatues.setAllowedStatusTransitions(dtCurrentStatus.getAllowedStatusTransitions());
                 dtc.getStatuses().put(key, dtcStatues);

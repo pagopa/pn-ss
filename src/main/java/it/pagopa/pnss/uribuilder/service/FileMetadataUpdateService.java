@@ -1,17 +1,14 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Document;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentChanges;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.OperationResultCodeResponse;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UpdateFileMetadataRequest;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.ScadenzaDocumentiClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
-import it.pagopa.pnss.common.exception.PatchDocumentException;
+import it.pagopa.pnss.common.client.exception.ScadenzaDocumentiCallException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
+import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
@@ -19,22 +16,22 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.RetryBackoffSpec;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
+import software.amazon.awssdk.services.s3.model.Tag;
+import software.amazon.awssdk.services.s3.model.Tagging;
 
 import java.text.SimpleDateFormat;
 import java.util.stream.Stream;
 
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
-import it.pagopa.pnss.common.client.exception.ScadenzaDocumentiCallException;
-import reactor.core.publisher.Flux;
-import software.amazon.awssdk.services.s3.model.*;
-
-import static it.pagopa.pnss.common.constant.Constant.*;
-import static it.pagopa.pnss.common.constant.Constant.DELETED;
+import static it.pagopa.pnss.common.constant.Constant.STORAGE_FREEZE;
 import static it.pagopa.pnss.common.utils.LogUtils.*;
 
 @Service
@@ -51,7 +48,7 @@ public class FileMetadataUpdateService {
     private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
 
     public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                                     DocTypesClientCall docTypesClientCall, RetryBackoffSpec gestoreRepositoryRetryStrategy,
+                                     DocTypesClientCall docTypesClientCall, @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy,
                                      S3Service s3Service, BucketName bucketName, ScadenzaDocumentiClientCall scadenzaDocumentiClientCall,
                                      IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler) {
         this.userConfigClientCall = userConfigurationClientCall;
@@ -93,17 +90,17 @@ public class FileMetadataUpdateService {
                     }
                 }))
                             .flatMap(object -> {
-                                Document document = (Document) object;
+                                DocumentResponseDocument doc = (DocumentResponseDocument) object;
                                 Mono<String> checkedStatus;
                                 if (logicalState != null && !logicalState.isBlank()) {
-                                   checkedStatus=getTechnicalState(document.getDocumentType(),logicalState);
+                                   checkedStatus=getTechnicalState(doc.getDocumentType(),logicalState);
                                 } else {
                                     checkedStatus = Mono.just("");
                                 }
-                                return Mono.zipDelayError(Mono.just(document),  checkedStatus);
+                                return Mono.zipDelayError(Mono.just(doc),  checkedStatus);
                             }).flatMap(objects -> {
 
-                    Document document = objects.getT1();
+                    DocumentResponseDocument document = objects.getT1();
                     DocumentType documentType = document.getDocumentType();
                     String technicalStatus = objects.getT2();
                     DocumentChanges documentChanges = new DocumentChanges();

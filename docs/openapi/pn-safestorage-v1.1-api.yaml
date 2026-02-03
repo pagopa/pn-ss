@@ -671,7 +671,7 @@ components:
       required: true
       schema:
         type: string
-        pattern: '^[a-zA-Z0-9\-_]{10,30}$'
+        pattern: '^[a-zA-Z0-9\-_]{5,30}$'
       example: pn-delivery-push
     fileKey: 
       name: fileKey

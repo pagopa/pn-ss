@@ -388,7 +388,7 @@ public class UriBuilderService {
                 })
                 .flatMap(tuple -> {
                     UserConfigurationResponse userConfigurationResponse = tuple.getT1();
-                    Document document = toDomain(tuple.getT2());
+                    Document document = toDocument(tuple.getT2());
                     log.debug("DEBUG - userConfigurationResponses: {}", userConfigurationResponse.getUserConfiguration());
 
                     // Recuperiamo la durata dalla configurazione utente per il download
@@ -450,7 +450,7 @@ public class UriBuilderService {
                     .flatMap(documentChanges -> documentClientCall.patchDocument(defaultInternalClientIdValue, defaultInternalApiKeyValue, document.getDocumentKey(), documentChanges)
                             .retryWhen(gestoreRepositoryRetryStrategy)
                             .map(DocumentResponse::getDocument))
-                    .map(this::toDomain)
+                    .map(this::toDocument)
                     .defaultIfEmpty(document);
         } else {
             return Mono.just(document);
@@ -721,7 +721,7 @@ public class UriBuilderService {
         return trimmedDigest.equals(MD5_EMPTY) || trimmedDigest.equals(SHA256_EMPTY);
     }
 
-    private Document toDomain(DocumentResponseDocument responseDoc) {
+    private Document toDocument(DocumentResponseDocument responseDoc) {
         Document doc = new Document();
         doc.setDocumentKey(responseDoc.getDocumentKey());
         doc.setContentType(responseDoc.getContentType());

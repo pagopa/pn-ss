@@ -6,8 +6,10 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
+import it.pagopa.pnss.common.exception.IndexingLimitException;
 import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import jakarta.validation.Validator;
 import lombok.CustomLog;
 import org.junit.jupiter.api.Assertions;
@@ -34,6 +36,7 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -41,7 +44,7 @@ import static it.pagopa.pnss.common.DocTypesConstant.*;
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 
 @SpringBootTestWebEnv
@@ -63,6 +66,9 @@ class UriBuilderUploadTest {
 
     @MockitoBean
     private TagsClientCall tagsClientCall;
+
+    @MockitoBean
+    private UriBuilderService uriBuilderService;
 
     @Value("${header.x-api-key:#{null}}")
     private String xApiKey;
@@ -258,45 +264,52 @@ class UriBuilderUploadTest {
             fcr.setContentType(IMAGE_TIFF_VALUE);
             fcr.setDocumentType(PN_NOTIFICATION_ATTACHMENTS);
             fcr.setStatus(PRELOADED);
-            FileCreationResponse fcresp = new FileCreationResponse();
-            fcresp.setUploadUrl("http://host:9090/urlFile");
 
-            UserConfigurationResponse userConfig = new UserConfigurationResponse();
             UserConfiguration userConfiguration = new UserConfiguration();
             userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
             userConfiguration.setApiKey(X_API_KEY_VALUE);
             userConfiguration.setCanCreate(List.of(PN_NOTIFICATION_ATTACHMENTS));
             userConfiguration.setCanWriteTags(true);
             userConfiguration.setDurationMinutesUpload(45);
+            UserConfigurationResponse userConfig = new UserConfigurationResponse();
             userConfig.setUserConfiguration(userConfiguration);
+            Mockito.when(userConfigurationClientCall.getUser(Mockito.any()))
+                    .thenReturn(Mono.just(userConfig));
 
-            Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
-            Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
+            FileCreationResponse fakeResponse = new FileCreationResponse();
+            fakeResponse.setKey("safestorage://fake-key");
+            fakeResponse.setUploadUrl("https://presigned-url");
+            fakeResponse.setSecret("secret");
 
-            DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
-            DocumentType documentType = new DocumentType();
-            documentType.setTipoDocumento(PN_LEGAL_FACTS);
-            documentTypeResponse.setDocType(documentType);
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString())).thenReturn(Mono.just(fakeResponse));
 
-            Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
-            Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
+            DocumentType docType = new DocumentType();
+            docType.setTipoDocumento(PN_LEGAL_FACTS);
 
-            DocumentResponse docResp = new DocumentResponse();
+            DocumentTypeResponse docTypeResponse = new DocumentTypeResponse();
+            docTypeResponse.setDocType(docType);
+
+            Mockito.when(docTypesClientCall.getdocTypes(Mockito.any()))
+                    .thenReturn(Mono.just(docTypeResponse));
+
             DocumentResponseDocument document = new DocumentResponseDocument();
             document.setDocumentKey("keyFile");
             DocumentType documentTypeDoc = new DocumentType();
             documentTypeDoc.setChecksum(DocumentType.ChecksumEnum.MD5);
             document.setDocumentType(documentTypeDoc);
+            DocumentResponse docResp = new DocumentResponse();
             docResp.setDocument(document);
-            Mono<DocumentResponse> respDoc = Mono.just(docResp);
-            Mockito.doReturn(respDoc).when(documentClientCall).postDocument(Mockito.any());
 
-            WebTestClient.ResponseSpec responseSpec = fileUploadTestCall(fcr, X_CHECKSUM_VALUE_MD5);
-            FluxExchangeResult<FileCreationResponse> objectFluxExchangeResult =
-                    responseSpec.expectStatus().isOk().returnResult(FileCreationResponse.class);
-            FileCreationResponse resp = objectFluxExchangeResult.getResponseBody().blockFirst();
+            Mockito.when(documentClientCall.postDocument(Mockito.any()))
+                    .thenReturn(Mono.just(docResp));
 
-            Assertions.assertFalse(resp.getUploadUrl().isEmpty());
+            FileCreationResponse resp = fileUploadTestCall(fcr, X_CHECKSUM_VALUE_MD5)
+                    .expectStatus().isOk()
+                    .expectBody(FileCreationResponse.class)
+                    .returnResult()
+                    .getResponseBody();
+            Assertions.assertNotNull(resp);
+            Assertions.assertEquals("safestorage://fake-key", resp.getKey());
         }
 
         @Test
@@ -309,7 +322,7 @@ class UriBuilderUploadTest {
             UserConfiguration userConfiguration = new UserConfiguration();
             userConfiguration.setName(X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE);
             userConfiguration.setApiKey(X_API_KEY_VALUE);
-            userConfiguration.setCanCreate(Collections.emptyList());
+            userConfiguration.setCanCreate(List.of("PN_NONE"));
             userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
@@ -318,14 +331,15 @@ class UriBuilderUploadTest {
             documentType.setTipoDocumento(PN_NOTIFICATION_ATTACHMENTS);
             documentTypeResponse.setDocType(documentType);
 
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN)));
             Mono<DocumentTypeResponse> docTypeEntity = Mono.just(documentTypeResponse);
             Mockito.doReturn(docTypeEntity).when(docTypesClientCall).getdocTypes(Mockito.any());
-
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
 
             fileUploadTestCall(fcr, X_CHECKSUM_VALUE_256).expectStatus().isForbidden();
         }
+
 
         @Test
         void testUrlGeneratoMD5(){
@@ -361,6 +375,7 @@ class UriBuilderUploadTest {
             Mono<UserConfigurationResponse> userConfigurationEntity = Mono.just(userConfig);
             Mockito.doReturn(userConfigurationEntity).when(userConfigurationClientCall).getUser(Mockito.any());
 
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString())).thenReturn(Mono.just(fcresp));
 
             DocumentTypeResponse documentTypeResponse = new DocumentTypeResponse();
             DocumentType documentType = new DocumentType();
@@ -404,7 +419,12 @@ class UriBuilderUploadTest {
             userConfiguration.setCanWriteTags(true);
             userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
+            FileCreationResponse fakeResponse = new FileCreationResponse();
+            fakeResponse.setKey("safestorage://fake-key");
+            fakeResponse.setUploadUrl("https://presigned-url");
+            fakeResponse.setSecret("secret");
 
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString())).thenReturn(Mono.just(fakeResponse));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
@@ -428,9 +448,13 @@ class UriBuilderUploadTest {
             userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
+            FileCreationResponse fakeResponse = new FileCreationResponse();
+            fakeResponse.setKey("fake-key");
+
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString())).thenReturn(Mono.just(fakeResponse));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
-            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
+            when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().tipoDocumento(PN_AAR).transformations(List.of("SIGN")))));
 
             FileCreationRequest fcr = new FileCreationRequest();
             fcr.setContentType("application/badContentType");
@@ -452,6 +476,13 @@ class UriBuilderUploadTest {
 
             String tagValue = "ABCDEF";
             Map<String, List<String>> setTags = Map.of(IUN, List.of(tagValue));
+
+            FileCreationResponse fakeResponse = new FileCreationResponse();
+            fakeResponse.setKey("safestorage://fake-key");
+            fakeResponse.setUploadUrl("https://presigned-url");
+            fakeResponse.setSecret("secret");
+
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString())).thenReturn(Mono.just(fakeResponse));
 
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
@@ -478,6 +509,12 @@ class UriBuilderUploadTest {
             userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
+            FileCreationResponse fakeResponse = new FileCreationResponse();
+            fakeResponse.setKey("safestorage://fake-key");
+            fakeResponse.setUploadUrl("https://presigned-url");
+            fakeResponse.setSecret("secret");
+
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString())).thenReturn(Mono.just(fakeResponse));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
@@ -500,6 +537,7 @@ class UriBuilderUploadTest {
             userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), eq(checksumValue), anyString())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Empty file not allowed")));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
@@ -533,6 +571,8 @@ class UriBuilderUploadTest {
             userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString()))
+                    .thenReturn(Mono.error(new IndexingLimitException("MaxTagsPerRequest", fileCreationRequest.getTags().size(), 50)));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exceeded MaxTagsPerRequest limit")));
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exceeded MaxTagsPerRequest limit")));
@@ -561,7 +601,8 @@ class UriBuilderUploadTest {
                     .map(Map.Entry::getKey)
                     .findFirst()
                     .orElseThrow(() -> new IllegalStateException("Nessuna chiave con limite di valori superato"));
-
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString()))
+                    .thenReturn(Mono.error(new IndexingLimitException("MaxValuesPerTagPerRequest", fileCreationRequest.getTags().size(), 51)));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exceeded MaxValuesPerTagPerRequest limit for tag: " +exceedingKey)));
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exceeded MaxValuesPerTagPerRequest limit for tag: " + exceedingKey)));
@@ -582,11 +623,11 @@ class UriBuilderUploadTest {
             userConfiguration.setCanWriteTags(true);
             userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
-
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString())).thenReturn(Mono.error(new PutTagsBadRequestException()));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
-            when(tagsClientCall.putTags("documentKey", new TagsChanges().SET(fcr.getTags()))).thenReturn(Mono.error(new PutTagsBadRequestException()));
+            when(tagsClientCall.putTags(eq("documentKey"), any(TagsChanges.class))).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Put tags failed")));
 
             fileUploadTestCall(fcr, X_CHECKSUM_VALUE_256).expectStatus().isBadRequest();
         }
@@ -606,6 +647,7 @@ class UriBuilderUploadTest {
             userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN)));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));
@@ -627,6 +669,7 @@ class UriBuilderUploadTest {
             userConfiguration.setDurationMinutesUpload(45);
             userConfig.setUserConfiguration(userConfiguration);
 
+            when(uriBuilderService.createUriForUploadFile(anyString(), any(FileCreationRequest.class), anyString(), anyString())).thenReturn(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)));
             when(documentClientCall.postDocument(any(DocumentInput.class))).thenReturn(Mono.just(DOCUMENT_RESPONSE_TAGS));
             when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfig));
             when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType().transformations(List.of("SIGN_AND_TIMEMARK")))));

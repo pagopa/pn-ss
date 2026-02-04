@@ -10,6 +10,7 @@ import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import lombok.CustomLog;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -72,8 +73,12 @@ public class DocumentClientCallImpl implements DocumentClientCall {
         log.info(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, PATCH_DOCUMENT);
         return ssWebClient.patch()
                           .uri(String.format(anagraficaDocumentiClientEndpoint, keyFile))
-                          .header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
-                          .header(xApiKey, authApiKey)
+                          .headers(headers -> {
+                              headers.add(xPagopaSafestorageCxId, authPagopaSafestorageCxId);
+                              if (StringUtils.isNotBlank(authApiKey)) {
+                                  headers.add(xApiKey, authApiKey);
+                              }
+                          })
                           .bodyValue(document)
                           .retrieve()
                           .onStatus(status -> status.equals(BAD_REQUEST) || status.equals(GONE), clientResponse -> clientResponse.bodyToMono(DocumentResponse.class)

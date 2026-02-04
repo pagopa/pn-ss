@@ -142,7 +142,7 @@ class DocumentClientCallImplTest {
 
         when(ssWebClient.patch()).thenAnswer(invocation -> requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenAnswer(invocation -> requestBodySpec);
-        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec); // simulazione header
+        when(requestBodySpec.headers(any())).thenReturn(requestBodySpec); // simulazione header
         when(requestBodySpec.bodyValue(any(DocumentChanges.class))).thenAnswer(invocation -> requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);

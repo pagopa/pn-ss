@@ -5,6 +5,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguratio
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import lombok.CustomLog;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -38,12 +39,15 @@ public class ConfigurationApiCallImpl implements ConfigurationApiCall {
         log.debug(INVOKING_INTERNAL_SERVICE, REPOSITORY_MANAGER, GET_DOCUMENTS_CONFIGS);
         return ssWebClient.get()
                           .uri(configurationApiDocumentsConfigClientEndpoint)
-                          .header(xPagopaSafestorageCxId, authPagopaSafestorageCxId)
-                          .header(xApiKey, authApiKey)
+                          .headers(headers -> {
+                              headers.add(xPagopaSafestorageCxId, authPagopaSafestorageCxId);
+                              if (StringUtils.isNotBlank(authApiKey)) {
+                                  headers.add(xApiKey, authApiKey);
+                              }
+                          })
                           .retrieve()
                           .bodyToMono(DocumentTypesConfigurations.class);
     }
-
     @Override
     public Mono<UserConfiguration> getCurrentClientConfig(String clientId) throws IdClientNotFoundException {
         return null;

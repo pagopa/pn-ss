@@ -1012,7 +1012,7 @@ components:
         status:
           type: string
           description: Lo stato del documento
-          pattern: '^[A-Za-z0-9_]{3,20}$'
+          pattern: '^[A-Za-z0-9_]{0,20}$'
           example: ATTACHED
         retentionUntil:
           type: string

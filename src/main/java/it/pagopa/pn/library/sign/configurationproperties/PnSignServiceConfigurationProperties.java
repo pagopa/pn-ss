@@ -1,13 +1,16 @@
 package it.pagopa.pn.library.sign.configurationproperties;
 
+import jakarta.validation.constraints.Pattern;
 import lombok.CustomLog;
 import lombok.Data;
 import org.joda.time.DateTime;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-import javax.validation.constraints.Pattern;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 

@@ -9,9 +9,9 @@ import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.exception.SqsClientException;
 import it.pagopa.pnss.common.service.EventBridgeService;
-import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configuration.TransformationConfig;
+import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationDetail;
@@ -30,9 +30,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -41,17 +40,16 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 
-import java.util.Objects;
-import java.util.stream.Stream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Stream;
 
+import static it.pagopa.pnss.common.constant.Constant.PRELOADED;
+import static it.pagopa.pnss.common.constant.Constant.STAGED;
 import static it.pagopa.pnss.configurationproperties.TransformationProperties.*;
-
-
-import static it.pagopa.pnss.common.constant.Constant.*;
 import static it.pagopa.pnss.transformation.utils.TransformationUtils.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -62,9 +60,9 @@ import static org.mockito.Mockito.*;
 @CustomLog
 class TransformationServiceTest {
 
-    @SpyBean
+    @MockitoSpyBean
     private TransformationService transformationService;
-    @MockBean
+    @MockitoBean
     private DocumentClientCall documentClientCall;
     @Autowired
     private BucketName bucketName;
@@ -74,17 +72,17 @@ class TransformationServiceTest {
     private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
     @Autowired
     AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
-    @SpyBean
+    @MockitoSpyBean
     private SqsService sqsService;
-    @SpyBean
+    @MockitoSpyBean
     private S3Service s3Service;
     @Autowired
     private SqsAsyncClient sqsAsyncClient;
-    @SpyBean
+    @MockitoSpyBean
     private TransformationConfig transformationConfig;
-    @SpyBean
+    @MockitoSpyBean
     private EventBridgeService eventBridgeService;
-    @SpyBean
+    @MockitoSpyBean
     private PnSignProviderService pnSignProviderService;
     @Value("${pn.ss.transformation.dummy-delay}")
     private Integer dummyDelay;
@@ -397,7 +395,7 @@ class TransformationServiceTest {
         putObjectInBucket(FILE_KEY, sourceBucket, new byte[10]);
 
         // WHEN
-        when(s3Service.putObjectTagging(anyString(), anyString(), any())).thenReturn(Mono.empty());
+        doReturn(Mono.empty()).when(s3Service).putObjectTagging(anyString(), anyString(), any());
         Mono<Void> transformationMono = invokeHandleNextTransformation(TRANSFORMATION_TAG_PREFIX + currentTransformation, FILE_KEY, sourceBucket, transformations, contentType);
         //THEN
         // nessun errore nella creazione dell'oggetto
@@ -471,7 +469,7 @@ class TransformationServiceTest {
         var documentType1 = new DocumentType().statuses(Map.ofEntries(Map.entry(PRELOADED, new CurrentStatus())))
                 .tipoDocumento(DocTypesConstant.PN_AAR)
                 .checksum(DocumentType.ChecksumEnum.MD5);
-        var document = new Document().documentType(documentType1);
+        var document = new DocumentResponseDocument().documentType(documentType1);
         document.setDocumentKey(FILE_KEY);
         document.setContentType(contentType);
         document.getDocumentType().setTransformations(transformations);

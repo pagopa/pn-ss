@@ -2,13 +2,14 @@ package it.pagopa.pnss.common.client.impl;
 
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsRelationsResponse;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
 import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
 import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
 import lombok.CustomLog;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -17,8 +18,8 @@ import reactor.core.publisher.Mono;
 
 import static it.pagopa.pnss.common.utils.LogUtils.INVOKING_INTERNAL_SERVICE;
 import static it.pagopa.pnss.common.utils.LogUtils.REPOSITORY_MANAGER;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @CustomLog
 @Service
@@ -35,7 +36,7 @@ public class TagsClientCallImpl implements TagsClientCall {
 
     private final WebClient ssWebClient;
 
-    public TagsClientCallImpl(WebClient ssWebClient) {
+    public TagsClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient) {
         this.ssWebClient = ssWebClient;
     }
 

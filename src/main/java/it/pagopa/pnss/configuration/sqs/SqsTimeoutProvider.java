@@ -1,6 +1,7 @@
 package it.pagopa.pnss.configuration.sqs;
 
 import it.pagopa.pnss.configurationproperties.SqsTimeoutConfigurationProperties;
+import jakarta.annotation.PostConstruct;
 import lombok.CustomLog;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
@@ -10,7 +11,6 @@ import software.amazon.awssdk.services.sqs.model.GetQueueAttributesRequest;
 import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest;
 import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
 
-import javax.annotation.PostConstruct;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

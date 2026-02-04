@@ -14,8 +14,8 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -33,12 +33,13 @@ import static org.mockito.Mockito.when;
 @AutoConfigureWebTestClient(timeout = "100000")
 class AdditionalFileTagsSearchTest {
 
-    @MockBean
+    @MockitoBean
     private TagsClientCall tagsClientCall;
-    @MockBean
+    @MockitoBean
     private UserConfigurationClientCall userConfigurationClientCall;
-    @MockBean
+    @MockitoBean
     private DocumentClientCall documentClientCall;
+
     @Autowired
     private WebTestClient webTestClient;
     private static final String SEARCH_URI = "/safe-storage/v1/files/tags";
@@ -130,7 +131,7 @@ class AdditionalFileTagsSearchTest {
                     assertThat(response.getFileKeys(), notNullValue());
                     assertThat(response.getFileKeys(), hasSize(1));
                     assertThat(response.getFileKeys(), hasItem(hasProperty("fileKey", equalTo(FILE_KEY))));
-                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", nullValue())));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", anEmptyMap())));
                 });
     }
 
@@ -159,7 +160,7 @@ class AdditionalFileTagsSearchTest {
                     assertThat(response.getFileKeys(), notNullValue());
                     assertThat(response.getFileKeys(), hasSize(1));
                     assertThat(response.getFileKeys(), hasItem(hasProperty("fileKey", equalTo(FILE_KEY))));
-                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", nullValue())));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", anEmptyMap())));
                 });
     }
 
@@ -221,7 +222,7 @@ class AdditionalFileTagsSearchTest {
                     assertThat(response.getFileKeys(), notNullValue());
                     assertThat(response.getFileKeys(), hasSize(1));
                     assertThat(response.getFileKeys(), hasItem(hasProperty("fileKey", equalTo(FILE_KEY))));
-                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", nullValue())));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", anEmptyMap())));
                 });
     }
 
@@ -249,7 +250,7 @@ class AdditionalFileTagsSearchTest {
                     assertThat(response.getFileKeys(), notNullValue());
                     assertThat(response.getFileKeys(), hasSize(1));
                     assertThat(response.getFileKeys(), hasItem(hasProperty("fileKey", equalTo(FILE_KEY))));
-                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", nullValue())));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", anEmptyMap())));
                 });
     }
 
@@ -332,7 +333,7 @@ class AdditionalFileTagsSearchTest {
                     assertThat(response.getFileKeys(), notNullValue());
                     assertThat(response.getFileKeys(), hasSize(1));
                     assertThat(response.getFileKeys(), hasItem(hasProperty("fileKey", equalTo(FILE_KEY))));
-                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", nullValue())));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("tags", anEmptyMap())));
                 });
     }
 
@@ -353,7 +354,7 @@ class AdditionalFileTagsSearchTest {
         //WHEN
         when(tagsClientCall.getTagsRelations(iunKeyValue)).thenReturn(Mono.just(new TagsRelationsResponse().tagsRelationsDto(new TagsRelationsDto().tagKeyValue(iunKeyValue).addFileKeysItem(FILE_KEY))));
         when(tagsClientCall.getTagsRelations(conservazioneKeyValue)).thenReturn(Mono.just(new TagsRelationsResponse().tagsRelationsDto(new TagsRelationsDto().tagKeyValue(conservazioneKeyValue).addFileKeysItem(FILE_KEY))));
-        when(documentClientCall.getDocument(FILE_KEY)).thenReturn(Mono.just(new DocumentResponse().document(new Document().tags(Map.of(IUN, List.of(iunValue), CONSERVAZIONE, List.of(conservazioneValue))))));
+        when(documentClientCall.getDocument(FILE_KEY)).thenReturn(Mono.just(new DocumentResponse().document(new DocumentResponseDocument().tags(Map.of(IUN, List.of(iunValue), CONSERVAZIONE, List.of(conservazioneValue))))));
 
         //THEN
         additionalFileTagsSearchCall("and", true, PN_CLIENT_AUTHORIZED, PN_CLIENT_AUTHORIZED_API_KEY, Map.entry(IUN, iunValue), Map.entry(CONSERVAZIONE, conservazioneValue))

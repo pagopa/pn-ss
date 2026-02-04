@@ -21,8 +21,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -56,9 +56,9 @@ AdditionalFileTagsGetTest {
     @Autowired
     private WebTestClient webTestClient;
     private static final String GET_PATH_WITH_PARAM = "/safe-storage/v1/files/{fileKey}/tags";
-    @MockBean
+    @MockitoBean
     private UserConfigurationClientCall userConfigurationClientCall;
-    @MockBean
+    @MockitoBean
     private DocumentClientCall documentClientCall;
 
     private static DynamoDbTable<DocumentEntity> dynamoDbTable;
@@ -139,7 +139,7 @@ AdditionalFileTagsGetTest {
 
     @Test
     void getItemWithTags() {
-        Document document1 = new Document();
+        DocumentResponseDocument document1 = new DocumentResponseDocument();
         document1.setDocumentKey(PARTITION_ID_DEFAULT_TAGS);
         document1.setTags(createTagsList());
 
@@ -165,7 +165,7 @@ AdditionalFileTagsGetTest {
     @ParameterizedTest
     @NullAndEmptySource
     void getItemWithoutTags(Map<String, List<String>> tagsMap) {
-        Document document1 = new Document();
+        DocumentResponseDocument document1 = new DocumentResponseDocument();
         document1.setDocumentKey(PARTITION_ID_DEFAULT_TAGS);
         document1.setTags(tagsMap);
 

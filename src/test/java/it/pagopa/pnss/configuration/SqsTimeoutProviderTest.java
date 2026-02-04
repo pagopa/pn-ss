@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.*;
@@ -19,18 +19,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @SpringBootTestWebEnv
 @TestPropertySource(properties = {
         "pn.ss.sqs.timeout.percent=10",
         "pn.ss.sqs.timeout.managedQueues=test-queue",
-        "pn.ss.sqs.timeout.default-seconds=86400"
+        "pn.ss.sqs.timeout.default-seconds=86400",
+        "spring.cloud.aws.sqs.enabled=false"
 })
 class SqsTimeoutProviderTest {
 
-    @MockBean
+    @MockitoBean
     private SqsAsyncClient sqsAsyncClient;
     @Autowired
     private SqsTimeoutProvider timeoutProvider;

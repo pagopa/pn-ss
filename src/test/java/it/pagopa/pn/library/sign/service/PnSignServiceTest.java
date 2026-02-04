@@ -2,21 +2,21 @@ package it.pagopa.pn.library.sign.service;
 
 import com.namirial.sign.library.service.PnSignServiceImpl;
 import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
-import it.pagopa.pn.ss.dummy.sign.service.PnDummySignServiceImpl;
-import it.pagopa.pnss.common.service.impl.CloudWatchMetricsService;
-import it.pagopa.pnss.configuration.cloudwatch.CloudWatchMetricPublisherConfiguration;
 import it.pagopa.pn.library.sign.configurationproperties.PnSignServiceConfigurationProperties;
 import it.pagopa.pn.library.sign.exception.MaxRetryExceededException;
 import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.impl.ArubaSignProviderService;
 import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
+import it.pagopa.pn.ss.dummy.sign.service.PnDummySignServiceImpl;
+import it.pagopa.pnss.common.service.impl.CloudWatchMetricsService;
+import it.pagopa.pnss.configuration.cloudwatch.CloudWatchMetricPublisherConfiguration;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.wsdl.ArubaSignService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -28,21 +28,21 @@ import static org.mockito.Mockito.*;
 @SpringBootTestWebEnv
 class PnSignServiceTest {
 
-    @SpyBean
+    @MockitoSpyBean
     private ArubaSignProviderService arubaSignProviderService;
-    @SpyBean
+    @MockitoSpyBean
     private PnSignServiceImpl namirialSignProviderService;
-    @SpyBean
+    @MockitoSpyBean
     private PnDummySignServiceImpl dummySignProviderService;
-    @SpyBean
+    @MockitoSpyBean
     private PnSignProviderService pnSignProviderService;
     @Autowired
     private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
-    @SpyBean
+    @MockitoSpyBean
     private CloudWatchMetricPublisherConfiguration cloudWatchMetricPublisherConfiguration;
-    @SpyBean
+    @MockitoSpyBean
     private CloudWatchMetricsService cloudWatchMetricsService;
-    @MockBean
+    @MockitoBean
     private ArubaSignService arubaSignServiceClient;
     @Value("${pn.sign.cloudwatch.namespace.aruba}")
     private String arubaNamespace;

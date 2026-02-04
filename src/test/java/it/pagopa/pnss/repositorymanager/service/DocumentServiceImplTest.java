@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -46,8 +46,8 @@ public class DocumentServiceImplTest {
     private DocumentServiceImpl documentServiceImpl;
     @Autowired
     private static DynamoDbTable<DocTypeEntity> docTypeDynamoDbTable;
-    @MockBean
-    private static CallMacchinaStati callMacchinaStati;
+    @MockitoBean
+    private CallMacchinaStati callMacchinaStati;
     private static DynamoDbTable<DocumentEntity> documentDynamoDbTable;
 
     private static final String T1 = "T1";

@@ -1,6 +1,6 @@
 package it.pagopa.pnss.transformation.handler;
 
-import io.awspring.cloud.messaging.listener.Acknowledgment;
+import io.awspring.cloud.sqs.listener.acknowledgement.Acknowledgement;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationDetail;
@@ -10,7 +10,7 @@ import it.pagopa.pnss.transformation.service.TransformationService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import reactor.test.publisher.TestPublisher;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
@@ -22,7 +22,7 @@ import static org.mockito.Mockito.*;
 @SpringBootTestWebEnv
 class TransformationHandlerTest {
 
-    @MockBean
+    @MockitoBean
     private TransformationService transformationService;
     @Autowired
     private TransformationHandler transformationHandler;
@@ -34,7 +34,7 @@ class TransformationHandlerTest {
         //GIVEN
         TestPublisher<Void> testPublisher = TestPublisher.createCold();
         testPublisher.complete();
-        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+        Acknowledgement acknowledgment = mock(Acknowledgement.class);
 
         //WHEN
         when(transformationService.handleS3Event(any(S3EventNotificationMessage.class))).thenReturn(testPublisher.mono());
@@ -50,7 +50,7 @@ class TransformationHandlerTest {
         //GIVEN
         TestPublisher<Void> testPublisher = TestPublisher.createCold();
         testPublisher.error(NoSuchKeyException.builder().build());
-        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+        Acknowledgement acknowledgment = mock(Acknowledgement.class);
 
         //WHEN
         when(transformationService.handleS3Event(any(S3EventNotificationMessage.class))).thenReturn(testPublisher.mono());
@@ -67,7 +67,7 @@ class TransformationHandlerTest {
         //GIVEN
         TestPublisher<PutObjectResponse> testPublisher = TestPublisher.createCold();
         testPublisher.next(PutObjectResponse.builder().build());
-        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+        Acknowledgement acknowledgment = mock(Acknowledgement.class);
 
         //WHEN
         when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(true),anyString())).thenReturn(testPublisher.mono());
@@ -83,7 +83,7 @@ class TransformationHandlerTest {
         //GIVEN
         TestPublisher<PutObjectResponse> testPublisher = TestPublisher.createCold();
         testPublisher.error(NoSuchKeyException.builder().build());
-        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+        Acknowledgement acknowledgment = mock(Acknowledgement.class);
 
         //WHEN
         when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(true),anyString())).thenReturn(testPublisher.mono());
@@ -99,7 +99,7 @@ class TransformationHandlerTest {
         //GIVEN
         TestPublisher<PutObjectResponse> testPublisher = TestPublisher.createCold();
         testPublisher.next(PutObjectResponse.builder().build());
-        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+        Acknowledgement acknowledgment = mock(Acknowledgement.class);
 
         //WHEN
         when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(false),anyString())).thenReturn(testPublisher.mono());
@@ -115,7 +115,7 @@ class TransformationHandlerTest {
         //GIVEN
         TestPublisher<PutObjectResponse> testPublisher = TestPublisher.createCold();
         testPublisher.error(NoSuchKeyException.builder().build());
-        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+        Acknowledgement acknowledgment = mock(Acknowledgement.class);
 
         //WHEN
         when(transformationService.signAndTimemarkTransformation(any(TransformationMessage.class), eq(false),anyString())).thenReturn(testPublisher.mono());
@@ -131,7 +131,7 @@ class TransformationHandlerTest {
         //GIVEN
         TestPublisher<PutObjectTaggingResponse> testPublisher = TestPublisher.createCold();
         testPublisher.next(PutObjectTaggingResponse.builder().build());
-        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+        Acknowledgement acknowledgment = mock(Acknowledgement.class);
 
         //WHEN
         when(transformationService.dummyTransformation(any(TransformationMessage.class))).thenReturn(testPublisher.mono());
@@ -147,7 +147,7 @@ class TransformationHandlerTest {
         //GIVEN
         TestPublisher<PutObjectTaggingResponse> testPublisher = TestPublisher.createCold();
         testPublisher.error(NoSuchKeyException.builder().build());
-        Acknowledgment acknowledgment = mock(Acknowledgment.class);
+        Acknowledgement acknowledgment = mock(Acknowledgement.class);
 
         //WHEN
         when(transformationService.dummyTransformation(any(TransformationMessage.class))).thenReturn(testPublisher.mono());

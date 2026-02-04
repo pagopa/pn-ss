@@ -1,11 +1,11 @@
 package it.pagopa.pnss.repositorymanager.entity;
 
-import java.util.List;
-
 import it.pagopa.pnss.common.model.entity.DocumentVersion;
 import lombok.*;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+
+import java.util.List;
 
 @DynamoDbBean
 @Data

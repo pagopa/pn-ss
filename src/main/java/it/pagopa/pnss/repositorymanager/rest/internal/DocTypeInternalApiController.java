@@ -1,23 +1,19 @@
 package it.pagopa.pnss.repositorymanager.rest.internal;
 
-import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.DocTypeInternalApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypeResponse;
-import it.pagopa.pnss.common.utils.LogUtils;
+import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Error;
+import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
+import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
+import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import lombok.CustomLog;
-import org.aspectj.lang.annotation.Aspect;
-import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
-import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
-import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
-import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
-import it.pagopa.pnss.repositorymanager.service.DocTypesService;
-import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Error;
 import reactor.core.publisher.Mono;
 
 import static it.pagopa.pnss.common.utils.LogUtils.*;

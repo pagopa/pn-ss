@@ -724,7 +724,7 @@ components:
         type: object
         additionalProperties:
           type: string
-          pattern: '^[A-Za-z0-9_\-]{1,256}$'
+          pattern: '^[\x20-\x7E]{1,256}$'
       style: form
       explode: true
 
@@ -763,7 +763,7 @@ components:
             type: array
             items:
               type: string
-              pattern: '^[A-Za-z0-9_\-]{1,256}$'
+              pattern: '^[\x20-\x7E]{1,256}$'
 
     FileCreationResponse:
       description: Informazioni necessarie a caricare il contenuto di un file

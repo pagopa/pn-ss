@@ -571,6 +571,7 @@ public class UriBuilderService {
                             .documentStatus(logicalState.orElse(""))
                             .retentionUntil(doc.getRetentionUntil() != null ? Date.from(Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()))) : null)
                             .contentType(doc.getContentType())
+                            .numberOfPages(doc.getNumberOfPages())
                             .documentType(doc.getDocumentType().getTipoDocumento())
                             .key(fileKey)
                             .versionId(null);

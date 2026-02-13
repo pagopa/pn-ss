@@ -36,6 +36,7 @@ public class DocumentEntity extends DocumentVersion {
     private String clientShortCode;
     private BigDecimal contentLenght; // modificabile in POST
     private String contentType;
+    private Integer numberOfPages;
     private DocTypeEntity documentType;
     private OffsetDateTime lastStatusChangeTimestamp;
     private Map<String, List<String>> tags;

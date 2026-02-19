@@ -48,6 +48,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
@@ -88,6 +89,8 @@ public class DocumentServiceImpl implements DocumentService {
         this.bucketName = bucketName;
         this.managerDynamoTableName = managerDynamoTableName;
     }
+
+    private final Predicate<String> isTransitionToAvailable = documentState -> AVAILABLE.equals(documentState) || PRELOADED.equals(documentState);
 
     private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
         return Mono.error(new DocumentKeyNotPresentException(documentKey));
@@ -237,7 +240,7 @@ public class DocumentServiceImpl implements DocumentService {
         log.debug("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}",
                 documentEntityStored);
 
-        if (AVAILABLE.equals(documentChanges.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntityStored.getContentType())) {
+        if (isTransitionToAvailable.test(documentChanges.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntityStored.getContentType())) {
 
             return s3Service.getObject(documentKey, bucketName.ssHotName())
                     .flatMap(getObjectResponse -> enrichWithDocumentPages(documentEntityStored, getObjectResponse.asByteArray()))

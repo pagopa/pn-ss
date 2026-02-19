@@ -22,8 +22,11 @@ import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositorymanager.exception.PdfReadException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.exception.ResourceDeletedException;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -31,6 +34,7 @@ import lombok.CustomLog;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
@@ -38,6 +42,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.Tag;
 import software.amazon.awssdk.services.s3.model.Tagging;
 
+import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Objects;
@@ -46,6 +51,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 
 @Service
@@ -223,13 +229,39 @@ public class DocumentServiceImpl implements DocumentService {
                 .doOnSuccess(documentEntity -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, EXECUTE_PATCH, documentEntity));
     }
 
-    private Mono<DocumentEntity> processDocumentEntity(DocumentEntity documentEntityStored, AtomicReference<String> oldState, DocumentChanges documentChanges, String documentKey) {
+    Mono<DocumentEntity> processDocumentEntity(DocumentEntity documentEntityStored, AtomicReference<String> oldState, DocumentChanges documentChanges, String documentKey) {
         // il vecchio stato viene considerato nella gestione della retentionUntil
         oldState.set(documentEntityStored.getDocumentState());
         updateDocumentState(documentEntityStored, documentChanges);
         updateOptionalProperties(documentEntityStored, documentChanges);
         log.debug("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}",
                 documentEntityStored);
+
+        if (AVAILABLE.equals(documentChanges.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntityStored.getContentType())) {
+
+            return s3Service.getObject(documentKey, bucketName.ssHotName())
+                    .flatMap(getObjectResponse -> enrichWithDocumentPages(documentEntityStored, getObjectResponse.asByteArray()))
+                    .flatMap(documentEntity -> proceedWithTagging(documentEntity, documentChanges, documentKey));
+        }
+
+        return proceedWithTagging(documentEntityStored, documentChanges, documentKey);
+    }
+
+    private Mono<DocumentEntity> enrichWithDocumentPages(DocumentEntity documentEntity, byte[] bytes) {
+        return Mono.fromSupplier(() -> {
+                    try (PDDocument pdDocument = Loader.loadPDF(bytes)) {
+                        log.debug("PDF page count for document {}: {}", documentEntity.getDocumentKey(), pdDocument.getNumberOfPages());
+                        documentEntity.setNumberOfPages(pdDocument.getNumberOfPages());
+                        return documentEntity;
+                    } catch (IOException e) {
+                        String errorMsg = String.format("Failed to count PDF pages for document %s : %s", documentEntity.getDocumentKey(), e.getMessage());
+                        throw new PdfReadException(errorMsg);
+                    }
+                })
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private Mono<DocumentEntity> proceedWithTagging(DocumentEntity documentEntityStored, DocumentChanges documentChanges, String documentKey) {
         if (documentChanges.getDocumentState() != null && (
                 documentChanges.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) ||
                         documentChanges.getDocumentState().equalsIgnoreCase(Constant.ATTACHED))) {

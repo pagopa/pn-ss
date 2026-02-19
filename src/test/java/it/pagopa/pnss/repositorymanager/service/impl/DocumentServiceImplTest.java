@@ -1,4 +1,4 @@
-package it.pagopa.pnss.repositorymanager.service;
+package it.pagopa.pnss.repositorymanager.service.impl;
 
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
@@ -10,37 +10,52 @@ import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
+import it.pagopa.pnss.repositorymanager.exception.PdfReadException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
-import it.pagopa.pnss.repositorymanager.service.impl.DocumentServiceImpl;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
+import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
-import static it.pagopa.pnss.common.constant.Constant.ATTACHED;
-import static it.pagopa.pnss.common.constant.Constant.AVAILABLE;
+import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 
 @SpringBootTestWebEnv
 @CustomLog
-public class DocumentServiceImplTest {
+class DocumentServiceImplTest {
 
     @Autowired
     private DocumentServiceImpl documentServiceImpl;
@@ -48,6 +63,8 @@ public class DocumentServiceImplTest {
     private static DynamoDbTable<DocTypeEntity> docTypeDynamoDbTable;
     @MockitoBean
     private CallMacchinaStati callMacchinaStati;
+    @MockitoBean
+    private S3Service s3Service;
     private static DynamoDbTable<DocumentEntity> documentDynamoDbTable;
 
     private static final String T1 = "T1";
@@ -59,7 +76,7 @@ public class DocumentServiceImplTest {
 
 
     @BeforeAll
-    public static void insertDefaultDocuments(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
+    static void insertDefaultDocuments(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
                                              @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
         docTypeDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
         insertDocTypeEntities(generateDocTypeEntity(T1), generateDocTypeEntity(T2));
@@ -68,7 +85,7 @@ public class DocumentServiceImplTest {
     }
 
     @AfterAll
-    public static void deleteDefaultDocuments(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
+    static void deleteDefaultDocuments(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
                                              @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
         docTypeDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
         deleteDocTypeEntities(generateDocTypeEntity(T1), generateDocTypeEntity(T2));
@@ -172,6 +189,80 @@ public class DocumentServiceImplTest {
 
         assert result != null;
         StepVerifier.create(result).verifyComplete();
+    }
+
+    @Test
+    void processDocumentEntity_pdfAvailable_shouldCountPages() throws IOException {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        documentEntity.setContentType(APPLICATION_PDF_VALUE);
+        DocumentChanges documentChanges = generateDocumentChanges();
+        documentChanges.setDocumentState(AVAILABLE);
+        AtomicReference<String> oldState = new AtomicReference<>();
+
+        byte[] pdfBytes = createTestPdfBytes(3);
+        ResponseBytes<GetObjectResponse> responseBytes = ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes);
+        when(s3Service.getObject(eq(KEY), anyString())).thenReturn(Mono.just(responseBytes));
+        when(s3Service.putObjectTagging(anyString(), anyString(), any())).thenReturn(Mono.just(PutObjectTaggingResponse.builder().build()));
+
+        Mono<DocumentEntity> result =  documentServiceImpl.processDocumentEntity( documentEntity, oldState, documentChanges, KEY);
+
+        StepVerifier.create(result)
+                .expectNextMatches(entity -> entity.getNumberOfPages() != null && entity.getNumberOfPages() == 3)
+                .verifyComplete();
+    }
+
+    @ParameterizedTest
+    @MethodSource("shouldNotCountPagesMethodSource")
+    void processDocumentEntity_shouldNotCountPages(String contentType, String documentState) {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        documentEntity.setContentType(contentType);
+        DocumentChanges documentChanges = generateDocumentChanges();
+        documentChanges.setDocumentState(documentState);
+        AtomicReference<String> oldState = new AtomicReference<>();
+
+        when(s3Service.putObjectTagging(anyString(), anyString(), any())).thenReturn(Mono.just(PutObjectTaggingResponse.builder().build()));
+
+        Mono<DocumentEntity> result = documentServiceImpl.processDocumentEntity(documentEntity, oldState, documentChanges, KEY);
+
+        StepVerifier.create(result)
+                .expectNextMatches(entity -> entity.getNumberOfPages() == null)
+                .verifyComplete();
+    }
+
+    private static List<Arguments> shouldNotCountPagesMethodSource() {
+        return List.of(
+                Arguments.of(APPLICATION_PDF_VALUE, ATTACHED),
+                Arguments.of(APPLICATION_XML_VALUE, AVAILABLE)
+        );
+    }
+
+    @Test
+    void processDocumentEntity_pdfParseError_shouldThrowPdfReadException() {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        documentEntity.setContentType(APPLICATION_PDF_VALUE);
+        DocumentChanges documentChanges = generateDocumentChanges();
+        documentChanges.setDocumentState(AVAILABLE);
+        AtomicReference<String> oldState = new AtomicReference<>();
+
+        byte[] invalidPdfBytes = "this is not a valid pdf".getBytes();
+        ResponseBytes<GetObjectResponse> responseBytes = ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), invalidPdfBytes);
+        when(s3Service.getObject(eq(KEY), anyString())).thenReturn(Mono.just(responseBytes));
+
+        Mono<DocumentEntity> result =  documentServiceImpl.processDocumentEntity( documentEntity, oldState, documentChanges, KEY);
+
+        StepVerifier.create(result)
+                .verifyError(PdfReadException.class);
+    }
+
+    private static byte[] createTestPdfBytes(int numberOfPages) throws IOException {
+        try (PDDocument document = new PDDocument();
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            for (int i = 0; i < numberOfPages; i++) {
+                document.addPage(new PDPage());
+            }
+            document.save(baos);
+            return baos.toByteArray();
+        }
     }
 
     @Test

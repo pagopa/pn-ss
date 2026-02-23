@@ -90,8 +90,6 @@ public class DocumentServiceImpl implements DocumentService {
         this.managerDynamoTableName = managerDynamoTableName;
     }
 
-    private final Predicate<String> isTransitionToAvailable = documentState -> AVAILABLE.equals(documentState) || PRELOADED.equals(documentState);
-
     private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
         return Mono.error(new DocumentKeyNotPresentException(documentKey));
     }
@@ -240,7 +238,7 @@ public class DocumentServiceImpl implements DocumentService {
         log.debug("patchDocument() : (ho aggiornato documentEntity in base al documentChanges) documentEntity for patch = {}",
                 documentEntityStored);
 
-        if (isTransitionToAvailable.test(documentChanges.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntityStored.getContentType())) {
+        if (AVAILABLE.equals(documentChanges.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntityStored.getContentType())) {
 
             return s3Service.getObject(documentKey, bucketName.ssHotName())
                     .flatMap(getObjectResponse -> enrichWithDocumentPages(documentEntityStored, getObjectResponse.asByteArray()))
@@ -251,17 +249,17 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private Mono<DocumentEntity> enrichWithDocumentPages(DocumentEntity documentEntity, byte[] bytes) {
-        return Mono.fromSupplier(() -> {
+        return Mono.fromCallable(() -> {
                     try (PDDocument pdDocument = Loader.loadPDF(bytes)) {
                         log.debug("PDF page count for document {}: {}", documentEntity.getDocumentKey(), pdDocument.getNumberOfPages());
                         documentEntity.setNumberOfPages(pdDocument.getNumberOfPages());
                         return documentEntity;
-                    } catch (IOException e) {
-                        String errorMsg = String.format("Failed to count PDF pages for document %s : %s", documentEntity.getDocumentKey(), e.getMessage());
-                        throw new PdfReadException(errorMsg);
                     }
                 })
-                .subscribeOn(Schedulers.boundedElastic());
+                .subscribeOn(Schedulers.boundedElastic())
+                .onErrorMap(IOException.class, e ->
+                        new PdfReadException(String.format("Failed to count PDF pages for document %s : %s", documentEntity.getDocumentKey(), e.getMessage()))
+                );
     }
 
     private Mono<DocumentEntity> proceedWithTagging(DocumentEntity documentEntityStored, DocumentChanges documentChanges, String documentKey) {

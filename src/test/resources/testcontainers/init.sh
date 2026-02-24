@@ -494,6 +494,11 @@ INDEXING_CONFIG='{
                       "key": "TAG_SINGLEVALUE_INDEXED",
                       "indexed": true,
                       "multivalue": false
+                    },
+                    {
+                      "key": "document_number_of_pages",
+                      "indexed": false,
+                      "multivalue": false
                     }
                   ],
                   "locals": [

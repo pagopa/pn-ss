@@ -45,6 +45,7 @@ import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
@@ -61,10 +62,13 @@ import java.util.*;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
 
 @SpringBootTestWebEnv
 @AutoConfigureWebTestClient(timeout = "36000")
@@ -82,6 +86,8 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 	private S3Client s3TestClient;
 	@MockitoSpyBean
 	private S3Service s3Service;
+	@Value("${pn.ss.indexing.document-number-of-pages-tag-key}")
+	private String documentNumberOfPagesTagKey;
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
@@ -476,6 +482,7 @@ log.info("documentInputTags {}", documentInputTags);
 		Map<String, CurrentStatusEntity> statuses1 = new HashMap<>();
 		statuses1.put("ATTACHED", currentStatusAttached);
 		statuses1.put("PRELOADED", currentStatusPreloaded);
+		statuses1.put("AVAILABLE", currentStatusPreloaded);
 
 		DocTypeEntity docTypeEntity = new DocTypeEntity();
 		docTypeEntity.setTipoDocumento(DOCTYPE_ID_LEGAL_FACTS);
@@ -712,6 +719,53 @@ log.info("documentInputTags {}", documentInputTags);
 		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(documentKey));
 		log.info("\n Test 6 (patchItem) passed \n");
 	}
+
+	@Test
+	void patchItem_WithPdfPagesCount_Ok() {
+
+		log.warn("DocumentInternalApiControllerTest.patchItemWithTags() : START");
+
+		String documentKey = "docKeyExecutePatchTags";
+
+		DocTypeEntity docTypeEntity = getTypeEntity();
+
+		var documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(docTypeEntity);
+		documentEntity.setContentType(APPLICATION_PDF_VALUE);
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(AVAILABLE);
+		documentEntity.setDocumentLogicalState(AVAILABLE);
+
+		insertDocumentEntity(documentEntity);
+		addFileToBucket(documentKey, bucketName.ssHotName());
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(AVAILABLE);
+		docChanges.setContentLenght(new BigDecimal(60));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
+
+		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
+		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
+		documentEntity.setVersion(1L);
+		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(documentEntity));
+
+		webTestClient.patch()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+				.header("x-pagopa-safestorage-cx-id", "pn-test")
+				.header("x-api-key", "pn-test_api_key")
+				.accept(APPLICATION_JSON)
+				.contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isOk();
+
+		DocumentEntity updatedEntity = dynamoDbTable.getItem(Key.builder().partitionValue(documentKey).build());
+		assertNotNull(updatedEntity);
+		assertNotNull(updatedEntity.getTags());
+		assertNotNull(updatedEntity.getTags().get(documentNumberOfPagesTagKey));
+		assertEquals("1", updatedEntity.getTags().get(documentNumberOfPagesTagKey).getFirst());
+	}
+
 	@Test
 	void patchItemIdempotenceOk() {
 
@@ -890,12 +944,12 @@ log.info("documentInputTags {}", documentInputTags);
 		Mono<ResponseEntity<DocumentResponse>> responseMono =
 				ReflectionTestUtils.invokeMethod(documentInternalApiController, "getResponse", null, throwable);
 
-		Assertions.assertNotNull(responseMono);
+		assertNotNull(responseMono);
 		ResponseEntity<DocumentResponse> response = responseMono.block();
-		Assertions.assertNotNull(response);
+		assertNotNull(response);
 		Assertions.assertEquals(expectedStatus, response.getStatusCode());
-		Assertions.assertNotNull(response.getBody());
-		Assertions.assertNotNull(response.getBody().getError());
+		assertNotNull(response.getBody());
+		assertNotNull(response.getBody().getError());
 	}
 
 	private static Stream<Map.Entry<Throwable, HttpStatus>> provideThrowable() {

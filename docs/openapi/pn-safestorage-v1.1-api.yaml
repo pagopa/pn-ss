@@ -973,9 +973,6 @@ components:
           description: >-
             data e ora fino a cui il documento sarà garantito all'interno di _SafeStorage_. <br/>
             Può essere ritardata nel tempo, mai anticipata. Formattata con timezone secondo l'rfc 3339
-        numberOfPages:
-          type: integer
-          description: numero di pagine del documento. Valorizzato solo se il documento è di tipo PDF
         tags:
           type: object
           additionalProperties:

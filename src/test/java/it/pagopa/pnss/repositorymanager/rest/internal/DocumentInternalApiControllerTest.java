@@ -725,7 +725,7 @@ log.info("documentInputTags {}", documentInputTags);
 
 		log.warn("DocumentInternalApiControllerTest.patchItemWithTags() : START");
 
-		String documentKey = "docKeyExecutePatchTags";
+		String documentKey = "docKeyWithPdfPagesCount";
 
 		DocTypeEntity docTypeEntity = getTypeEntity();
 

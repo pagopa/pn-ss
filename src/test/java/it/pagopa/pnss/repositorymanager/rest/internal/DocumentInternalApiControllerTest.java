@@ -723,7 +723,7 @@ log.info("documentInputTags {}", documentInputTags);
 	@Test
 	void patchItem_WithPdfPagesCount_Ok() {
 
-		log.warn("DocumentInternalApiControllerTest.patchItemWithTags() : START");
+		log.warn("DocumentInternalApiControllerTest.patchItem_WithPdfPagesCount() : START");
 
 		String documentKey = "docKeyWithPdfPagesCount";
 

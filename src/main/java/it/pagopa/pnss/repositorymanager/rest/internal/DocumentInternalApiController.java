@@ -56,6 +56,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 		responseDocument.setCheckSum(document.getCheckSum());
 		responseDocument.setContentLenght(document.getContentLenght());
 		responseDocument.setDocumentType(document.getDocumentType());
+		responseDocument.setTags(document.getTags());
 		response.setDocument(responseDocument);
 		return response;
 	}

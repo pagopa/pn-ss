@@ -732,6 +732,7 @@ public class UriBuilderService {
         doc.setCheckSum(responseDoc.getCheckSum());
         doc.setContentLenght(responseDoc.getContentLenght());
         doc.setDocumentType(responseDoc.getDocumentType());
+        doc.setTags(responseDoc.getTags());
         return doc;
     }
 

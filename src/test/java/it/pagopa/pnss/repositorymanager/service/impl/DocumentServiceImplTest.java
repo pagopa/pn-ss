@@ -28,11 +28,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import it.pagopa.pnss.common.exception.MissingTagException;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -237,6 +239,36 @@ class DocumentServiceImplTest {
 
         StepVerifier.create(result)
                 .verifyError(PdfReadException.class);
+    }
+
+    @Test
+    void updateNumberOfPagesS3ErrorTest() {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+
+        when(s3Service.getObject(eq(KEY), any()))
+                .thenReturn(Mono.error(NoSuchKeyException.builder().build()));
+
+        Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
+
+        StepVerifier.create(result)
+                .verifyError(NoSuchKeyException.class);
+    }
+
+    @Test
+    void updateNumberOfPagesTagNotConfiguredTest() throws IOException {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        byte[] pdfBytes = createTestPdfBytes(3);
+        ReflectionTestUtils.setField(documentServiceImpl, "documentNumberOfPagesTagKey", "non_existing_tag_key");
+
+        when(s3Service.getObject(eq(KEY), any()))
+                .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
+        try {
+            Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
+            StepVerifier.create(result)
+                    .verifyError(MissingTagException.class);
+        } finally {
+            ReflectionTestUtils.setField(documentServiceImpl, "documentNumberOfPagesTagKey", documentNumberOfPagesTagKey);
+        }
     }
 
     @Test

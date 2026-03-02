@@ -13,7 +13,6 @@ import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.PdfReadException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
-import it.pagopa.pnss.repositorymanager.service.TagsService;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
@@ -38,10 +37,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,8 +59,6 @@ class DocumentServiceImplTest {
     private CallMacchinaStati callMacchinaStati;
     @MockitoBean
     private S3Service s3Service;
-    @MockitoBean
-    private TagsService tagsService;
     @MockitoBean
     private RetentionService retentionService;
     @Value("${pn.ss.indexing.document-number-of-pages-tag-key}")
@@ -216,36 +210,30 @@ class DocumentServiceImplTest {
         }
     }
 
-    // ---- calculateDocumentPages ----
-
     @Test
-    void saveDocumentPagesAsTagTest() throws IOException {
+    void updateNumberOfPagesTest() throws IOException {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
         byte[] pdfBytes = createTestPdfBytes(3);
 
         when(s3Service.getObject(eq(KEY), any()))
                 .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
-        when(tagsService.putTags(eq(KEY), any()))
-                .thenReturn(Mono.just(new TagsDto()));
 
-        Mono<DocumentEntity> result = documentServiceImpl.saveDocumentPagesAsTag(documentEntity);
+        Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
 
         StepVerifier.create(result)
                 .assertNext(entity -> assertEquals(KEY, entity.getDocumentKey()))
                 .verifyComplete();
-
-        verify(tagsService).putTags(eq(KEY), any());
     }
 
     @Test
-    void saveDocumentPagesAsTagInvalidPdfTest() {
+    void updateNumberOfPagesInvalidPdfTest() {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
         byte[] invalidBytes = new byte[]{1, 2, 3};
 
         when(s3Service.getObject(eq(KEY), any()))
                 .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), invalidBytes)));
 
-        Mono<DocumentEntity> result = documentServiceImpl.saveDocumentPagesAsTag(documentEntity);
+        Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
 
         StepVerifier.create(result)
                 .verifyError(PdfReadException.class);
@@ -264,15 +252,12 @@ class DocumentServiceImplTest {
         byte[] pdfBytes = createTestPdfBytes(5);
         when(s3Service.getObject(eq(KEY_PDF_ATTACHED), any()))
                 .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
-        when(tagsService.putTags(eq(KEY_PDF_ATTACHED), any()))
-                .thenReturn(Mono.just(new TagsDto()));
 
         StepVerifier.create(documentServiceImpl.patchDocument(KEY_PDF_ATTACHED, documentChanges, "cxId", "apiKey"))
                 .assertNext(Assertions::assertNotNull)
                 .verifyComplete();
 
         verify(s3Service).getObject(eq(KEY_PDF_ATTACHED), any());
-        verify(tagsService).putTags(eq(KEY_PDF_ATTACHED), any());
     }
 
     @Test
@@ -290,7 +275,6 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(s3Service, never()).getObject(any(), any());
-        verify(tagsService, never()).putTags(any(), any());
     }
 
     @Test
@@ -391,7 +375,7 @@ class DocumentServiceImplTest {
         documentEntity.setContentType(contentType);
         documentEntity.setDocumentLogicalState("documentLogicalState");
         documentEntity.setClientShortCode("clientShortCode");
-        documentEntity.setTags(Map.of("key", List.of("value")));
+        documentEntity.setTags(new HashMap<>(Map.of("key", List.of("value"))));
         return documentEntity;
     }
 

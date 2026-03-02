@@ -12,6 +12,7 @@ import it.pagopa.pnss.common.retention.RetentionService;
 import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.LogUtils;
+import it.pagopa.pnss.configuration.IndexingConfiguration;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
 import it.pagopa.pnss.configurationproperties.StreamRecordProcessorQueueName;
@@ -32,6 +33,7 @@ import lombok.CustomLog;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -43,6 +45,7 @@ import software.amazon.awssdk.services.s3.model.Tagging;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -71,12 +74,13 @@ public class DocumentServiceImpl implements DocumentService {
     final RepositoryManagerDynamoTableName managerDynamoTableName;
     private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
     private final String documentNumberOfPagesTagKey;
+    private final IndexingConfiguration indexingConfiguration;
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
                                RetentionService retentionService,
                                BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service, SqsService sqsService, TagsService tagsService, StreamRecordProcessorQueueName streamRecordProcessorQueueName,
-                               IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler, RepositoryManagerDynamoTableName managerDynamoTableName, @Value("${pn.ss.indexing.document-number-of-pages-tag-key}") String documentNumberOfPagesTagKey) {
+                               IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler, RepositoryManagerDynamoTableName managerDynamoTableName, @Value("${pn.ss.indexing.document-number-of-pages-tag-key}") String documentNumberOfPagesTagKey, IndexingConfiguration indexingConfiguration) {
         this.docTypesService = docTypesService;
         this.callMacchinaStati = callMacchinaStati;
         this.s3Service = s3Service;
@@ -84,6 +88,7 @@ public class DocumentServiceImpl implements DocumentService {
         this.tagsService = tagsService;
         this.streamRecordProcessorQueueName = streamRecordProcessorQueueName;
         this.ignoredUpdateMetadataHandler = ignoredUpdateMetadataHandler;
+        this.indexingConfiguration = indexingConfiguration;
         this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
                                                                                   TableSchema.fromBean(DocumentEntity.class)));
         this.objectMapper = objectMapper;
@@ -220,12 +225,12 @@ public class DocumentServiceImpl implements DocumentService {
                     	   return Mono.just(documentEntityStored);
                        }
                    })
+                   .flatMap(documentEntityStored -> {
+                       if (AVAILABLE.equalsIgnoreCase(documentChanges.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntityStored.getContentType()))
+                           return updateNumberOfPages(documentEntityStored);
+                       else return Mono.just(documentEntityStored);
+                   })
                    .flatMap(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
-                   .flatMap(documentEntity -> {
-                        if (AVAILABLE.equalsIgnoreCase(documentEntity.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntity.getContentType()))
-                            return saveDocumentPagesAsTag(documentEntity);
-                        else return Mono.just(documentEntity);
-                    })
                     .flatMap(documentEntity -> {
                      String oldStateStr = oldState.get();
                      if (documentEntity.getDocumentState().equalsIgnoreCase(Constant.AVAILABLE) && !oldStateStr.equals(documentEntity.getDocumentState())) {
@@ -272,12 +277,22 @@ public class DocumentServiceImpl implements DocumentService {
         return Mono.just(documentEntityStored);
     }
 
-    Mono<DocumentEntity> saveDocumentPagesAsTag(DocumentEntity documentEntity) {
-        return s3Service.getObject(documentEntity.getDocumentKey(), bucketName.ssHotName())
+    Mono<DocumentEntity> updateNumberOfPages(DocumentEntity documentEntity) {
+        return Mono.fromCallable(() -> indexingConfiguration.getTagInfo(documentNumberOfPagesTagKey))
+                .then(s3Service.getObject(documentEntity.getDocumentKey(), bucketName.ssHotName()))
                 .flatMap(getObjectResponse -> calculateDocumentPages(documentEntity, getObjectResponse.asByteArray()))
                 .map(String::valueOf)
-                .flatMap(numberOfPages -> tagsService.putTags(documentEntity.getDocumentKey(), new TagsChanges().putSETItem(documentNumberOfPagesTagKey, List.of(numberOfPages))))
+                .map(numberOfPages -> updateDocumentTags(documentEntity, numberOfPages))
                 .thenReturn(documentEntity);
+    }
+
+    private DocumentEntity updateDocumentTags(DocumentEntity documentEntity, String tagValue) {
+        Map<String, List<String>> tags = documentEntity.getTags();
+        if (CollectionUtils.isEmpty(documentEntity.getTags())) {
+            tags = new HashMap<>(Map.of(documentNumberOfPagesTagKey, List.of(tagValue)));
+        } else tags.put(documentNumberOfPagesTagKey, List.of(tagValue));
+        documentEntity.setTags(tags);
+        return documentEntity;
     }
 
     private Mono<Integer> calculateDocumentPages(DocumentEntity documentEntity, byte[] bytes) {

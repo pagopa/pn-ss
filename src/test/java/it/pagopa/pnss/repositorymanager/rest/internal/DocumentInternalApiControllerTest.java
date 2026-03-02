@@ -40,6 +40,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.reactive.function.BodyInserters;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -384,7 +385,7 @@ log.info("documentInputTags {}", documentInputTags);
 		webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT))
 				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class);
 
-		log.info("\n Test 3 (getItem) passed \n");
+		log.info("\n Test 3.1 (getItem) passed \n");
 
 	}
 
@@ -392,10 +393,14 @@ log.info("documentInputTags {}", documentInputTags);
 		// codice test: DCSS.100.1
 	void getItemWithTags() {
 
-		webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT_TAGS))
-				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class);
+		DocumentResponse response = webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(PARTITION_ID_DEFAULT_TAGS))
+				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+				.returnResult().getResponseBody();
+		Assertions.assertNotNull(response);
+		Assertions.assertNotNull(response.getDocument());
+		Assertions.assertFalse(CollectionUtils.isEmpty(response.getDocument().getTags()));
 
-		log.info("\n Test 3 (getItem) passed \n");
+		log.info("\n Test 3.2 (getItemWithTags) passed \n");
 
 	}
 

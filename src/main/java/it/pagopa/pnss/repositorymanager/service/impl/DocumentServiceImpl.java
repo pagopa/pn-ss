@@ -23,7 +23,6 @@ import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.PdfReadException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.exception.ResourceDeletedException;
-import it.pagopa.pnss.repositorymanager.service.TagsService;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import it.pagopa.pnss.repositorymanager.service.DocTypesService;
@@ -69,7 +68,6 @@ public class DocumentServiceImpl implements DocumentService {
     private final CallMacchinaStati callMacchinaStati;
     private final S3Service s3Service;
     private final SqsService sqsService;
-    private final TagsService tagsService;
     private final StreamRecordProcessorQueueName streamRecordProcessorQueueName;
     final RepositoryManagerDynamoTableName managerDynamoTableName;
     private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
@@ -79,13 +77,12 @@ public class DocumentServiceImpl implements DocumentService {
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
                                RetentionService retentionService,
-                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service, SqsService sqsService, TagsService tagsService, StreamRecordProcessorQueueName streamRecordProcessorQueueName,
+                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service, SqsService sqsService, StreamRecordProcessorQueueName streamRecordProcessorQueueName,
                                IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler, RepositoryManagerDynamoTableName managerDynamoTableName, @Value("${pn.ss.indexing.document-number-of-pages-tag-key}") String documentNumberOfPagesTagKey, IndexingConfiguration indexingConfiguration) {
         this.docTypesService = docTypesService;
         this.callMacchinaStati = callMacchinaStati;
         this.s3Service = s3Service;
         this.sqsService = sqsService;
-        this.tagsService = tagsService;
         this.streamRecordProcessorQueueName = streamRecordProcessorQueueName;
         this.ignoredUpdateMetadataHandler = ignoredUpdateMetadataHandler;
         this.indexingConfiguration = indexingConfiguration;

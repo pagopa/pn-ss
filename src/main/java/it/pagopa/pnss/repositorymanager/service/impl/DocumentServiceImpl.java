@@ -72,13 +72,15 @@ public class DocumentServiceImpl implements DocumentService {
     final RepositoryManagerDynamoTableName managerDynamoTableName;
     private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
     private final String documentNumberOfPagesTagKey;
+    private final boolean pdfPageCountEnabled;
     private final IndexingConfiguration indexingConfiguration;
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
                                RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
                                RetentionService retentionService,
                                BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service, SqsService sqsService, StreamRecordProcessorQueueName streamRecordProcessorQueueName,
-                               IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler, RepositoryManagerDynamoTableName managerDynamoTableName, @Value("${pn.ss.indexing.document-number-of-pages-tag-key}") String documentNumberOfPagesTagKey, IndexingConfiguration indexingConfiguration) {
+                               IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler, RepositoryManagerDynamoTableName managerDynamoTableName,
+                               @Value("${pn.ss.indexing.document-number-of-pages-tag-key}") String documentNumberOfPagesTagKey, @Value("${pn.ss.document.pdf-page-count-enabled}") boolean pdfPageCountEnabled, IndexingConfiguration indexingConfiguration) {
         this.docTypesService = docTypesService;
         this.callMacchinaStati = callMacchinaStati;
         this.s3Service = s3Service;
@@ -93,6 +95,7 @@ public class DocumentServiceImpl implements DocumentService {
         this.bucketName = bucketName;
         this.managerDynamoTableName = managerDynamoTableName;
         this.documentNumberOfPagesTagKey = documentNumberOfPagesTagKey;
+        this.pdfPageCountEnabled = pdfPageCountEnabled;
     }
 
     private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
@@ -223,7 +226,7 @@ public class DocumentServiceImpl implements DocumentService {
                        }
                    })
                    .flatMap(documentEntityStored -> {
-                       if (AVAILABLE.equalsIgnoreCase(documentChanges.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntityStored.getContentType()))
+                       if (pdfPageCountEnabled && AVAILABLE.equalsIgnoreCase(documentChanges.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntityStored.getContentType()))
                            return updateNumberOfPages(documentEntityStored);
                        else return Mono.just(documentEntityStored);
                    })

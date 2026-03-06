@@ -20,7 +20,6 @@ import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
-import it.pagopa.pnss.repositorymanager.exception.PdfReadException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.exception.ResourceDeletedException;
 import org.apache.pdfbox.Loader;
@@ -300,9 +299,10 @@ public class DocumentServiceImpl implements DocumentService {
                     }
                 })
                 .subscribeOn(Schedulers.boundedElastic())
-                .onErrorMap(IOException.class, e ->
-                        new PdfReadException(String.format("Failed to count PDF pages for document %s : %s", documentEntity.getDocumentKey(), e.getMessage()))
-                );
+                .onErrorResume(IOException.class, e -> {
+                    log.warn("Failed to count PDF pages for document {} : {}", documentEntity.getDocumentKey(), e.getMessage());
+                    return Mono.empty();
+                });
     }
 
     private static void updateOptionalProperties(DocumentEntity documentEntityStored, DocumentChanges documentChanges) {

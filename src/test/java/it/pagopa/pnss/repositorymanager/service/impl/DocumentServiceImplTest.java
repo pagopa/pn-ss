@@ -11,7 +11,6 @@ import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
-import it.pagopa.pnss.repositorymanager.exception.PdfReadException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -26,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import it.pagopa.pnss.common.exception.MissingTagException;
@@ -42,7 +42,7 @@ import java.math.BigDecimal;
 import java.util.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -215,6 +215,7 @@ class DocumentServiceImplTest {
     @Test
     void updateNumberOfPagesTest() throws IOException {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        documentEntity.setTags(null);
         byte[] pdfBytes = createTestPdfBytes(3);
 
         when(s3Service.getObject(eq(KEY), any()))
@@ -223,13 +224,18 @@ class DocumentServiceImplTest {
         Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
 
         StepVerifier.create(result)
-                .assertNext(entity -> assertEquals(KEY, entity.getDocumentKey()))
+                .assertNext(entity -> {
+                    assertEquals(KEY, entity.getDocumentKey());
+                    assertFalse(CollectionUtils.isEmpty(entity.getTags()));
+                    assertEquals("3", entity.getTags().get(documentNumberOfPagesTagKey).getFirst());
+                })
                 .verifyComplete();
     }
 
     @Test
     void updateNumberOfPagesInvalidPdfTest() {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        documentEntity.setTags(null);
         byte[] invalidBytes = new byte[]{1, 2, 3};
 
         when(s3Service.getObject(eq(KEY), any()))
@@ -238,7 +244,11 @@ class DocumentServiceImplTest {
         Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
 
         StepVerifier.create(result)
-                .verifyError(PdfReadException.class);
+                .assertNext(entity -> {
+                    assertEquals(KEY, entity.getDocumentKey());
+                    assertTrue(CollectionUtils.isEmpty(entity.getTags()));
+                })
+                .verifyComplete();
     }
 
     @Test

@@ -18,7 +18,10 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -80,6 +83,11 @@ class DocumentServiceImplTest {
         docTypeDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
         insertDocTypeEntities(generateDocTypeEntity(T1), generateDocTypeEntity(T2));
         documentDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+        insertDocumentEntities(
+                generateDocumentEntity(ALREADY_PRESENT),
+                generateDocumentEntity(KEY_PDF_ATTACHED, BOOKED, APPLICATION_PDF_VALUE),
+                generateDocumentEntity(KEY_NON_PDF_ATTACHED, BOOKED, APPLICATION_XML_VALUE)
+        );
     }
 
     @AfterAll
@@ -88,19 +96,6 @@ class DocumentServiceImplTest {
         docTypeDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
         deleteDocTypeEntities(generateDocTypeEntity(T1), generateDocTypeEntity(T2));
         documentDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
-    }
-
-    @BeforeEach
-    void initBeforeEach() {
-        insertDocumentEntities(
-                generateDocumentEntity(ALREADY_PRESENT),
-                generateDocumentEntity(KEY_PDF_ATTACHED, BOOKED, APPLICATION_PDF_VALUE),
-                generateDocumentEntity(KEY_NON_PDF_ATTACHED, BOOKED, APPLICATION_XML_VALUE)
-        );
-    }
-
-    @AfterEach
-    void cleanUpAfterEach() {
         deleteDocumentEntities(
                 generateDocumentEntity(KEY), generateDocumentEntity(KEY2), generateDocumentEntity(KEY3),
                 generateDocumentEntity(ALREADY_PRESENT),
@@ -278,34 +273,6 @@ class DocumentServiceImplTest {
 
     @Test
     void patchDocumentPdfBecomesAvailableTriggersPageCountTest() throws IOException {
-        ReflectionTestUtils.setField(documentServiceImpl, "pdfPageCountEnabled", true);
-        try {
-            DocumentChanges documentChanges = new DocumentChanges();
-            documentChanges.setDocumentState(AVAILABLE);
-
-            when(callMacchinaStati.statusValidation(any()))
-                    .thenReturn(Mono.just(generateMacchinaStatiValidateStatoResponseDto(true)));
-            when(retentionService.setRetentionPeriodInBucketObjectMetadata(any(), any(), any(), any(DocumentEntity.class), any()))
-                    .thenAnswer(invocation -> Mono.just(invocation.getArgument(3)));
-
-            byte[] pdfBytes = createTestPdfBytes(5);
-            when(s3Service.getObject(eq(KEY_PDF_ATTACHED), any()))
-                    .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
-
-            StepVerifier.create(documentServiceImpl.patchDocument(KEY_PDF_ATTACHED, documentChanges, "cxId", "apiKey"))
-                    .assertNext(Assertions::assertNotNull)
-                    .verifyComplete();
-
-            verify(s3Service).getObject(eq(KEY_PDF_ATTACHED), any());
-        } finally {
-            ReflectionTestUtils.setField(documentServiceImpl, "pdfPageCountEnabled", false);
-        }
-    }
-
-    @Test
-    void patchDocumentPdfBecomesAvailableWithFlagDisabledDoesNotTriggerPageCountTest() {
-        ReflectionTestUtils.setField(documentServiceImpl, "pdfPageCountEnabled", false);
-
         DocumentChanges documentChanges = new DocumentChanges();
         documentChanges.setDocumentState(AVAILABLE);
 
@@ -314,33 +281,32 @@ class DocumentServiceImplTest {
         when(retentionService.setRetentionPeriodInBucketObjectMetadata(any(), any(), any(), any(DocumentEntity.class), any()))
                 .thenAnswer(invocation -> Mono.just(invocation.getArgument(3)));
 
+        byte[] pdfBytes = createTestPdfBytes(5);
+        when(s3Service.getObject(eq(KEY_PDF_ATTACHED), any()))
+                .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
+
         StepVerifier.create(documentServiceImpl.patchDocument(KEY_PDF_ATTACHED, documentChanges, "cxId", "apiKey"))
                 .assertNext(Assertions::assertNotNull)
                 .verifyComplete();
 
-        verify(s3Service, never()).getObject(any(), any());
+        verify(s3Service).getObject(eq(KEY_PDF_ATTACHED), any());
     }
 
     @Test
     void patchDocumentNonPdfBecomesAvailableDoesNotTriggerPageCountTest() {
-        ReflectionTestUtils.setField(documentServiceImpl, "pdfPageCountEnabled", true);
-        try {
-            DocumentChanges documentChanges = new DocumentChanges();
-            documentChanges.setDocumentState(AVAILABLE);
+        DocumentChanges documentChanges = new DocumentChanges();
+        documentChanges.setDocumentState(AVAILABLE);
 
-            when(callMacchinaStati.statusValidation(any()))
-                    .thenReturn(Mono.just(generateMacchinaStatiValidateStatoResponseDto(true)));
-            when(retentionService.setRetentionPeriodInBucketObjectMetadata(any(), any(), any(), any(DocumentEntity.class), any()))
-                    .thenAnswer(invocation -> Mono.just(invocation.getArgument(3)));
+        when(callMacchinaStati.statusValidation(any()))
+                .thenReturn(Mono.just(generateMacchinaStatiValidateStatoResponseDto(true)));
+        when(retentionService.setRetentionPeriodInBucketObjectMetadata(any(), any(), any(), any(DocumentEntity.class), any()))
+                .thenAnswer(invocation -> Mono.just(invocation.getArgument(3)));
 
-            StepVerifier.create(documentServiceImpl.patchDocument(KEY_NON_PDF_ATTACHED, documentChanges, "cxId", "apiKey"))
-                    .assertNext(Assertions::assertNotNull)
-                    .verifyComplete();
+        StepVerifier.create(documentServiceImpl.patchDocument(KEY_NON_PDF_ATTACHED, documentChanges, "cxId", "apiKey"))
+                .assertNext(Assertions::assertNotNull)
+                .verifyComplete();
 
-            verify(s3Service, never()).getObject(any(), any());
-        } finally {
-            ReflectionTestUtils.setField(documentServiceImpl, "pdfPageCountEnabled", false);
-        }
+        verify(s3Service, never()).getObject(any(), any());
     }
 
     @Test

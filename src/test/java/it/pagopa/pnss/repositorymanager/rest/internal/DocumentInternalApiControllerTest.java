@@ -24,10 +24,7 @@ import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -725,6 +722,7 @@ log.info("documentInputTags {}", documentInputTags);
 	}
 
 	@Test
+	@Disabled("Counting pages feature is temporarily disabled")
 	void patchItem_WithPdfPagesCount_Ok() {
 
 		log.warn("DocumentInternalApiControllerTest.patchItem_WithPdfPagesCount() : START");
@@ -771,6 +769,7 @@ log.info("documentInputTags {}", documentInputTags);
 	}
 
 	@Test
+	@Disabled("Counting pages feature is temporarily disabled")
 	void patchItem_PdfTransitionToAvailable_PageCountSaved() {
 
 		log.warn("DocumentInternalApiControllerTest.patchItem_PdfTransitionToAvailable_PageCountSaved() : START");
@@ -819,6 +818,7 @@ log.info("documentInputTags {}", documentInputTags);
 	}
 
 	@Test
+	@Disabled("Counting pages feature is temporarily disabled")
 	void patchItem_PdfWithExistingTags_PageCountAdded_ExistingTagsPreserved() {
 
 		log.warn("DocumentInternalApiControllerTest.patchItem_PdfWithExistingTags_PageCountAdded_ExistingTagsPreserved() : START");

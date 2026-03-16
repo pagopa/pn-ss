@@ -221,11 +221,12 @@ public class DocumentServiceImpl implements DocumentService {
                     	   return Mono.just(documentEntityStored);
                        }
                    })
-                   .flatMap(documentEntityStored -> {
-                       if (AVAILABLE.equalsIgnoreCase(documentChanges.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntityStored.getContentType()))
-                           return updateNumberOfPages(documentEntityStored);
-                       else return Mono.just(documentEntityStored);
-                   })
+//                   DISABLED - page count feature disabled
+//                   .flatMap(documentEntityStored -> {
+//                       if (AVAILABLE.equalsIgnoreCase(documentChanges.getDocumentState()) && APPLICATION_PDF_VALUE.equalsIgnoreCase(documentEntityStored.getContentType()))
+//                           return updateNumberOfPages(documentEntityStored);
+//                       else return Mono.just(documentEntityStored);
+//                   })
                    .flatMap(documentUpdated -> Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentUpdated)))
                     .flatMap(documentEntity -> {
                      String oldStateStr = oldState.get();

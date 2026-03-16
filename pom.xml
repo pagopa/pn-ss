@@ -98,12 +98,6 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>cloudwatch-metric-publisher</artifactId>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.amazonaws/amazon-kinesis-client -->
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>amazon-kinesis-client</artifactId>
-            <version>1.15.2</version>
-        </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>dynamodb-streams-kinesis-adapter</artifactId>

@@ -17,10 +17,7 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -212,113 +209,118 @@ class DocumentServiceImplTest {
         }
     }
 
-    // DISABLED - page count feature disabled
-//    @Test
-//    void updateNumberOfPagesTest() throws IOException {
-//        DocumentEntity documentEntity = generateDocumentEntity(KEY);
-//        documentEntity.setTags(null);
-//        byte[] pdfBytes = createTestPdfBytes(3);
-//
-//        when(s3Service.getObject(eq(KEY), any()))
-//                .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
-//
-//        Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
-//
-//        StepVerifier.create(result)
-//                .assertNext(entity -> {
-//                    assertEquals(KEY, entity.getDocumentKey());
-//                    assertFalse(CollectionUtils.isEmpty(entity.getTags()));
-//                    assertEquals("3", entity.getTags().get(documentNumberOfPagesTagKey).getFirst());
-//                })
-//                .verifyComplete();
-//    }
-//
-//    @Test
-//    void updateNumberOfPagesInvalidPdfTest() {
-//        DocumentEntity documentEntity = generateDocumentEntity(KEY);
-//        documentEntity.setTags(null);
-//        byte[] invalidBytes = new byte[]{1, 2, 3};
-//
-//        when(s3Service.getObject(eq(KEY), any()))
-//                .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), invalidBytes)));
-//
-//        Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
-//
-//        StepVerifier.create(result)
-//                .assertNext(entity -> {
-//                    assertEquals(KEY, entity.getDocumentKey());
-//                    assertTrue(CollectionUtils.isEmpty(entity.getTags()));
-//                })
-//                .verifyComplete();
-//    }
-//
-//    @Test
-//    void updateNumberOfPagesS3ErrorTest() {
-//        DocumentEntity documentEntity = generateDocumentEntity(KEY);
-//
-//        when(s3Service.getObject(eq(KEY), any()))
-//                .thenReturn(Mono.error(NoSuchKeyException.builder().build()));
-//
-//        Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
-//
-//        StepVerifier.create(result)
-//                .verifyError(NoSuchKeyException.class);
-//    }
-//
-//    @Test
-//    void updateNumberOfPagesTagNotConfiguredTest() throws IOException {
-//        DocumentEntity documentEntity = generateDocumentEntity(KEY);
-//        byte[] pdfBytes = createTestPdfBytes(3);
-//        ReflectionTestUtils.setField(documentServiceImpl, "documentNumberOfPagesTagKey", "non_existing_tag_key");
-//
-//        when(s3Service.getObject(eq(KEY), any()))
-//                .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
-//        try {
-//            Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
-//            StepVerifier.create(result)
-//                    .verifyError(MissingTagException.class);
-//        } finally {
-//            ReflectionTestUtils.setField(documentServiceImpl, "documentNumberOfPagesTagKey", documentNumberOfPagesTagKey);
-//        }
-//    }
-//
-//    @Test
-//    void patchDocumentPdfBecomesAvailableTriggersPageCountTest() throws IOException {
-//        DocumentChanges documentChanges = new DocumentChanges();
-//        documentChanges.setDocumentState(AVAILABLE);
-//
-//        when(callMacchinaStati.statusValidation(any()))
-//                .thenReturn(Mono.just(generateMacchinaStatiValidateStatoResponseDto(true)));
-//        when(retentionService.setRetentionPeriodInBucketObjectMetadata(any(), any(), any(), any(DocumentEntity.class), any()))
-//                .thenAnswer(invocation -> Mono.just(invocation.getArgument(3)));
-//
-//        byte[] pdfBytes = createTestPdfBytes(5);
-//        when(s3Service.getObject(eq(KEY_PDF_ATTACHED), any()))
-//                .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
-//
-//        StepVerifier.create(documentServiceImpl.patchDocument(KEY_PDF_ATTACHED, documentChanges, "cxId", "apiKey"))
-//                .assertNext(Assertions::assertNotNull)
-//                .verifyComplete();
-//
-//        verify(s3Service).getObject(eq(KEY_PDF_ATTACHED), any());
-//    }
-//
-//    @Test
-//    void patchDocumentNonPdfBecomesAvailableDoesNotTriggerPageCountTest() {
-//        DocumentChanges documentChanges = new DocumentChanges();
-//        documentChanges.setDocumentState(AVAILABLE);
-//
-//        when(callMacchinaStati.statusValidation(any()))
-//                .thenReturn(Mono.just(generateMacchinaStatiValidateStatoResponseDto(true)));
-//        when(retentionService.setRetentionPeriodInBucketObjectMetadata(any(), any(), any(), any(DocumentEntity.class), any()))
-//                .thenAnswer(invocation -> Mono.just(invocation.getArgument(3)));
-//
-//        StepVerifier.create(documentServiceImpl.patchDocument(KEY_NON_PDF_ATTACHED, documentChanges, "cxId", "apiKey"))
-//                .assertNext(Assertions::assertNotNull)
-//                .verifyComplete();
-//
-//        verify(s3Service, never()).getObject(any(), any());
-//    }
+    @Test
+    @Disabled("Counting pages feature is temporarily disabled")
+    void updateNumberOfPagesTest() throws IOException {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        documentEntity.setTags(null);
+        byte[] pdfBytes = createTestPdfBytes(3);
+
+        when(s3Service.getObject(eq(KEY), any()))
+                .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
+
+        Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
+
+        StepVerifier.create(result)
+                .assertNext(entity -> {
+                    assertEquals(KEY, entity.getDocumentKey());
+                    assertFalse(CollectionUtils.isEmpty(entity.getTags()));
+                    assertEquals("3", entity.getTags().get(documentNumberOfPagesTagKey).getFirst());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    @Disabled("Counting pages feature is temporarily disabled")
+    void updateNumberOfPagesInvalidPdfTest() {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        documentEntity.setTags(null);
+        byte[] invalidBytes = new byte[]{1, 2, 3};
+
+        when(s3Service.getObject(eq(KEY), any()))
+                .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), invalidBytes)));
+
+        Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
+
+        StepVerifier.create(result)
+                .assertNext(entity -> {
+                    assertEquals(KEY, entity.getDocumentKey());
+                    assertTrue(CollectionUtils.isEmpty(entity.getTags()));
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    @Disabled("Counting pages feature is temporarily disabled")
+    void updateNumberOfPagesS3ErrorTest() {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+
+        when(s3Service.getObject(eq(KEY), any()))
+                .thenReturn(Mono.error(NoSuchKeyException.builder().build()));
+
+        Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
+
+        StepVerifier.create(result)
+                .verifyError(NoSuchKeyException.class);
+    }
+
+    @Test
+    @Disabled("Counting pages feature is temporarily disabled")
+    void updateNumberOfPagesTagNotConfiguredTest() throws IOException {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        byte[] pdfBytes = createTestPdfBytes(3);
+        ReflectionTestUtils.setField(documentServiceImpl, "documentNumberOfPagesTagKey", "non_existing_tag_key");
+
+        when(s3Service.getObject(eq(KEY), any()))
+                .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
+        try {
+            Mono<DocumentEntity> result = documentServiceImpl.updateNumberOfPages(documentEntity);
+            StepVerifier.create(result)
+                    .verifyError(MissingTagException.class);
+        } finally {
+            ReflectionTestUtils.setField(documentServiceImpl, "documentNumberOfPagesTagKey", documentNumberOfPagesTagKey);
+        }
+    }
+
+    @Test
+    @Disabled("Counting pages feature is temporarily disabled")
+    void patchDocumentPdfBecomesAvailableTriggersPageCountTest() throws IOException {
+        DocumentChanges documentChanges = new DocumentChanges();
+        documentChanges.setDocumentState(AVAILABLE);
+
+        when(callMacchinaStati.statusValidation(any()))
+                .thenReturn(Mono.just(generateMacchinaStatiValidateStatoResponseDto(true)));
+        when(retentionService.setRetentionPeriodInBucketObjectMetadata(any(), any(), any(), any(DocumentEntity.class), any()))
+                .thenAnswer(invocation -> Mono.just(invocation.getArgument(3)));
+
+        byte[] pdfBytes = createTestPdfBytes(5);
+        when(s3Service.getObject(eq(KEY_PDF_ATTACHED), any()))
+                .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
+
+        StepVerifier.create(documentServiceImpl.patchDocument(KEY_PDF_ATTACHED, documentChanges, "cxId", "apiKey"))
+                .assertNext(Assertions::assertNotNull)
+                .verifyComplete();
+
+        verify(s3Service).getObject(eq(KEY_PDF_ATTACHED), any());
+    }
+
+    @Test
+    @Disabled("Counting pages feature is temporarily disabled")
+    void patchDocumentNonPdfBecomesAvailableDoesNotTriggerPageCountTest() {
+        DocumentChanges documentChanges = new DocumentChanges();
+        documentChanges.setDocumentState(AVAILABLE);
+
+        when(callMacchinaStati.statusValidation(any()))
+                .thenReturn(Mono.just(generateMacchinaStatiValidateStatoResponseDto(true)));
+        when(retentionService.setRetentionPeriodInBucketObjectMetadata(any(), any(), any(), any(DocumentEntity.class), any()))
+                .thenAnswer(invocation -> Mono.just(invocation.getArgument(3)));
+
+        StepVerifier.create(documentServiceImpl.patchDocument(KEY_NON_PDF_ATTACHED, documentChanges, "cxId", "apiKey"))
+                .assertNext(Assertions::assertNotNull)
+                .verifyComplete();
+
+        verify(s3Service, never()).getObject(any(), any());
+    }
 
     @Test
     void hasBeenPatchedTest() {

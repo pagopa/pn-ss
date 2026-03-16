@@ -24,10 +24,7 @@ import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -724,151 +721,153 @@ log.info("documentInputTags {}", documentInputTags);
 		log.info("\n Test 6 (patchItem) passed \n");
 	}
 
-	// DISABLED - page count feature disabled
-//	@Test
-//	void patchItem_WithPdfPagesCount_Ok() {
-//
-//		log.warn("DocumentInternalApiControllerTest.patchItem_WithPdfPagesCount() : START");
-//
-//		String documentKey = "docKeyWithPdfPagesCount";
-//
-//		DocTypeEntity docTypeEntity = getTypeEntity();
-//
-//		var documentEntity = new DocumentEntity();
-//		documentEntity.setDocumentKey(documentKey);
-//		documentEntity.setDocumentType(docTypeEntity);
-//		documentEntity.setContentType(APPLICATION_PDF_VALUE);
-//		documentEntity.setContentLenght(new BigDecimal(50));
-//		documentEntity.setDocumentState(AVAILABLE);
-//		documentEntity.setDocumentLogicalState(AVAILABLE);
-//
-//		insertDocumentEntity(documentEntity);
-//		addFileToBucket(documentKey, bucketName.ssHotName());
-//
-//		DocumentChanges docChanges = new DocumentChanges();
-//		docChanges.setDocumentState(AVAILABLE);
-//		docChanges.setContentLenght(new BigDecimal(60));
-//		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
-//
-//		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
-//		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
-//		documentEntity.setVersion(1L);
-//		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(documentEntity));
-//
-//		webTestClient.patch()
-//				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
-//				.header("x-pagopa-safestorage-cx-id", "pn-test")
-//				.header("x-api-key", "pn-test_api_key")
-//				.accept(APPLICATION_JSON)
-//				.contentType(APPLICATION_JSON)
-//				.body(BodyInserters.fromValue(docChanges))
-//				.exchange().expectStatus().isOk();
-//
-//		DocumentEntity updatedEntity = dynamoDbTable.getItem(Key.builder().partitionValue(documentKey).build());
-//		assertNotNull(updatedEntity);
-//		assertNotNull(updatedEntity.getTags());
-//		assertNotNull(updatedEntity.getTags().get(documentNumberOfPagesTagKey));
-//		assertEquals("1", updatedEntity.getTags().get(documentNumberOfPagesTagKey).getFirst());
-//	}
-//
-//	@Test
-//	void patchItem_PdfTransitionToAvailable_PageCountSaved() {
-//
-//		log.warn("DocumentInternalApiControllerTest.patchItem_PdfTransitionToAvailable_PageCountSaved() : START");
-//
-//		String documentKey = "docKeyPdfPreloadedToAvailable";
-//
-//		DocTypeEntity docTypeEntity = getTypeEntity();
-//
-//		var documentEntity = new DocumentEntity();
-//		documentEntity.setDocumentKey(documentKey);
-//		documentEntity.setDocumentType(docTypeEntity);
-//		documentEntity.setContentType(APPLICATION_PDF_VALUE);
-//		documentEntity.setContentLenght(new BigDecimal(50));
-//		documentEntity.setDocumentState(PRELOADED);
-//		documentEntity.setDocumentLogicalState(PRELOADED);
-//
-//		insertDocumentEntity(documentEntity);
-//		addFileToBucket(documentKey, bucketName.ssHotName());
-//
-//		DocumentChanges docChanges = new DocumentChanges();
-//		docChanges.setDocumentState(AVAILABLE);
-//		docChanges.setContentLenght(new BigDecimal(60));
-//		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
-//
-//		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
-//		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
-//		documentEntity.setVersion(1L);
-//		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(documentEntity));
-//
-//		webTestClient.patch()
-//				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
-//				.header("x-pagopa-safestorage-cx-id", "pn-test")
-//				.header("x-api-key", "pn-test_api_key")
-//				.accept(APPLICATION_JSON)
-//				.contentType(APPLICATION_JSON)
-//				.body(BodyInserters.fromValue(docChanges))
-//				.exchange().expectStatus().isOk();
-//
-//		DocumentEntity updatedEntity = dynamoDbTable.getItem(Key.builder().partitionValue(documentKey).build());
-//		assertNotNull(updatedEntity);
-//		assertNotNull(updatedEntity.getTags());
-//		assertNotNull(updatedEntity.getTags().get(documentNumberOfPagesTagKey));
-//		assertEquals("1", updatedEntity.getTags().get(documentNumberOfPagesTagKey).getFirst());
-//
-//		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(documentKey));
-//	}
-//
-//	@Test
-//	void patchItem_PdfWithExistingTags_PageCountAdded_ExistingTagsPreserved() {
-//
-//		log.warn("DocumentInternalApiControllerTest.patchItem_PdfWithExistingTags_PageCountAdded_ExistingTagsPreserved() : START");
-//
-//		String documentKey = "docKeyPdfExistingTagsPageCount";
-//
-//		DocTypeEntity docTypeEntity = getTypeEntity();
-//
-//		var documentEntity = new DocumentEntity();
-//		documentEntity.setDocumentKey(documentKey);
-//		documentEntity.setDocumentType(docTypeEntity);
-//		documentEntity.setContentType(APPLICATION_PDF_VALUE);
-//		documentEntity.setContentLenght(new BigDecimal(50));
-//		documentEntity.setDocumentState(AVAILABLE);
-//		documentEntity.setDocumentLogicalState(AVAILABLE);
-//		documentEntity.setTags(createTagsList());
-//
-//		insertDocumentEntity(documentEntity);
-//		addFileToBucket(documentKey, bucketName.ssHotName());
-//
-//		DocumentChanges docChanges = new DocumentChanges();
-//		docChanges.setDocumentState(AVAILABLE);
-//		docChanges.setContentLenght(new BigDecimal(60));
-//		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
-//
-//		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
-//		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
-//		documentEntity.setVersion(1L);
-//		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(documentEntity));
-//
-//		webTestClient.patch()
-//				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
-//				.header("x-pagopa-safestorage-cx-id", "pn-test")
-//				.header("x-api-key", "pn-test_api_key")
-//				.accept(APPLICATION_JSON)
-//				.contentType(APPLICATION_JSON)
-//				.body(BodyInserters.fromValue(docChanges))
-//				.exchange().expectStatus().isOk();
-//
-//		DocumentEntity updatedEntity = dynamoDbTable.getItem(Key.builder().partitionValue(documentKey).build());
-//		assertNotNull(updatedEntity);
-//		assertNotNull(updatedEntity.getTags());
-//		assertNotNull(updatedEntity.getTags().get("key_1"));
-//		assertNotNull(updatedEntity.getTags().get("key_2"));
-//		assertNotNull(updatedEntity.getTags().get(documentNumberOfPagesTagKey));
-//		assertEquals("1", updatedEntity.getTags().get(documentNumberOfPagesTagKey).getFirst());
-//
-//		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(documentKey));
-//	}
+	@Test
+	@Disabled("Counting pages feature is temporarily disabled")
+	void patchItem_WithPdfPagesCount_Ok() {
+
+		log.warn("DocumentInternalApiControllerTest.patchItem_WithPdfPagesCount() : START");
+
+		String documentKey = "docKeyWithPdfPagesCount";
+
+		DocTypeEntity docTypeEntity = getTypeEntity();
+
+		var documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(docTypeEntity);
+		documentEntity.setContentType(APPLICATION_PDF_VALUE);
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(AVAILABLE);
+		documentEntity.setDocumentLogicalState(AVAILABLE);
+
+		insertDocumentEntity(documentEntity);
+		addFileToBucket(documentKey, bucketName.ssHotName());
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(AVAILABLE);
+		docChanges.setContentLenght(new BigDecimal(60));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
+
+		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
+		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
+		documentEntity.setVersion(1L);
+		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(documentEntity));
+
+		webTestClient.patch()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+				.header("x-pagopa-safestorage-cx-id", "pn-test")
+				.header("x-api-key", "pn-test_api_key")
+				.accept(APPLICATION_JSON)
+				.contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isOk();
+
+		DocumentEntity updatedEntity = dynamoDbTable.getItem(Key.builder().partitionValue(documentKey).build());
+		assertNotNull(updatedEntity);
+		assertNotNull(updatedEntity.getTags());
+		assertNotNull(updatedEntity.getTags().get(documentNumberOfPagesTagKey));
+		assertEquals("1", updatedEntity.getTags().get(documentNumberOfPagesTagKey).getFirst());
+	}
+
+	@Test
+	@Disabled("Counting pages feature is temporarily disabled")
+	void patchItem_PdfTransitionToAvailable_PageCountSaved() {
+
+		log.warn("DocumentInternalApiControllerTest.patchItem_PdfTransitionToAvailable_PageCountSaved() : START");
+
+		String documentKey = "docKeyPdfPreloadedToAvailable";
+
+		DocTypeEntity docTypeEntity = getTypeEntity();
+
+		var documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(docTypeEntity);
+		documentEntity.setContentType(APPLICATION_PDF_VALUE);
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(PRELOADED);
+		documentEntity.setDocumentLogicalState(PRELOADED);
+
+		insertDocumentEntity(documentEntity);
+		addFileToBucket(documentKey, bucketName.ssHotName());
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(AVAILABLE);
+		docChanges.setContentLenght(new BigDecimal(60));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
+
+		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
+		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
+		documentEntity.setVersion(1L);
+		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(documentEntity));
+
+		webTestClient.patch()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+				.header("x-pagopa-safestorage-cx-id", "pn-test")
+				.header("x-api-key", "pn-test_api_key")
+				.accept(APPLICATION_JSON)
+				.contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isOk();
+
+		DocumentEntity updatedEntity = dynamoDbTable.getItem(Key.builder().partitionValue(documentKey).build());
+		assertNotNull(updatedEntity);
+		assertNotNull(updatedEntity.getTags());
+		assertNotNull(updatedEntity.getTags().get(documentNumberOfPagesTagKey));
+		assertEquals("1", updatedEntity.getTags().get(documentNumberOfPagesTagKey).getFirst());
+
+		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(documentKey));
+	}
+
+	@Test
+	@Disabled("Counting pages feature is temporarily disabled")
+	void patchItem_PdfWithExistingTags_PageCountAdded_ExistingTagsPreserved() {
+
+		log.warn("DocumentInternalApiControllerTest.patchItem_PdfWithExistingTags_PageCountAdded_ExistingTagsPreserved() : START");
+
+		String documentKey = "docKeyPdfExistingTagsPageCount";
+
+		DocTypeEntity docTypeEntity = getTypeEntity();
+
+		var documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(docTypeEntity);
+		documentEntity.setContentType(APPLICATION_PDF_VALUE);
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(AVAILABLE);
+		documentEntity.setDocumentLogicalState(AVAILABLE);
+		documentEntity.setTags(createTagsList());
+
+		insertDocumentEntity(documentEntity);
+		addFileToBucket(documentKey, bucketName.ssHotName());
+
+		DocumentChanges docChanges = new DocumentChanges();
+		docChanges.setDocumentState(AVAILABLE);
+		docChanges.setContentLenght(new BigDecimal(60));
+		docChanges.setLastStatusChangeTimestamp(OffsetDateTime.now().minusMinutes(10));
+
+		when(userConfigurationClientCall.getUser("pn-test")).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name("pn-test").apiKey("pn-test_api_key"))));
+		when(callMacchinaStati.statusValidation(any(DocumentStatusChange.class))).thenReturn(Mono.just(new MacchinaStatiValidateStatoResponseDto()));
+		documentEntity.setVersion(1L);
+		when(retentionService.setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString())).thenReturn(Mono.just(documentEntity));
+
+		webTestClient.patch()
+				.uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+				.header("x-pagopa-safestorage-cx-id", "pn-test")
+				.header("x-api-key", "pn-test_api_key")
+				.accept(APPLICATION_JSON)
+				.contentType(APPLICATION_JSON)
+				.body(BodyInserters.fromValue(docChanges))
+				.exchange().expectStatus().isOk();
+
+		DocumentEntity updatedEntity = dynamoDbTable.getItem(Key.builder().partitionValue(documentKey).build());
+		assertNotNull(updatedEntity);
+		assertNotNull(updatedEntity.getTags());
+		assertNotNull(updatedEntity.getTags().get("key_1"));
+		assertNotNull(updatedEntity.getTags().get("key_2"));
+		assertNotNull(updatedEntity.getTags().get(documentNumberOfPagesTagKey));
+		assertEquals("1", updatedEntity.getTags().get(documentNumberOfPagesTagKey).getFirst());
+
+		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(documentKey));
+	}
 
 	@Test
 	void patchItemIdempotenceOk() {

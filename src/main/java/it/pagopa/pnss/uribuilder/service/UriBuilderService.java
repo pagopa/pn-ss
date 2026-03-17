@@ -210,6 +210,7 @@ public class UriBuilderService {
                                                                     // Chiamata a putTags usando documentKey ottenuto da postDocument
                                                                     TagsChanges tagsChanges = new TagsChanges().SET(validatedRequest.getTags());
                                                                     return tagsClientCall.putTags(insertedDocument.getDocument().getDocumentKey(), tagsChanges)
+                                                                            .retryWhen(gestoreRepositoryRetryStrategy)
                                                                             .doOnSuccess(tagsResponse -> log.info("PutTags successful for document key: {}", insertedDocument.getDocument().getDocumentKey()))
                                                                             .thenReturn(response);
                                                                 } else {

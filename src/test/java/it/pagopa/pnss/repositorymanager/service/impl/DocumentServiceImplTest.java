@@ -17,10 +17,7 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -213,6 +210,7 @@ class DocumentServiceImplTest {
     }
 
     @Test
+    @Disabled("Counting pages feature is temporarily disabled")
     void updateNumberOfPagesTest() throws IOException {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
         documentEntity.setTags(null);
@@ -233,6 +231,7 @@ class DocumentServiceImplTest {
     }
 
     @Test
+    @Disabled("Counting pages feature is temporarily disabled")
     void updateNumberOfPagesInvalidPdfTest() {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
         documentEntity.setTags(null);
@@ -252,6 +251,7 @@ class DocumentServiceImplTest {
     }
 
     @Test
+    @Disabled("Counting pages feature is temporarily disabled")
     void updateNumberOfPagesS3ErrorTest() {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
 
@@ -265,6 +265,7 @@ class DocumentServiceImplTest {
     }
 
     @Test
+    @Disabled("Counting pages feature is temporarily disabled")
     void updateNumberOfPagesTagNotConfiguredTest() throws IOException {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
         byte[] pdfBytes = createTestPdfBytes(3);
@@ -282,6 +283,7 @@ class DocumentServiceImplTest {
     }
 
     @Test
+    @Disabled("Counting pages feature is temporarily disabled")
     void patchDocumentPdfBecomesAvailableTriggersPageCountTest() throws IOException {
         DocumentChanges documentChanges = new DocumentChanges();
         documentChanges.setDocumentState(AVAILABLE);
@@ -303,6 +305,7 @@ class DocumentServiceImplTest {
     }
 
     @Test
+    @Disabled("Counting pages feature is temporarily disabled")
     void patchDocumentNonPdfBecomesAvailableDoesNotTriggerPageCountTest() {
         DocumentChanges documentChanges = new DocumentChanges();
         documentChanges.setDocumentState(AVAILABLE);

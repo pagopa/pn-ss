@@ -1,6 +1,6 @@
 package it.pagopa.pnss.uribuilder.service;
 
-import com.amazonaws.SdkClientException;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType.ChecksumEnum;
 import it.pagopa.pnss.common.client.DocTypesClientCall;

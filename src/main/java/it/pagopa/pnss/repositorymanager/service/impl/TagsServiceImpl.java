@@ -48,7 +48,6 @@ public class TagsServiceImpl implements TagsService {
     private final DynamoDbAsyncTableDecorator<TagsRelationsEntity> tagsEntityDynamoDbAsyncTable;
     private final DynamoDbAsyncTableDecorator<DocumentEntity> documentEntityDynamoDbAsyncTable;
     private final IndexingConfiguration indexingConfiguration;
-    private final RetryBackoffSpec tagsRetryStrategy;
 
     private enum OperationType {
         /**
@@ -69,12 +68,11 @@ public class TagsServiceImpl implements TagsService {
      * @param repositoryManagerDynamoTableName the repository manager dynamo table name
      * @param indexingConfiguration            the indexing configuration
      */
-    public TagsServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient, RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, IndexingConfiguration indexingConfiguration, @Qualifier("tagsRetryStrategy") RetryBackoffSpec tagsRetryStrategy) {
+    public TagsServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient, RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, IndexingConfiguration indexingConfiguration) {
         this.objectMapper = objectMapper;
         this.indexingConfiguration = indexingConfiguration;
         this.tagsEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.tagsName(), TableSchema.fromBean(TagsRelationsEntity.class)));
         this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class)));
-        this.tagsRetryStrategy = tagsRetryStrategy;
     }
 
     private Mono<TagsRelationsEntity> getErrorIdTagNotFoundException(String tagKeyValue) {
@@ -114,7 +112,6 @@ public class TagsServiceImpl implements TagsService {
         var operationsFlux = Flux.merge(setFlux, deleteFlux);
         // Tags updating
         return updateTags(documentKey, operationsFlux).retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY)
-                .retryWhen(tagsRetryStrategy)
                 // Relations updating
                 .flatMap(documentEntity -> updateRelations(documentKey, operationsFlux).thenReturn(documentEntity.getTags() == null ? new HashMap<String, List<String>>() : documentEntity.getTags()))
                 .map(tags -> new TagsDto().tags(tags))

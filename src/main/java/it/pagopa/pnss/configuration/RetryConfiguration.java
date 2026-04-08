@@ -37,7 +37,7 @@ public class RetryConfiguration {
         this.gestoreRepositoryRetryStrategyProperties = gestoreRepositoryRetryStrategyProperties;
         this.s3RetryStrategyProperties = s3RetryStrategyProperties;
     }
-    private final Predicate<Throwable> isNotFound = throwable -> (throwable instanceof DocumentKeyNotPresentException) || (throwable instanceof IdClientNotFoundException)  || (throwable instanceof DocumentTypeNotPresentException);
+    private static final Predicate<Throwable> isNotFound = throwable -> (throwable instanceof DocumentKeyNotPresentException) || (throwable instanceof IdClientNotFoundException)  || (throwable instanceof DocumentTypeNotPresentException);
 
     @Bean
     RetryBackoffSpec dynamoRetryStrategy() {
@@ -77,7 +77,7 @@ public class RetryConfiguration {
     @Bean
     RetryBackoffSpec tagsRetryStrategy() {
         return Retry.backoff(gestoreRepositoryRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(gestoreRepositoryRetryStrategyProperties.minBackoff()))
-                .filter(Predicate.isEqual(isNotFound))
+                .filter(isNotFound)
                 .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }

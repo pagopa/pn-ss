@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
     <artifactId>pn-ss</artifactId>
-    <version>3.1.1-RC.1</version>
+    <version>3.1.1</version>
     <name>pn-ss</name>
     <description>A template for a PN Backend Microservice</description>
     <scm>

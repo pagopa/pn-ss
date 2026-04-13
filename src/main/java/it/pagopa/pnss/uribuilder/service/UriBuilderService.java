@@ -107,11 +107,25 @@ public class UriBuilderService {
     private static final String SEPARATORE = "~";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
     private final IndexingConfiguration indexingConfiguration;
+    private final RetryBackoffSpec tagsRetryStrategy;
+
 
     final RepositoryManagerDynamoTableName managerDynamoTableName;
 
-    public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
-                             BucketName bucketName, DocTypesClientCall docTypesClientCall, TagsClientCall tagsClientCall, S3Service s3Service, S3Presigner s3Presigner, @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue, AdditionalFileTagsService additionalFileTagsService, @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy, ThreadPoolTaskExecutor taskExecutor, IndexingConfiguration indexingConfiguration, RepositoryManagerDynamoTableName managerDynamoTableName) {
+    public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall,
+                             DocumentClientCall documentClientCall,
+                             BucketName bucketName,
+                             DocTypesClientCall docTypesClientCall,
+                             TagsClientCall tagsClientCall,
+                             S3Service s3Service,
+                             S3Presigner s3Presigner,
+                             @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue,
+                             AdditionalFileTagsService additionalFileTagsService,
+                             @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy,
+                             ThreadPoolTaskExecutor taskExecutor,
+                             IndexingConfiguration indexingConfiguration,
+                             RepositoryManagerDynamoTableName managerDynamoTableName,
+                             @Qualifier("tagsRetryStrategy") RetryBackoffSpec tagsRetryStrategy) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
         this.bucketName = bucketName;
@@ -125,6 +139,8 @@ public class UriBuilderService {
         this.taskExecutor = taskExecutor;
         this.indexingConfiguration = indexingConfiguration;
         this.managerDynamoTableName = managerDynamoTableName;
+        this.tagsRetryStrategy = tagsRetryStrategy;
+
     }
 
     private Mono<String> getBucketName(DocumentType docType) {
@@ -210,7 +226,7 @@ public class UriBuilderService {
                                                                     // Chiamata a putTags usando documentKey ottenuto da postDocument
                                                                     TagsChanges tagsChanges = new TagsChanges().SET(validatedRequest.getTags());
                                                                     return tagsClientCall.putTags(insertedDocument.getDocument().getDocumentKey(), tagsChanges)
-                                                                            .retryWhen(gestoreRepositoryRetryStrategy)
+                                                                            .retryWhen(tagsRetryStrategy)
                                                                             .doOnSuccess(tagsResponse -> log.info("PutTags successful for document key: {}", insertedDocument.getDocument().getDocumentKey()))
                                                                             .thenReturn(response);
                                                                 } else {

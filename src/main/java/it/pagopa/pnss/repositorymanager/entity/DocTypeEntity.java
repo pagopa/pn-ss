@@ -1,7 +1,5 @@
 package it.pagopa.pnss.repositorymanager.entity;
 
-
-//import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConvertedEnum;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.utils.InformationClassificationConverter;
 import it.pagopa.pnss.common.utils.TimeStampedConverter;

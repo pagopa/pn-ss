@@ -1,6 +1,6 @@
 package it.pagopa.pnss.uribuilder;
 
-import com.amazonaws.SdkClientException;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocTypesClientCall;
@@ -354,7 +354,7 @@ class UriBuilderServiceDownloadTest {
     @Test
     void recoverDocumentFromBucketSdkClientException() {
 
-        SdkClientException sdkClientException = new SdkClientException("SdkClientException");
+        SdkClientException sdkClientException = SdkClientException.create("SdkClientException");
         when(s3Service.restoreObject(anyString(), anyString(), any(RestoreRequest.class))).thenReturn(Mono.error(sdkClientException));
 
         Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();
@@ -390,7 +390,7 @@ class UriBuilderServiceDownloadTest {
     @Test
     void getPresignedUrlSdkClientException() {
 
-        SdkClientException sdkClientException = new SdkClientException("SdkClientException");
+        SdkClientException sdkClientException = SdkClientException.create("SdkClientException");
         Mockito.doReturn(Mono.error(sdkClientException)).when(s3Service).presignGetObject(any(GetObjectRequest.class), any(Duration.class));
 
         Integer durationDownload = USER_CONFIGURATION_RESPONSE.getUserConfiguration().getDurationMinutesDownload();

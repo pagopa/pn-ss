@@ -81,6 +81,156 @@ Parameters:
     Default: 'MARKER'
     AllowedValues: [MARKER]
 
+  NotificationAttachmentExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i documenti notificati scadono e vengono eliminati'
+    Default: 120
+
+  AarExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali gli AAR scadono e vengono eliminati'
+    Default: 3655
+  
+  LegalFactsExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i Legal Facts scadono e vengono eliminati'
+    Default: 3655
+
+  LogsArchiveAudit5YExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 5 anni scadono e vengono eliminati'
+    Default: 1830
+
+  LogsArchiveAudit10YExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 10 anni scadono e vengono eliminati'
+    Default: 3655
+
+  InvoicingActivityReportExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i report di attività di fatturazione scadono e vengono eliminati'
+    Default: 366
+  
+  AddressesExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali le anagrafiche indirizzi scadono e vengono eliminate'
+    Default: 30
+
+  LogsArchiveAudit2YExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 2 anni scadono e vengono eliminati'
+    Default: 731
+
+  NotificationAttachmentExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i documenti notificati scadono e vengono eliminati (regola di backup per sicurezza)'
+    Default: 120
+
+  AarExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali gli AAR scadono e vengono eliminati (regola di backup per sicurezza)'
+    Default: 3655
+
+  LegalFactsExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i Legal Facts scadono e vengono eliminati (regola di backup per sicurezza)'
+    Default: 3655
+
+  InvoicingActivityReportExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i report di attività di fatturazione scadono e vengono eliminati (regola di backup per sicurezza)'
+    Default: 366
+
+  AddressesExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali le anagrafiche indirizzi scadono e vengono eliminate (regola di backup per sicurezza)'
+    Default: 30
+
+  LogsArchiveAudit2YExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 2 anni scadono e vengono eliminati (regola di backup per sicurezza)'
+    Default: 731
+
+  LogsArchiveAudit5YExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 5 anni scadono e vengono eliminati (regola di backup per sicurezza)'
+    Default: 1830
+
+  LogsArchiveAudit10YExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 10 anni scadono e vengono eliminati (regola di backup per sicurezza)'
+    Default: 3655
+
+  PaperAttachmentsExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i documenti di tipo paper attachment scadono e vengono eliminati (regola di backup per sicurezza)'
+    Default: 120
+
+  AarTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali gli AAR vengono spostati su storage a basso costo'
+    Default: 365
+
+  LegalFactsTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i Legal Facts vengono spostati su storage a basso costo'
+    Default: 365
+
+  InvoicingActivityReportTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i report di attività di fatturazione vengono spostati su storage a basso costo'
+    Default: 70
+  
+  LogsArchiveAudit2YTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 2 anni vengono spostati su storage a basso costo'
+    Default: 1
+
+  LogsArchiveAudit5YTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 5 anni vengono spostati su storage a basso costo'
+    Default: 1
+
+  LogsArchiveAudit10YTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 10 anni vengono spostati su storage a basso costo'
+    Default: 1
+
+  PaperAttachmentsFreezeTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i documenti di tipo paper attachment vengono congelati (non più modificabili)'
+    Default: 30
+
+  AarFreezeTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali gli AAR vengono congelati (non più modificabili)'
+    Default: 1825
+  
+  LegalFactsFreezeTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i Legal Facts vengono congelati (non più modificabili)'
+    Default: 365
+
+  InvoicingActivityReportFreezeTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i report di attività di fatturazione vengono congelati (non più modificabili)'
+    Default: 70
+
+  LogsArchiveAudit2YFreezeTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 2 anni vengono congelati (non più modificabili)'
+    Default: 1
+  
+  LogsArchiveAudit5YFreezeTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 5 anni vengono congelati (non più modificabili)'
+    Default: 1
+
+  LogsArchiveAudit10YFreezeTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i log di audit con retention 10 anni vengono congelati (non più modificabili)'
+    Default: 1
+  
 Conditions:
   IsDevEnv: !Equals [ !Ref EnvType, 'dev']
 ##  DocumentsCompleteDeletion: !Equals [ !Ref PnSsDocumentDeletionMode, 'COMPLETE']
@@ -281,71 +431,71 @@ Resources:
               - Key: 'storageType'
                 Value: 'PN_TEMPORARY_DOCUMENT'
           - Id: 'PnSsNotificationAttachment'
-            ExpirationInDays: 120
+            ExpirationInDays: !Ref NotificationAttachmentExpirationDays
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'
                 Value: 'PN_NOTIFIED_DOCUMENTS'
           - Id: 'PnSsAar'
-            ExpirationInDays: 3655
+            ExpirationInDays: !Ref AarExpirationDays
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_AAR'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 365
+                TransitionInDays: !Ref AarTransitionInDays
           - Id: 'PnSsLegalFacts'
-            ExpirationInDays: 3655
+            ExpirationInDays: !Ref LegalFactsExpirationDays
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_LEGAL_FACTS'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 365
+                TransitionInDays: !Ref LegalFactsTransitionInDays
           - Id: 'PnSsLogsArchiveAudit5Y'
-            ExpirationInDays: 1830
+            ExpirationInDays: !Ref LogsArchiveAudit5YExpirationDays
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_LOGS_ARCHIVE_AUDIT5Y'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+                TransitionInDays: !Ref LogsArchiveAudit5YTransitionInDays
           - Id: 'PnSsLogsArchiveAudit10Y'
-            ExpirationInDays: 3655
+            ExpirationInDays: !Ref LogsArchiveAudit10YExpirationDays
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+                TransitionInDays: !Ref LogsArchiveAudit10YTransitionInDays
           - Id: 'PnSsInvoicingActivityReport'
-            ExpirationInDays: 366
+            ExpirationInDays: !Ref InvoicingActivityReportExpirationDays
             Status: 'Enabled'
             TagFilters: 
               - Key: 'storageType'
                 Value: 'PN_INVOICING_ACTIVITY_REPORT'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 70
+                TransitionInDays: !Ref InvoicingActivityReportTransitionInDays
           - Id: 'PnSsAddresses'
-            ExpirationInDays: 30
+            ExpirationInDays: !Ref AddressesExpirationDays
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'
                 Value: 'PN_ADDRESSES_STORAGE'
           - Id: 'PnSsLogsArchiveAudit2Y'
-            ExpirationInDays: 731
+            ExpirationInDays: !Ref LogsArchiveAudit2YExpirationDays
             Status: 'Enabled'
             TagFilters:
               - Key: 'storageType'
                 Value: 'PN_LOGS_ARCHIVE_AUDIT2Y'
             Transitions: 
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+                TransitionInDays: !Ref LogsArchiveAudit2YTransitionInDays
           - Id: 'PnSsNotificationAttachmentTemporary_expiry'
             ExpirationInDays: !Ref PnSsPreloadedDocsRetentionDays
             Status: 'Enabled'
@@ -354,7 +504,7 @@ Resources:
                 Value: 'PN_TEMPORARY_DOCUMENT'
           - Id: 'PnSsNotificationAttachment_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 120
+            ExpirationInDays: !Ref NotificationAttachmentExpiryExpirationDays
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_NOTIFIED_DOCUMENTS'
@@ -365,10 +515,10 @@ Resources:
                 Value: 'PN_AAR'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1825
+                TransitionInDays: !Ref AarFreezeTransitionInDays
           - Id: 'PnSsAar_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 3655
+            ExpirationInDays: !Ref AarExpiryExpirationDays
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_AAR'
@@ -379,10 +529,10 @@ Resources:
                 Value: 'PN_LEGAL_FACTS'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 365
+                TransitionInDays: !Ref LegalFactsFreezeTransitionInDays
           - Id: 'PnSsLegalFacts_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 3655
+            ExpirationInDays: !Ref LegalFactsExpiryExpirationDays
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_LEGAL_FACTS'
@@ -393,16 +543,16 @@ Resources:
                 Value: 'PN_INVOICING_ACTIVITY_REPORT'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 70
+                TransitionInDays: !Ref InvoicingActivityReportFreezeTransitionInDays
           - Id: 'PnSsInvoicingActivityReport_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 366
+            ExpirationInDays: !Ref InvoicingActivityReportExpiryExpirationDays
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_INVOICING_ACTIVITY_REPORT'
           - Id: 'PnSsAddresses_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 30
+            ExpirationInDays: !Ref AddressesExpiryExpirationDays
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_ADDRESSES_STORAGE'
@@ -413,10 +563,10 @@ Resources:
                 Value: 'PN_LOGS_ARCHIVE_AUDIT2Y'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+                TransitionInDays: !Ref LogsArchiveAudit2YFreezeTransitionInDays
           - Id: 'PnSsLogsArchiveAudit2Y_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 731
+            ExpirationInDays: !Ref LogsArchiveAudit2YExpiryExpirationDays
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_LOGS_ARCHIVE_AUDIT2Y'
@@ -427,10 +577,10 @@ Resources:
                 Value: 'PN_LOGS_ARCHIVE_AUDIT5Y'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+                TransitionInDays: !Ref LogsArchiveAudit5YFreezeTransitionInDays
           - Id: 'PnSsLogsArchiveAudit5Y_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 1830
+            ExpirationInDays: !Ref LogsArchiveAudit5YExpiryExpirationDays
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_LOGS_ARCHIVE_AUDIT5Y'
@@ -441,10 +591,10 @@ Resources:
                 Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 1
+                TransitionInDays: !Ref LogsArchiveAudit10YFreezeTransitionInDays
           - Id: 'PnSsLogsArchiveAudit10Y_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 3655
+            ExpirationInDays: !Ref LogsArchiveAudit10YExpiryExpirationDays
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_LOGS_ARCHIVE_AUDIT10Y'
@@ -455,10 +605,10 @@ Resources:
                 Value: 'PN_PAPER_ATTACHMENT'
             Transitions:
               - StorageClass: 'GLACIER'
-                TransitionInDays: 30
+                TransitionInDays: !Ref PaperAttachmentsFreezeTransitionInDays
           - Id: 'PnSsPaperAttachments_expiry'
             Status: 'Enabled'
-            ExpirationInDays: 120
+            ExpirationInDays: !Ref PaperAttachmentsExpiryExpirationDays
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_PAPER_ATTACHMENT'

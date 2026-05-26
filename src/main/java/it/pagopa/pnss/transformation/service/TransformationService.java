@@ -5,8 +5,11 @@ import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TransformationMessage;
 import it.pagopa.pnss.common.client.DocumentClientCall;
+import it.pagopa.pnss.common.exception.CadesContentMismatchException;
 import it.pagopa.pnss.common.service.EventBridgeService;
 import it.pagopa.pnss.common.service.SqsService;
+import it.pagopa.pnss.common.utils.CadesUtils;
+import it.pagopa.pnss.common.utils.EmfLogUtils;
 import it.pagopa.pnss.common.utils.EventBridgeUtil;
 import it.pagopa.pnss.configuration.TransformationConfig;
 import it.pagopa.pnss.configuration.sqs.SqsTimeoutProvider;
@@ -16,6 +19,7 @@ import it.pagopa.pnss.transformation.exception.InvalidTransformationStateExcepti
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.utils.TransformationUtils;
 import lombok.CustomLog;
+import org.bouncycastle.cms.CMSException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -333,6 +337,10 @@ public class TransformationService {
         }
         //max retry raggiunto
         log.error("Max retry exceeded for fileKey={}", fileKey, throwable);
+        if (throwable instanceof CadesContentMismatchException) {
+            EmfLogUtils.trackCadesChecksumMismatchExhausted(fileKey);
+            return Mono.empty();
+        }
         return handlePermanentTransformationException(fileKey, bucketName, transformationType, throwable);
     }
 
@@ -346,7 +354,16 @@ public class TransformationService {
                     return switch (contentType) {
                         case APPLICATION_PDF_VALUE -> pnSignService.signPdfDocument(s3ObjectBytes, marcatura);
                         case APPLICATION_XML_VALUE -> pnSignService.signXmlDocument(s3ObjectBytes, marcatura);
-                        default -> pnSignService.pkcs7Signature(s3ObjectBytes, marcatura);
+                        default -> pnSignService.pkcs7Signature(s3ObjectBytes, marcatura)
+                                .flatMap(response -> {
+                                    try {
+                                        CadesUtils.verifyP7mContentHash(s3ObjectBytes, response.getSignedDocument(), fileKey);
+                                        return Mono.just(response);
+                                    } catch (CMSException e) {
+                                        log.warn("CAdES p7m parsing failed for fileKey={}", fileKey, e);
+                                        return Mono.error(new CadesContentMismatchException(fileKey));
+                                    }
+                                });
                     };
 
                 });

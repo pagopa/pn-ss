@@ -18,6 +18,16 @@ import it.pagopa.pnss.transformation.model.dto.S3EventNotificationDetail;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.model.dto.S3Object;
 import lombok.CustomLog;
+import org.bouncycastle.cert.jcajce.JcaCertStore;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.cms.CMSProcessableByteArray;
+import org.bouncycastle.cms.CMSSignedDataGenerator;
+import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -483,9 +493,48 @@ class TransformationServiceTest {
     void mockSignCalls() {
         PnSignDocumentResponse pnSignDocumentResponse = new PnSignDocumentResponse();
         pnSignDocumentResponse.setSignedDocument(new byte[10]);
+
+        PnSignDocumentResponse zipSignResponse = new PnSignDocumentResponse();
+        try {
+            zipSignResponse.setSignedDocument(buildValidP7m(new byte[10]));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to build test CAdES p7m", e);
+        }
+
         when(pnSignProviderService.signPdfDocument(any(), anyBoolean())).thenReturn(Mono.just(pnSignDocumentResponse));
         when(pnSignProviderService.signXmlDocument(any(), anyBoolean())).thenReturn(Mono.just(pnSignDocumentResponse));
-        when(pnSignProviderService.pkcs7Signature(any(), anyBoolean())).thenReturn(Mono.just(pnSignDocumentResponse));
+        when(pnSignProviderService.pkcs7Signature(any(), anyBoolean())).thenReturn(Mono.just(zipSignResponse));
+    }
+
+    private byte[] buildValidP7m(byte[] content) throws Exception {
+        if (java.security.Security.getProvider("BC") == null) {
+            java.security.Security.addProvider(new BouncyCastleProvider());
+        }
+        java.security.KeyPairGenerator kpg = java.security.KeyPairGenerator.getInstance("RSA");
+        kpg.initialize(2048);
+        java.security.KeyPair kp = kpg.generateKeyPair();
+        long now = System.currentTimeMillis();
+        java.security.cert.X509Certificate cert = new JcaX509CertificateConverter()
+                .setProvider("BC")
+                .getCertificate(
+                    new JcaX509v3CertificateBuilder(
+                        new javax.security.auth.x500.X500Principal("CN=test"),
+                        java.math.BigInteger.ONE,
+                        new java.util.Date(now - 1000),
+                        new java.util.Date(now + 86400000),
+                        new javax.security.auth.x500.X500Principal("CN=test"),
+                        kp.getPublic()
+                    ).build(new JcaContentSignerBuilder("SHA256withRSA").setProvider("BC").build(kp.getPrivate()))
+                );
+        CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
+        ContentSigner signer = new JcaContentSignerBuilder("SHA256withRSA").setProvider("BC").build(kp.getPrivate());
+        gen.addSignerInfoGenerator(
+            new JcaSignerInfoGeneratorBuilder(
+                new JcaDigestCalculatorProviderBuilder().setProvider("BC").build()
+            ).build(signer, cert)
+        );
+        gen.addCertificates(new JcaCertStore(List.of(cert)));
+        return gen.generate(new CMSProcessableByteArray(content), true).getEncoded();
     }
 
     void verifyPnSignProviderCalls(String contentType, boolean marcatura) {

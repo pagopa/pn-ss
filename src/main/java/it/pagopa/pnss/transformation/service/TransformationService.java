@@ -360,7 +360,7 @@ public class TransformationService {
                                         CadesUtils.verifyP7mContentHash(s3ObjectBytes, response.getSignedDocument(), fileKey);
                                         return Mono.just(response);
                                     } catch (CMSException e) {
-                                        log.warn("CAdES p7m parsing failed for fileKey={}", fileKey, e);
+                                        log.error("fileKey={} does not contain a valid CAdES p7m file", fileKey, e);
                                         return Mono.error(new CadesContentMismatchException(fileKey));
                                     }
                                 });

@@ -338,7 +338,7 @@ public class TransformationService {
         //max retry raggiunto
         log.error("Max retry exceeded for fileKey={}", fileKey, throwable);
         if (throwable instanceof CadesContentMismatchException) {
-            EmfLogUtils.trackCadesChecksumMismatchExhausted(fileKey);
+            EmfLogUtils.trackCadesSignExceeded(fileKey);
             return Mono.empty();
         }
         return handlePermanentTransformationException(fileKey, bucketName, transformationType, throwable);

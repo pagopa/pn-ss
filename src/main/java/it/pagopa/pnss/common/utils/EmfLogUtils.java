@@ -30,24 +30,24 @@ public class EmfLogUtils {
     private static final String SERVICE_SAFE_STORAGE = "SafeStorage";
 
     public static final String NAMESPACE_PN_SAFE_STORAGE = "PN-SafeStorage";
-    public static final String METRIC_CADES_CHECKSUM_MISMATCH_EXHAUSTED = "CadesChecksumMismatchExhausted";
+    public static final String METRIC_CADES_SIGN_EXCEEDED = "CadesSignExceeded";
 
     private EmfLogUtils() {
         throw new IllegalStateException("EmfLogUtils is a utility class");
     }
 
-    public static void trackCadesChecksumMismatchExhausted(String fileKey) {
+    public static void trackCadesSignExceeded(String fileKey) {
         try {
             String emfLog = createEmfLog(
                     NAMESPACE_PN_SAFE_STORAGE,
-                    METRIC_CADES_CHECKSUM_MISMATCH_EXHAUSTED,
+                    METRIC_CADES_SIGN_EXCEEDED,
                     UNIT_COUNT,
                     List.of(SERVICE),
-                    Map.of(METRIC_CADES_CHECKSUM_MISMATCH_EXHAUSTED, 1, SERVICE, SERVICE_SAFE_STORAGE, "FileKey", fileKey)
+                    Map.of(METRIC_CADES_SIGN_EXCEEDED, 1, SERVICE, SERVICE_SAFE_STORAGE, "FileKey", fileKey)
             );
             jsonLogger.info(emfLog);
         } catch (Exception e) {
-            log.warn("Failed to emit EMF log for CAdES checksum mismatch exhausted", e);
+            log.warn("Failed to emit EMF log for CAdES sign exceeded", e);
         }
     }
 

@@ -948,6 +948,28 @@ Resources:
             Arn: !Ref PnSsQueueArnEventsDLQueuePnCoreTargetEventBus
 
   #####    Metrics and Alarms  -  Microservice #####
+  CadesSignFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-safe-storage-CadesSignExceeded'
+      AlarmDescription: 'CAdES sign failure after max retry exceeded - document skipped without error tagging'
+      Namespace: 'PN-SafeStorage'
+      MetricName: 'CadesSignExceeded'
+      Dimensions:
+        - Name: Service
+          Value: SafeStorage
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${AlarmSNSTopicName}'
+      OKActions:
+        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${AlarmSNSTopicName}'
+
   SafeStorageMicroserviceAlarm:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -976,6 +998,7 @@ Resources:
             - !Ref PnSsAlarmArnQueueGestoreBucketInvoke
             - !Ref PnSsAlarmArnDLQueueGestoreBucketInvoke
             - !Ref PnSsAlarmArnEventsDLQueuePnCoreTargetEventBus
+            - !GetAtt CadesSignFailureAlarm.Arn
             # - !GetAtt SafeStorageMicroservice.Outputs.AutoScalingAlarmArn
         DynamoDBTableNames:
           !Join

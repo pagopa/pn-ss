@@ -50,6 +50,7 @@ import java.util.*;
 
 import static it.pagopa.pnss.common.DocTypesConstant.PN_AAR;
 import static it.pagopa.pnss.common.constant.Constant.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -108,6 +109,10 @@ class UriBuilderServiceDownloadTest {
 
     @Autowired
     BucketName bucketName;
+
+    @Autowired
+    S3Client s3TestClient;
+
     private static final String CHECKSUM = "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
 
     @Value("${default.internal.x-api-key.value:#{null}}")
@@ -441,7 +446,6 @@ class UriBuilderServiceDownloadTest {
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE);
     }
 
-    // WI-2.2: arricchimento del messaggio della 410 Gone con [deletionTimestamp=...]
     @Test
     void testUrlStatusDeletedWithDeleteMarker() {
         String docId = "1111-aaaa";
@@ -462,7 +466,7 @@ class UriBuilderServiceDownloadTest {
 
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
-                .value(body -> org.assertj.core.api.Assertions.assertThat(body)
+                .value(body -> assertThat(body)
                         .contains("Document has been deleted [deletionTimestamp=2026-06-24T10:15:30Z]"));
     }
 
@@ -486,7 +490,7 @@ class UriBuilderServiceDownloadTest {
 
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
-                .value(body -> org.assertj.core.api.Assertions.assertThat(body)
+                .value(body -> assertThat(body)
                         .contains("Document has been deleted [deletionTimestamp=2026-06-20T08:00:00Z]"));
     }
 
@@ -509,8 +513,8 @@ class UriBuilderServiceDownloadTest {
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
                 .value(body -> {
-                    org.assertj.core.api.Assertions.assertThat(body).contains("Document has been deleted");
-                    org.assertj.core.api.Assertions.assertThat(body).doesNotContain("deletionTimestamp");
+                    assertThat(body).contains("Document has been deleted");
+                    assertThat(body).doesNotContain("deletionTimestamp");
                 });
     }
 
@@ -535,7 +539,7 @@ class UriBuilderServiceDownloadTest {
 
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
-                .value(body -> org.assertj.core.api.Assertions.assertThat(body)
+                .value(body -> assertThat(body)
                         .contains("Document has been deleted [deletionTimestamp=2026-06-20T08:00:00Z]"));
     }
 
@@ -559,7 +563,7 @@ class UriBuilderServiceDownloadTest {
 
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
-                .value(body -> org.assertj.core.api.Assertions.assertThat(body)
+                .value(body -> assertThat(body)
                         .contains("Document has been deleted [deletionTimestamp=2026-06-24T10:15:30Z]"));
     }
 
@@ -585,7 +589,7 @@ class UriBuilderServiceDownloadTest {
 
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
-                .value(body -> org.assertj.core.api.Assertions.assertThat(body)
+                .value(body -> assertThat(body)
                         .contains("Document has been deleted [deletionTimestamp=2026-06-20T08:00:00Z]"));
     }
 
@@ -609,12 +613,35 @@ class UriBuilderServiceDownloadTest {
         verify(s3Service, never()).listObjectVersions(anyString(), anyString());
     }
 
-    // WI-2.2: test di integrazione end-to-end su LocalStack (S3 reale, s3Service NON mockato)
+    @Test
+    void testUrlStatusDeletedBlankDocumentKeyShortCircuitsOnFallback() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentType type = new DocumentType();
+        type.setTipoDocumento(DocTypesConstant.PN_AAR);
+        type.setChecksum(DocumentType.ChecksumEnum.MD5);
+        DocumentResponseDocument doc = new DocumentResponseDocument();
+        doc.setDocumentType(type);
+        doc.setDocumentKey(null); // key mancante
+        doc.setDocumentState(DELETED);
+        doc.setLastStatusChangeTimestamp(OffsetDateTime.parse("2026-06-20T08:00:00Z"));
+        doReturn(Mono.just(new DocumentResponse().document(doc))).when(documentClientCall).getDocument(docId);
+
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
+                .expectBody(String.class)
+                .value(body -> assertThat(body)
+                        .contains("Document has been deleted [deletionTimestamp=2026-06-20T08:00:00Z]"));
+
+        verify(s3Service, never()).listObjectVersions(anyString(), anyString());
+    }
+
 
     @Test
     void testUrlStatusDeletedIntegrationWithRealDeleteMarker() {
-        // IT1: file caricato e cancellato su S3 -> Delete Marker reale -> deletionTimestamp = lastModified del marker
-        String docId = "IT1-real-delete-marker";
+        String docId = "real-delete-marker";
         Instant expectedLastModified = createRealDeleteMarker(docId);
         String expectedTs = DateTimeFormatter.ISO_INSTANT.format(expectedLastModified);
 
@@ -630,14 +657,13 @@ class UriBuilderServiceDownloadTest {
 
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
-                .value(body -> org.assertj.core.api.Assertions.assertThat(body)
+                .value(body -> assertThat(body)
                         .contains("Document has been deleted [deletionTimestamp=" + expectedTs + "]"));
     }
 
     @Test
     void testUrlStatusDeletedIntegrationFallbackWhenNoObjectOnS3() {
-        // IT2: nessun oggetto/marker su S3 per la key -> fallback su lastStatusChangeTimestamp dei metadati
-        String docId = "IT2-no-object-on-s3";
+        String docId = "no-object-on-s3";
         OffsetDateTime lastStatusChangeTimestamp = OffsetDateTime.parse("2026-06-20T08:00:00Z");
 
         mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
@@ -653,23 +679,18 @@ class UriBuilderServiceDownloadTest {
 
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
-                .value(body -> org.assertj.core.api.Assertions.assertThat(body)
+                .value(body -> assertThat(body)
                         .contains("Document has been deleted [deletionTimestamp=2026-06-20T08:00:00Z]"));
     }
 
-    /**
-     * Carica un oggetto e poi lo cancella (senza versionId) nel bucket hot su LocalStack, generando un Delete Marker
-     * reale. Restituisce il lastModified assegnato da S3 al Delete Marker più recente per quella key.
-     */
+
     private Instant createRealDeleteMarker(String key) {
-        S3Client s3Client = S3Client.builder().endpointOverride(URI.create(testAwsS3Endpoint)).build();
         byte[] fileBytes = readPdfDocoument();
-        // Il bucket hot ha l'object-lock abilitato: la PutObject richiede l'header Content-MD5 (come in S3ServiceImpl.putObject).
         String contentMD5 = new String(org.apache.commons.codec.binary.Base64.encodeBase64(org.apache.commons.codec.digest.DigestUtils.md5(fileBytes)));
-        s3Client.putObject(PutObjectRequest.builder().bucket(bucketName.ssHotName()).key(key).contentMD5(contentMD5).build(),
+        s3TestClient.putObject(PutObjectRequest.builder().bucket(bucketName.ssHotName()).key(key).contentMD5(contentMD5).build(),
                 RequestBody.fromBytes(fileBytes));
-        s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName.ssHotName()).key(key).build());
-        return s3Client.listObjectVersions(ListObjectVersionsRequest.builder().bucket(bucketName.ssHotName()).prefix(key).build())
+        s3TestClient.deleteObject(DeleteObjectRequest.builder().bucket(bucketName.ssHotName()).key(key).build());
+        return s3TestClient.listObjectVersions(ListObjectVersionsRequest.builder().bucket(bucketName.ssHotName()).prefix(key).build())
                 .deleteMarkers().stream()
                 .filter(dm -> key.equals(dm.key()))
                 .max(Comparator.comparing(DeleteMarkerEntry::lastModified))

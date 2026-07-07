@@ -454,18 +454,27 @@ public class UriBuilderService {
      * Dato default: lastModified del Delete Marker su S3. Fallback: lastStatusChangeTimestamp dei metadati.
      */
     private Mono<Optional<String>> resolveDeletionTimestamp(DocumentResponseDocument document) {
-        return s3Service.listObjectVersions(document.getDocumentKey(), bucketName.ssHotName())
+        String documentKey = document.getDocumentKey();
+
+        if (StringUtils.isBlank(documentKey)) {
+            return Mono.just(fallbackTimestamp(document));
+        }
+
+        return s3Service.listObjectVersions(documentKey, bucketName.ssHotName())
                 .map(resp -> resp.deleteMarkers().stream()
-                        .filter(dm -> document.getDocumentKey().equals(dm.key()))
+                        .filter(dm -> documentKey.equals(dm.key()))
                         .max(Comparator.comparing(DeleteMarkerEntry::lastModified))
                         .map(dm -> DELETION_TS_FORMATTER.format(dm.lastModified())))
                 .onErrorResume(t -> {
                     log.warn("resolveDeletionTimestamp: listObjectVersions KO, fallback su lastStatusChangeTimestamp", t);
                     return Mono.just(Optional.<String>empty());
                 })
-                .map(fromMarker -> fromMarker.or(() ->
-                        Optional.ofNullable(document.getLastStatusChangeTimestamp())
-                                .map(odt -> DELETION_TS_FORMATTER.format(odt.toInstant()))));
+                .map(fromMarker -> fromMarker.or(() -> fallbackTimestamp(document)));
+    }
+
+    private Optional<String> fallbackTimestamp(DocumentResponseDocument document) {
+        return Optional.ofNullable(document.getLastStatusChangeTimestamp())
+                .map(odt -> DELETION_TS_FORMATTER.format(odt.toInstant()));
     }
 
     private Mono<Document> handleDocumentState(Document document, UserConfigurationResponse userConfigurationResponse) {

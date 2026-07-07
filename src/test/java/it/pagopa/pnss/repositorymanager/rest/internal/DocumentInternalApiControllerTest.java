@@ -387,6 +387,41 @@ log.info("documentInputTags {}", documentInputTags);
 	}
 
 	@Test
+	// Regressione PN-20532: la getDocument deve propagare lastStatusChangeTimestamp nella response
+	void getItemPropagatesLastStatusChangeTimestamp() {
+
+		// Test auto-contenuto (indipendente dall'ordine di esecuzione): inserisce un documento dedicato
+		// con lastStatusChangeTimestamp valorizzato, lo legge via getDocument e verifica che il campo arrivi.
+		String documentKey = "documentKeyLastStatusChangeRegression";
+		OffsetDateTime lastStatusChangeTimestamp = OffsetDateTime.parse("2025-11-06T05:08:58.064313133Z");
+
+		DocumentEntity documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(getDocTypeEntity());
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(SAVED);
+		documentEntity.setDocumentLogicalState(AVAILABLE);
+		documentEntity.setLastStatusChangeTimestamp(lastStatusChangeTimestamp);
+		dynamoDbTable.putItem(builder -> builder.item(documentEntity));
+
+		try {
+			DocumentResponse response = webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+					.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+					.returnResult().getResponseBody();
+
+			Assertions.assertNotNull(response);
+			Assertions.assertNotNull(response.getDocument());
+			Assertions.assertNotNull(response.getDocument().getLastStatusChangeTimestamp(),
+					"lastStatusChangeTimestamp deve essere propagato nella response della getDocument");
+		} finally {
+			dynamoDbTable.deleteItem(Key.builder().partitionValue(documentKey).build());
+		}
+
+		log.info("\n Test (getItemPropagatesLastStatusChangeTimestamp) passed \n");
+
+	}
+
+	@Test
 		// codice test: DCSS.100.1
 	void getItemWithTags() {
 

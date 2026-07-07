@@ -57,6 +57,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 		responseDocument.setContentLenght(document.getContentLenght());
 		responseDocument.setDocumentType(document.getDocumentType());
 		responseDocument.setTags(document.getTags());
+		responseDocument.setLastStatusChangeTimestamp(document.getLastStatusChangeTimestamp());
 		response.setDocument(responseDocument);
 		return response;
 	}

@@ -495,6 +495,30 @@ class UriBuilderServiceDownloadTest {
     }
 
     @Test
+    void testUrlStatusDeletedFallbackWithNanosecondTimestamp() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        OffsetDateTime lastStatusChangeTimestamp = OffsetDateTime.parse("2025-11-06T05:08:58.064313133Z");
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(DELETED);
+        d.setCheckSum(CHECKSUM);
+        d.setLastStatusChangeTimestamp(lastStatusChangeTimestamp);
+        mockGetDocument(d, docId);
+
+        when(docTypesClientCall.getdocTypes(DocTypesConstant.PN_AAR)).thenReturn(Mono.just(new DocumentTypeResponse().docType(new DocumentType())));
+
+        doReturn(Mono.just(ListObjectVersionsResponse.builder().deleteMarkers(Collections.emptyList()).build()))
+                .when(s3Service).listObjectVersions(eq(docId), anyString());
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
+                .expectBody(String.class)
+                .value(body -> assertThat(body)
+                        .contains("Document has been deleted [deletionTimestamp=2025-11-06T05:08:58.064313133Z]"));
+    }
+
+    @Test
     void testUrlStatusDeletedNoMarkerNoFallbackData() {
         String docId = "1111-aaaa";
         mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));

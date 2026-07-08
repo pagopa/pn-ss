@@ -466,13 +466,14 @@ public class UriBuilderService {
                         .max(Comparator.comparing(DeleteMarkerEntry::lastModified))
                         .map(dm -> DELETION_TS_FORMATTER.format(dm.lastModified())))
                 .onErrorResume(t -> {
-                    log.warn("resolveDeletionTimestamp: listObjectVersions KO, fallback su lastStatusChangeTimestamp", t);
+                    log.error( "Error while retrieving delete marker for documentKey {}: {}", documentKey, t.getMessage(), t);
                     return Mono.just(Optional.<String>empty());
                 })
                 .map(fromMarker -> fromMarker.or(() -> fallbackTimestamp(document)));
     }
 
     private Optional<String> fallbackTimestamp(DocumentResponseDocument document) {
+        log.info("Unable to retrieve deletion timestamp from S3 for documentKey '{}', falling back to lastStatusChangeTimestamp from metadata", document.getDocumentKey());
         return Optional.ofNullable(document.getLastStatusChangeTimestamp())
                 .map(odt -> DELETION_TS_FORMATTER.format(odt.toInstant()));
     }

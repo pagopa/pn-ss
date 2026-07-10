@@ -85,6 +85,10 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 	private S3Service s3Service;
 	@Value("${pn.ss.indexing.document-number-of-pages-tag-key}")
 	private String documentNumberOfPagesTagKey;
+	@Autowired
+	private software.amazon.awssdk.services.dynamodb.DynamoDbClient dynamoDbClient;
+	@Autowired
+	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
@@ -383,6 +387,67 @@ log.info("documentInputTags {}", documentInputTags);
 				.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class);
 
 		log.info("\n Test 3.1 (getItem) passed \n");
+
+	}
+
+	@Test
+	void getItemPropagatesLastStatusChangeTimestamp() {
+
+		String documentKey = "documentKeyLastStatusChangeRegression";
+		OffsetDateTime lastStatusChangeTimestamp = OffsetDateTime.parse("2025-11-06T05:08:58.064313133Z");
+
+		DocumentEntity documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(getDocTypeEntity());
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(SAVED);
+		documentEntity.setDocumentLogicalState(AVAILABLE);
+		documentEntity.setLastStatusChangeTimestamp(lastStatusChangeTimestamp);
+		dynamoDbTable.putItem(builder -> builder.item(documentEntity));
+
+		try {
+			DocumentResponse response = webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+					.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+					.returnResult().getResponseBody();
+
+			Assertions.assertNotNull(response);
+			Assertions.assertNotNull(response.getDocument());
+			Assertions.assertNotNull(response.getDocument().getLastStatusChangeTimestamp(),
+					"lastStatusChangeTimestamp deve essere propagato nella response della getDocument");
+		} finally {
+			dynamoDbTable.deleteItem(Key.builder().partitionValue(documentKey).build());
+		}
+
+		log.info("\n Test (getItemPropagatesLastStatusChangeTimestamp) passed \n");
+
+	}
+
+	@Test
+	void getItemWithEmptyLastStatusChangeTimestampReturnsOkWithNullField() {
+
+		String documentKey = "documentKeyEmptyLastStatusChange";
+		Map<String, software.amazon.awssdk.services.dynamodb.model.AttributeValue> item = new HashMap<>();
+		item.put("documentKey", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(documentKey).build());
+		item.put("documentState", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(SAVED).build());
+		item.put("documentLogicalState", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(AVAILABLE).build());
+		item.put("lastStatusChangeTimestamp", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s("").build());
+
+		dynamoDbClient.putItem(builder -> builder.tableName(repositoryManagerDynamoTableName.documentiName()).item(item));
+
+		try {
+			DocumentResponse response = webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+					.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+					.returnResult().getResponseBody();
+
+			Assertions.assertNotNull(response);
+			Assertions.assertNotNull(response.getDocument());
+			Assertions.assertNull(response.getDocument().getLastStatusChangeTimestamp(),
+					"lastStatusChangeTimestamp vuoto su Dynamo deve essere letto come null, non causare 500");
+		} finally {
+			dynamoDbTable.deleteItem(Key.builder().partitionValue(documentKey).build());
+		}
+
+		log.info("\n Test (getItemWithEmptyLastStatusChangeTimestampReturnsOkWithNullField) passed \n");
 
 	}
 

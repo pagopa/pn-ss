@@ -106,6 +106,9 @@ public class UriBuilderService {
     private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private static final String SEPARATORE = "~";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.from(ZoneOffset.UTC));
+    private static final String DELETED_MESSAGE = "Document has been deleted";
+    private static final String DELETION_TS_MARKER = " [deletionTimestamp=%s]";
+    private static final DateTimeFormatter DELETION_TS_FORMATTER = DateTimeFormatter.ISO_INSTANT;
     private final IndexingConfiguration indexingConfiguration;
     private final RetryBackoffSpec tagsRetryStrategy;
 
@@ -429,8 +432,12 @@ public class UriBuilderService {
             return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
                     String.format("Client : %s not has privilege for read document type %s", xPagopaSafestorageCxId, documentType)));
         } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
-            return Mono.error(new ResponseStatusException(HttpStatus.GONE,
-                    "Document has been deleted"));
+            return resolveDeletionTimestamp(document)
+                    .map(tsOpt -> tsOpt
+                            .map(ts -> DELETED_MESSAGE + String.format(DELETION_TS_MARKER, ts))
+                            .orElse(DELETED_MESSAGE))
+                    .flatMap(msg -> Mono.<DocumentResponseDocument>error(
+                            new ResponseStatusException(HttpStatus.GONE, msg)));
         } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
             return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Document not found"));
@@ -440,6 +447,34 @@ public class UriBuilderService {
         } else {
             return Mono.just(document);
         }
+    }
+
+    /**
+     * Calcola il timestamp di cancellazione dell'allegato per arricchire il messaggio della 410 Gone (WI-2.2).
+     * Dato default: lastModified del Delete Marker su S3. Fallback: lastStatusChangeTimestamp dei metadati.
+     */
+    private Mono<Optional<String>> resolveDeletionTimestamp(DocumentResponseDocument document) {
+        String documentKey = document.getDocumentKey();
+
+        if (StringUtils.isBlank(documentKey)) {
+            return Mono.just(fallbackTimestamp(document));
+        }
+
+        return s3Service.listObjectVersions(documentKey, bucketName.ssHotName())
+                .map(resp -> resp.deleteMarkers().stream()
+                        .filter(dm -> documentKey.equals(dm.key()))
+                        .max(Comparator.comparing(DeleteMarkerEntry::lastModified))
+                        .map(dm -> DELETION_TS_FORMATTER.format(dm.lastModified())))
+                .onErrorResume(t -> {
+                    log.info("resolveDeletionTimestamp: listObjectVersions KO, fallback su lastStatusChangeTimestamp", t);
+                    return Mono.just(Optional.<String>empty());
+                })
+                .map(fromMarker -> fromMarker.or(() -> fallbackTimestamp(document)));
+    }
+
+    private Optional<String> fallbackTimestamp(DocumentResponseDocument document) {
+        return Optional.ofNullable(document.getLastStatusChangeTimestamp())
+                .map(odt -> DELETION_TS_FORMATTER.format(odt.toInstant()));
     }
 
     private Mono<Document> handleDocumentState(Document document, UserConfigurationResponse userConfigurationResponse) {

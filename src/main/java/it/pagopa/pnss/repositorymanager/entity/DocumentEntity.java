@@ -1,8 +1,10 @@
 package it.pagopa.pnss.repositorymanager.entity;
 
 import it.pagopa.pnss.common.model.entity.DocumentVersion;
+import it.pagopa.pnss.common.utils.NullSafeOffsetDateTimeConverter;
 import lombok.*;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
 import java.math.BigDecimal;
@@ -37,6 +39,7 @@ public class DocumentEntity extends DocumentVersion {
     private BigDecimal contentLenght; // modificabile in POST
     private String contentType;
     private DocTypeEntity documentType;
+    @Getter(onMethod=@__({@DynamoDbConvertedBy(NullSafeOffsetDateTimeConverter.class)}))
     private OffsetDateTime lastStatusChangeTimestamp;
     private Map<String, List<String>> tags;
 

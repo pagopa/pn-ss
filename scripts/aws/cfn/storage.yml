@@ -121,6 +121,16 @@ Parameters:
     Description: 'Numero di giorni dopo i quali i log di audit con retention 2 anni scadono e vengono eliminati'
     Default: 731
 
+  CommunicationsCoverPageExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i COMMUNICATIONS_COVERPAGE scadono e vengono eliminati'
+    Default: 3655
+
+  CommunicationsAttachmentExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i COMMUNICATIONS_ATTACHMENT scadono e vengono eliminati'
+    Default: 120
+
   NotificationAttachmentExpiryExpirationDays:
     Type: Number
     Description: 'Numero di giorni dopo i quali i documenti notificati scadono e vengono eliminati (regola di backup per sicurezza)'
@@ -166,6 +176,16 @@ Parameters:
     Description: 'Numero di giorni dopo i quali i documenti di tipo paper attachment scadono e vengono eliminati (regola di backup per sicurezza)'
     Default: 120
 
+  CommunicationsCoverPageExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i COMMUNICATIONS_COVERPAGE scadono e vengono eliminati (regola di backup per sicurezza)'
+    Default: 3655
+
+  CommunicationsAttachmentExpiryExpirationDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i COMMUNICATIONS_ATTACHMENT scadono e vengono eliminati (regola di backup per sicurezza)'
+    Default: 120
+
   AarTransitionInDays:
     Type: Number
     Description: 'Numero di giorni dopo i quali gli AAR vengono spostati su storage a basso costo'
@@ -195,6 +215,11 @@ Parameters:
     Type: Number
     Description: 'Numero di giorni dopo i quali i log di audit con retention 10 anni vengono spostati su storage a basso costo'
     Default: 1
+
+  CommunicationsCoverPageTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i COMMUNICATIONS_COVERPAGE vengono spostati su storage a basso costo'
+    Default: 365
 
   PaperAttachmentsFreezeTransitionInDays:
     Type: Number
@@ -230,7 +255,12 @@ Parameters:
     Type: Number
     Description: 'Numero di giorni dopo i quali i log di audit con retention 10 anni vengono congelati (non più modificabili)'
     Default: 1
-  
+
+  CommunicationsCoverPageFreezeTransitionInDays:
+    Type: Number
+    Description: 'Numero di giorni dopo i quali i COMMUNICATIONS_COVERPAGE vengono congelati (non più modificabili)'
+    Default: 1825
+
 Conditions:
   IsDevEnv: !Equals [ !Ref EnvType, 'dev']
 ##  DocumentsCompleteDeletion: !Equals [ !Ref PnSsDocumentDeletionMode, 'COMPLETE']
@@ -612,6 +642,42 @@ Resources:
             TagFilters:
               - Key: 'storage_expiry'
                 Value: 'PN_PAPER_ATTACHMENT'
+          - Id: 'PnSsCommunicationsCoverPage'
+            ExpirationInDays: !Ref CommunicationsCoverPageExpirationDays
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storageType'
+                Value: 'PN_COMMUNICATIONS_COVERPAGE'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: !Ref CommunicationsCoverPageTransitionInDays
+          - Id: 'PnSsCommunicationsCoverPage_freeze'
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storage_freeze'
+                Value: 'PN_COMMUNICATIONS_COVERPAGE'
+            Transitions:
+              - StorageClass: 'GLACIER'
+                TransitionInDays: !Ref CommunicationsCoverPageFreezeTransitionInDays
+          - Id: 'PnSsCommunicationsCoverPage_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: !Ref CommunicationsCoverPageExpiryExpirationDays
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_COMMUNICATIONS_COVERPAGE'
+
+          - Id: 'PnSsCommunicationsAttachment'
+            ExpirationInDays: !Ref CommunicationsAttachmentExpirationDays
+            Status: 'Enabled'
+            TagFilters:
+              - Key: 'storageType'
+                Value: 'PN_COMMUNICATIONS_ATTACHMENT'
+          - Id: 'PnSsCommunicationsAttachment_expiry'
+            Status: 'Enabled'
+            ExpirationInDays: !Ref CommunicationsAttachmentExpiryExpirationDays
+            TagFilters:
+              - Key: 'storage_expiry'
+                Value: 'PN_COMMUNICATIONS_ATTACHMENT'
       NotificationConfiguration:
         QueueConfigurations:
           - Event: 's3:ObjectCreated:*'

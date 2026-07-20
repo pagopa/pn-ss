@@ -51,8 +51,7 @@ public class EventBridgeUtil {
         message.setClientShortCode(documentEntity.getClientShortCode()!=null ? documentEntity.getClientShortCode():null);
 
         if (documentEntity.getTags() != null && canReadTags) {
-            Map<String, List<String>> tags =documentEntity.getTags();
-            message.setTags(tags);
+            message.setTags(removeLocalPrefix(documentEntity.getTags()));
         }
 
         try {
@@ -79,6 +78,15 @@ public class EventBridgeUtil {
         } catch (JsonProcessingException e) {
             throw new PutEventsRequestEntryException(PutEventsRequestEntry.class);
         }
+    }
+
+    private static Map<String, List<String>> removeLocalPrefix(Map<String, List<String>> tags) {
+        Map<String, List<String>> result = new HashMap<>();
+        tags.forEach((key, values) -> {
+            String[] parts = key.split("~", 2);
+            result.put(parts.length == 2 ? parts[1] : key, values);
+        });
+        return result;
     }
 
     private static PutEventsRequestEntry createPutEventRequestEntry(String event, String eventBusName, String detailType){

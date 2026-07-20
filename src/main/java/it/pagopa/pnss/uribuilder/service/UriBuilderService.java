@@ -224,11 +224,11 @@ public class UriBuilderService {
 
                                                                 if (validatedRequest.getTags() != null && !validatedRequest.getTags().isEmpty()) {
                                                                     // Chiamata a putTags usando documentKey ottenuto da postDocument
-                                                                    TagsChanges tagsChanges = new TagsChanges().SET(validatedRequest.getTags());
-                                                                    return tagsClientCall.putTags(insertedDocument.getDocument().getDocumentKey(), tagsChanges)
-                                                                            .retryWhen(tagsRetryStrategy)
-                                                                            .doOnSuccess(tagsResponse -> log.info("PutTags successful for document key: {}", insertedDocument.getDocument().getDocumentKey()))
-                                                                            .thenReturn(response);
+                                                                    return additionalFileTagsService.validateTagsForFileCreation(validatedRequest.getTags(), xPagopaSafestorageCxId)
+                                                                            .flatMap(tagsChanges -> tagsClientCall.putTags(insertedDocument.getDocument().getDocumentKey(), tagsChanges)
+                                                                                    .retryWhen(tagsRetryStrategy)
+                                                                                    .doOnSuccess(tagsResponse -> log.info("PutTags successful for document key: {}", insertedDocument.getDocument().getDocumentKey()))
+                                                                                    .thenReturn(response));
                                                                 } else {
                                                                     // Nessun tag da scrivere
                                                                     return Mono.just(response);

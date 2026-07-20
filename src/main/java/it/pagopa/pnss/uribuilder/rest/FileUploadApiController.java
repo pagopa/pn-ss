@@ -8,6 +8,7 @@ import it.pagopa.pnss.common.client.exception.ChecksumException;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.exception.IndexingLimitException;
 import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
+import it.pagopa.pnss.common.exception.RequestValidationException;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.CustomLog;
 import org.slf4j.MDC;
@@ -49,6 +50,11 @@ public class FileUploadApiController implements FileUploadApi {
     @ExceptionHandler(DocumentKeyNotPresentException.class)
     public ResponseEntity<String> handleDocumentKeyNotPresentException(DocumentKeyNotPresentException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(RequestValidationException.class)
+    public ResponseEntity<String> handleRequestValidationException(RequestValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
 
     @Override

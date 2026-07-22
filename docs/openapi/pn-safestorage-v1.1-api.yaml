@@ -747,7 +747,7 @@ components:
           description: >-
             Il tipo di documento da caricare; definisce diritti di accesso e tempo 
             di permanenza del file all'interno di _SafeStorage_
-          pattern: '^PN_[A-Z0-9_]{1,50}$'
+          pattern: '^[A-Z0-9_]{1,50}$'
           example: 'PN_NOTIFICATION_ATTACHMENTS'
         status:
           type: string

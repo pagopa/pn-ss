@@ -19,4 +19,6 @@ public interface AdditionalFileTagsService {
     Mono<Boolean> getWriteTagsPermission(String cxId);
 
     Mono<TagsChanges> requestValidation(AdditionalFileTagsUpdateRequest request, String cxId);
+
+    Mono<TagsChanges> validateTagsForFileCreation(Map<String, List<String>> setTags, String cxId);
 }

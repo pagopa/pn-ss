@@ -172,6 +172,23 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     }
 
     @Override
+    public Mono<TagsChanges> validateTagsForFileCreation(Map<String, List<String>> setTags, String cxId) {
+        final String VALIDATE_TAGS_FOR_FILE_CREATION = "AdditionalFileTagsService.validateTagsForFileCreation()";
+        log.debug(INVOKING_METHOD, VALIDATE_TAGS_FOR_FILE_CREATION, Stream.of(setTags, cxId).toList());
+        return Mono.create(sink -> {
+            try {
+                Map<String, List<String>> resolvedTags = new HashMap<>();
+                processTags(setTags, cxId, resolvedTags);
+                validateSingleValueTags(resolvedTags);
+
+                sink.success(new TagsChanges().SET(resolvedTags).DELETE(new HashMap<>()));
+            } catch (Exception e) {
+                sink.error(e);
+            }
+        });
+    }
+
+    @Override
     public Mono<AdditionalFileTagsMassiveUpdateResponse> postMassiveTags(AdditionalFileTagsMassiveUpdateRequest request, String cxId) {
         final String POST_MASSIVE_TAG = "AdditionalFileTagsService.postMassiveTags()";
         log.debug(LogUtils.INVOKING_METHOD, POST_MASSIVE_TAG, Stream.of(request, cxId).toList());

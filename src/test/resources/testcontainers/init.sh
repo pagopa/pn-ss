@@ -511,6 +511,11 @@ INDEXING_CONFIG='{
                       "key": "pn-downtime-logs~active",
                       "indexed": false,
                       "multivalue": false
+                    },
+                    {
+                      "key": "pn-test~NrtLocalTag",
+                      "indexed": false,
+                      "multivalue": false
                     }
                   ],
                   "limits": {

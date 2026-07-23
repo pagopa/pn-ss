@@ -43,8 +43,6 @@ class AdditionalFileTagsServiceImplTest {
         indexingConfiguration.getTags().put(SINGLE_VALUE_TAG_KEY,
                 IndexingTag.builder().key(SINGLE_VALUE_TAG_KEY).indexed(false).multivalue(false).global(false).build());
 
-        // I limiti non vengono popolati da init() (no Spring/SSM in questo unit test): li impostiamo
-        // esplicitamente perche' il metodo condiviso di preparazione applica anche MaxValuesPerTagPerRequest.
         ReflectionTestUtils.setField(indexingConfiguration, "indexingLimits",
                 IndexingLimits.builder()
                         .maxTagsPerRequest(50L)

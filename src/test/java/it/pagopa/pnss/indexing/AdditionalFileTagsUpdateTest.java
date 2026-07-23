@@ -316,10 +316,6 @@ class AdditionalFileTagsUpdateTest {
         additionalFileTagsUpdateTestCall(tag, "NOTFOUND").expectStatus().isNotFound();
     }
 
-    /**
-     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con un tag locale single-value passato non prefissato
-     * Risultato atteso: 200 OK, con putTags invocato con la chiave risolta cxId~tag
-     */
     @Test
     void testUpdateLocalSingleValueTagUnprefixed() {
         String cxId = "pn-downtime-logs";
@@ -338,10 +334,6 @@ class AdditionalFileTagsUpdateTest {
         assertTrue(tagsChangesCaptor.getValue().getSET().containsKey(cxId + "~active"));
     }
 
-    /**
-     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con un tag locale multivalue passato non prefissato
-     * Risultato atteso: 200 OK, con putTags invocato con la chiave risolta cxId~tag
-     */
     @Test
     void testUpdateLocalMultiValueTagUnprefixed() {
         String cxId = "pn-radd-fsu";

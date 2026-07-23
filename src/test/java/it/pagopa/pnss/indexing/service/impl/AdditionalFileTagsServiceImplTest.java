@@ -2,10 +2,12 @@ package it.pagopa.pnss.indexing.service.impl;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
 import it.pagopa.pnss.common.exception.RequestValidationException;
+import it.pagopa.pnss.common.model.pojo.IndexingLimits;
 import it.pagopa.pnss.common.model.pojo.IndexingTag;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -40,6 +42,20 @@ class AdditionalFileTagsServiceImplTest {
                 IndexingTag.builder().key(LOCAL_TAG_KEY).indexed(true).multivalue(true).global(false).build());
         indexingConfiguration.getTags().put(SINGLE_VALUE_TAG_KEY,
                 IndexingTag.builder().key(SINGLE_VALUE_TAG_KEY).indexed(false).multivalue(false).global(false).build());
+
+        // I limiti non vengono popolati da init() (no Spring/SSM in questo unit test): li impostiamo
+        // esplicitamente perche' il metodo condiviso di preparazione applica anche MaxValuesPerTagPerRequest.
+        ReflectionTestUtils.setField(indexingConfiguration, "indexingLimits",
+                IndexingLimits.builder()
+                        .maxTagsPerRequest(50L)
+                        .maxOperationsOnTagsPerRequest(50L)
+                        .maxFileKeys(1000L)
+                        .maxMapValuesForSearch(10L)
+                        .maxFileKeysUpdateMassivePerRequest(100L)
+                        .maxTagsPerDocument(40L)
+                        .maxValuesPerTagDocument(1000L)
+                        .maxValuesPerTagPerRequest(100L)
+                        .build());
 
         additionalFileTagsService = new AdditionalFileTagsServiceImpl(null, indexingConfiguration, null, null, null);
     }

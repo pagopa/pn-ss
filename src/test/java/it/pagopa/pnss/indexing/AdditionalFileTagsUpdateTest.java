@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -63,6 +65,19 @@ class AdditionalFileTagsUpdateTest {
         return webTestClient.post()
                 .uri(uriBuilder -> uriBuilder.path(PATH_WITH_PARAM).queryParam("documentKey", documentKey).build(documentKey))
                 .header(xPagopaSafestorageCxId, X_PAGO_PA_SAFESTORAGE_CX_ID_VALUE)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
+                .bodyValue(additionalFileTagsUpdateRequest)
+                .exchange();
+    }
+
+    private WebTestClient.ResponseSpec additionalFileTagsUpdateTestCall(AdditionalFileTagsUpdateRequest additionalFileTagsUpdateRequest, String documentKey, String cxId) {
+
+        webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
+
+        return webTestClient.post()
+                .uri(uriBuilder -> uriBuilder.path(PATH_WITH_PARAM).queryParam("documentKey", documentKey).build(documentKey))
+                .header(xPagopaSafestorageCxId, cxId)
                 .header(xApiKey, X_API_KEY_VALUE)
                 .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
                 .bodyValue(additionalFileTagsUpdateRequest)
@@ -299,6 +314,50 @@ class AdditionalFileTagsUpdateTest {
         when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.error(new DocumentKeyNotPresentException("NOTFOUND")));
 
         additionalFileTagsUpdateTestCall(tag, "NOTFOUND").expectStatus().isNotFound();
+    }
+
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con un tag locale single-value passato non prefissato
+     * Risultato atteso: 200 OK, con putTags invocato con la chiave risolta cxId~tag
+     */
+    @Test
+    void testUpdateLocalSingleValueTagUnprefixed() {
+        String cxId = "pn-downtime-logs";
+        Map<String, List<String>> set = new HashMap<>();
+        set.put("active", List.of("value1"));
+        var tag = new AdditionalFileTagsUpdateRequest().SET(set);
+        var tagsDto = new TagsDto().tags(set);
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        additionalFileTagsUpdateTestCall(tag, DOCUMENT_KEY, cxId).expectStatus().isOk();
+
+        ArgumentCaptor<TagsChanges> tagsChangesCaptor = ArgumentCaptor.forClass(TagsChanges.class);
+        verify(tagsClientCall, times(1)).putTags(anyString(), tagsChangesCaptor.capture());
+        assertTrue(tagsChangesCaptor.getValue().getSET().containsKey(cxId + "~active"));
+    }
+
+    /**
+     * POST sulla tabella pn-SsTags, update su pn-SsDocuments di una filekey con un tag locale multivalue passato non prefissato
+     * Risultato atteso: 200 OK, con putTags invocato con la chiave risolta cxId~tag
+     */
+    @Test
+    void testUpdateLocalMultiValueTagUnprefixed() {
+        String cxId = "pn-radd-fsu";
+        Map<String, List<String>> set = new HashMap<>();
+        set.put("DataCreazione", List.of("2024-01-01", "2024-02-02"));
+        var tag = new AdditionalFileTagsUpdateRequest().SET(set);
+        var tagsDto = new TagsDto().tags(set);
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        additionalFileTagsUpdateTestCall(tag, DOCUMENT_KEY, cxId).expectStatus().isOk();
+
+        ArgumentCaptor<TagsChanges> tagsChangesCaptor = ArgumentCaptor.forClass(TagsChanges.class);
+        verify(tagsClientCall, times(1)).putTags(anyString(), tagsChangesCaptor.capture());
+        assertTrue(tagsChangesCaptor.getValue().getSET().containsKey(cxId + "~DataCreazione"));
     }
 
     // UPDATE MASSIVA

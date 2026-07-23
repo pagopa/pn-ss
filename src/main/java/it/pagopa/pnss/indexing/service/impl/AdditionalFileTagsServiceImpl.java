@@ -152,19 +152,17 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         final String REQUEST_VALIDATION = "AdditionalFileTagsService.requestValidation()";
         log.debug(INVOKING_METHOD, REQUEST_VALIDATION, Stream.of(request, cxId).toList());
         return Mono.create(sink -> {
-            TagsChanges tagsChanges = new TagsChanges();
-            Map<String, List<String>> tagsToSet = new HashMap<>();
-            Map<String, List<String>> tagsToDelete = new HashMap<>();
+            Map<String, List<String>> setTags = request.getSET();
+            Map<String, List<String>> deleteTags = request.getDELETE();
 
             try {
-                Map<String, List<String>> setTags = request.getSET();
-                Map<String, List<String>> deleteTags = request.getDELETE();
+                if (setTags == null && deleteTags == null) {
+                    throw new RequestValidationException("No tags to set nor delete.");
+                }
 
-                validateRequest(setTags, deleteTags);
-                processTags(setTags, cxId, tagsToSet);
-                processTags(deleteTags, cxId, tagsToDelete);
+                validateTagsLimit(setTags, deleteTags);
 
-                sink.success(tagsChanges.SET(tagsToSet).DELETE(tagsToDelete));
+                sink.success(prepareAndValidateTags(setTags, deleteTags, cxId));
             } catch (Exception e) {
                 sink.error(e);
             }
@@ -177,15 +175,36 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         log.debug(INVOKING_METHOD, VALIDATE_TAGS_FOR_FILE_CREATION, Stream.of(setTags, cxId).toList());
         return Mono.create(sink -> {
             try {
-                Map<String, List<String>> resolvedTags = new HashMap<>();
-                processTags(setTags, cxId, resolvedTags);
-                validateSingleValueTags(resolvedTags);
-
-                sink.success(new TagsChanges().SET(resolvedTags).DELETE(new HashMap<>()));
+                sink.success(prepareAndValidateTags(setTags, new HashMap<>(), cxId));
             } catch (Exception e) {
                 sink.error(e);
             }
         });
+    }
+
+    /**
+     * Metodo condiviso che risolve il namespacing dei tag locali (cxId~tag) e ne valida la
+     * coerenza, applicando la validazione single-value e il limite MaxValuesPerTagPerRequest
+     * sulle chiavi gia' risolte, in modo uniforme tra creazione e aggiornamento dei tag.
+     *
+     * @param setTags i tag da impostare (chiavi grezze)
+     * @param deleteTags i tag da eliminare (chiavi grezze)
+     * @param cxId il clientId usato per il namespacing dei tag locali
+     * @return TagsChanges con le mappe SET e DELETE risolte e validate
+     */
+    private TagsChanges prepareAndValidateTags(Map<String, List<String>> setTags,
+                                               Map<String, List<String>> deleteTags,
+                                               String cxId) {
+        validateNoCommonTags(setTags, deleteTags);
+        Map<String, List<String>> resolvedSet = new HashMap<>();
+        Map<String, List<String>> resolvedDelete = new HashMap<>();
+        processTags(setTags, cxId, resolvedSet);
+        processTags(deleteTags, cxId, resolvedDelete);
+        validateSingleValueTags(resolvedSet);
+        validateSingleValueTags(resolvedDelete);
+        validateMaxValuesPerTag(resolvedSet);
+        validateMaxValuesPerTag(resolvedDelete);
+        return new TagsChanges().SET(resolvedSet).DELETE(resolvedDelete);
     }
 
     @Override
@@ -274,21 +293,6 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
             tagsMap.put(fileKey, tag);
         }
         return tagsList;
-    }
-
-    private void validateRequest(Map<String, List<String>> setTags, Map<String, List<String>> deleteTags) throws RequestValidationException {
-        if (setTags == null && deleteTags == null) {
-            throw new RequestValidationException("No tags to set nor delete.");
-        }
-
-        validateSingleValueTags(setTags);
-        validateSingleValueTags(deleteTags);
-
-        validateNoCommonTags(setTags, deleteTags);
-        validateTagsLimit(setTags, deleteTags);
-
-        validateMaxValuesPerTag(setTags);
-        validateMaxValuesPerTag(deleteTags);
     }
 
     private void validateSingleValueTags(Map<String, List<String>> tags) throws RequestValidationException {

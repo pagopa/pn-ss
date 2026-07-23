@@ -255,12 +255,6 @@ public class UriBuilderService {
             return Mono.error(new IndexingLimitException("MaxTagsPerRequest", tags.size(), indexingConfiguration.getIndexingLimits().getMaxTagsPerRequest()));
         }
 
-        // Verifica MaxValuesPerTagPerRequest
-        for (Map.Entry<String, List<String>> entry : tags.entrySet()) {
-            if (entry.getValue().size() > indexingConfiguration.getIndexingLimits().getMaxValuesPerTagPerRequest()) {
-                return Mono.error(new IndexingLimitException("MaxValuesPerTagPerRequest", entry.getValue().size(), indexingConfiguration.getIndexingLimits().getMaxValuesPerTagPerRequest()));
-            }
-        }
         return Mono.just(request);
     }
 

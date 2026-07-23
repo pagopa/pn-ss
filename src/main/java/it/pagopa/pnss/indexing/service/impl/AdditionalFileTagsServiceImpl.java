@@ -182,16 +182,6 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         });
     }
 
-    /**
-     * Metodo condiviso che risolve il namespacing dei tag locali (cxId~tag) e ne valida la
-     * coerenza, applicando la validazione single-value e il limite MaxValuesPerTagPerRequest
-     * sulle chiavi gia' risolte, in modo uniforme tra creazione e aggiornamento dei tag.
-     *
-     * @param setTags i tag da impostare (chiavi grezze)
-     * @param deleteTags i tag da eliminare (chiavi grezze)
-     * @param cxId il clientId usato per il namespacing dei tag locali
-     * @return TagsChanges con le mappe SET e DELETE risolte e validate
-     */
     private TagsChanges prepareAndValidateTags(Map<String, List<String>> setTags,
                                                Map<String, List<String>> deleteTags,
                                                String cxId) {

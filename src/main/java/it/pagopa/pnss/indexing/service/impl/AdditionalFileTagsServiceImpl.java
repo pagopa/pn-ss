@@ -185,11 +185,11 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     private TagsChanges prepareAndValidateTags(Map<String, List<String>> setTags,
                                                Map<String, List<String>> deleteTags,
                                                String cxId) {
-        validateNoCommonTags(setTags, deleteTags);
         Map<String, List<String>> resolvedSet = new HashMap<>();
         Map<String, List<String>> resolvedDelete = new HashMap<>();
         processTags(setTags, cxId, resolvedSet);
         processTags(deleteTags, cxId, resolvedDelete);
+        validateNoCommonTags(resolvedSet, resolvedDelete);
         validateSingleValueTags(resolvedSet);
         validateSingleValueTags(resolvedDelete);
         validateMaxValuesPerTag(resolvedSet);

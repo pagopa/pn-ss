@@ -73,8 +73,6 @@ class AdditionalFileTagsUpdateTest {
 
     private WebTestClient.ResponseSpec additionalFileTagsUpdateTestCall(AdditionalFileTagsUpdateRequest additionalFileTagsUpdateRequest, String documentKey, String cxId) {
 
-        webTestClient.mutate().responseTimeout(Duration.ofMillis(30000)).build();
-
         return webTestClient.post()
                 .uri(uriBuilder -> uriBuilder.path(PATH_WITH_PARAM).queryParam("documentKey", documentKey).build(documentKey))
                 .header(xPagopaSafestorageCxId, cxId)
@@ -350,6 +348,23 @@ class AdditionalFileTagsUpdateTest {
         ArgumentCaptor<TagsChanges> tagsChangesCaptor = ArgumentCaptor.forClass(TagsChanges.class);
         verify(tagsClientCall, times(1)).putTags(anyString(), tagsChangesCaptor.capture());
         assertTrue(tagsChangesCaptor.getValue().getSET().containsKey(cxId + "~DataCreazione"));
+    }
+
+    @Test
+    void testUpdateLocalTagSetUnprefixedDeletePrefixedSameKeyKo() {
+        String cxId = "pn-downtime-logs";
+        Map<String, List<String>> set = new HashMap<>();
+        set.put("active", List.of("v1"));
+        Map<String, List<String>> delete = new HashMap<>();
+        delete.put(cxId + "~active", List.of("v2"));
+        var tag = new AdditionalFileTagsUpdateRequest().SET(set).DELETE(delete);
+        var tagsDto = new TagsDto().tags(set);
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        additionalFileTagsUpdateTestCall(tag, DOCUMENT_KEY, cxId).expectStatus().isBadRequest();
+        verify(tagsClientCall, never()).putTags(anyString(), any(TagsChanges.class));
     }
 
     // UPDATE MASSIVA

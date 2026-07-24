@@ -476,6 +476,11 @@ INDEXING_CONFIG='{
                       "multivalue": true
                     },
                     {
+                      "key": "global_indexed_multivalue",
+                      "indexed": true,
+                      "multivalue": true
+                    },
+                    {
                       "key": "DataNotifica",
                       "indexed": true,
                       "multivalue": true
@@ -515,6 +520,11 @@ INDEXING_CONFIG='{
                     {
                       "key": "pn-test~NrtLocalTag",
                       "indexed": false,
+                      "multivalue": false
+                    },
+                    {
+                      "key": "pn-test~local_indexed_singlevalue",
+                      "indexed": true,
                       "multivalue": false
                     }
                   ],

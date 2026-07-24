@@ -95,6 +95,16 @@ class AdditionalFileTagsUpdateTest {
                 .exchange();
     }
 
+    private WebTestClient.ResponseSpec additionalFileTagsMassiveUpdateTestCall(AdditionalFileTagsMassiveUpdateRequest additionalFileTagsMassiveUpdateRequest, String cxId) {
+        return webTestClient.post()
+                .uri(uriBuilder -> uriBuilder.path(PATH_NO_PARAM).build())
+                .header(xPagopaSafestorageCxId, cxId)
+                .header(xApiKey, X_API_KEY_VALUE)
+                .header(HttpHeaders.ACCEPT, APPLICATION_JSON_VALUE)
+                .bodyValue(additionalFileTagsMassiveUpdateRequest)
+                .exchange();
+    }
+
     @BeforeEach
     public void createUserConfiguration() {
         var userConfiguration =
@@ -766,6 +776,26 @@ class AdditionalFileTagsUpdateTest {
                                 hasProperty("resultCode", is("400.00")),
                                 hasProperty("resultDescription", containsStringIgnoringCase("Bad request during put tags operation")),
                                 hasProperty("fileKey", hasItem(containsString("documentKey"))))));
+    }
+
+    @Test
+    void testMassiveUpdateLocalTagUnprefixed_isNamespacedWithCxId() {
+        String cxId = "pn-radd-fsu";
+        Map<String, List<String>> set = new HashMap<>();
+        set.put("DataCreazione", List.of("2024-01-01"));
+        List<Tags> tagsList = new ArrayList<>();
+        tagsList.add(new Tags().fileKey("fileKey").SET(set).DELETE(new HashMap<>()));
+        AdditionalFileTagsMassiveUpdateRequest tagsMassiveUpdateRequest = new AdditionalFileTagsMassiveUpdateRequest().tags(tagsList);
+
+        var tagsDto = new TagsDto().tags(set);
+        var tagResponse = new TagsResponse().tagsDto(tagsDto);
+        when(tagsClientCall.putTags(anyString(), any(TagsChanges.class))).thenReturn(Mono.just(tagResponse));
+
+        additionalFileTagsMassiveUpdateTestCall(tagsMassiveUpdateRequest, cxId).expectStatus().isOk();
+
+        ArgumentCaptor<TagsChanges> tagsChangesCaptor = ArgumentCaptor.forClass(TagsChanges.class);
+        verify(tagsClientCall, times(1)).putTags(anyString(), tagsChangesCaptor.capture());
+        assertTrue(tagsChangesCaptor.getValue().getSET().containsKey(cxId + "~DataCreazione"));
     }
 
 

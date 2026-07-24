@@ -332,18 +332,19 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     private void processTags(Map<String, List<String>> tags, String cxId, Map<String, List<String>> result) throws RequestValidationException {
         if (tags != null) {
             for (Map.Entry<String, List<String>> entry : tags.entrySet()) {
-                String tag = entry.getKey();
-
-                if (!indexingConfiguration.isTagValid(tag)) {
-                    if (!indexingConfiguration.isTagValid(cxId + "~" + tag)) {
-                        throw new RequestValidationException("Tag " + tag + " not found in the indexing configuration");
-                    }
-                    result.put(cxId + "~" + tag, entry.getValue());
-                } else {
-                    result.put(tag, entry.getValue());
-                }
+                result.put(resolveTagKey(entry.getKey(), cxId), entry.getValue());
             }
         }
+    }
+
+    private String resolveTagKey(String tag, String cxId) throws RequestValidationException {
+        if (indexingConfiguration.isTagValid(tag)) {
+            return tag;
+        }
+        if (indexingConfiguration.isTagValid(cxId + "~" + tag)) {
+            return cxId + "~" + tag;
+        }
+        throw new RequestValidationException("Tag " + tag + " not found in the indexing configuration");
     }
 
     /**
@@ -365,7 +366,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                     } else sink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, String.format("Client: %s does not have privilege to read tags", xPagopaSafestorageCxId)));
                 })
                 .thenMany(Flux.defer(() -> validateQueryParams(queryParams)))
-                .flatMap(this::getFileKeysList)
+                .flatMap(entry -> getFileKeysList(entry, xPagopaSafestorageCxId))
                 .map(HashSet::new)
                 .reduce(reducingFunction)
                 .onErrorResume(EmptyIntersectionException.class, throwable -> Mono.just(new HashSet<>()))
@@ -373,10 +374,12 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                 .map(fileKey -> new AdditionalFileTagsSearchResponseFileKeysInner().fileKey(fileKey))
                 .flatMap(fileKey -> {
                     if (Boolean.TRUE.equals(tags)) {
-                        return documentClientCall.getDocument(fileKey.getFileKey()).map(documentResponse -> {
-                            fileKey.setTags(documentResponse.getDocument().getTags());
-                            return fileKey;
-                        });
+                        return documentClientCall.getDocument(fileKey.getFileKey())
+                                .flatMap(documentResponse -> removePrefixTags(documentResponse.getDocument().getTags())
+                                        .map(strippedTags -> {
+                                            fileKey.setTags(strippedTags);
+                                            return fileKey;
+                                        }));
                     } else return Mono.just(fileKey);
                 })
                 .collectList()
@@ -429,10 +432,18 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
      * A method to get the list of fileKeys with the given tag and value.
      *
      * @param mapEntry the tag and value to search
+     * @param cxId the clientId
      * @return Mono<List<String>> the mono containing the list of fileKeys
      */
-    private Mono<List<String>> getFileKeysList(Map.Entry<String, String> mapEntry) {
-        return Mono.just(mapEntry).flatMap(entry -> tagsClientCall.getTagsRelations(entry.getKey() + "~" + entry.getValue()))
+    private Mono<List<String>> getFileKeysList(Map.Entry<String, String> mapEntry, String cxId) {
+        String resolvedKey;
+        try {
+            resolvedKey = resolveTagKey(mapEntry.getKey(), cxId);
+        } catch (RequestValidationException e) {
+            resolvedKey = mapEntry.getKey();
+        }
+        String tagKey = resolvedKey;
+        return Mono.just(mapEntry).flatMap(entry -> tagsClientCall.getTagsRelations(tagKey + "~" + entry.getValue()))
                 .map(tagsResponse -> tagsResponse.getTagsRelationsDto().getFileKeys())
                 .onErrorResume(TagKeyValueNotPresentException.class, e -> Mono.fromSupplier(ArrayList::new));
     }

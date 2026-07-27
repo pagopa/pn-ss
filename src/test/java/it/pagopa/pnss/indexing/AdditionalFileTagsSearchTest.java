@@ -423,4 +423,47 @@ class AdditionalFileTagsSearchTest {
                 .isBadRequest();
     }
 
+    @Test
+    void search_localTagUnprefixed_resolvesPrefix_ok() {
+
+        String cxId = "pn-radd-fsu";
+        String cxApiKey = "pn-radd-fsu_api_key";
+        String value = "20260101";
+        String resolvedKeyValue = "pn-radd-fsu~DataCreazione~" + value;
+
+        when(userConfigurationClientCall.getUser(cxId)).thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(new UserConfiguration().name(cxId).apiKey(cxApiKey).canReadTags(true))));
+        when(tagsClientCall.getTagsRelations(resolvedKeyValue)).thenReturn(Mono.just(new TagsRelationsResponse().tagsRelationsDto(new TagsRelationsDto().tagKeyValue(resolvedKeyValue).addFileKeysItem(FILE_KEY))));
+
+        additionalFileTagsSearchCall("or", false, cxId, cxApiKey, Map.entry("DataCreazione", value))
+                .expectStatus()
+                .isOk()
+                .expectBody(AdditionalFileTagsSearchResponse.class)
+                .value(response -> {
+                    assertThat(response.getFileKeys(), notNullValue());
+                    assertThat(response.getFileKeys(), hasSize(1));
+                    assertThat(response.getFileKeys(), hasItem(hasProperty("fileKey", equalTo(FILE_KEY))));
+                });
+    }
+
+    @Test
+    void search_tagsTrue_localTag_stripsPrefixInOutput() {
+
+        String iunValue = "ABCDEF";
+        String iunKeyValue = IUN + "~" + iunValue;
+
+        when(tagsClientCall.getTagsRelations(iunKeyValue)).thenReturn(Mono.just(new TagsRelationsResponse().tagsRelationsDto(new TagsRelationsDto().tagKeyValue(iunKeyValue).addFileKeysItem(FILE_KEY))));
+        when(documentClientCall.getDocument(FILE_KEY)).thenReturn(Mono.just(new DocumentResponse().document(new DocumentResponseDocument().tags(Map.of("pn-radd-fsu~DataCreazione", List.of("20260101"), IUN, List.of(iunValue))))));
+
+        additionalFileTagsSearchCall("or", true, PN_CLIENT_AUTHORIZED, PN_CLIENT_AUTHORIZED_API_KEY, Map.entry(IUN, iunValue))
+                .expectStatus()
+                .isOk()
+                .expectBody(AdditionalFileTagsSearchResponse.class)
+                .value(response -> {
+                    assertThat(response.getFileKeys(), hasSize(1));
+                    assertThat(response.getFileKeys().get(0).getTags(), hasKey("DataCreazione"));
+                    assertThat(response.getFileKeys().get(0).getTags(), not(hasKey("pn-radd-fsu~DataCreazione")));
+                    assertThat(response.getFileKeys().get(0).getTags(), hasKey(IUN));
+                });
+    }
+
 }

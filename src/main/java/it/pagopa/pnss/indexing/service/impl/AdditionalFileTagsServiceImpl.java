@@ -152,19 +152,17 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         final String REQUEST_VALIDATION = "AdditionalFileTagsService.requestValidation()";
         log.debug(INVOKING_METHOD, REQUEST_VALIDATION, Stream.of(request, cxId).toList());
         return Mono.create(sink -> {
-            TagsChanges tagsChanges = new TagsChanges();
-            Map<String, List<String>> tagsToSet = new HashMap<>();
-            Map<String, List<String>> tagsToDelete = new HashMap<>();
+            Map<String, List<String>> setTags = request.getSET();
+            Map<String, List<String>> deleteTags = request.getDELETE();
 
             try {
-                Map<String, List<String>> setTags = request.getSET();
-                Map<String, List<String>> deleteTags = request.getDELETE();
+                if (setTags == null && deleteTags == null) {
+                    throw new RequestValidationException("No tags to set nor delete.");
+                }
 
-                validateRequest(setTags, deleteTags);
-                processTags(setTags, cxId, tagsToSet);
-                processTags(deleteTags, cxId, tagsToDelete);
+                validateTagsLimit(setTags, deleteTags);
 
-                sink.success(tagsChanges.SET(tagsToSet).DELETE(tagsToDelete));
+                sink.success(prepareAndValidateTags(setTags, deleteTags, cxId));
             } catch (Exception e) {
                 sink.error(e);
             }
@@ -177,15 +175,26 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         log.debug(INVOKING_METHOD, VALIDATE_TAGS_FOR_FILE_CREATION, Stream.of(setTags, cxId).toList());
         return Mono.create(sink -> {
             try {
-                Map<String, List<String>> resolvedTags = new HashMap<>();
-                processTags(setTags, cxId, resolvedTags);
-                validateSingleValueTags(resolvedTags);
-
-                sink.success(new TagsChanges().SET(resolvedTags).DELETE(new HashMap<>()));
+                sink.success(prepareAndValidateTags(setTags, new HashMap<>(), cxId));
             } catch (Exception e) {
                 sink.error(e);
             }
         });
+    }
+
+    private TagsChanges prepareAndValidateTags(Map<String, List<String>> setTags,
+                                               Map<String, List<String>> deleteTags,
+                                               String cxId) {
+        Map<String, List<String>> resolvedSet = new HashMap<>();
+        Map<String, List<String>> resolvedDelete = new HashMap<>();
+        processTags(setTags, cxId, resolvedSet);
+        processTags(deleteTags, cxId, resolvedDelete);
+        validateNoCommonTags(resolvedSet, resolvedDelete);
+        validateSingleValueTags(resolvedSet);
+        validateSingleValueTags(resolvedDelete);
+        validateMaxValuesPerTag(resolvedSet);
+        validateMaxValuesPerTag(resolvedDelete);
+        return new TagsChanges().SET(resolvedSet).DELETE(resolvedDelete);
     }
 
     @Override
@@ -276,21 +285,6 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
         return tagsList;
     }
 
-    private void validateRequest(Map<String, List<String>> setTags, Map<String, List<String>> deleteTags) throws RequestValidationException {
-        if (setTags == null && deleteTags == null) {
-            throw new RequestValidationException("No tags to set nor delete.");
-        }
-
-        validateSingleValueTags(setTags);
-        validateSingleValueTags(deleteTags);
-
-        validateNoCommonTags(setTags, deleteTags);
-        validateTagsLimit(setTags, deleteTags);
-
-        validateMaxValuesPerTag(setTags);
-        validateMaxValuesPerTag(deleteTags);
-    }
-
     private void validateSingleValueTags(Map<String, List<String>> tags) throws RequestValidationException {
         if (tags != null) {
             for (Map.Entry<String, List<String>> entry : tags.entrySet()) {
@@ -338,18 +332,19 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
     private void processTags(Map<String, List<String>> tags, String cxId, Map<String, List<String>> result) throws RequestValidationException {
         if (tags != null) {
             for (Map.Entry<String, List<String>> entry : tags.entrySet()) {
-                String tag = entry.getKey();
-
-                if (!indexingConfiguration.isTagValid(tag)) {
-                    if (!indexingConfiguration.isTagValid(cxId + "~" + tag)) {
-                        throw new RequestValidationException("Tag " + tag + " not found in the indexing configuration");
-                    }
-                    result.put(cxId + "~" + tag, entry.getValue());
-                } else {
-                    result.put(tag, entry.getValue());
-                }
+                result.put(resolveTagKey(entry.getKey(), cxId), entry.getValue());
             }
         }
+    }
+
+    private String resolveTagKey(String tag, String cxId) throws RequestValidationException {
+        if (indexingConfiguration.isTagValid(tag)) {
+            return tag;
+        }
+        if (indexingConfiguration.isTagValid(cxId + "~" + tag)) {
+            return cxId + "~" + tag;
+        }
+        throw new RequestValidationException("Tag " + tag + " not found in the indexing configuration");
     }
 
     /**
@@ -371,7 +366,7 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                     } else sink.error(new ResponseStatusException(HttpStatus.FORBIDDEN, String.format("Client: %s does not have privilege to read tags", xPagopaSafestorageCxId)));
                 })
                 .thenMany(Flux.defer(() -> validateQueryParams(queryParams)))
-                .flatMap(this::getFileKeysList)
+                .flatMap(entry -> getFileKeysList(entry, xPagopaSafestorageCxId))
                 .map(HashSet::new)
                 .reduce(reducingFunction)
                 .onErrorResume(EmptyIntersectionException.class, throwable -> Mono.just(new HashSet<>()))
@@ -379,10 +374,12 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
                 .map(fileKey -> new AdditionalFileTagsSearchResponseFileKeysInner().fileKey(fileKey))
                 .flatMap(fileKey -> {
                     if (Boolean.TRUE.equals(tags)) {
-                        return documentClientCall.getDocument(fileKey.getFileKey()).map(documentResponse -> {
-                            fileKey.setTags(documentResponse.getDocument().getTags());
-                            return fileKey;
-                        });
+                        return documentClientCall.getDocument(fileKey.getFileKey())
+                                .flatMap(documentResponse -> removePrefixTags(documentResponse.getDocument().getTags())
+                                        .map(strippedTags -> {
+                                            fileKey.setTags(strippedTags);
+                                            return fileKey;
+                                        }));
                     } else return Mono.just(fileKey);
                 })
                 .collectList()
@@ -435,10 +432,18 @@ public class AdditionalFileTagsServiceImpl implements AdditionalFileTagsService 
      * A method to get the list of fileKeys with the given tag and value.
      *
      * @param mapEntry the tag and value to search
+     * @param cxId the clientId
      * @return Mono<List<String>> the mono containing the list of fileKeys
      */
-    private Mono<List<String>> getFileKeysList(Map.Entry<String, String> mapEntry) {
-        return Mono.just(mapEntry).flatMap(entry -> tagsClientCall.getTagsRelations(entry.getKey() + "~" + entry.getValue()))
+    private Mono<List<String>> getFileKeysList(Map.Entry<String, String> mapEntry, String cxId) {
+        String resolvedKey;
+        try {
+            resolvedKey = resolveTagKey(mapEntry.getKey(), cxId);
+        } catch (RequestValidationException e) {
+            resolvedKey = mapEntry.getKey();
+        }
+        String tagKey = resolvedKey;
+        return Mono.just(mapEntry).flatMap(entry -> tagsClientCall.getTagsRelations(tagKey + "~" + entry.getValue()))
                 .map(tagsResponse -> tagsResponse.getTagsRelationsDto().getFileKeys())
                 .onErrorResume(TagKeyValueNotPresentException.class, e -> Mono.fromSupplier(ArrayList::new));
     }

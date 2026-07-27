@@ -327,6 +327,40 @@ class UriBuilderRetryTagsTest {
     }
 
     @Test
+    void createFileWithTagExceedingMaxValuesPerTagPerRequest_returns400_putTagsNeverInvoked() {
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName("test-client-max-values-tag");
+        userConfiguration.setApiKey("test-api-key");
+        userConfiguration.setCanCreate(List.of("PN_AAR"));
+        userConfiguration.setCanWriteTags(true);
+        userConfiguration.setDurationMinutesUpload(5);
+        UserConfigurationResponse userConfigResponse = new UserConfigurationResponse();
+        userConfigResponse.setUserConfiguration(userConfiguration);
+
+        when(userConfigurationClientCall.getUser(anyString())).thenReturn(Mono.just(userConfigResponse));
+
+        FileCreationRequest fileCreationRequest = new FileCreationRequest();
+        fileCreationRequest.setContentType("application/pdf");
+        fileCreationRequest.setDocumentType("PN_AAR");
+        fileCreationRequest.setStatus("preloaded");
+        fileCreationRequest.setTags(Map.of("IUN", List.of("IUN1", "IUN2", "IUN3", "IUN4", "IUN5", "IUN6")));
+
+        webTestClient.post()
+                .uri(urlPath)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .header("x-pagopa-safestorage-cx-id", "test-client-max-values-tag")
+                .header("x-api-key", "test-api-key")
+                .header("x-checksum-value", "rL0Y20zC+Fzt72VPzMSk2A==")
+                .header("x-amzn-trace-id", "trace-max-values-tag")
+                .bodyValue(fileCreationRequest)
+                .exchange()
+                .expectStatus().isBadRequest();
+
+        verify(tagsClientCall, never()).putTags(any(), any());
+    }
+
+    @Test
     void createFileWithGlobalTag_keyUnchanged_returns200() {
         DocumentType documentType = new DocumentType();
         documentType.setTipoDocumento("PN_AAR");

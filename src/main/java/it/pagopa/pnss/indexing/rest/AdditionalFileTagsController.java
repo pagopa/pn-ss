@@ -84,7 +84,7 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
                     return ResponseEntity.ok().body(response);
                 })
                 .doOnSuccess(result -> log.logEndingProcess(GET_TAGS_DOCUMENT))
-                .doOnError(throwable -> log.logEndingProcess(GET_TAGS_DOCUMENT, false, throwable.getMessage())));
+                .doOnError(throwable -> log.logEndingProcess(GET_TAGS_DOCUMENT, false, throwable.getMessage(), throwable)));
     }
 
     @Override
@@ -96,7 +96,7 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
         return MDCUtils.addMDCToContextAndExecute(additionalFileTagsService.searchTags(xPagopaSafestorageCxId, logic, tags, tagParams)
                 .map(fileKeys -> ResponseEntity.ok().body(new AdditionalFileTagsSearchResponse().fileKeys(fileKeys)))
                 .doOnSuccess(result -> log.logEndingProcess(ADDITIONAL_FILE_TAGS_SEARCH))
-                .doOnError(throwable -> log.logEndingProcess(ADDITIONAL_FILE_TAGS_SEARCH, false, throwable.getMessage())));
+                .doOnError(throwable -> log.logEndingProcess(ADDITIONAL_FILE_TAGS_SEARCH, false, throwable.getMessage(), throwable)));
     }
 
     @Override
@@ -106,7 +106,7 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
         log.logStartingProcess(MASSIVE_POST_TAG_DOCUMENT);
         return additionalFileTagsMassiveUpdateRequest.flatMap(request -> additionalFileTagsService.postMassiveTags(request, xPagopaSafestorageCxId).map(response -> ResponseEntity.ok().body(response)))
             .doOnSuccess(result -> log.logEndingProcess(MASSIVE_POST_TAG_DOCUMENT))
-                .doOnError(throwable -> log.logEndingProcess(MASSIVE_POST_TAG_DOCUMENT, false, throwable.getMessage()));
+                .doOnError(throwable -> log.logEndingProcess(MASSIVE_POST_TAG_DOCUMENT, false, throwable.getMessage(), throwable));
     }
 
     @Override
@@ -119,7 +119,7 @@ public class AdditionalFileTagsController implements AdditionalFileTagsApi {
                         .map(response -> ResponseEntity.ok().body(response))).doOnSuccess(result -> log.logEndingProcess(POST_TAG_DOCUMENT))
                 .onErrorResume(DocumentKeyNotPresentException.class, throwable -> Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new AdditionalFileTagsUpdateResponse().resultCode("404.00").resultDescription(throwable.getMessage()))))
-                .doOnError(throwable -> log.logEndingProcess(POST_TAG_DOCUMENT, false, throwable.getMessage())));
+                .doOnError(throwable -> log.logEndingProcess(POST_TAG_DOCUMENT, false, throwable.getMessage(), throwable)));
     }
 
 }

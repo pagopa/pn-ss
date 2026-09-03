@@ -64,7 +64,7 @@ public class ConfigurationApiController implements CfgApi {
                 .map(ResponseEntity::ok)
                 .doOnSuccess(result -> log.logEndingProcess(GET_DOCUMENTS_CONFIGS))
                 .onErrorResume(throwable -> {
-                    log.logEndingProcess(GET_DOCUMENTS_CONFIGS, false, throwable.getMessage());
+                    log.logEndingProcess(GET_DOCUMENTS_CONFIGS, false, throwable.getMessage(), throwable);
                     return this.getDocumentTypesConfigurationsErrorResponse(throwable);
                 });
     }
@@ -92,7 +92,7 @@ public class ConfigurationApiController implements CfgApi {
                         UserConfiguration.class)))
                 .doOnSuccess(result -> log.logEndingProcess(GET_CURRENT_CLIENT_CONFIG))
                 .onErrorResume(throwable -> {
-                    log.logEndingProcess(GET_CURRENT_CLIENT_CONFIG, false, throwable.getMessage());
+                    log.logEndingProcess(GET_CURRENT_CLIENT_CONFIG, false, throwable.getMessage(), throwable);
                     return getUserConfigurationErrorResponse(throwable);
                 });
     }

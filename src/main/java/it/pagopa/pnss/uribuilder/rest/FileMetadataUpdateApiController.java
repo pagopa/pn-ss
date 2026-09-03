@@ -49,7 +49,7 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
                 request,
                 pagopaSafestorageCxIdValue,
                 apiKeyValue)).map(ResponseEntity::ok)
-                .doOnError(throwable -> log.logEndingProcess(UPDATE_FILE_METADATA, false, throwable.getMessage()))
+                .doOnError(throwable -> log.logEndingProcess(UPDATE_FILE_METADATA, false, throwable.getMessage(), throwable))
                 .doOnSuccess(result->log.logEndingProcess(UPDATE_FILE_METADATA)));
     }
 }

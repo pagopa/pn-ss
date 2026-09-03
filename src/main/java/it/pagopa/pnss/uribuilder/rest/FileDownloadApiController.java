@@ -44,6 +44,6 @@ public class FileDownloadApiController implements FileDownloadApi {
         return MDCUtils.addMDCToContextAndExecute(uriBuilderService.createUriForDownloadFile(fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly, tags)
                 .map(ResponseEntity::ok)
                 .doOnSuccess(result -> log.logEndingProcess(GET_FILE))
-                .doOnError(throwable -> log.logEndingProcess(GET_FILE, false, throwable.getMessage())));
+                .doOnError(throwable -> log.logEndingProcess(GET_FILE, false, throwable.getMessage(), throwable)));
     }
 }

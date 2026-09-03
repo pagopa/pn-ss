@@ -72,7 +72,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 		log.logStartingProcess(GET_DOC_TYPE);
 		return docTypesService.getDocType(typeId).map(docType -> ResponseEntity.ok(getResponse(docType)))
 				.onErrorResume(throwable -> getErrorResponse(typeId, throwable))
-				.doOnError(throwable -> log.logEndingProcess(GET_DOC_TYPE, false, throwable.getMessage()))
+				.doOnError(throwable -> log.logEndingProcess(GET_DOC_TYPE, false, throwable.getMessage(), throwable))
 				.doOnSuccess(result -> log.logEndingProcess(GET_DOC_TYPE));
 	}
 
@@ -82,7 +82,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 		return documentType.flatMap(docTypesService::insertDocType)
 				.map(docType -> ResponseEntity.ok(getResponse(docType)))
 				.onErrorResume(throwable -> getErrorResponse(null, throwable))
-				.doOnError(throwable -> log.logEndingProcess(INSERT_DOC_TYPE, false, throwable.getMessage()))
+				.doOnError(throwable -> log.logEndingProcess(INSERT_DOC_TYPE, false, throwable.getMessage(), throwable))
 				.doOnSuccess(result -> log.logEndingProcess(INSERT_DOC_TYPE));
 
 	}
@@ -93,7 +93,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 		return documentType.flatMap(request -> docTypesService.updateDocType(typeId, request))
 				.map(docType -> ResponseEntity.ok(getResponse(docType)))
 				.onErrorResume(throwable -> getErrorResponse(typeId, throwable))
-				.doOnError(throwable -> log.logEndingProcess(UPDATE_DOC_TYPE, false, throwable.getMessage()))
+				.doOnError(throwable -> log.logEndingProcess(UPDATE_DOC_TYPE, false, throwable.getMessage(), throwable))
 				.doOnSuccess(result -> log.logEndingProcess(UPDATE_DOC_TYPE));
 	}
 
@@ -102,7 +102,7 @@ public class DocTypeInternalApiController implements DocTypeInternalApi {
 		log.logStartingProcess(DELETE_DOC_TYPE);
 		return docTypesService.deleteDocType(typeId).map(docType -> ResponseEntity.noContent().<Void>build())
 				.onErrorResume(DocumentTypeNotPresentException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, throwable.getMessage(), throwable.getCause())))
-                .doOnError(throwable -> log.logEndingProcess(DELETE_DOC_TYPE, false, throwable.getMessage()))
+                .doOnError(throwable -> log.logEndingProcess(DELETE_DOC_TYPE, false, throwable.getMessage(), throwable))
 				.doOnSuccess(result -> log.logEndingProcess(DELETE_DOC_TYPE));
 	}
 }

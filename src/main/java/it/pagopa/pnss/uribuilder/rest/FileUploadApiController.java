@@ -73,7 +73,7 @@ public class FileUploadApiController implements FileUploadApi {
         						  .onErrorResume(ChecksumException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage())))
         						  .onErrorResume(IndexingLimitException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage())))
 								  .map(ResponseEntity::ok)
-				                  .doOnError(throwable -> log.logEndingProcess(CREATE_FILE, false, throwable.getMessage()))
+				                  .doOnError(throwable -> log.logEndingProcess(CREATE_FILE, false, throwable.getMessage(), throwable))
 				                  .doOnSuccess(result->log.logEndingProcess(CREATE_FILE)));
     }
 }

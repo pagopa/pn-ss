@@ -3,9 +3,7 @@ package it.pagopa.pnss.configuration;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.configurationproperties.DynamoRetryStrategyProperties;
-import it.pagopa.pnss.configurationproperties.GestoreRepositoryRetryStrategyProperties;
-import it.pagopa.pnss.configurationproperties.retry.S3RetryStrategyProperties;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.RetryBackoffSpec;
@@ -16,13 +14,38 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class RetryConfigurationTagsStrategyTest {
 
+    private static PnSsConfig buildPnSsConfig() {
+        PnSsConfig pnSsConfig = new PnSsConfig();
+
+        PnSsConfig.Dynamo dynamo = new PnSsConfig.Dynamo();
+        PnSsConfig.Dynamo.RetryStrategy dynamoRetryStrategy = new PnSsConfig.Dynamo.RetryStrategy();
+        dynamoRetryStrategy.setMaxAttempts(1L);
+        dynamoRetryStrategy.setMinBackoff(0L);
+        dynamo.setRetryStrategy(dynamoRetryStrategy);
+        pnSsConfig.setDynamo(dynamo);
+
+        PnSsConfig.GestoreRepository gestoreRepository = new PnSsConfig.GestoreRepository();
+        PnSsConfig.GestoreRepository.RetryStrategy gestoreRetryStrategy = new PnSsConfig.GestoreRepository.RetryStrategy();
+        gestoreRetryStrategy.setMaxAttempts(2L);
+        gestoreRetryStrategy.setMinBackoff(0L);
+        gestoreRepository.setRetryStrategy(gestoreRetryStrategy);
+        pnSsConfig.setGestoreRepository(gestoreRepository);
+
+        PnSsConfig.S3 s3 = new PnSsConfig.S3();
+        PnSsConfig.S3.RetryStrategy s3RetryStrategy = new PnSsConfig.S3.RetryStrategy();
+        s3RetryStrategy.setMaxAttempts(1L);
+        s3RetryStrategy.setMinBackoff(0L);
+        s3.setRetryStrategy(s3RetryStrategy);
+        pnSsConfig.setS3(s3);
+
+        return pnSsConfig;
+    }
+
     @Test
     void realTagsRetryStrategy_retriesOnDocumentKeyNotPresentException() {
-        GestoreRepositoryRetryStrategyProperties gestoreProps = new GestoreRepositoryRetryStrategyProperties(2L, 0L);
-        DynamoRetryStrategyProperties dynamoProps = new DynamoRetryStrategyProperties(1L, 0L);
-        S3RetryStrategyProperties s3Props = new S3RetryStrategyProperties(1L, 0L);
+        PnSsConfig pnSsConfig = buildPnSsConfig();
 
-        RetryConfiguration retryConfiguration = new RetryConfiguration(dynamoProps, gestoreProps, s3Props);
+        RetryConfiguration retryConfiguration = new RetryConfiguration(pnSsConfig);
         RetryBackoffSpec strategy = retryConfiguration.tagsRetryStrategy();
 
         AtomicInteger attempts = new AtomicInteger(0);
@@ -39,11 +62,9 @@ class RetryConfigurationTagsStrategyTest {
 
     @Test
     void realTagsRetryStrategy_retriesOnIdClientNotFoundException() {
-        GestoreRepositoryRetryStrategyProperties gestoreProps = new GestoreRepositoryRetryStrategyProperties(2L, 0L);
-        DynamoRetryStrategyProperties dynamoProps = new DynamoRetryStrategyProperties(1L, 0L);
-        S3RetryStrategyProperties s3Props = new S3RetryStrategyProperties(1L, 0L);
+        PnSsConfig pnSsConfig = buildPnSsConfig();
 
-        RetryConfiguration retryConfiguration = new RetryConfiguration(dynamoProps, gestoreProps, s3Props);
+        RetryConfiguration retryConfiguration = new RetryConfiguration(pnSsConfig);
         RetryBackoffSpec strategy = retryConfiguration.tagsRetryStrategy();
 
         AtomicInteger attempts = new AtomicInteger(0);
@@ -60,11 +81,9 @@ class RetryConfigurationTagsStrategyTest {
 
     @Test
     void realTagsRetryStrategy_retriesOnDocumentTypeNotPresentException() {
-        GestoreRepositoryRetryStrategyProperties gestoreProps = new GestoreRepositoryRetryStrategyProperties(2L, 0L);
-        DynamoRetryStrategyProperties dynamoProps = new DynamoRetryStrategyProperties(1L, 0L);
-        S3RetryStrategyProperties s3Props = new S3RetryStrategyProperties(1L, 0L);
+        PnSsConfig pnSsConfig = buildPnSsConfig();
 
-        RetryConfiguration retryConfiguration = new RetryConfiguration(dynamoProps, gestoreProps, s3Props);
+        RetryConfiguration retryConfiguration = new RetryConfiguration(pnSsConfig);
         RetryBackoffSpec strategy = retryConfiguration.tagsRetryStrategy();
 
         AtomicInteger attempts = new AtomicInteger(0);
@@ -81,11 +100,9 @@ class RetryConfigurationTagsStrategyTest {
 
     @Test
     void realTagsRetryStrategy_doesNotRetry_onUnrelatedException() {
-        GestoreRepositoryRetryStrategyProperties gestoreProps = new GestoreRepositoryRetryStrategyProperties(2L, 0L);
-        DynamoRetryStrategyProperties dynamoProps = new DynamoRetryStrategyProperties(1L, 0L);
-        S3RetryStrategyProperties s3Props = new S3RetryStrategyProperties(1L, 0L);
+        PnSsConfig pnSsConfig = buildPnSsConfig();
 
-        RetryConfiguration retryConfiguration = new RetryConfiguration(dynamoProps, gestoreProps, s3Props);
+        RetryConfiguration retryConfiguration = new RetryConfiguration(pnSsConfig);
         RetryBackoffSpec strategy = retryConfiguration.tagsRetryStrategy();
 
         AtomicInteger attempts = new AtomicInteger(0);

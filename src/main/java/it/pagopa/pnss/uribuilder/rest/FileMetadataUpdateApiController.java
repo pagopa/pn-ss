@@ -4,10 +4,10 @@ import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.FileMetadataUpdateApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.OperationResultCodeResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UpdateFileMetadataRequest;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.uribuilder.service.FileMetadataUpdateService;
 import lombok.CustomLog;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
@@ -22,14 +22,13 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
 
     final FileMetadataUpdateService fileMetadataUpdateService;
 
-    @Value("${header.x-api-key}")
-    private String apiKey;
+    private final String apiKey;
+    private final String pagopaSafestorageCxId;
 
-    @Value("${header.x-pagopa-safestorage-cx-id}")
-    private String pagopaSafestorageCxId;
-
-    public FileMetadataUpdateApiController(FileMetadataUpdateService fileMetadataUpdateService) {
+    public FileMetadataUpdateApiController(FileMetadataUpdateService fileMetadataUpdateService, PnSsConfig pnSsConfig) {
         this.fileMetadataUpdateService = fileMetadataUpdateService;
+        this.apiKey = pnSsConfig.getClientInterni().getHeader().getApiKey();
+        this.pagopaSafestorageCxId = pnSsConfig.getClientInterni().getHeader().getPagopaSafestorageCxId();
     }
 
     @Override

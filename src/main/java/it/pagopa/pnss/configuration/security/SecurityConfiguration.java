@@ -3,8 +3,8 @@ package it.pagopa.pnss.configuration.security;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationResponse;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -27,14 +27,13 @@ public class SecurityConfiguration {
 
     private final UserConfigurationClientCall userConfigurationClientCall;
 
-    @Value("${header.x-api-key}")
-    private String xApiKey;
+    private final String xApiKey;
+    private final String xPagopaSafestorageCxId;
 
-    @Value("${header.x-pagopa-safestorage-cx-id}")
-    private String xPagopaSafestorageCxId;
-
-    public SecurityConfiguration(UserConfigurationClientCall userConfigurationClientCall) {
+    public SecurityConfiguration(UserConfigurationClientCall userConfigurationClientCall, PnSsConfig pnSsConfig) {
         this.userConfigurationClientCall = userConfigurationClientCall;
+        this.xApiKey = pnSsConfig.getClientInterni().getHeader().getApiKey();
+        this.xPagopaSafestorageCxId = pnSsConfig.getClientInterni().getHeader().getPagopaSafestorageCxId();
     }
 
     @Bean

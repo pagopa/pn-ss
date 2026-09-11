@@ -6,8 +6,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.configuration.sqs.SqsTimeoutProvider;
-import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationDetail;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
@@ -48,11 +47,9 @@ class TransformationServiceTimeoutTest {
     @MockitoBean
     private DocumentClientCall documentClientCall;
     @Autowired
-    private BucketName bucketName;
+    private PnSsConfig pnSsConfig;
     @Autowired
     private S3Client s3TestClient;
-    @Autowired
-    AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
     @MockitoSpyBean
     private S3Service s3Service;
     @MockitoSpyBean
@@ -68,20 +65,20 @@ class TransformationServiceTimeoutTest {
 
     @BeforeEach
     void initialize() {
-        putObjectInBucket(FILE_KEY, bucketName.ssStageName(), new byte[10]);
+        putObjectInBucket(FILE_KEY, pnSsConfig.getBucket().getStageName(), new byte[10]);
     }
 
     @AfterEach
     void clean() {
-        deleteObjectInBucket(FILE_KEY, bucketName.ssHotName());
-        deleteObjectInBucket(FILE_KEY, bucketName.ssStageName());
+        deleteObjectInBucket(FILE_KEY, pnSsConfig.getBucket().getHotName());
+        deleteObjectInBucket(FILE_KEY, pnSsConfig.getBucket().getStageName());
     }
 
     @Test
     void signAndTimemark_LongTimeout() {
         //GIVEN
         String contentType="application/pdf";
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
         Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + SIGN_AND_TIMEMARK).value(OK).build();
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
@@ -102,7 +99,7 @@ class TransformationServiceTimeoutTest {
     void signAndTimemark_NoTimeout() {
         //GIVEN
         String contentType="application/pdf";
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
         Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + SIGN_AND_TIMEMARK).value(OK).build();
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
@@ -123,7 +120,7 @@ class TransformationServiceTimeoutTest {
     void signAndTimemark_ShortTimeout() {
         //GIVEN
         String contentType="application/pdf";
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
         Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + SIGN_AND_TIMEMARK).value(OK).build();
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 

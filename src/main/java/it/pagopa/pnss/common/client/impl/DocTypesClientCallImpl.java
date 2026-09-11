@@ -5,9 +5,9 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypeResp
 import it.pagopa.pnss.common.client.DocTypesClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -22,11 +22,11 @@ public class DocTypesClientCallImpl implements DocTypesClientCall {
 
     private final WebClient ssWebClient;
 
-    @Value("${gestore.repository.anagrafica.internal.docTypes}")
-    private String anagraficaDocTypesInternalClientEndpoint;
+    private final String anagraficaDocTypesInternalClientEndpoint;
 
-    public DocTypesClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient) {
+    public DocTypesClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient, PnSsConfig pnSsConfig) {
         this.ssWebClient = ssWebClient;
+        this.anagraficaDocTypesInternalClientEndpoint = pnSsConfig.getClientInterni().getEndpoint().getDocTypes();
     }
 
     @Override

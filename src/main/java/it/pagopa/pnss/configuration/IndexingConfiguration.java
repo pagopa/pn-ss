@@ -5,9 +5,9 @@ import it.pagopa.pnss.common.model.pojo.IndexingLimits;
 import it.pagopa.pnss.common.model.pojo.IndexingSettings;
 import it.pagopa.pnss.common.model.pojo.IndexingTag;
 import it.pagopa.pnss.common.utils.JsonUtils;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import jakarta.annotation.PostConstruct;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -35,14 +35,14 @@ public class IndexingConfiguration {
     /**
      * Instantiates a new Indexing configuration.
      *
-     * @param ssmAsyncClient            the ssm async client
-     * @param jsonUtils                 the json utils
-     * @param indexingConfigurationName the json parameter name containing the indexing configuration
+     * @param ssmAsyncClient the ssm async client
+     * @param jsonUtils      the json utils
+     * @param pnSsConfig     the centralized pn-ss configuration, providing the json parameter name containing the indexing configuration
      */
-    public IndexingConfiguration(SsmAsyncClient ssmAsyncClient, JsonUtils jsonUtils, @Value("${pn.ss.indexing.configuration.name}") String indexingConfigurationName) {
+    public IndexingConfiguration(SsmAsyncClient ssmAsyncClient, JsonUtils jsonUtils, PnSsConfig pnSsConfig) {
         this.ssmAsyncClient = ssmAsyncClient;
         this.jsonUtils = jsonUtils;
-        this.indexingConfigurationName = indexingConfigurationName;
+        this.indexingConfigurationName = pnSsConfig.getIndexing().getConfigurationName();
         this.tags = new ConcurrentHashMap<>();
     }
 

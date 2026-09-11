@@ -87,6 +87,7 @@ public class SecurityConfiguration {
         final AuthenticationWebFilter authenticationWebFilter = new AuthenticationWebFilter(reactiveAuthenticationManager);
         authenticationWebFilter.setServerAuthenticationConverter(serverAuthenticationConverter);
 
+
         return http.authorizeExchange()
                    .anyExchange()
                    .permitAll()

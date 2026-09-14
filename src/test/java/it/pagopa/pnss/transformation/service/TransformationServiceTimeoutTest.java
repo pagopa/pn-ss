@@ -126,7 +126,7 @@ class TransformationServiceTimeoutTest {
 
         //WHEN
         when(sqsTimeoutProvider.getTimeoutForQueue(anyString())).thenReturn(Duration.ofMillis(2));
-        when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.delay(Duration.ofMillis(50)).map(l -> new PnSignDocumentResponse(new byte[]{1,2,3})));
+        doReturn(Mono.delay(Duration.ofMillis(50)).map(l -> new PnSignDocumentResponse(new byte[]{1,2,3}))).when(pnSignProviderService).signPdfDocument(any(), any());
 
 
         mockSignCalls();

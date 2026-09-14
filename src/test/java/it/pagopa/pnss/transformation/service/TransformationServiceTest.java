@@ -317,7 +317,7 @@ class TransformationServiceTest {
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
         //WHEN
-        when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception")));
+        doReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception"))).when(pnSignProviderService).signPdfDocument(any(), any());
         var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura,QUEUE_NAME);
 
         //THEN

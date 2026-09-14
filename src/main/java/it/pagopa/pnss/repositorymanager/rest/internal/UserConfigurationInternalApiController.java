@@ -75,7 +75,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 				.map(userConfiguration -> ResponseEntity.ok(getResponse(userConfiguration)))
 				.doOnSuccess(result -> log.logEndingProcess(GET_USER_CONFIGURATION))
 				.onErrorResume(throwable -> {
-					log.logEndingProcess(GET_USER_CONFIGURATION, false, throwable.getMessage());
+					log.logEndingProcess(GET_USER_CONFIGURATION, false, throwable.getMessage(), throwable);
 					return getResponse(name, throwable);
 				});
 
@@ -92,7 +92,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 				.map(userConfigurationOutput -> ResponseEntity.ok(getResponse(userConfigurationOutput)))
 				.doOnSuccess(result -> log.logEndingProcess(INSERT_USER_CONFIGURATION))
 				.onErrorResume(throwable -> {
-					log.logEndingProcess(INSERT_USER_CONFIGURATION, false, throwable.getMessage());
+					log.logEndingProcess(INSERT_USER_CONFIGURATION, false, throwable.getMessage(), throwable);
 					return getResponse(null, throwable);
 				});
 
@@ -108,7 +108,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 				.map(userConfigurationOutput -> ResponseEntity.ok(getResponse(userConfigurationOutput)))
 				.doOnSuccess(result -> log.logEndingProcess(PATCH_USER_CONFIGURATION))
 				.onErrorResume(throwable -> {
-					log.logEndingProcess(PATCH_USER_CONFIGURATION, false, throwable.getMessage());
+					log.logEndingProcess(PATCH_USER_CONFIGURATION, false, throwable.getMessage(), throwable);
 					return getResponse(name, throwable);
 				});
 	}
@@ -122,7 +122,7 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 				.map(docType -> ResponseEntity.noContent().<Void>build())
 				.doOnSuccess(result -> log.logEndingProcess(DELETE_USER_CONFIGURATION))
 				.onErrorResume(IdClientNotFoundException.class, throwable -> {
-					log.logEndingProcess(DELETE_USER_CONFIGURATION, false, throwable.getMessage());
+					log.logEndingProcess(DELETE_USER_CONFIGURATION, false, throwable.getMessage(), throwable);
 					return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
 							throwable.getMessage(), throwable.getCause()));
 				});

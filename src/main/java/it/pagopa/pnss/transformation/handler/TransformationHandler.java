@@ -53,7 +53,7 @@ public class TransformationHandler {
                         .doOnSuccess(result -> {
                             log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT);
                             acknowledgment.acknowledge();
-                        }).doOnError(throwable -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, throwable.getMessage()))
+                        }).doOnError(throwable -> log.logEndingProcess(PROCESS_TRANSFORMATION_EVENT, false, throwable.getMessage(), throwable))
         ).subscribe();
     }
 
@@ -87,7 +87,7 @@ public class TransformationHandler {
                     log.logEndingProcess(op);
                     acknowledgment.acknowledge();
                 })
-                .doOnError(throwable -> log.logEndingProcess(op, false, throwable.getMessage())));
+                .doOnError(throwable -> log.logEndingProcess(op, false, throwable.getMessage(), throwable)));
     }
 
     private void acquireSemaphore(Semaphore semaphore) {

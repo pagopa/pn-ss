@@ -86,7 +86,7 @@ public class IgnoredUpdateMetadataConfig {
         log.logStartingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED);
         refreshIgnoredUpdateMetadataList()
                 .onErrorResume(FileNotModifiedException.class, throwable -> Mono.empty())
-                .doOnError(throwable -> log.logEndingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED, false, throwable.getMessage()))
+                .doOnError(throwable -> log.logEndingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED, false, throwable.getMessage(), throwable))
                 .doOnSuccess(result -> log.logEndingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED))
                 .block();
     }

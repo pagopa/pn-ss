@@ -33,7 +33,7 @@ public class ScadenzaDocumentiInternalApiController implements ScadenzaDocumenti
                 .map(scadenzaDocumenti -> new ScadenzaDocumentiResponse().scadenzaDocumenti(scadenzaDocumenti))
                 .map(ResponseEntity::ok)
                 .doOnSuccess(result -> log.logEndingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI))
-                .doOnError(throwable -> log.logEndingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI, false, throwable.getMessage()))
+                .doOnError(throwable -> log.logEndingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI, false, throwable.getMessage(), throwable))
                 .onErrorResume(RepositoryManagerException.class, e -> Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ScadenzaDocumentiResponse().error(
                         new Error().code("400").description(e.getMessage())))))
                 .onErrorResume(DynamoDbException.class, e -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ScadenzaDocumentiResponse().error(

@@ -161,7 +161,7 @@ public class StreamsRecordProcessor {
     public CompletableFuture<GetItemResponse> getFromDynamo(String cxId){
         final String METHOD_NAME = "getFromDynamo()";
         log.debug(LogUtils.INVOKING_METHOD, METHOD_NAME, cxId);
-        return dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
+        return dynamoDbClient.getItem(builder -> builder.tableName(pnSsConfig.getDynamo().getRepositoryManager().getAnagraficaClientName())
                 .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
                 .projectionExpression(CAN_READ_TAGS));
     }

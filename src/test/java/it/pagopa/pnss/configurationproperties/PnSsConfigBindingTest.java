@@ -7,7 +7,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(classes = PnSsConfig.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(classes = PnSsConfig.class, webEnvironment = SpringBootTest.WebEnvironment.NONE,
+        properties = "spring.config.location=classpath:/application.properties")
 @EnableConfigurationProperties(PnSsConfig.class)
 class PnSsConfigBindingTest {
 

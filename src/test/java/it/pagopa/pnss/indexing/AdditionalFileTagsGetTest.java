@@ -5,7 +5,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
@@ -128,10 +128,10 @@ AdditionalFileTagsGetTest {
 
     @BeforeAll
     public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+                                             @Autowired PnSsConfig pnSsConfig) {
         log.info("execute insertDefaultDocument()");
         dynamoDbTable = dynamoDbEnhancedClient.table(
-                gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+                pnSsConfig.getDynamo().getRepositoryManager().getDocumentiName(), TableSchema.fromBean(DocumentEntity.class));
         insertDocumentEntityWithTags(PARTITION_ID_ENTITY_TAGS);
 
     }

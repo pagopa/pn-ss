@@ -8,7 +8,7 @@ import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.S3BucketException;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
@@ -108,7 +108,7 @@ class UriBuilderServiceDownloadTest {
     String testAwsS3Endpoint;
 
     @Autowired
-    BucketName bucketName;
+    PnSsConfig pnSsConfig;
 
     @Autowired
     S3Client s3TestClient;
@@ -711,10 +711,10 @@ class UriBuilderServiceDownloadTest {
     private Instant createRealDeleteMarker(String key) {
         byte[] fileBytes = readPdfDocoument();
         String contentMD5 = new String(org.apache.commons.codec.binary.Base64.encodeBase64(org.apache.commons.codec.digest.DigestUtils.md5(fileBytes)));
-        s3TestClient.putObject(PutObjectRequest.builder().bucket(bucketName.ssHotName()).key(key).contentMD5(contentMD5).build(),
+        s3TestClient.putObject(PutObjectRequest.builder().bucket(pnSsConfig.getBucket().getHotName()).key(key).contentMD5(contentMD5).build(),
                 RequestBody.fromBytes(fileBytes));
-        s3TestClient.deleteObject(DeleteObjectRequest.builder().bucket(bucketName.ssHotName()).key(key).build());
-        return s3TestClient.listObjectVersions(ListObjectVersionsRequest.builder().bucket(bucketName.ssHotName()).prefix(key).build())
+        s3TestClient.deleteObject(DeleteObjectRequest.builder().bucket(pnSsConfig.getBucket().getHotName()).key(key).build());
+        return s3TestClient.listObjectVersions(ListObjectVersionsRequest.builder().bucket(pnSsConfig.getBucket().getHotName()).prefix(key).build())
                 .deleteMarkers().stream()
                 .filter(dm -> key.equals(dm.key()))
                 .max(Comparator.comparing(DeleteMarkerEntry::lastModified))
@@ -1002,7 +1002,7 @@ class UriBuilderServiceDownloadTest {
         client.endpointOverride(URI.create(testAwsS3Endpoint));
         S3Client s3Client = client.build();
         PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(bucketName.ssHotName())
+                .bucket(pnSsConfig.getBucket().getHotName())
                 .storageClass(StorageClass.GLACIER)
                 .key(fileName).build();
 

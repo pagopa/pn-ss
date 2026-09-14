@@ -6,12 +6,11 @@ import it.pagopa.pnss.common.model.pojo.SqsMessageWrapper;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.EventBridgeUtil;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.configurationproperties.StreamRecordProcessorQueueName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.configurationproperties.retry.SqsEventHandlerRetryStrategyProperties;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import lombok.CustomLog;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -51,28 +50,20 @@ public class StreamsRecordProcessor {
     private static final String CAN_READ_TAGS = "canReadTags";
     private final EventBridgeClient eventBridgeClient;
     private final SqsService sqsService;
-    private final StreamRecordProcessorQueueName streamRecordProcessorQueueName;
+    private final PnSsConfig pnSsConfig;
 
     private final RetryBackoffSpec sqsEnventHandlerRetryStrategy;
 
-    @Value("${pn.ss.event-handler.max.messages}")
-    private int maxMessages;
-
-
     DynamoDbAsyncClient dynamoDbClient;
-    @Value("${event.bridge.disponibilita-documenti-name}")
-    private String disponibilitaDocumentiEventBridge;
-    @Value("${pn.ss.safe-clients}")
-    private String safeClients;
 
 
 
 
-    public StreamsRecordProcessor(DynamoDbAsyncClient dynamoDbClient, SqsService sqsService, StreamRecordProcessorQueueName streamRecordProcessorQueueName, SqsEventHandlerRetryStrategyProperties sqsEventHandlerRetryStrategyProperties, EventBridgeClient eventBridgeClient) {
+    public StreamsRecordProcessor(DynamoDbAsyncClient dynamoDbClient, SqsService sqsService, PnSsConfig pnSsConfig, SqsEventHandlerRetryStrategyProperties sqsEventHandlerRetryStrategyProperties, EventBridgeClient eventBridgeClient) {
         this.eventBridgeClient = eventBridgeClient;
         this.dynamoDbClient = dynamoDbClient;
         this.sqsService = sqsService;
-        this.streamRecordProcessorQueueName = streamRecordProcessorQueueName;
+        this.pnSsConfig = pnSsConfig;
         this.sqsEnventHandlerRetryStrategy = Retry.backoff(sqsEventHandlerRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(sqsEventHandlerRetryStrategyProperties.minBackoff()))
                 .filter(throwable -> throwable instanceof DynamoDbException || throwable instanceof SdkClientException || throwable instanceof EventBridgeException)
                 .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure()+","+retrySignal.failure().getMessage()));
@@ -90,7 +81,7 @@ public class StreamsRecordProcessor {
                 .flatMap(wrappers ->
                      Flux.fromIterable(wrappers)
                             .map(SqsMessageWrapper::getMessage)
-                            .flatMap(message ->sqsService.deleteMessageFromQueue(message, streamRecordProcessorQueueName.sqsName()))
+                            .flatMap(message ->sqsService.deleteMessageFromQueue(message, pnSsConfig.getSqs().getAvailability().getSqsName()))
                 )
                 .retryWhen(sqsEnventHandlerRetryStrategy)
                 .transform(pullFromFluxUntilIsEmpty())
@@ -121,7 +112,7 @@ public class StreamsRecordProcessor {
     public Flux<Tuple2<SqsMessageWrapper<DocumentStateDto>, PutEventsRequestEntry>> findEventSendToBridge() {
         final String FIND_EVENT_SEND_TO_BRIDGE = "StreamRecordProcessor.findEventSendToBridge()";
         log.debug(INVOKING_METHOD, FIND_EVENT_SEND_TO_BRIDGE);
-        return sqsService.getMessages(streamRecordProcessorQueueName.sqsName(), DocumentStateDto.class, maxMessages)
+        return sqsService.getMessages(pnSsConfig.getSqs().getAvailability().getSqsName(), DocumentStateDto.class, pnSsConfig.getEventHandler().getMaxMessages())
                 .flatMap(this::buildEventEntryWithMessage)
                 .doOnError(e -> log.fatal("DBStream: Errore generico nella gestione dell'evento - {}", e.getMessage(), e))
                 .doOnComplete(() -> log.info("DBStream: Nessun evento da inviare a bridge"));
@@ -133,7 +124,7 @@ public class StreamsRecordProcessor {
         return MDCUtils.addMDCToContextAndExecute(getCanReadTags(docEntity)
                 .mapNotNull(canReadTags -> {
                     PutEventsRequestEntry putEventsRequestEntry = EventBridgeUtil.createMessage(docEntity,
-                            disponibilitaDocumentiEventBridge,
+                            pnSsConfig.getEventBridge().getDisponibilitaDocumentiName(),
                             recordEvent.getMessageContent().getOldDocumentState(),
                             canReadTags);
                     if (putEventsRequestEntry != null) {
@@ -170,7 +161,7 @@ public class StreamsRecordProcessor {
     public CompletableFuture<GetItemResponse> getFromDynamo(String cxId){
         final String METHOD_NAME = "getFromDynamo()";
         log.debug(LogUtils.INVOKING_METHOD, METHOD_NAME, cxId);
-        return dynamoDbClient.getItem(builder -> builder.tableName("pn-SsAnagraficaClient")
+        return dynamoDbClient.getItem(builder -> builder.tableName(pnSsConfig.getDynamo().getRepositoryManager().getAnagraficaClientName())
                 .key(Map.of("name", AttributeValue.builder().s(cxId).build()))
                 .projectionExpression(CAN_READ_TAGS));
     }
@@ -181,8 +172,9 @@ public class StreamsRecordProcessor {
     }
 
     private List<String> getClientList() {
+        String safeClients = pnSsConfig.getSafeClients();
         if (safeClients == null || safeClients.isEmpty()) {
-            safeClients="";
+            safeClients = "";
         }
         return List.of(safeClients.strip().split(";"));
     }

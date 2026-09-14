@@ -2,7 +2,7 @@ package it.pagopa.pnss.repositorymanager.rest.internal;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocumentiInput;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocumentiResponse;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.ScadenzaDocumentiEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
@@ -31,9 +31,9 @@ public class ScadenzaDocumentiInternalApiControllerTest {
     private static final long SECONDS_TO_ADD = 31536000;
 
     @BeforeAll
-    public static void setup(@Autowired DynamoDbEnhancedClient enhancedClient, @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+    public static void setup(@Autowired DynamoDbEnhancedClient enhancedClient, @Autowired PnSsConfig pnSsConfig) {
         log.info("execute insertScadenzaDocumenti()");
-        DynamoDbTable<ScadenzaDocumentiEntity> dynamoTable = enhancedClient.table(gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(ScadenzaDocumentiEntity.class));
+        DynamoDbTable<ScadenzaDocumentiEntity> dynamoTable = enhancedClient.table(pnSsConfig.getDynamo().getRepositoryManager().getDocumentiName(), TableSchema.fromBean(ScadenzaDocumentiEntity.class));
         ScadenzaDocumentiEntity scadenzaDocumenti = new ScadenzaDocumentiEntity();
         scadenzaDocumenti.setRetentionUntil(Instant.EPOCH.plusSeconds(SECONDS_TO_ADD).getEpochSecond());
         scadenzaDocumenti.setDocumentKey(DOCUMENT_KEY);

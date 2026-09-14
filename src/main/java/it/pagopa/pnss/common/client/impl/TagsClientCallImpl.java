@@ -8,9 +8,9 @@ import it.pagopa.pnss.common.client.TagsClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.TagKeyValueNotPresentException;
 import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -25,19 +25,17 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @Service
 public class TagsClientCallImpl implements TagsClientCall {
 
-    @Value("${header.x-pagopa-safestorage-cx-id}")
-    private String xPagopaSafestorageCxId;
-
-    @Value("${gestore.repository.anagrafica.internal.tags.get}")
-    private String anagraficaTagsClientEndpointGet;
-
-    @Value("${gestore.repository.anagrafica.internal.tags.put}")
-    private String anagraficaTagsClientEndpointPut;
+    private final String xPagopaSafestorageCxId;
+    private final String anagraficaTagsClientEndpointGet;
+    private final String anagraficaTagsClientEndpointPut;
 
     private final WebClient ssWebClient;
 
-    public TagsClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient) {
+    public TagsClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient, PnSsConfig pnSsConfig) {
         this.ssWebClient = ssWebClient;
+        this.xPagopaSafestorageCxId = pnSsConfig.getClientInterni().getHeader().getPagopaSafestorageCxId();
+        this.anagraficaTagsClientEndpointGet = pnSsConfig.getClientInterni().getEndpoint().getTagsGet();
+        this.anagraficaTagsClientEndpointPut = pnSsConfig.getClientInterni().getEndpoint().getTagsPut();
     }
 
     @Override

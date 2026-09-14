@@ -9,10 +9,10 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.exception.IndexingLimitException;
 import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
 import it.pagopa.pnss.common.exception.RequestValidationException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.CustomLog;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,15 +31,15 @@ import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 @CustomLog
 public class FileUploadApiController implements FileUploadApi {
 
-    @Value("${queryParam.presignedUrl.traceId}")
-    private String xTraceId;
+    private final String xTraceId;
 
     private final UriBuilderService uriBuilderService;
     private final Environment env;
 
-    public FileUploadApiController(UriBuilderService uriBuilderService, Environment env) {
+    public FileUploadApiController(UriBuilderService uriBuilderService, Environment env, PnSsConfig pnSsConfig) {
         this.uriBuilderService = uriBuilderService;
         this.env = env;
+        this.xTraceId = pnSsConfig.getClientInterni().getQueryParam().getPresignedUrlTraceId();
     }
 
     @ExceptionHandler(PutTagsBadRequestException.class)

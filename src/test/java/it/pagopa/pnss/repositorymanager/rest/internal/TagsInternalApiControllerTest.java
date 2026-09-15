@@ -2,7 +2,7 @@ package it.pagopa.pnss.repositorymanager.rest.internal;
 
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.TagsResponse;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.TagsRelationsEntity;
 import it.pagopa.pnss.repositorymanager.service.TagsService;
@@ -43,9 +43,9 @@ class TagsInternalApiControllerTest {
 
     @BeforeAll
     public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName repositoryManagerDynamoTableName) {
-        tagsEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.tagsName(), TableSchema.fromBean(TagsRelationsEntity.class));
-        documentEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+                                             @Autowired PnSsConfig pnSsConfig) {
+        tagsEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(pnSsConfig.getDynamo().getRepositoryManager().getTagsName(), TableSchema.fromBean(TagsRelationsEntity.class));
+        documentEntityDynamoDbAsyncTable = dynamoDbEnhancedClient.table(pnSsConfig.getDynamo().getRepositoryManager().getDocumentiName(), TableSchema.fromBean(DocumentEntity.class));
         GetTagsTest.insertTagEntity();
     }
 

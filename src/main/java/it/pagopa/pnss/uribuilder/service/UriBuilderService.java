@@ -13,8 +13,7 @@ import it.pagopa.pnss.common.exception.InvalidConfigurationException;
 import it.pagopa.pnss.common.exception.RestoreRequestDateNotFound;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
-import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.indexing.service.AdditionalFileTagsService;
 import it.pagopa.pnss.repositorymanager.exception.QueryParamException;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -57,43 +56,25 @@ import static it.pagopa.pnss.common.utils.LogUtils.*;
 @CustomLog
 public class UriBuilderService {
 
-    @Value("${uri.builder.presigned.url.duration.minutes.download}")
-    Integer durationMinutesDownload;
-
-    @Value("${uri.builder.presigned.url.duration.minutes.upload}")
-    Integer durationMinutesUpload;
-
-    @Value("${uri.builder.stay.Hot.Bucket.tyme.days}")
-    Integer stayHotTime;
-
-    @Value("${header.presignUrl.checksum-sha256:#{null}}")
-    String headerChecksumSha256;
-
-    @Value("${presignedUrl.initial.newDocument.state}")
-    String initialNewDocumentState;
+    final Integer durationMinutesDownload;
+    final Integer durationMinutesUpload;
+    final Integer stayHotTime;
+    final String headerChecksumSha256;
+    final String initialNewDocumentState;
 
     @Value("${test.aws.s3.endpoint:#{null}}")
     private String testAwsS3Endpoint;
 
-    @Value("${queryParam.presignedUrl.traceId:#{null}}")
-    String queryParamPresignedUrlTraceId;
-
-    @Value("${max.restore.time.cold}")
-    BigDecimal maxRestoreTimeCold;
-
-    @Value("${default.internal.x-api-key.value:#{null}}")
-    private String defaultInternalApiKeyValue;
-
-    @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
-    private String defaultInternalClientIdValue;
-
-    @Value("${amz.restore.request.date.header.name}")
-    private String restoreRequestDateHeaderName;
+    final String queryParamPresignedUrlTraceId;
+    final BigDecimal maxRestoreTimeCold;
+    private final String defaultInternalApiKeyValue;
+    private final String defaultInternalClientIdValue;
+    private final String restoreRequestDateHeaderName;
 
     private final GetFilePatchConfiguration getFileWithPatchConfiguration;
     private final UserConfigurationClientCall userConfigurationClientCall;
     private final DocumentClientCall documentClientCall;
-    private final BucketName bucketName;
+    private final PnSsConfig pnSsConfig;
     private final DocTypesClientCall docTypesClientCall;
     private final TagsClientCall tagsClientCall;
     private final S3Service s3Service;
@@ -112,45 +93,48 @@ public class UriBuilderService {
     private final IndexingConfiguration indexingConfiguration;
     private final RetryBackoffSpec tagsRetryStrategy;
 
-
-    final RepositoryManagerDynamoTableName managerDynamoTableName;
-
     public UriBuilderService(UserConfigurationClientCall userConfigurationClientCall,
                              DocumentClientCall documentClientCall,
-                             BucketName bucketName,
+                             PnSsConfig pnSsConfig,
                              DocTypesClientCall docTypesClientCall,
                              TagsClientCall tagsClientCall,
                              S3Service s3Service,
                              S3Presigner s3Presigner,
-                             @Value("${uri.builder.get.file.with.patch.configuration}") String getFileWithPatchConfigValue,
                              AdditionalFileTagsService additionalFileTagsService,
                              @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy,
                              ThreadPoolTaskExecutor taskExecutor,
                              IndexingConfiguration indexingConfiguration,
-                             RepositoryManagerDynamoTableName managerDynamoTableName,
                              @Qualifier("tagsRetryStrategy") RetryBackoffSpec tagsRetryStrategy) {
         this.userConfigurationClientCall = userConfigurationClientCall;
         this.documentClientCall = documentClientCall;
-        this.bucketName = bucketName;
+        this.pnSsConfig = pnSsConfig;
         this.docTypesClientCall = docTypesClientCall;
         this.tagsClientCall = tagsClientCall;
         this.s3Service = s3Service;
         this.s3Presigner = s3Presigner;
-        this.getFileWithPatchConfiguration= GetFilePatchConfiguration.valueOf(getFileWithPatchConfigValue);
+        this.getFileWithPatchConfiguration = GetFilePatchConfiguration.valueOf(pnSsConfig.getUriBuilder().getGetFileWithPatchConfiguration());
         this.additionalFileTagsService = additionalFileTagsService;
         this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
         this.taskExecutor = taskExecutor;
         this.indexingConfiguration = indexingConfiguration;
-        this.managerDynamoTableName = managerDynamoTableName;
         this.tagsRetryStrategy = tagsRetryStrategy;
-
+        this.durationMinutesDownload = pnSsConfig.getUriBuilder().getPresignedUrl().getDurationMinutesDownload();
+        this.durationMinutesUpload = pnSsConfig.getUriBuilder().getPresignedUrl().getDurationMinutesUpload();
+        this.stayHotTime = pnSsConfig.getUriBuilder().getStayHotBucketTimeDays();
+        this.headerChecksumSha256 = pnSsConfig.getUriBuilder().getPresignedUrl().getChecksumSha256Header();
+        this.initialNewDocumentState = pnSsConfig.getUriBuilder().getInitialNewDocumentState();
+        this.queryParamPresignedUrlTraceId = pnSsConfig.getClientInterni().getQueryParam().getPresignedUrlTraceId();
+        this.maxRestoreTimeCold = pnSsConfig.getUriBuilder().getMaxRestoreTimeCold();
+        this.defaultInternalApiKeyValue = pnSsConfig.getRetention().getDefaultInternalApiKeyValue();
+        this.defaultInternalClientIdValue = pnSsConfig.getRetention().getDefaultInternalClientIdValue();
+        this.restoreRequestDateHeaderName = pnSsConfig.getUriBuilder().getRestoreRequestDateHeaderName();
     }
 
     private Mono<String> getBucketName(DocumentType docType) {
         var transformations = docType.getTransformations();
         if (transformations == null || transformations.isEmpty()) {
-            return Mono.just(bucketName.ssHotName());
-        } else return Mono.just(bucketName.ssStageName());
+            return Mono.just(pnSsConfig.getBucket().getHotName());
+        } else return Mono.just(pnSsConfig.getBucket().getStageName());
     }
 
 
@@ -459,7 +443,7 @@ public class UriBuilderService {
             return Mono.just(fallbackTimestamp(document));
         }
 
-        return s3Service.listObjectVersions(documentKey, bucketName.ssHotName())
+        return s3Service.listObjectVersions(documentKey, pnSsConfig.getBucket().getHotName())
                 .map(resp -> resp.deleteMarkers().stream()
                         .filter(dm -> documentKey.equals(dm.key()))
                         .max(Comparator.comparing(DeleteMarkerEntry::lastModified))
@@ -481,9 +465,9 @@ public class UriBuilderService {
         boolean hasRetentionUntilNull = StringUtils.isBlank(document.getRetentionUntil());
 
         if (isBooked || hasRetentionUntilNull) {
-            log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", document.getDocumentKey(), bucketName.ssHotName());
+            log.info(CLIENT_METHOD_INVOCATION + ARG, "s3Service.headObject()", document.getDocumentKey(), pnSsConfig.getBucket().getHotName());
 
-            return s3Service.headObject(document.getDocumentKey(), bucketName.ssHotName())
+            return s3Service.headObject(document.getDocumentKey(), pnSsConfig.getBucket().getHotName())
                     .onErrorResume(NoSuchKeyException.class, throwable -> Mono.error(new S3BucketException.NoSuchKeyException(document.getDocumentKey())))
                     .map(headObjectResponse -> {
                         DocumentChanges documentChanges;
@@ -645,9 +629,9 @@ public class UriBuilderService {
         if (Boolean.TRUE.equals(metadataOnly))
             return Mono.empty();
         if (!status.equalsIgnoreCase(TECHNICAL_STATUS_FREEZED)) {
-            return getPresignedUrl(bucketName.ssHotName(), fileKey, xTraceIdValue, finalDurationDownload);
+            return getPresignedUrl(pnSsConfig.getBucket().getHotName(), fileKey, xTraceIdValue, finalDurationDownload);
         } else {
-            return recoverDocumentFromBucket(bucketName.ssHotName(), fileKey);
+            return recoverDocumentFromBucket(pnSsConfig.getBucket().getHotName(), fileKey);
         }
     }
     private Mono<FileDownloadInfo> recoverDocumentFromBucket(String bucketName, String keyName) throws S3BucketException.NoSuchKeyException {

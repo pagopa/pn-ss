@@ -9,7 +9,7 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.model.pojo.IndexingTag;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.entity.TagsRelationsEntity;
 import it.pagopa.pnss.common.exception.IndexingLimitException;
@@ -65,14 +65,14 @@ public class TagsServiceImpl implements TagsService {
      *
      * @param objectMapper                     the object mapper
      * @param dynamoDbEnhancedAsyncClient      the dynamo db enhanced async client
-     * @param repositoryManagerDynamoTableName the repository manager dynamo table name
+     * @param pnSsConfig the consolidated pn-ss configuration
      * @param indexingConfiguration            the indexing configuration
      */
-    public TagsServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient, RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, IndexingConfiguration indexingConfiguration) {
+    public TagsServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient, PnSsConfig pnSsConfig, IndexingConfiguration indexingConfiguration) {
         this.objectMapper = objectMapper;
         this.indexingConfiguration = indexingConfiguration;
-        this.tagsEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.tagsName(), TableSchema.fromBean(TagsRelationsEntity.class)));
-        this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class)));
+        this.tagsEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(pnSsConfig.getDynamo().getRepositoryManager().getTagsName(), TableSchema.fromBean(TagsRelationsEntity.class)));
+        this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(pnSsConfig.getDynamo().getRepositoryManager().getDocumentiName(), TableSchema.fromBean(DocumentEntity.class)));
     }
 
     private Mono<TagsRelationsEntity> getErrorIdTagNotFoundException(String tagKeyValue) {

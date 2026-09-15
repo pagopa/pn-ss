@@ -5,8 +5,8 @@ import it.pagopa.pn.library.sign.pojo.SignatureType;
 import it.pagopa.pnss.common.exception.CloudWatchResourceNotFoundException;
 import it.pagopa.pnss.configuration.cloudwatch.CloudWatchMetricPublisherConfiguration;
 import it.pagopa.pnss.configuration.cloudwatch.MetricsDimensionConfiguration;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.metrics.MetricCollector;
@@ -27,24 +27,25 @@ public class CloudWatchMetricsService {
 
     private final CloudWatchMetricPublisherConfiguration cloudWatchMetricPublisherConfiguration;
     private final MetricsDimensionConfiguration metricsDimensionConfiguration;
-    @Value("${pn.sign.cloudwatch.metric.dimension.file-size-range}")
-    private String fileSizeRangeDimensionName;
-    @Value("${pn.sign.cloudwatch.metric.response-time.pades}")
-    private String signPadesReadResponseTimeMetric;
-    @Value("${pn.sign.cloudwatch.metric.response-time.xades}")
-    private String signXadesReadResponseTimeMetric;
-    @Value("${pn.sign.cloudwatch.metric.response-time.cades}")
-    private String signCadesReadResponseTimeMetric;
+    private final String fileSizeRangeDimensionName;
+    private final String signPadesReadResponseTimeMetric;
+    private final String signXadesReadResponseTimeMetric;
+    private final String signCadesReadResponseTimeMetric;
 
     /**
      * Constructor for the CloudWatchMetricsService class.
      *
      * @param cloudWatchMetricPublisherConfiguration Configuration for the CloudWatchMetricPublisher.
      * @param metricsDimensionConfiguration          Configuration for the metrics dimensions.
+     * @param pnSsConfig                             The centralized pn-ss configuration.
      */
-    public CloudWatchMetricsService(CloudWatchMetricPublisherConfiguration cloudWatchMetricPublisherConfiguration, MetricsDimensionConfiguration metricsDimensionConfiguration) {
+    public CloudWatchMetricsService(CloudWatchMetricPublisherConfiguration cloudWatchMetricPublisherConfiguration, MetricsDimensionConfiguration metricsDimensionConfiguration, PnSsConfig pnSsConfig) {
         this.cloudWatchMetricPublisherConfiguration = cloudWatchMetricPublisherConfiguration;
         this.metricsDimensionConfiguration = metricsDimensionConfiguration;
+        this.fileSizeRangeDimensionName = pnSsConfig.getSign().getCloudwatch().getMetricDimensionFileSizeRange();
+        this.signPadesReadResponseTimeMetric = pnSsConfig.getSign().getCloudwatch().getMetricResponseTime().getPades();
+        this.signXadesReadResponseTimeMetric = pnSsConfig.getSign().getCloudwatch().getMetricResponseTime().getXades();
+        this.signCadesReadResponseTimeMetric = pnSsConfig.getSign().getCloudwatch().getMetricResponseTime().getCades();
     }
 
     /**

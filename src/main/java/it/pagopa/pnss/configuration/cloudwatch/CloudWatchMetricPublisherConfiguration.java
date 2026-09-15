@@ -1,10 +1,10 @@
 package it.pagopa.pnss.configuration.cloudwatch;
 
 import it.pagopa.pnss.common.exception.CloudWatchResourceNotFoundException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.metrics.MetricCategory;
 import software.amazon.awssdk.metrics.MetricLevel;
@@ -22,24 +22,27 @@ import java.util.Map;
 @Configuration
 @CustomLog
 public class CloudWatchMetricPublisherConfiguration {
-    @Value("${pn.sign.cloudwatch.namespace.aruba}")
-    private String arubaPecNamespace;
-    @Value("${pn.sign.cloudwatch.namespace.namirial}")
-    private String namirialPecNamespace;
-    @Value("${pn.sign.cloudwatch.metric.response-time.pades}")
-    private String signPadesReadResponseTimeMetric;
-    @Value("${pn.sign.cloudwatch.metric.response-time.xades}")
-    private String signXadesReadResponseTimeMetric;
-    @Value("${pn.sign.cloudwatch.metric.response-time.cades}")
-    private String signCadesReadResponseTimeMetric;
-    @Value("${pn.sign.cloudwatch.metric.dimension.file-size-range}")
-    private String fileSizeRangeDimensionName;
-    @Value("${pn.sign.cloudwatch.publisher.maximum-calls-per-upload:#{null}}")
-    private int maximumCallsPerUpload;
-    @Value("${pn.sign.cloudwatch.publisher.upload-frequency-millis:#{null}}")
-    private int uploadFrequencyMillis;
+    private final String arubaPecNamespace;
+    private final String namirialPecNamespace;
+    private final String signPadesReadResponseTimeMetric;
+    private final String signXadesReadResponseTimeMetric;
+    private final String signCadesReadResponseTimeMetric;
+    private final String fileSizeRangeDimensionName;
+    private final int maximumCallsPerUpload;
+    private final int uploadFrequencyMillis;
     private final Map<String, CloudWatchMetricPublisher> cloudWatchMetricPublishers = new HashMap<>();
     private final Map<String, SdkMetric<?>> sdkMetrics = new HashMap<>();
+
+    public CloudWatchMetricPublisherConfiguration(PnSsConfig pnSsConfig) {
+        this.arubaPecNamespace = pnSsConfig.getSign().getCloudwatch().getNamespaceAruba();
+        this.namirialPecNamespace = pnSsConfig.getSign().getCloudwatch().getNamespaceNamirial();
+        this.signPadesReadResponseTimeMetric = pnSsConfig.getSign().getCloudwatch().getMetricResponseTime().getPades();
+        this.signXadesReadResponseTimeMetric = pnSsConfig.getSign().getCloudwatch().getMetricResponseTime().getXades();
+        this.signCadesReadResponseTimeMetric = pnSsConfig.getSign().getCloudwatch().getMetricResponseTime().getCades();
+        this.fileSizeRangeDimensionName = pnSsConfig.getSign().getCloudwatch().getMetricDimensionFileSizeRange();
+        this.maximumCallsPerUpload = pnSsConfig.getSign().getCloudwatch().getPublisher().getMaximumCallsPerUpload();
+        this.uploadFrequencyMillis = pnSsConfig.getSign().getCloudwatch().getPublisher().getUploadFrequencyMillis().intValue();
+    }
 
     /**
      * Init method to initialize MetricPublishers and SdkMetrics

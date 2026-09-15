@@ -13,9 +13,9 @@ import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.exception.ResourceDeletedException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,17 +31,16 @@ import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKIN
 @RestController
 @CustomLog
 public class DocumentInternalApiController implements DocumentInternalApi {
-	
-    @Value("${header.x-api-key}")
-    private String xApiKey;
 
-    @Value("${header.x-pagopa-safestorage-cx-id}")
-    private String xPagopaSafestorageCxId;
+    private final String xApiKey;
+    private final String xPagopaSafestorageCxId;
 
 	private final DocumentService documentService;
 
-	public DocumentInternalApiController(DocumentService documentService) {
+	public DocumentInternalApiController(DocumentService documentService, PnSsConfig pnSsConfig) {
 		this.documentService = documentService;
+		this.xApiKey = pnSsConfig.getClientInterni().getHeader().getApiKey();
+		this.xPagopaSafestorageCxId = pnSsConfig.getClientInterni().getHeader().getPagopaSafestorageCxId();
 	}
 
 	private DocumentResponse getResponse(Document document) {

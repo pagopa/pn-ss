@@ -3,7 +3,7 @@ package it.pagopa.pnss.repositorymanager.service;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.StorageConfiguration;
 import it.pagopa.pnss.common.client.dto.LifecycleRuleDTO;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.exception.BucketException;
@@ -46,8 +46,8 @@ public class DocumentsConfigsServiceImplTest {
 
     @BeforeAll
     public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
-        docTypeDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
+                                             @Autowired PnSsConfig pnSsConfig) {
+        docTypeDynamoDbTable = dynamoDbEnhancedClient.table(pnSsConfig.getDynamo().getRepositoryManager().getTipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
         insertDocTypeEntities(createDocTypeEntity("T1"), createDocTypeEntity("T2"));
     }
 

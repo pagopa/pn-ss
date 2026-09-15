@@ -3,10 +3,10 @@ package it.pagopa.pnss.uribuilder.rest;
 import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.FileDownloadApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.FileDownloadResponse;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.CustomLog;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,12 +24,12 @@ public class FileDownloadApiController implements FileDownloadApi {
     private final UriBuilderService uriBuilderService;
     private final Environment env;
 
-    @Value("${queryParam.presignedUrl.traceId}")
-    private String xTraceId;
+    private final String xTraceId;
 
-    public FileDownloadApiController(UriBuilderService uriBuilderService, Environment env) {
+    public FileDownloadApiController(UriBuilderService uriBuilderService, Environment env, PnSsConfig pnSsConfig) {
         this.uriBuilderService = uriBuilderService;
         this.env = env;
+        this.xTraceId = pnSsConfig.getClientInterni().getQueryParam().getPresignedUrlTraceId();
     }
 
     @Override

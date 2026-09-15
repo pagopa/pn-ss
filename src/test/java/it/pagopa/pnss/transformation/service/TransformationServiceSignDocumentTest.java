@@ -9,7 +9,7 @@ import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.client.DocumentClientCall;
 import it.pagopa.pnss.configuration.TransformationConfig;
 import it.pagopa.pnss.configuration.sqs.SqsTimeoutProvider;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.configurationproperties.TransformationProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,19 +62,25 @@ class TransformationServiceSignDocumentTest {
 
     @BeforeEach
     void setUp() {
-        BucketName bucketName = new BucketName("hot-bucket", BUCKET_NAME);
+        PnSsConfig.Bucket bucket = new PnSsConfig.Bucket();
+        bucket.setHotName("hot-bucket");
+        bucket.setStageName(BUCKET_NAME);
+        PnSsConfig.EventBridge eventBridge = new PnSsConfig.EventBridge();
+        eventBridge.setDisponibilitaDocumentiName("test-event-bridge");
+        PnSsConfig pnSsConfig = new PnSsConfig();
+        pnSsConfig.setBucket(bucket);
+        pnSsConfig.setEventBridge(eventBridge);
         transformationService = new TransformationService(
                 s3Service,
                 pnSignService,
                 documentClientCall,
-                bucketName,
+                pnSsConfig,
                 sqsService,
                 eventBridgeService,
                 transformationConfig,
                 sqsTimeoutProvider,
                 props
         );
-        ReflectionTestUtils.setField(transformationService, "disponibilitaDocumentiEventBridge", "test-event-bridge");
     }
 
     @Test

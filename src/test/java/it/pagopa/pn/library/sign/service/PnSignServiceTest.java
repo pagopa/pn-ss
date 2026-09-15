@@ -10,11 +10,12 @@ import it.pagopa.pn.library.sign.service.impl.PnSignProviderService;
 import it.pagopa.pn.ss.dummy.sign.service.PnDummySignServiceImpl;
 import it.pagopa.pnss.common.service.impl.CloudWatchMetricsService;
 import it.pagopa.pnss.configuration.cloudwatch.CloudWatchMetricPublisherConfiguration;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.wsdl.ArubaSignService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -44,9 +45,9 @@ class PnSignServiceTest {
     private CloudWatchMetricsService cloudWatchMetricsService;
     @MockitoBean
     private ArubaSignService arubaSignServiceClient;
-    @Value("${pn.sign.cloudwatch.namespace.aruba}")
+    @Autowired
+    private PnSsConfig pnSsConfig;
     private String arubaNamespace;
-    @Value("${pn.sign.cloudwatch.namespace.namirial}")
     private String namirialNamespace;
 
     private static final String PROVIDER_SWITCH = "providerSwitch";
@@ -54,6 +55,12 @@ class PnSignServiceTest {
     private static final String CONDITIONAL_DATE_PROVIDER_DUMMY = "1999-02-01T10:00:00Z;dummy";
     private static final String CONDITIONAL_DATE_PROVIDER_FUTURE = "1999-02-01T10:00:00Z;aruba,2004-02-15T10:00:00Z;namirial";
     private static final byte[] fileBytes = "file".getBytes();
+
+    @BeforeEach
+    void setUp() {
+        arubaNamespace = pnSsConfig.getSign().getCloudwatch().getNamespaceAruba();
+        namirialNamespace = pnSsConfig.getSign().getCloudwatch().getNamespaceNamirial();
+    }
 
     @Test
     void arubaProvider_signPdf_ok() {

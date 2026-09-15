@@ -12,7 +12,6 @@ import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.transformation.service.TransformationService;
 import lombok.CustomLog;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
@@ -28,14 +27,12 @@ public class TransformationHandler {
     private final Semaphore signAndTimemarkSemaphore;
     private final Semaphore signSemaphore;
     private final S3Service s3Service;
-    @Value("${pn.ss.transformation.queues.sign-and-timemark}")
-    private String signAndTimemarkQueueName;
-    @Value("${pn.ss.transformation.queues.sign}")
-    private String signQueueName;
+    private final TransformationProperties props;
 
 
     public TransformationHandler(TransformationService transformationService, TransformationProperties props, S3Service s3Service) {
         this.transformationService = transformationService;
+        this.props = props;
         this.signAndTimemarkSemaphore = new Semaphore(props.getMaxThreadPoolSize().getSignAndTimemark());
         this.signSemaphore = new Semaphore(props.getMaxThreadPoolSize().getSign());
         this.s3Service = s3Service;
@@ -60,7 +57,7 @@ public class TransformationHandler {
     @SqsListener(value = "${pn.ss.transformation.queues.sign-and-timemark}", acknowledgementMode = SqsListenerAcknowledgementMode.MANUAL)
     void signAndTimemarkTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgement acknowledgment) {
         acquireSemaphore(signAndTimemarkSemaphore);
-        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, true,signAndTimemarkQueueName), acknowledgment, SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER)
+        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, true, props.getQueues().getSignAndTimemark()), acknowledgment, SIGN_AND_TIMEMARK_TRANSFORMATION_SUBSCRIBER)
                 .doFinally(signalType -> signAndTimemarkSemaphore.release())
                 .subscribe();
     }
@@ -68,7 +65,7 @@ public class TransformationHandler {
     @SqsListener(value = "${pn.ss.transformation.queues.sign}", acknowledgementMode = SqsListenerAcknowledgementMode.MANUAL)
     void signTransformationSubscriber(TransformationMessage transformationMessage, Acknowledgement acknowledgment) {
         acquireSemaphore(signSemaphore);
-        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, false,signQueueName), acknowledgment, SIGN_TRANSFORMATION_SUBSCRIBER)
+        consumeTransformationMessage(transformationMessage, message -> transformationService.signAndTimemarkTransformation(message, false, props.getQueues().getSign()), acknowledgment, SIGN_TRANSFORMATION_SUBSCRIBER)
                 .doFinally(signalType -> signSemaphore.release())
                 .subscribe();
     }

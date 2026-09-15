@@ -52,6 +52,7 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -249,6 +250,114 @@ class TransformationServiceTest {
         //THEN
         StepVerifier.create(testMono).expectError(SqsClientException.class).verify();
         verify(sqsService).send(any(), eq(expectedMessage));
+    }
+
+    @Test
+    void handleEvent_InProgressTagNotFirstInAlphabeticalOrder_Skip() {
+        //GIVEN
+        String sourceBucket = bucketName.ssStageName();
+        String contentType = "application/pdf";
+        List<String> transformations = List.of(DUMMY, RASTERIZATION, SIGN_AND_TIMEMARK);
+        S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
+
+        //WHEN
+        mockGetObjectTaggingSortedByKey(sourceBucket,
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + DUMMY).value(OK).build(),
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + RASTERIZATION).value(TRANSFORMATION_IN_PROGRESS).build());
+        mockGetDocument(contentType, STAGED, transformations);
+        var testMono = transformationService.handleS3Event(record);
+
+        //THEN
+        StepVerifier.create(testMono).verifyComplete();
+        verify(sqsService, never()).send(anyString(), any());
+        verify(s3Service, never()).putObjectTagging(anyString(), anyString(), any());
+    }
+
+    @Test
+    void handleEvent_InProgressTagFirstInAlphabeticalOrder_Skip() {
+        //GIVEN
+        String sourceBucket = bucketName.ssStageName();
+        String contentType = "application/pdf";
+        List<String> transformations = List.of(RASTERIZATION, DUMMY, SIGN_AND_TIMEMARK);
+        S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
+
+        //WHEN
+        mockGetObjectTaggingSortedByKey(sourceBucket,
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + RASTERIZATION).value(OK).build(),
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + DUMMY).value(TRANSFORMATION_IN_PROGRESS).build());
+        mockGetDocument(contentType, STAGED, transformations);
+        var testMono = transformationService.handleS3Event(record);
+
+        //THEN
+        StepVerifier.create(testMono).verifyComplete();
+        verify(sqsService, never()).send(anyString(), any());
+        verify(s3Service, never()).putObjectTagging(anyString(), anyString(), any());
+    }
+
+    @Test
+    void handleEvent_LastTransformationInProgress_Skip() {
+        //GIVEN
+        String sourceBucket = bucketName.ssStageName();
+        String contentType = "application/pdf";
+        List<String> transformations = List.of(RASTERIZATION, DUMMY, SIGN_AND_TIMEMARK);
+        S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
+
+        //WHEN
+        mockGetObjectTaggingSortedByKey(sourceBucket,
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + RASTERIZATION).value(OK).build(),
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + DUMMY).value(OK).build(),
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + SIGN_AND_TIMEMARK).value(TRANSFORMATION_IN_PROGRESS).build());
+        mockGetDocument(contentType, STAGED, transformations);
+        var testMono = transformationService.handleS3Event(record);
+
+        //THEN
+        StepVerifier.create(testMono).verifyComplete();
+        verify(sqsService, never()).send(anyString(), any());
+        verify(s3Service, never()).putObject(anyString(), any(), anyString(), eq(bucketName.ssHotName()));
+    }
+
+    @Test
+    void handleEvent_CompletedTagsOnly_PublishesNextTransformationInChainOrder() {
+        //GIVEN
+        String sourceBucket = bucketName.ssStageName();
+        String contentType = "application/pdf";
+        List<String> transformations = List.of(DUMMY, RASTERIZATION, SIGN_AND_TIMEMARK);
+        S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
+        TransformationMessage expectedMessage = createTransformationMessage(SIGN_AND_TIMEMARK, sourceBucket, contentType);
+
+        //WHEN
+        mockGetObjectTaggingSortedByKey(sourceBucket,
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + DUMMY).value(OK).build(),
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + RASTERIZATION).value(OK).build());
+        mockGetDocument(contentType, STAGED, transformations);
+        when(s3Service.putObjectTagging(anyString(), anyString(), any())).thenReturn(Mono.empty());
+        var testMono = transformationService.handleS3Event(record);
+
+        //THEN
+        StepVerifier.create(testMono).verifyComplete();
+        verify(sqsService).send(any(), eq(expectedMessage));
+    }
+
+    @Test
+    void handleEvent_ErrorTagWithCompletedTags_SendsUnavailabilityEvent() {
+        //GIVEN
+        String sourceBucket = bucketName.ssStageName();
+        String contentType = "application/pdf";
+        List<String> transformations = List.of(DUMMY, RASTERIZATION, SIGN_AND_TIMEMARK);
+        S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
+
+        //WHEN
+        mockGetObjectTaggingSortedByKey(sourceBucket,
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + DUMMY).value(OK).build(),
+                Tag.builder().key(TRANSFORMATION_TAG_PREFIX + RASTERIZATION).value(ERROR).build());
+        mockGetDocument(contentType, STAGED, transformations);
+        doReturn(Mono.empty()).when(eventBridgeService).putSingleEvent(any());
+        var testMono = transformationService.handleS3Event(record);
+
+        //THEN
+        StepVerifier.create(testMono).verifyComplete();
+        verify(eventBridgeService).putSingleEvent(any());
+        verify(sqsService, never()).send(anyString(), any());
     }
 
     @ParameterizedTest
@@ -457,6 +566,11 @@ class TransformationServiceTest {
     }
 
 
+
+    private void mockGetObjectTaggingSortedByKey(String bucket, Tag... tags) {
+        List<Tag> tagSet = Stream.of(tags).sorted(Comparator.comparing(Tag::key)).toList();
+        doReturn(Mono.just(GetObjectTaggingResponse.builder().tagSet(tagSet).build())).when(s3Service).getObjectTagging(FILE_KEY, bucket);
+    }
 
     private Mono<Void> invokeHandleNextTransformation(String tagKey, String fileKey, String sourceBucket, List<String> transformations, String contentType) {
         return ReflectionTestUtils.invokeMethod(transformationService, "handleNextTransformation", tagKey, fileKey, sourceBucket, transformations, contentType);

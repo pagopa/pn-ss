@@ -27,7 +27,7 @@ public class TagsInternalApiController implements TagsInternalApi {
         return tagsService.getTagsRelations(tagKeyValue)
                 .map(tagOutput -> ResponseEntity.ok().body(new TagsRelationsResponse().tagsRelationsDto(tagOutput)))
                 .doOnSuccess(result -> log.logEndingProcess(GET_TAGS_RELATIONS_OP))
-                .doOnError(throwable -> log.logEndingProcess(GET_TAGS_RELATIONS_OP, false, throwable.getMessage()));
+                .doOnError(throwable -> log.logEndingProcess(GET_TAGS_RELATIONS_OP, false, throwable.getMessage(), throwable));
     }
 
     @Override
@@ -35,6 +35,6 @@ public class TagsInternalApiController implements TagsInternalApi {
         return tagsChanges.flatMap(changes -> tagsService.putTags(documentKey, changes))
                 .map(tagsDto -> ResponseEntity.ok().body(new TagsResponse().tagsDto(tagsDto)))
                 .doOnSuccess(result -> log.logEndingProcess(PUT_TAGS_OP))
-                .doOnError(throwable -> log.logEndingProcess(PUT_TAGS_OP, false, throwable.getMessage()));
+                .doOnError(throwable -> log.logEndingProcess(PUT_TAGS_OP, false, throwable.getMessage(), throwable));
     }
 }

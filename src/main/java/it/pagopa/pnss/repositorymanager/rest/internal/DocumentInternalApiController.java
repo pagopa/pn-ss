@@ -131,7 +131,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
 				.doOnSuccess(result -> log.logEndingProcess(GET_DOCUMENT))
 				.onErrorResume(throwable -> {
-					log.logEndingProcess(GET_DOCUMENT, false, throwable.getMessage());
+					log.logEndingProcess(GET_DOCUMENT, false, throwable.getMessage(), throwable);
 					return getResponse(documentKey, throwable);
 				}));
 
@@ -149,7 +149,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
 				.doOnSuccess(result -> log.logEndingProcess(INSERT_DOCUMENT))
 				.onErrorResume(throwable -> {
-					log.logEndingProcess(INSERT_DOCUMENT, false, throwable.getMessage());
+					log.logEndingProcess(INSERT_DOCUMENT, false, throwable.getMessage(), throwable);
 					return getResponse(null, throwable);
 				});
 
@@ -172,7 +172,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
                        .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
 				       .doOnSuccess(result->log.logEndingProcess(PATCH_DOCUMENT))
                        .onErrorResume(throwable -> {
-						   log.logEndingProcess(PATCH_DOCUMENT, false, throwable.getMessage());
+						   log.logEndingProcess(PATCH_DOCUMENT, false, throwable.getMessage(), throwable);
 						   return getResponse(documentKey, throwable);
 					   }));
 
@@ -186,7 +186,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 		return documentService.deleteDocument(documentKey).map(docType -> ResponseEntity.noContent().<Void>build())
 				.doOnSuccess(result->log.logEndingProcess(DELETE_DOCUMENT))
 				.onErrorResume(DocumentKeyNotPresentException.class, throwable -> {
-					log.logEndingProcess(DELETE_DOCUMENT, false, throwable.getMessage());
+					log.logEndingProcess(DELETE_DOCUMENT, false, throwable.getMessage(), throwable);
 					return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
 							throwable.getMessage(), throwable.getCause()));
 				});

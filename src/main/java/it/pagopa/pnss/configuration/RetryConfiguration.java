@@ -7,7 +7,7 @@ import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.exception.StateMachineServiceException;
 import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.configurationproperties.retry.StateMachineRetryStrategyProperties;
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +23,7 @@ import java.util.function.Predicate;
 import static it.pagopa.pnss.common.utils.LogUtils.RETRY_ATTEMPT;
 
 @Configuration
-@Slf4j
+@CustomLog
 public class RetryConfiguration {
     private final PnSsConfig pnSsConfig;
 

@@ -93,7 +93,7 @@ public class TransformationService {
                     String docContentType = document.getDocument().getContentType();
                     return s3Service.getObjectTagging(fileKey, sourceBucket)
                             .flatMap(response -> {
-                                Optional<Tag> tagOpt = response.tagSet().stream().filter(tag -> tag.key().startsWith(TRANSFORMATION_TAG_PREFIX)).findFirst();
+                                Optional<Tag> tagOpt = selectTransformationTag(response.tagSet(), transformations);
                                 if (tagOpt.isEmpty())
                                     return markInProgressAndPublishTransformationOnQueue(fileKey, sourceBucket, transformations.get(0), docContentType, transformations).then();
                                 return  handleObjectTag(fileKey, sourceBucket, tagOpt.get(), transformations, docContentType, document);

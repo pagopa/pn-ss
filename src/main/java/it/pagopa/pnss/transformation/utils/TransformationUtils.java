@@ -1,7 +1,6 @@
 package it.pagopa.pnss.transformation.utils;
 
 import it.pagopa.pn.library.exceptions.PnSpapiPermanentErrorException;
-import it.pagopa.pn.library.exceptions.PnSpapiTemporaryErrorException;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.CurrentStatus;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
@@ -9,16 +8,17 @@ import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import lombok.CustomLog;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.jetbrains.annotations.NotNull;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.s3.model.Tag;
 import software.amazon.awssdk.services.s3.model.Tagging;
 import software.amazon.awssdk.utils.StringUtils;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 import static it.pagopa.pnss.configurationproperties.TransformationProperties.TRANSFORMATION_TAG_PREFIX;
@@ -97,6 +97,16 @@ public class TransformationUtils {
             statusesEntity.put(entry.getKey(), currentStatusDtoToEntity(entry.getValue()));
         }
         return statusesEntity;
+    }
+
+    public static Optional<Tag> selectTransformationTag(List<Tag> tagSet, List<String> transformations) {
+        return tagSet.stream()
+                .filter(tag -> tag.key().startsWith(TRANSFORMATION_TAG_PREFIX))
+                .max(Comparator.comparingInt(tag -> chainPosition(tag, transformations)));
+    }
+
+    private static int chainPosition(Tag tag, List<String> transformations) {
+        return transformations.indexOf(tag.key().replace(TRANSFORMATION_TAG_PREFIX, ""));
     }
 
     public static Tagging buildTransformationTagging(String transformation, String value) {

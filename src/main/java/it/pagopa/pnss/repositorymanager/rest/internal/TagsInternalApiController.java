@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import static it.pagopa.pnss.common.utils.LogUtils.GET_TAGS_RELATIONS_OP;
-import static it.pagopa.pnss.common.utils.LogUtils.PUT_TAGS_OP;
 
 @CustomLog
 @RestController
@@ -23,18 +21,13 @@ public class TagsInternalApiController implements TagsInternalApi {
 
     @Override
     public Mono<ResponseEntity<TagsRelationsResponse>> getTagsRelations(String tagKeyValue, final ServerWebExchange exchange) {
-        log.logStartingProcess(GET_TAGS_RELATIONS_OP);
         return tagsService.getTagsRelations(tagKeyValue)
-                .map(tagOutput -> ResponseEntity.ok().body(new TagsRelationsResponse().tagsRelationsDto(tagOutput)))
-                .doOnSuccess(result -> log.logEndingProcess(GET_TAGS_RELATIONS_OP))
-                .doOnError(throwable -> log.logEndingProcess(GET_TAGS_RELATIONS_OP, false, throwable.getMessage(), throwable));
+                .map(tagOutput -> ResponseEntity.ok().body(new TagsRelationsResponse().tagsRelationsDto(tagOutput)));
     }
 
     @Override
     public Mono<ResponseEntity<TagsResponse>> putTags(String documentKey, Mono<TagsChanges> tagsChanges, ServerWebExchange exchange) {
         return tagsChanges.flatMap(changes -> tagsService.putTags(documentKey, changes))
-                .map(tagsDto -> ResponseEntity.ok().body(new TagsResponse().tagsDto(tagsDto)))
-                .doOnSuccess(result -> log.logEndingProcess(PUT_TAGS_OP))
-                .doOnError(throwable -> log.logEndingProcess(PUT_TAGS_OP, false, throwable.getMessage(), throwable));
+                .map(tagsDto -> ResponseEntity.ok().body(new TagsResponse().tagsDto(tagsDto)));
     }
 }

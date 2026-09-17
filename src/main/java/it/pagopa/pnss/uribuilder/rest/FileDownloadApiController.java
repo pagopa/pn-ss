@@ -15,7 +15,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
-import static it.pagopa.pnss.common.utils.LogUtils.GET_FILE;
 import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 
 @RestController
@@ -40,10 +39,7 @@ public class FileDownloadApiController implements FileDownloadApi {
         MDC.put(MDC_CORR_ID_KEY, fileKey);
         String xTraceIdValue = exchange.getRequest().getQueryParams().getFirst(xTraceId);
         xTraceIdValue = (xTraceIdValue == null) ? UUID.randomUUID().toString() : xTraceIdValue;
-        log.logStartingProcess(GET_FILE);
         return MDCUtils.addMDCToContextAndExecute(uriBuilderService.createUriForDownloadFile(fileKey, xPagopaSafestorageCxId, xTraceIdValue, metadataOnly, tags)
-                .map(ResponseEntity::ok)
-                .doOnSuccess(result -> log.logEndingProcess(GET_FILE))
-                .doOnError(throwable -> log.logEndingProcess(GET_FILE, false, throwable.getMessage(), throwable)));
+                .map(ResponseEntity::ok));
     }
 }

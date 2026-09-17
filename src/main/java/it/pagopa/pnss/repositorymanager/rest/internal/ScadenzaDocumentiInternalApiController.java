@@ -4,7 +4,6 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.ScadenzaDocument
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.Error;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocumentiInput;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocumentiResponse;
-import it.pagopa.pnss.common.utils.LogUtils;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.service.ScadenzaDocumentiService;
@@ -28,12 +27,9 @@ public class ScadenzaDocumentiInternalApiController implements ScadenzaDocumenti
 
     @Override
     public Mono<ResponseEntity<ScadenzaDocumentiResponse>> insertOrUpdateScadenzaDocumenti(Mono<ScadenzaDocumentiInput> scadenzaDocumentiInput, ServerWebExchange exchange) {
-        log.logStartingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI);
         return scadenzaDocumentiInput.flatMap(scadenzaDocumentiService::insertOrUpdateScadenzaDocumenti)
                 .map(scadenzaDocumenti -> new ScadenzaDocumentiResponse().scadenzaDocumenti(scadenzaDocumenti))
                 .map(ResponseEntity::ok)
-                .doOnSuccess(result -> log.logEndingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI))
-                .doOnError(throwable -> log.logEndingProcess(LogUtils.INSERT_OR_UPDATE_SCADENZA_DOCUMENTI, false, throwable.getMessage(), throwable))
                 .onErrorResume(RepositoryManagerException.class, e -> Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ScadenzaDocumentiResponse().error(
                         new Error().code("400").description(e.getMessage())))))
                 .onErrorResume(DynamoDbException.class, e -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ScadenzaDocumentiResponse().error(

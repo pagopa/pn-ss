@@ -14,7 +14,6 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
-import static it.pagopa.pnss.common.utils.LogUtils.UPDATE_FILE_METADATA;
 
 @RestController
 @CustomLog
@@ -38,7 +37,6 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
 
         MDC.clear();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
-        log.logStartingProcess(UPDATE_FILE_METADATA);
 
         String pagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(pagopaSafestorageCxId);
         String apiKeyValue = exchange.getRequest().getHeaders().getFirst(apiKey);
@@ -47,8 +45,6 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
                 xPagopaSafestorageCxId,
                 request,
                 pagopaSafestorageCxIdValue,
-                apiKeyValue)).map(ResponseEntity::ok)
-                .doOnError(throwable -> log.logEndingProcess(UPDATE_FILE_METADATA, false, throwable.getMessage(), throwable))
-                .doOnSuccess(result->log.logEndingProcess(UPDATE_FILE_METADATA)));
+                apiKeyValue)).map(ResponseEntity::ok));
     }
 }

@@ -1,12 +1,12 @@
 package it.pagopa.pnss.configuration.http;
 
 import it.pagopa.pn.commons.utils.MDCUtils;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.Request;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,12 +25,15 @@ import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
 @CustomLog
 public class JettyHttpClientConf {
 
-    @Value("${jetty.maxConnectionsPerDestination}")
-    private int maxConnections;
-    @Value("${pn.log.cx-id-header}")
-    private String corrIdHeaderName;
+    private final int maxConnections;
+    private final String corrIdHeaderName;
     private final SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
     private static final List<String> CONTENT_TYPE_OF_RESPONSE_BODY_TO_LOG = List.of(APPLICATION_JSON_VALUE, APPLICATION_XML_VALUE);
+
+    public JettyHttpClientConf(PnSsConfig pnSsConfig) {
+        this.maxConnections = pnSsConfig.getClientInterni().getJetty().getMaxConnectionsPerDestination();
+        this.corrIdHeaderName = pnSsConfig.getClientInterni().getHeader().getCorrelationId();
+    }
 
     @Bean
     public HttpClient getJettyHttpClient() {

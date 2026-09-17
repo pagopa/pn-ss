@@ -1,7 +1,6 @@
 package it.pagopa.pnss.configuration.http;
 
-import it.pagopa.pnss.common.configurationproperties.endpoint.internal.statemachine.StateMachineEndpointProperties;
-import org.springframework.beans.factory.annotation.Value;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.JettyClientHttpConnector;
@@ -16,14 +15,13 @@ public class WebClientConf {
 
     private final JettyHttpClientConf jettyHttpClientConf;
 
-    @Value("${internal.base.url}")
-    String internalBaseUrl;
+    private final String internalBaseUrl;
+    private final String corrIdHeaderName;
 
-    @Value("${pn.log.cx-id-header}")
-    private String corrIdHeaderName;
-
-	public WebClientConf(JettyHttpClientConf jettyHttpClientConf) {
+	public WebClientConf(JettyHttpClientConf jettyHttpClientConf, PnSsConfig pnSsConfig) {
         this.jettyHttpClientConf = jettyHttpClientConf;
+        this.internalBaseUrl = pnSsConfig.getClientInterni().getBaseUrl();
+        this.corrIdHeaderName = pnSsConfig.getClientInterni().getHeader().getCorrelationId();
     }
 
     private WebClient.Builder defaultWebClientBuilder() {
@@ -35,8 +33,8 @@ public class WebClientConf {
     }
 
     @Bean
-    public WebClient stateMachineWebClient(StateMachineEndpointProperties stateMachineEndpointProperties) {
-        return defaultJsonWebClientBuilder().baseUrl(stateMachineEndpointProperties.containerBaseUrl()).build();
+    public WebClient stateMachineWebClient(PnSsConfig pnSsConfig) {
+        return defaultJsonWebClientBuilder().baseUrl(pnSsConfig.getEndpoint().getStateMachine().getContainerBaseUrl()).build();
     }
 
     @Bean

@@ -5,11 +5,9 @@ import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.exception.StateMachineServiceException;
-import it.pagopa.pnss.configurationproperties.DynamoRetryStrategyProperties;
-import it.pagopa.pnss.configurationproperties.GestoreRepositoryRetryStrategyProperties;
-import it.pagopa.pnss.configurationproperties.retry.S3RetryStrategyProperties;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.configurationproperties.retry.StateMachineRetryStrategyProperties;
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,23 +23,19 @@ import java.util.function.Predicate;
 import static it.pagopa.pnss.common.utils.LogUtils.RETRY_ATTEMPT;
 
 @Configuration
-@Slf4j
+@CustomLog
 public class RetryConfiguration {
-    private final DynamoRetryStrategyProperties dynamoRetryStrategyProperties;
-    private final GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties;
-    private final S3RetryStrategyProperties s3RetryStrategyProperties;
+    private final PnSsConfig pnSsConfig;
 
     @Autowired
-    public RetryConfiguration(DynamoRetryStrategyProperties dynamoRetryStrategyProperties, GestoreRepositoryRetryStrategyProperties gestoreRepositoryRetryStrategyProperties, S3RetryStrategyProperties s3RetryStrategyProperties) {
-        this.dynamoRetryStrategyProperties = dynamoRetryStrategyProperties;
-        this.gestoreRepositoryRetryStrategyProperties = gestoreRepositoryRetryStrategyProperties;
-        this.s3RetryStrategyProperties = s3RetryStrategyProperties;
+    public RetryConfiguration(PnSsConfig pnSsConfig) {
+        this.pnSsConfig = pnSsConfig;
     }
     private static final Predicate<Throwable> isNotFound = throwable -> (throwable instanceof DocumentKeyNotPresentException) || (throwable instanceof IdClientNotFoundException)  || (throwable instanceof DocumentTypeNotPresentException);
 
     @Bean
     RetryBackoffSpec dynamoRetryStrategy() {
-        return Retry.backoff(dynamoRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(dynamoRetryStrategyProperties.minBackoff()))
+        return Retry.backoff(pnSsConfig.getDynamo().getRetryStrategy().getMaxAttempts(), Duration.ofSeconds(pnSsConfig.getDynamo().getRetryStrategy().getMinBackoff()))
                 .filter(DynamoDbException.class::isInstance)
                 .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
@@ -49,7 +43,7 @@ public class RetryConfiguration {
 
     @Bean
     RetryBackoffSpec gestoreRepositoryRetryStrategy() {
-        return Retry.backoff(gestoreRepositoryRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(gestoreRepositoryRetryStrategyProperties.minBackoff()))
+        return Retry.backoff(pnSsConfig.getGestoreRepository().getRetryStrategy().getMaxAttempts(), Duration.ofSeconds(pnSsConfig.getGestoreRepository().getRetryStrategy().getMinBackoff()))
                 .filter(Predicate.not(isNotFound))
                 .filter(throwable -> throwable instanceof PatchDocumentException && ((PatchDocumentException) throwable).getStatusCode().is5xxServerError())
                 .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
@@ -58,7 +52,7 @@ public class RetryConfiguration {
 
     @Bean
     RetryBackoffSpec s3RetryStrategy() {
-        return Retry.backoff(s3RetryStrategyProperties.maxAttempts(), Duration.ofSeconds(s3RetryStrategyProperties.minBackoff()))
+        return Retry.backoff(pnSsConfig.getS3().getRetryStrategy().getMaxAttempts(), Duration.ofSeconds(pnSsConfig.getS3().getRetryStrategy().getMinBackoff()))
                 .filter(S3Exception.class::isInstance)
                 .filter(Predicate.not(NoSuchKeyException.class::isInstance))
                 .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
@@ -76,7 +70,7 @@ public class RetryConfiguration {
 
     @Bean
     RetryBackoffSpec tagsRetryStrategy() {
-        return Retry.backoff(gestoreRepositoryRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(gestoreRepositoryRetryStrategyProperties.minBackoff()))
+        return Retry.backoff(pnSsConfig.getGestoreRepository().getRetryStrategy().getMaxAttempts(), Duration.ofSeconds(pnSsConfig.getGestoreRepository().getRetryStrategy().getMinBackoff()))
                 .filter(isNotFound)
                 .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());

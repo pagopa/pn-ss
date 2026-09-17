@@ -13,9 +13,7 @@ import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
-import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
-import it.pagopa.pnss.configurationproperties.StreamRecordProcessorQueueName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
@@ -29,7 +27,6 @@ import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Mono;
@@ -63,35 +60,29 @@ public class DocumentServiceImpl implements DocumentService {
     private final DynamoDbAsyncTableDecorator<DocumentEntity> documentEntityDynamoDbAsyncTable;
     private final DocTypesService docTypesService;
     private final RetentionService retentionService;
-    private final BucketName bucketName;
+    private final PnSsConfig pnSsConfig;
     private final CallMacchinaStati callMacchinaStati;
     private final S3Service s3Service;
     private final SqsService sqsService;
-    private final StreamRecordProcessorQueueName streamRecordProcessorQueueName;
-    final RepositoryManagerDynamoTableName managerDynamoTableName;
     private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
-    private final String documentNumberOfPagesTagKey;
     private final IndexingConfiguration indexingConfiguration;
 
     public DocumentServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, DocTypesService docTypesService,
+                               PnSsConfig pnSsConfig, DocTypesService docTypesService,
                                RetentionService retentionService,
-                               BucketName bucketName, CallMacchinaStati callMacchinaStati, S3Service s3Service, SqsService sqsService, StreamRecordProcessorQueueName streamRecordProcessorQueueName,
-                               IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler, RepositoryManagerDynamoTableName managerDynamoTableName, @Value("${pn.ss.indexing.document-number-of-pages-tag-key}") String documentNumberOfPagesTagKey, IndexingConfiguration indexingConfiguration) {
+                               CallMacchinaStati callMacchinaStati, S3Service s3Service, SqsService sqsService,
+                               IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler, IndexingConfiguration indexingConfiguration) {
         this.docTypesService = docTypesService;
         this.callMacchinaStati = callMacchinaStati;
         this.s3Service = s3Service;
         this.sqsService = sqsService;
-        this.streamRecordProcessorQueueName = streamRecordProcessorQueueName;
         this.ignoredUpdateMetadataHandler = ignoredUpdateMetadataHandler;
         this.indexingConfiguration = indexingConfiguration;
-        this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.documentiName(),
+        this.documentEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(pnSsConfig.getDynamo().getRepositoryManager().getDocumentiName(),
                                                                                   TableSchema.fromBean(DocumentEntity.class)));
         this.objectMapper = objectMapper;
         this.retentionService = retentionService;
-        this.bucketName = bucketName;
-        this.managerDynamoTableName = managerDynamoTableName;
-        this.documentNumberOfPagesTagKey = documentNumberOfPagesTagKey;
+        this.pnSsConfig = pnSsConfig;
     }
 
     private Mono<DocumentEntity> getErrorIdDocNotFoundException(String documentKey) {
@@ -234,7 +225,7 @@ public class DocumentServiceImpl implements DocumentService {
                         DocumentStateDto documentStateDto = new DocumentStateDto();
                         documentStateDto.setDocumentEntity(documentEntity);
                         documentStateDto.setOldDocumentState(oldStateStr);
-                        return sqsService.send(streamRecordProcessorQueueName.sqsName(), documentStateDto).thenReturn(docEntity);
+                        return sqsService.send(pnSsConfig.getSqs().getAvailability().getSqsName(), documentStateDto).thenReturn(docEntity);
                      } else return Mono.just(documentEntity);
                     })
                 .doOnSuccess(documentEntity -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, EXECUTE_PATCH, documentEntity));
@@ -264,7 +255,7 @@ public class DocumentServiceImpl implements DocumentService {
                     Tag expiryTag = Tag.builder().key(STORAGE_EXPIRY).value(storageType).build();
                     Tag freezeTag = Tag.builder().key(STORAGE_FREEZE).value(storageType).build();
                     Tagging tagging = Tagging.builder().tagSet(expiryTag, freezeTag).build();
-                    return s3Service.putObjectTagging(documentKey, bucketName.ssHotName(), tagging)
+                    return s3Service.putObjectTagging(documentKey, pnSsConfig.getBucket().getHotName(), tagging)
                             .thenReturn(documentEntityStored);
                 } else {
                     log.debug("patchDocument() : Tagging : storageTypeEmpty");
@@ -275,8 +266,8 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     Mono<DocumentEntity> updateNumberOfPages(DocumentEntity documentEntity) {
-        return Mono.fromCallable(() -> indexingConfiguration.getTagInfo(documentNumberOfPagesTagKey))
-                .then(s3Service.getObject(documentEntity.getDocumentKey(), bucketName.ssHotName()))
+        return Mono.fromCallable(() -> indexingConfiguration.getTagInfo(pnSsConfig.getIndexing().getDocumentNumberOfPagesTagKey()))
+                .then(s3Service.getObject(documentEntity.getDocumentKey(), pnSsConfig.getBucket().getHotName()))
                 .flatMap(getObjectResponse -> calculateDocumentPages(documentEntity, getObjectResponse.asByteArray()))
                 .map(String::valueOf)
                 .map(numberOfPages -> updateDocumentTags(documentEntity, numberOfPages))
@@ -286,8 +277,8 @@ public class DocumentServiceImpl implements DocumentService {
     private DocumentEntity updateDocumentTags(DocumentEntity documentEntity, String tagValue) {
         Map<String, List<String>> tags = documentEntity.getTags();
         if (CollectionUtils.isEmpty(documentEntity.getTags())) {
-            tags = new HashMap<>(Map.of(documentNumberOfPagesTagKey, List.of(tagValue)));
-        } else tags.put(documentNumberOfPagesTagKey, List.of(tagValue));
+            tags = new HashMap<>(Map.of(pnSsConfig.getIndexing().getDocumentNumberOfPagesTagKey(), List.of(tagValue)));
+        } else tags.put(pnSsConfig.getIndexing().getDocumentNumberOfPagesTagKey(), List.of(tagValue));
         documentEntity.setTags(tags);
         return documentEntity;
     }
@@ -361,7 +352,7 @@ public class DocumentServiceImpl implements DocumentService {
             String documentKey = documentEntity.getDocumentKey();
             boolean isToIgnore = ignoredUpdateMetadataHandler.isToIgnore(documentKey);
             if (isToIgnore) {
-                return s3Service.headObject(documentKey, bucketName.ssHotName()).onErrorResume(NoSuchKeyException.class, throwable -> {
+                return s3Service.headObject(documentKey, pnSsConfig.getBucket().getHotName()).onErrorResume(NoSuchKeyException.class, throwable -> {
                     log.debug("File with key '{}' is to ignore", documentKey);
                     return Mono.empty();
                 }).doOnNext(headObjectResponse -> {

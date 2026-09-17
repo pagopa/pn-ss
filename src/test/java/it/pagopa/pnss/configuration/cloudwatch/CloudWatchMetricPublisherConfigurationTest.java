@@ -1,25 +1,23 @@
 package it.pagopa.pnss.configuration.cloudwatch;
 
 import it.pagopa.pnss.common.exception.CloudWatchResourceNotFoundException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 
 @SpringBootTestWebEnv
 class CloudWatchMetricPublisherConfigurationTest {
 
     @Autowired
     private CloudWatchMetricPublisherConfiguration config;
-    @Value("${pn.sign.cloudwatch.namespace.namirial}")
-    private String namirialNamespace;
-    @Value("${pn.sign.cloudwatch.metric.response-time.pades}")
-    private String signPadesReadResponseTimeMetric;
+    @Autowired
+    private PnSsConfig pnSsConfig;
 
     @Test
     void getMetricPublisherByNamespaceOk() {
-        Assertions.assertDoesNotThrow(() -> config.getMetricPublisherByNamespace(namirialNamespace));
+        Assertions.assertDoesNotThrow(() -> config.getMetricPublisherByNamespace(pnSsConfig.getSign().getCloudwatch().getNamespaceNamirial()));
     }
 
     @Test
@@ -30,7 +28,7 @@ class CloudWatchMetricPublisherConfigurationTest {
 
     @Test
     void getSdkMetricByNameOk() {
-        Assertions.assertDoesNotThrow(() -> config.getSdkMetricByName(signPadesReadResponseTimeMetric));
+        Assertions.assertDoesNotThrow(() -> config.getSdkMetricByName(pnSsConfig.getSign().getCloudwatch().getMetricResponseTime().getPades()));
     }
 
     @Test

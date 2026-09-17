@@ -2,8 +2,8 @@ package it.pagopa.pnss.configuration;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import it.pagopa.pnss.common.utils.JsonUtils;
+import it.pagopa.pnss.configurationproperties.TransformationProperties;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.services.ssm.SsmClient;
 
@@ -17,9 +17,9 @@ import static it.pagopa.pnss.common.utils.LogUtils.TRANSFORMATION_CONFIG;
 public class TransformationConfig {
     private final HashMap<String, String> config;
 
-    public TransformationConfig(SsmClient ssmClient, JsonUtils jsonUtils, @Value("${pn.ss.transformation.config.parameter-name}") String parameterName) {
+    public TransformationConfig(SsmClient ssmClient, JsonUtils jsonUtils, TransformationProperties props) {
         log.debug(INITIALIZING, TRANSFORMATION_CONFIG);
-        config = loadConfig(ssmClient, jsonUtils, parameterName);
+        config = loadConfig(ssmClient, jsonUtils, props.getConfig().getParameterName());
     }
 
     private HashMap<String, String> loadConfig(SsmClient ssmClient, JsonUtils jsonUtils, String transformationConfigName) {

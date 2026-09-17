@@ -2,10 +2,10 @@ package it.pagopa.pnss.configuration;
 
 import it.pagopa.pnss.common.exception.FileNotModifiedException;
 import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.transformation.service.S3Service;
 import jakarta.annotation.PostConstruct;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -33,7 +33,7 @@ import static it.pagopa.pnss.common.utils.LogUtils.*;
  */
 @CustomLog
 @Configuration
-@ConditionalOnExpression("T(org.apache.commons.lang3.StringUtils).isNotEmpty('${pn.ss.ignored.update.metadata.list}')")
+@ConditionalOnExpression("T(org.apache.commons.lang3.StringUtils).isNotEmpty('${pn.ss.ignored-update-metadata.list}')")
 public class IgnoredUpdateMetadataConfig {
     private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
     private final S3Service s3Service;
@@ -45,14 +45,15 @@ public class IgnoredUpdateMetadataConfig {
     /**
      * Instantiates a new Ignored update metadata config.
      *
-     * @param ignoredUpdateMetadataListUri the s3 uri pointing to the list of files to ignore
+     * @param pnSsConfig                   the centralized pn-ss configuration, providing the s3 uri pointing to the list of files to ignore
      * @param ignoredUpdateMetadataHandler  the handler of the set containing files to ignore
      * @param s3Service                    the s3 service
      */
-    public IgnoredUpdateMetadataConfig(@Value("${pn.ss.ignored.update.metadata.list}") String ignoredUpdateMetadataListUri, IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler, S3Service s3Service) {
+    public IgnoredUpdateMetadataConfig(PnSsConfig pnSsConfig, IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler, S3Service s3Service) {
         this.ignoredUpdateMetadataHandler = ignoredUpdateMetadataHandler;
         this.s3Service = s3Service;
         this.lastModified = Instant.now().minusSeconds(1);
+        String ignoredUpdateMetadataListUri = pnSsConfig.getIgnoredUpdateMetadata().getList();
 
         //Parse S3 URI
         Pattern pattern = Pattern.compile(S3_URI_REGEX);
@@ -86,7 +87,7 @@ public class IgnoredUpdateMetadataConfig {
         log.logStartingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED);
         refreshIgnoredUpdateMetadataList()
                 .onErrorResume(FileNotModifiedException.class, throwable -> Mono.empty())
-                .doOnError(throwable -> log.logEndingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED, false, throwable.getMessage()))
+                .doOnError(throwable -> log.logEndingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED, false, throwable.getMessage(), throwable))
                 .doOnSuccess(result -> log.logEndingProcess(REFRESH_IGNORED_UPDATE_METADATA_LIST_SCHEDULED))
                 .block();
     }

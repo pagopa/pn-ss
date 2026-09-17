@@ -9,10 +9,10 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -26,22 +26,19 @@ import static org.springframework.http.HttpStatus.*;
 @CustomLog
 public class DocumentClientCallImpl implements DocumentClientCall {
 
-    @Value("${gestore.repository.anagrafica.internal.docClient}")
-    private String anagraficaDocumentiClientEndpoint;
-
-    @Value("${gestore.repository.anagrafica.internal.docClient.post}")
-    private String anagraficaDocumentiClientEndpointPost;
-
-    @Value("${header.x-api-key}")
-    private String xApiKey;
-
-    @Value("${header.x-pagopa-safestorage-cx-id}")
-    private String xPagopaSafestorageCxId;
+    private final String anagraficaDocumentiClientEndpoint;
+    private final String anagraficaDocumentiClientEndpointPost;
+    private final String xApiKey;
+    private final String xPagopaSafestorageCxId;
 
     private final WebClient ssWebClient;
 
-    public DocumentClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient) {
+    public DocumentClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient, PnSsConfig pnSsConfig) {
         this.ssWebClient = ssWebClient;
+        this.anagraficaDocumentiClientEndpoint = pnSsConfig.getClientInterni().getEndpoint().getDocClient();
+        this.anagraficaDocumentiClientEndpointPost = pnSsConfig.getClientInterni().getEndpoint().getDocClientPost();
+        this.xApiKey = pnSsConfig.getClientInterni().getHeader().getApiKey();
+        this.xPagopaSafestorageCxId = pnSsConfig.getClientInterni().getHeader().getPagopaSafestorageCxId();
     }
 
     @Override

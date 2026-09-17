@@ -57,16 +57,9 @@ public class ConfigurationApiController implements CfgApi {
 
     @Override
     public Mono<ResponseEntity<DocumentTypesConfigurations>> getDocumentsConfigs(final ServerWebExchange exchange) {
-        final String GET_DOCUMENTS_CONFIGS = "getDocumentsConfigs";
-
-        log.logStartingProcess(GET_DOCUMENTS_CONFIGS);
         return documentsConfigsService.getDocumentsConfigs()
                 .map(ResponseEntity::ok)
-                .doOnSuccess(result -> log.logEndingProcess(GET_DOCUMENTS_CONFIGS))
-                .onErrorResume(throwable -> {
-                    log.logEndingProcess(GET_DOCUMENTS_CONFIGS, false, throwable.getMessage());
-                    return this.getDocumentTypesConfigurationsErrorResponse(throwable);
-                });
+                .onErrorResume(this::getDocumentTypesConfigurationsErrorResponse);
     }
 
     /**
@@ -83,17 +76,10 @@ public class ConfigurationApiController implements CfgApi {
      */
     @Override
     public Mono<ResponseEntity<UserConfiguration>> getCurrentClientConfig(String clientId, final ServerWebExchange exchange) {
-        final String GET_CURRENT_CLIENT_CONFIG = "getCurrentClientConfig";
-
-        log.logStartingProcess(GET_CURRENT_CLIENT_CONFIG);
         return userConfigurationService.getUserConfiguration(clientId)
                 .map(userConfigurationInternal -> ResponseEntity.ok(objectMapper.convertValue(
                         userConfigurationInternal,
                         UserConfiguration.class)))
-                .doOnSuccess(result -> log.logEndingProcess(GET_CURRENT_CLIENT_CONFIG))
-                .onErrorResume(throwable -> {
-                    log.logEndingProcess(GET_CURRENT_CLIENT_CONFIG, false, throwable.getMessage());
-                    return getUserConfigurationErrorResponse(throwable);
-                });
+                .onErrorResume(this::getUserConfigurationErrorResponse);
     }
 }

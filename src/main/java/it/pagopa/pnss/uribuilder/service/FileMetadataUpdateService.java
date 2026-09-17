@@ -11,7 +11,7 @@ import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.uribuilder.rest.constant.ResultCodeWithDescription;
 import lombok.CustomLog;
@@ -43,20 +43,20 @@ public class FileMetadataUpdateService {
     private final DocTypesClientCall docTypesClientCall;
     private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
     private final S3Service s3Service;
-    private final BucketName bucketName;
+    private final PnSsConfig pnSsConfig;
     private final ScadenzaDocumentiClientCall scadenzaDocumentiClientCall;
     private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
 
     public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
                                      DocTypesClientCall docTypesClientCall, @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy,
-                                     S3Service s3Service, BucketName bucketName, ScadenzaDocumentiClientCall scadenzaDocumentiClientCall,
+                                     S3Service s3Service, PnSsConfig pnSsConfig, ScadenzaDocumentiClientCall scadenzaDocumentiClientCall,
                                      IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler) {
         this.userConfigClientCall = userConfigurationClientCall;
         this.docClientCall = documentClientCall;
         this.docTypesClientCall = docTypesClientCall;
         this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
         this.s3Service = s3Service;
-        this.bucketName = bucketName;
+        this.pnSsConfig = pnSsConfig;
         this.scadenzaDocumentiClientCall = scadenzaDocumentiClientCall;
         this.ignoredUpdateMetadataHandler = ignoredUpdateMetadataHandler;
     }
@@ -233,7 +233,7 @@ public class FileMetadataUpdateService {
                     Tag freezeTag = Tag.builder().key(STORAGE_FREEZE).value(storage).build();
                     return Tagging.builder().tagSet(freezeTag).build();
                 })
-                .flatMap(tagging -> s3Service.putObjectTagging(fileKey, bucketName.ssHotName(), tagging));
+                .flatMap(tagging -> s3Service.putObjectTagging(fileKey, pnSsConfig.getBucket().getHotName(), tagging));
     }
 
 }

@@ -1,6 +1,6 @@
 package it.pagopa.pnss.configuration;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,7 +35,7 @@ import software.amazon.awssdk.services.ssm.SsmClientBuilder;
 import java.net.URI;
 
 @Configuration
-@Slf4j
+@CustomLog
 public class AwsConfiguration {
 
     @Value("${test.aws.region-code:#{null}}")

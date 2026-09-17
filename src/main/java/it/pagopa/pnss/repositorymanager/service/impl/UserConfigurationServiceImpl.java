@@ -6,7 +6,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguratio
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
@@ -31,16 +31,14 @@ public class UserConfigurationServiceImpl implements UserConfigurationService {
     private final ObjectMapper objectMapper;
     private final DynamoDbAsyncTableDecorator<UserConfigurationEntity> userConfigurationEntityDynamoDbAsyncTable;
     private final RetryBackoffSpec dynamoRetryStrategy;
-    final RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public UserConfigurationServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, @Qualifier("dynamoRetryStrategy") RetryBackoffSpec dynamoRetryStrategy, RepositoryManagerDynamoTableName managerDynamoTableName) {
+                                        PnSsConfig pnSsConfig, @Qualifier("dynamoRetryStrategy") RetryBackoffSpec dynamoRetryStrategy) {
         this.objectMapper = objectMapper;
         this.userConfigurationEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(
-                dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.anagraficaClientName(),
+                dynamoDbEnhancedAsyncClient.table(pnSsConfig.getDynamo().getRepositoryManager().getAnagraficaClientName(),
                         TableSchema.fromBean(UserConfigurationEntity.class)));
         this.dynamoRetryStrategy = dynamoRetryStrategy;
-        this.managerDynamoTableName = managerDynamoTableName;
     }
 
     private Mono<UserConfigurationEntity> getErrorIdClientNotFoundException(String name) {

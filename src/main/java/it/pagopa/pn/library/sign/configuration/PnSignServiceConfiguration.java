@@ -12,17 +12,21 @@ import java.util.Set;
 public class PnSignServiceConfiguration {
 
     private final Set<String> namirialPropertiesKeySet = Set.of(
-            "namirial.server.address",
-            "namirial.server.max-connections",
-            "namirial.server.pending-acquire-timeout");
+            "pn.ss.sign.namirial.address",
+            "pn.ss.sign.namirial.max-connections",
+            "pn.ss.sign.namirial.pending-acquire-timeout");
 
 
     @Bean
     public PnSignServiceImpl pnSignServiceImpl(@Autowired Environment env) {
         namirialPropertiesKeySet.forEach(key -> {
             String property = env.getRequiredProperty(key);
-            System.setProperty(key, property);
+            System.setProperty(toNamirialSystemPropertyKey(key), property);
         });
         return new PnSignServiceImpl();
+    }
+
+    private static String toNamirialSystemPropertyKey(String springPropertyKey) {
+        return "namirial.server." + springPropertyKey.substring(springPropertyKey.lastIndexOf('.') + 1);
     }
 }

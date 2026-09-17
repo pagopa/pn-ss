@@ -2,6 +2,7 @@ package it.pagopa.pnss.configuration.secret;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import jakarta.annotation.PostConstruct;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,8 +21,7 @@ public class PnSignCredentialConf {
 
     @Value("${aws.region-code}")
     private String regionCode;
-    @Value("${pn.ss.identity.signature}")
-    private String pnSsIdentitySignature;
+    private final String pnSsIdentitySignature;
     @Value("${test.secret.properties:#{null}}")
     private String testSecretProperties;
     @Value("${test.aws.secretsmanager.endpoint:#{null}}")
@@ -29,8 +29,9 @@ public class PnSignCredentialConf {
     private final ObjectMapper objectMapper;
     private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER_V2 = DefaultCredentialsProvider.create();
 
-    public PnSignCredentialConf(ObjectMapper objectMapper) {
+    public PnSignCredentialConf(ObjectMapper objectMapper, PnSsConfig pnSsConfig) {
         this.objectMapper = objectMapper;
+        this.pnSsIdentitySignature = pnSsConfig.getSign().getIdentitySignature();
     }
 
     @PostConstruct

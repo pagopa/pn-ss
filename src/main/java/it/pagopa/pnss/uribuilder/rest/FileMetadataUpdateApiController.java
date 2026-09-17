@@ -4,17 +4,16 @@ import it.pagopa.pn.commons.utils.MDCUtils;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.api.FileMetadataUpdateApi;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.OperationResultCodeResponse;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UpdateFileMetadataRequest;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.uribuilder.service.FileMetadataUpdateService;
 import lombok.CustomLog;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
-import static it.pagopa.pnss.common.utils.LogUtils.UPDATE_FILE_METADATA;
 
 @RestController
 @CustomLog
@@ -22,14 +21,13 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
 
     final FileMetadataUpdateService fileMetadataUpdateService;
 
-    @Value("${header.x-api-key}")
-    private String apiKey;
+    private final String apiKey;
+    private final String pagopaSafestorageCxId;
 
-    @Value("${header.x-pagopa-safestorage-cx-id}")
-    private String pagopaSafestorageCxId;
-
-    public FileMetadataUpdateApiController(FileMetadataUpdateService fileMetadataUpdateService) {
+    public FileMetadataUpdateApiController(FileMetadataUpdateService fileMetadataUpdateService, PnSsConfig pnSsConfig) {
         this.fileMetadataUpdateService = fileMetadataUpdateService;
+        this.apiKey = pnSsConfig.getClientInterni().getHeader().getApiKey();
+        this.pagopaSafestorageCxId = pnSsConfig.getClientInterni().getHeader().getPagopaSafestorageCxId();
     }
 
     @Override
@@ -39,7 +37,6 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
 
         MDC.clear();
         MDC.put(MDC_CORR_ID_KEY, fileKey);
-        log.logStartingProcess(UPDATE_FILE_METADATA);
 
         String pagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(pagopaSafestorageCxId);
         String apiKeyValue = exchange.getRequest().getHeaders().getFirst(apiKey);
@@ -48,8 +45,6 @@ public class FileMetadataUpdateApiController implements FileMetadataUpdateApi {
                 xPagopaSafestorageCxId,
                 request,
                 pagopaSafestorageCxIdValue,
-                apiKeyValue)).map(ResponseEntity::ok)
-                .doOnError(throwable -> log.logEndingProcess(UPDATE_FILE_METADATA, false, throwable.getMessage()))
-                .doOnSuccess(result->log.logEndingProcess(UPDATE_FILE_METADATA)));
+                apiKeyValue)).map(ResponseEntity::ok));
     }
 }

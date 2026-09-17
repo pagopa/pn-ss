@@ -5,6 +5,7 @@ import it.pagopa.pnss.common.exception.RequestValidationException;
 import it.pagopa.pnss.common.model.pojo.IndexingLimits;
 import it.pagopa.pnss.common.model.pojo.IndexingTag;
 import it.pagopa.pnss.configuration.IndexingConfiguration;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -35,7 +36,11 @@ class AdditionalFileTagsServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        IndexingConfiguration indexingConfiguration = new IndexingConfiguration(null, null, null);
+        PnSsConfig pnSsConfig = new PnSsConfig();
+        PnSsConfig.Indexing indexing = new PnSsConfig.Indexing();
+        indexing.setConfigurationName("indexing-config-test");
+        pnSsConfig.setIndexing(indexing);
+        IndexingConfiguration indexingConfiguration = new IndexingConfiguration(null, null, pnSsConfig);
         indexingConfiguration.getTags().put(GLOBAL_TAG,
                 IndexingTag.builder().key(GLOBAL_TAG).indexed(true).multivalue(true).global(true).build());
         indexingConfiguration.getTags().put(LOCAL_TAG_KEY,

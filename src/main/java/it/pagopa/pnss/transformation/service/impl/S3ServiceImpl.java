@@ -1,6 +1,6 @@
 package it.pagopa.pnss.transformation.service.impl;
 
-import it.pagopa.pnss.configurationproperties.retry.S3RetryStrategyProperties;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
@@ -35,10 +35,10 @@ public class S3ServiceImpl implements S3Service {
     private final Predicate<Throwable> isRestoreAlreadyInProgress = throwable -> (throwable instanceof AwsServiceException) && ((AwsServiceException) throwable).awsErrorDetails().errorCode().equalsIgnoreCase("RestoreAlreadyInProgress");
 
 
-    public S3ServiceImpl(S3AsyncClient s3AsyncClient, S3Presigner s3Presigner, S3RetryStrategyProperties s3RetryStrategyProperties) {
+    public S3ServiceImpl(S3AsyncClient s3AsyncClient, S3Presigner s3Presigner, PnSsConfig pnSsConfig) {
         this.s3AsyncClient = s3AsyncClient;
         this.s3Presigner = s3Presigner;
-        s3RetryStrategy = Retry.backoff(s3RetryStrategyProperties.maxAttempts(), Duration.ofSeconds(s3RetryStrategyProperties.minBackoff()))
+        s3RetryStrategy = Retry.backoff(pnSsConfig.getS3().getRetryStrategy().getMaxAttempts(), Duration.ofSeconds(pnSsConfig.getS3().getRetryStrategy().getMinBackoff()))
                 .filter(S3Exception.class::isInstance)
                 .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());

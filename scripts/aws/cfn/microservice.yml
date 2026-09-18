@@ -612,6 +612,11 @@ Parameters:
     Default: '-'
     Description: Cron for which you send the metric to CloudWatch
 
+  CpuArchitecture:
+    Type: String
+    Default: 'ARM'
+    Description: CPU architecture for the Fargate tasks
+
 Conditions:
   PnCoreTargetEventBusExists: !Not [ !Equals [!Ref PnCoreTargetEventBus, '' ] ]
   HasCloudTrailLogsBucketName: !Not [ !Equals [!Ref SafeStorageFileAccessLogsBucketName, '-' ] ]
@@ -707,6 +712,7 @@ Resources:
         JavaToolOptions: !Ref JavaToolOptions
         EfsFilesystem: !Ref FargateEFSFileSystemID
         MountEfs: !Ref MountEfs
+        CpuArchitecture: !Ref CpuArchitecture
         # HealthCheckPath:
 
   PnSsManagedPolicy:

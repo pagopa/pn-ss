@@ -1020,7 +1020,13 @@ components:
           description: >- 
             data e ora fino a cui il documento sarà garantito all'interno di _SafeStorage_. <br/>
             Può essere ritardata nel tempo, mai anticipata. Formattata con timezone secondo l'rfc 3339
-            
+        availableUntil:
+          type: string
+          format: date-time
+          description: >-
+            data oltre la quale il documento non è più scaricabile da _SafeStorage_. <br/>
+            La cessazione della disponibilità decorre dalla fine del giorno indicato, in ora italiana. <br/>
+            Formattata con timezone secondo l'rfc 3339
     
     UpdateFileMetadataResponse:
       $ref: '#/components/schemas/OperationResultCodeResponse'

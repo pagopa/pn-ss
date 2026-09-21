@@ -34,6 +34,7 @@ public class DocumentEntity extends DocumentVersion {
      * Nota: dipendenza dal tag ??
      */
     private String retentionUntil; // modificabile in POST
+    private String availableUntil;
     private String checkSum; // modificabile in POST
     private String clientShortCode;
     private BigDecimal contentLenght; // modificabile in POST

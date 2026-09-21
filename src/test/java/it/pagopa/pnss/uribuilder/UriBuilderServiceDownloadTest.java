@@ -115,6 +115,10 @@ class UriBuilderServiceDownloadTest {
 
     private static final String CHECKSUM = "91375e9e5a9510087606894437a6a382fa5bc74950f932e2b85a788303cf5ba0";
 
+    private static final String AVAILABLE_UNTIL_PAST = "2020-01-01T23:59:59Z";
+    private static final String AVAILABLE_UNTIL_FUTURE = "2099-12-31T23:59:59Z";
+    private static final String NOT_AVAILABLE_MESSAGE = "Document is no longer available";
+
     @Value("${default.internal.x-api-key.value:#{null}}")
     private String defaultInternalApiKeyValue;
 
@@ -722,6 +726,269 @@ class UriBuilderServiceDownloadTest {
                 .orElseThrow(() -> new IllegalStateException("Delete Marker non creato per la key " + key));
     }
 
+
+    @Test
+    void testAvailableUntilExpiredMetadataOnlyReturnsGone() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil(AVAILABLE_UNTIL_PAST);
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
+                .expectBody(String.class)
+                .value(body -> {
+                    assertThat(body).contains(NOT_AVAILABLE_MESSAGE + " [availableUntil=" + AVAILABLE_UNTIL_PAST + "]");
+                    assertThat(body).doesNotContain("download");
+                });
+    }
+
+    /**
+     * Stesso esito con metadataOnly=false: nessuna presigned URL viene emessa.
+     */
+    @Test
+    void testAvailableUntilExpiredWithDownloadReturnsGone() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil(AVAILABLE_UNTIL_PAST);
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.GONE)
+                .expectBody(String.class)
+                .value(body -> assertThat(body)
+                        .contains(NOT_AVAILABLE_MESSAGE + " [availableUntil=" + AVAILABLE_UNTIL_PAST + "]"));
+    }
+
+    @Test
+    void testAvailableUntilInFutureReturnsUrlAndAvailabilityAsRetention() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+        d.setRetentionUntil("2098-01-01T00:00:00Z");
+        d.setAvailableUntil(AVAILABLE_UNTIL_FUTURE);
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCall(docId, false).expectStatus().isOk()
+                .expectBody(FileDownloadResponse.class)
+                .value(response -> {
+                    assertThat(response.getDownload()).isNotNull();
+                    assertThat(response.getDownload().getUrl()).isNotBlank();
+                    assertThat(response.getRetentionUntil()).isEqualTo(Date.from(Instant.parse(AVAILABLE_UNTIL_FUTURE)));
+                });
+    }
+
+    @Test
+    void testWithoutAvailableUntilRetentionIsUnchanged() {
+        String docId = "1111-aaaa";
+        String retentionUntil = "2098-01-01T00:00:00Z";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+        d.setRetentionUntil(retentionUntil);
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCall(docId, false).expectStatus().isOk()
+                .expectBody(FileDownloadResponse.class)
+                .value(response -> {
+                    assertThat(response.getDownload()).isNotNull();
+                    assertThat(response.getRetentionUntil()).isEqualTo(Date.from(Instant.parse(retentionUntil)));
+                });
+    }
+
+    @Test
+    void testDeletedWithAvailableUntilPrefersDeleteMarker() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(DELETED);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil(AVAILABLE_UNTIL_PAST);
+        mockGetDocument(d, docId);
+
+        Instant deleteMarkerLastModified = Instant.parse("2026-06-24T10:15:30Z");
+        DeleteMarkerEntry deleteMarkerEntry = DeleteMarkerEntry.builder().key(docId).lastModified(deleteMarkerLastModified).isLatest(true).build();
+        doReturn(Mono.just(ListObjectVersionsResponse.builder().deleteMarkers(deleteMarkerEntry).build()))
+                .when(s3Service).listObjectVersions(eq(docId), anyString());
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
+                .expectBody(String.class)
+                .value(body -> assertThat(body)
+                        .contains("Document has been deleted [deletionTimestamp=2026-06-24T10:15:30Z]"));
+    }
+
+
+    @Test
+    void testDeletedWithoutDeleteMarkerPrefersAvailableUntilOverLastStatusChange() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(DELETED);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil(AVAILABLE_UNTIL_PAST);
+        d.setLastStatusChangeTimestamp(OffsetDateTime.parse("2026-06-20T08:00:00Z"));
+        mockGetDocument(d, docId);
+
+        doReturn(Mono.just(ListObjectVersionsResponse.builder().deleteMarkers(Collections.emptyList()).build()))
+                .when(s3Service).listObjectVersions(eq(docId), anyString());
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
+                .expectBody(String.class)
+                .value(body -> assertThat(body)
+                        .contains("Document has been deleted [deletionTimestamp=" + AVAILABLE_UNTIL_PAST + "]"));
+    }
+
+
+    @Test
+    void testAvailableUntilExpiredDoesNotInvokeListObjectVersions() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil(AVAILABLE_UNTIL_PAST);
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE);
+
+        verify(s3Service, never()).listObjectVersions(anyString(), anyString());
+    }
+
+
+    @Test
+    void testAvailableUntilSurvivesDocumentStateHandling() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentType type = new DocumentType();
+        type.setTipoDocumento(DocTypesConstant.PN_AAR);
+        type.setChecksum(DocumentType.ChecksumEnum.MD5);
+        type.setStatuses(Map.of(SAVED, new CurrentStatus().technicalState(AVAILABLE)));
+
+        DocumentResponseDocument doc = new DocumentResponseDocument();
+        doc.setDocumentType(type);
+        doc.setDocumentKey(docId);
+        doc.setDocumentState(AVAILABLE);
+        doc.setRetentionUntil(null);
+        doc.setAvailableUntil(AVAILABLE_UNTIL_FUTURE);
+        doReturn(Mono.just(new DocumentResponse().document(doc))).when(documentClientCall).getDocument(docId);
+
+        DocumentResponseDocument patched = new DocumentResponseDocument();
+        patched.setDocumentType(type);
+        patched.setDocumentKey(docId);
+        patched.setDocumentState(AVAILABLE);
+        patched.setRetentionUntil("2098-01-01T00:00:00Z");
+        patched.setAvailableUntil(AVAILABLE_UNTIL_FUTURE);
+        when(documentClientCall.patchDocument(eq(defaultInternalClientIdValue), eq(defaultInternalApiKeyValue), eq(docId), any(DocumentChanges.class)))
+                .thenReturn(Mono.just(new DocumentResponse().document(patched)));
+
+        doReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.parse("2098-01-01T00:00:00Z")).build()))
+                .when(s3Service).headObject(anyString(), anyString());
+
+        fileDownloadTestCall(docId, false).expectStatus().isOk()
+                .expectBody(FileDownloadResponse.class)
+                .value(response -> assertThat(response.getRetentionUntil()).isEqualTo(Date.from(Instant.parse(AVAILABLE_UNTIL_FUTURE))));
+    }
+
+
+    @Test
+    void testAvailableUntilExpiredTakesPrecedenceOverTagsCheck() {
+        String docId = "1111-aaaa";
+        String clientId = "client-not-authorized";
+        String apiKey = "client-not-authorized_api_key";
+
+        UserConfiguration userConfiguration = new UserConfiguration();
+        userConfiguration.setName(clientId);
+        userConfiguration.setApiKey(apiKey);
+        userConfiguration.setCanReadTags(false);
+        userConfiguration.setCanRead(Collections.singletonList(PN_AAR));
+        when(userConfigurationClientCall.getUser(anyString()))
+                .thenReturn(Mono.just(new UserConfigurationResponse().userConfiguration(userConfiguration)));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil(AVAILABLE_UNTIL_PAST);
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCallWithClientId(docId, true, clientId, apiKey).expectStatus().isEqualTo(HttpStatus.GONE);
+    }
+
+    /**
+     * Ordine dei rami: il controllo sul tipo documento leggibile resta il primo, la 403 vince sulla 410.
+     */
+    @Test
+    void testDocumentTypeNotReadableTakesPrecedenceOverAvailableUntil() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of());
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil(AVAILABLE_UNTIL_PAST);
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCall(docId, true).expectStatus().isForbidden();
+    }
+
+
+    @Test
+    void testAvailableUntilMalformedReturnsServerError() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(AVAILABLE);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil("non-una-data");
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+
+    @Test
+    void testStagedWithAvailableUntilExpiredReturnsGone() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(STAGED);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil(AVAILABLE_UNTIL_PAST);
+        mockGetDocument(d, docId);
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
+                .expectBody(String.class)
+                .value(body -> assertThat(body)
+                        .contains(NOT_AVAILABLE_MESSAGE + " [availableUntil=" + AVAILABLE_UNTIL_PAST + "]"));
+    }
+
 //    @Test
 //    void testDocumentMissingFromBucket() {
 //
@@ -970,7 +1237,8 @@ class UriBuilderServiceDownloadTest {
         doc.setDocumentKey(docId);
         doc.setDocumentState(d.getDocumentState());
         doc.setDocumentLogicalState(d.getDocumentLogicalState());
-        doc.setRetentionUntil(OffsetDateTime.now().format(DATE_TIME_FORMATTER));
+        doc.setRetentionUntil(d.getRetentionUntil() != null ? d.getRetentionUntil() : OffsetDateTime.now().format(DATE_TIME_FORMATTER));
+        doc.setAvailableUntil(d.getAvailableUntil());
         doc.setLastStatusChangeTimestamp(d.getLastStatusChangeTimestamp());
         documentResponse.setDocument(doc);
         Mono<DocumentResponse> docRespEntity = Mono.just(documentResponse);

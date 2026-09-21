@@ -109,6 +109,8 @@ public class UriBuilderService {
     private static final String DELETED_MESSAGE = "Document has been deleted";
     private static final String DELETION_TS_MARKER = " [deletionTimestamp=%s]";
     private static final DateTimeFormatter DELETION_TS_FORMATTER = DateTimeFormatter.ISO_INSTANT;
+    private static final String NOT_AVAILABLE_MESSAGE = "Document is no longer available";
+    private static final String AVAILABILITY_END_MARKER = " [availableUntil=%s]";
     private final IndexingConfiguration indexingConfiguration;
     private final RetryBackoffSpec tagsRetryStrategy;
 
@@ -431,10 +433,17 @@ public class UriBuilderService {
             return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
                     String.format("Client : %s not has privilege for read document type %s", xPagopaSafestorageCxId, documentType)));
         } else if (document.getDocumentState().equalsIgnoreCase(DELETED)) {
-            return resolveDeletionTimestamp(document)
+            return resolveDeletionTimestamp(document, true)
                     .map(tsOpt -> tsOpt
                             .map(ts -> DELETED_MESSAGE + String.format(DELETION_TS_MARKER, ts))
                             .orElse(DELETED_MESSAGE))
+                    .flatMap(msg -> Mono.<DocumentResponseDocument>error(
+                            new ResponseStatusException(HttpStatus.GONE, msg)));
+        } else if (isAvailabilityExpired(document)) {
+            return resolveDeletionTimestamp(document, false)
+                    .map(tsOpt -> tsOpt
+                            .map(ts -> NOT_AVAILABLE_MESSAGE + String.format(AVAILABILITY_END_MARKER, ts))
+                            .orElse(NOT_AVAILABLE_MESSAGE))
                     .flatMap(msg -> Mono.<DocumentResponseDocument>error(
                             new ResponseStatusException(HttpStatus.GONE, msg)));
         } else if (document.getDocumentState().equalsIgnoreCase(STAGED)) {
@@ -448,15 +457,31 @@ public class UriBuilderService {
         }
     }
 
+
+    private boolean isAvailabilityExpired(DocumentResponseDocument document) {
+        return parseAvailableUntil(document)
+                .map(availableUntil -> availableUntil.isBefore(Instant.now()))
+                .orElse(false);
+    }
+
     /**
-     * Calcola il timestamp di cancellazione dell'allegato per arricchire il messaggio della 410 Gone (WI-2.2).
-     * Dato default: lastModified del Delete Marker su S3. Fallback: lastStatusChangeTimestamp dei metadati.
+     * Un availableUntil presente ma non interpretabile come data non viene ignorato. La
+     * DateTimeException risale come 500.
      */
-    private Mono<Optional<String>> resolveDeletionTimestamp(DocumentResponseDocument document) {
+    private Optional<Instant> parseAvailableUntil(DocumentResponseDocument document) {
+        String availableUntil = document.getAvailableUntil();
+        if (StringUtils.isBlank(availableUntil)) {
+            return Optional.empty();
+        }
+        return Optional.of(Instant.from(DATE_TIME_FORMATTER.parse(availableUntil)));
+    }
+
+
+    private Mono<Optional<String>> resolveDeletionTimestamp(DocumentResponseDocument document, boolean isDeleted) {
         String documentKey = document.getDocumentKey();
 
-        if (StringUtils.isBlank(documentKey)) {
-            return Mono.just(fallbackTimestamp(document));
+        if (!isDeleted || StringUtils.isBlank(documentKey)) {
+            return Mono.just(availabilityTimestamp(document).or(() -> fallbackTimestamp(document)));
         }
 
         return s3Service.listObjectVersions(documentKey, bucketName.ssHotName())
@@ -465,10 +490,16 @@ public class UriBuilderService {
                         .max(Comparator.comparing(DeleteMarkerEntry::lastModified))
                         .map(dm -> DELETION_TS_FORMATTER.format(dm.lastModified())))
                 .onErrorResume(t -> {
-                    log.info("resolveDeletionTimestamp: listObjectVersions KO, fallback su lastStatusChangeTimestamp", t);
+                    log.info("resolveDeletionTimestamp: listObjectVersions KO, fallback su availableUntil/lastStatusChangeTimestamp", t);
                     return Mono.just(Optional.<String>empty());
                 })
-                .map(fromMarker -> fromMarker.or(() -> fallbackTimestamp(document)));
+                .map(fromMarker -> fromMarker
+                        .or(() -> availabilityTimestamp(document))
+                        .or(() -> fallbackTimestamp(document)));
+    }
+
+    private Optional<String> availabilityTimestamp(DocumentResponseDocument document) {
+        return parseAvailableUntil(document).map(DELETION_TS_FORMATTER::format);
     }
 
     private Optional<String> fallbackTimestamp(DocumentResponseDocument document) {
@@ -620,7 +651,7 @@ public class UriBuilderService {
                             .checksum(doc.getCheckSum() != null ? doc.getCheckSum() : null)
                             .contentLength(doc.getContentLenght())
                             .documentStatus(logicalState.orElse(""))
-                            .retentionUntil(doc.getRetentionUntil() != null ? Date.from(Instant.from(DATE_TIME_FORMATTER.parse(doc.getRetentionUntil()))) : null)
+                            .retentionUntil(resolveEffectiveRetentionUntil(doc))
                             .contentType(doc.getContentType())
                             .documentType(doc.getDocumentType().getTipoDocumento())
                             .key(fileKey)
@@ -633,6 +664,17 @@ public class UriBuilderService {
                 })
                 .cast(FileDownloadResponse.class)
                 .doOnSuccess(fileDownloadResponse -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, GET_FILE_DOWNLOAD_RESPONSE, fileDownloadResponse));
+    }
+
+    /**
+     * Il campo retentionUntil della response riporta la data entro cui il documento è effettivamente
+     * utilizzabile: la fine disponibilità quando valorizzata, altrimenti la retention.
+     */
+    private Date resolveEffectiveRetentionUntil(Document doc) {
+        String effective = StringUtils.isNotBlank(doc.getAvailableUntil())
+                ? doc.getAvailableUntil()
+                : doc.getRetentionUntil();
+        return effective != null ? Date.from(Instant.from(DATE_TIME_FORMATTER.parse(effective))) : null;
     }
 
     private Mono<Boolean> validationFieldCreateUri() {
@@ -780,6 +822,7 @@ public class UriBuilderService {
         doc.setDocumentLogicalState(responseDoc.getDocumentLogicalState());
         doc.setClientShortCode(responseDoc.getClientShortCode());
         doc.setRetentionUntil(responseDoc.getRetentionUntil());
+        doc.setAvailableUntil(responseDoc.getAvailableUntil());
         doc.setCheckSum(responseDoc.getCheckSum());
         doc.setContentLenght(responseDoc.getContentLenght());
         doc.setDocumentType(responseDoc.getDocumentType());

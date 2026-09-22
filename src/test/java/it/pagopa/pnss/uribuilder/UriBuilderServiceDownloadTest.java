@@ -742,7 +742,7 @@ class UriBuilderServiceDownloadTest {
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
                 .value(body -> {
-                    assertThat(body).contains(NOT_AVAILABLE_MESSAGE + " [availableUntil=" + AVAILABLE_UNTIL_PAST + "]");
+                    assertThat(body).contains(NOT_AVAILABLE_MESSAGE + " [deletionTimestamp=" + AVAILABLE_UNTIL_PAST + "]");
                     assertThat(body).doesNotContain("download");
                 });
     }
@@ -765,7 +765,7 @@ class UriBuilderServiceDownloadTest {
         fileDownloadTestCall(docId, false).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
                 .value(body -> assertThat(body)
-                        .contains(NOT_AVAILABLE_MESSAGE + " [availableUntil=" + AVAILABLE_UNTIL_PAST + "]"));
+                        .contains(NOT_AVAILABLE_MESSAGE + " [deletionTimestamp=" + AVAILABLE_UNTIL_PAST + "]"));
     }
 
     @Test
@@ -1078,7 +1078,7 @@ class UriBuilderServiceDownloadTest {
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
                 .expectBody(String.class)
                 .value(body -> assertThat(body)
-                        .contains(NOT_AVAILABLE_MESSAGE + " [availableUntil=" + AVAILABLE_UNTIL_PAST + "]"));
+                        .contains(NOT_AVAILABLE_MESSAGE + " [deletionTimestamp=" + AVAILABLE_UNTIL_PAST + "]"));
     }
 
 //    @Test

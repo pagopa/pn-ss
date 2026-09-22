@@ -110,7 +110,6 @@ public class UriBuilderService {
     private static final String DELETION_TS_MARKER = " [deletionTimestamp=%s]";
     private static final DateTimeFormatter DELETION_TS_FORMATTER = DateTimeFormatter.ISO_INSTANT;
     private static final String NOT_AVAILABLE_MESSAGE = "Document is no longer available";
-    private static final String AVAILABILITY_END_MARKER = " [availableUntil=%s]";
     private final IndexingConfiguration indexingConfiguration;
     private final RetryBackoffSpec tagsRetryStrategy;
 
@@ -442,7 +441,7 @@ public class UriBuilderService {
         } else if (isAvailabilityExpired(document)) {
             return resolveDeletionTimestamp(document, false)
                     .map(tsOpt -> tsOpt
-                            .map(ts -> NOT_AVAILABLE_MESSAGE + String.format(AVAILABILITY_END_MARKER, ts))
+                            .map(ts -> NOT_AVAILABLE_MESSAGE + String.format(DELETION_TS_MARKER, ts))
                             .orElse(NOT_AVAILABLE_MESSAGE))
                     .flatMap(msg -> Mono.<DocumentResponseDocument>error(
                             new ResponseStatusException(HttpStatus.GONE, msg)));

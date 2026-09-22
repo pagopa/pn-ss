@@ -401,7 +401,7 @@ public class DocumentServiceImpl implements DocumentService {
             hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getAvailableUntil(), documentEntity.getAvailableUntil());
         }
         if (!Objects.isNull(documentChanges.getContentLenght())) {
-            hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getContentLenght(), documentEntity.getContentLenght());
+            hasBeenPatched = hasBeenPatched && documentEntity.getContentLenght() != null && documentChanges.getContentLenght().compareTo(documentEntity.getContentLenght()) == 0;
         }
         if (!Objects.isNull(documentChanges.getCheckSum())) {
             hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getCheckSum(), documentEntity.getCheckSum());

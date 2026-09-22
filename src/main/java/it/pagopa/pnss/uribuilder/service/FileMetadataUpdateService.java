@@ -10,6 +10,7 @@ import it.pagopa.pnss.common.client.exception.ScadenzaDocumentiCallException;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
 import it.pagopa.pnss.common.service.IgnoredUpdateMetadataHandler;
+import it.pagopa.pnss.common.utils.DocumentDateFormatter;
 import it.pagopa.pnss.common.utils.LogUtils;
 import it.pagopa.pnss.configurationproperties.BucketName;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -28,7 +29,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectTaggingResponse;
 import software.amazon.awssdk.services.s3.model.Tag;
 import software.amazon.awssdk.services.s3.model.Tagging;
 
-import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.stream.Stream;
 
 import static it.pagopa.pnss.common.constant.Constant.STORAGE_FREEZE;
@@ -46,11 +47,12 @@ public class FileMetadataUpdateService {
     private final BucketName bucketName;
     private final ScadenzaDocumentiClientCall scadenzaDocumentiClientCall;
     private final IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler;
+    private final DocumentDateFormatter documentDateFormatter;
 
     public FileMetadataUpdateService(UserConfigurationClientCall userConfigurationClientCall, DocumentClientCall documentClientCall,
                                      DocTypesClientCall docTypesClientCall, @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy,
                                      S3Service s3Service, BucketName bucketName, ScadenzaDocumentiClientCall scadenzaDocumentiClientCall,
-                                     IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler) {
+                                     IgnoredUpdateMetadataHandler ignoredUpdateMetadataHandler, DocumentDateFormatter documentDateFormatter) {
         this.userConfigClientCall = userConfigurationClientCall;
         this.docClientCall = documentClientCall;
         this.docTypesClientCall = docTypesClientCall;
@@ -59,6 +61,7 @@ public class FileMetadataUpdateService {
         this.bucketName = bucketName;
         this.scadenzaDocumentiClientCall = scadenzaDocumentiClientCall;
         this.ignoredUpdateMetadataHandler = ignoredUpdateMetadataHandler;
+        this.documentDateFormatter = documentDateFormatter;
     }
 
     public Mono<OperationResultCodeResponse> updateMetadata(String fileKey, String xPagopaSafestorageCxId, UpdateFileMetadataRequest request, String authPagopaSafestorageCxId, String authApiKey) {
@@ -66,6 +69,7 @@ public class FileMetadataUpdateService {
         log.debug(INVOKING_METHOD, UPDATE_METADATA, Stream.of(fileKey, xPagopaSafestorageCxId, request).toList());
 
         var retentionUntil = request.getRetentionUntil();
+        var availableUntil = request.getAvailableUntil();
         var logicalState = request.getStatus();
 
         return docClientCall.getDocument(fileKey)
@@ -128,10 +132,27 @@ public class FileMetadataUpdateService {
                         }
 
                     }
+
+                    if (availableUntil != null && documentDateFormatter.toLocalDate(availableUntil).isBefore(documentDateFormatter.today())) {
+                        String errorMsg = String.format("Availability date '%s' is already expired for document key : %s", availableUntil, fileKey);
+                        log.debug("{} : {}", UPDATE_METADATA, errorMsg);
+                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg));
+                    }
+
                     documentChanges.setDocumentState(technicalStatus);
 
                     if (retentionUntil != null) {
-                        documentChanges.setRetentionUntil(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").format(retentionUntil));
+                        documentChanges.setRetentionUntil(documentDateFormatter.format(retentionUntil));
+                    }
+
+                    if (availableUntil != null) {
+                        Instant normalizedAvailableUntil = documentDateFormatter.endOfDay(availableUntil);
+                        documentChanges.setAvailableUntil(documentDateFormatter.format(normalizedAvailableUntil));
+
+                        String currentRetentionUntil = retentionUntil != null ? documentChanges.getRetentionUntil() : document.getRetentionUntil();
+                        if (StringUtils.isBlank(currentRetentionUntil) || normalizedAvailableUntil.isAfter(documentDateFormatter.parse(currentRetentionUntil))) {
+                            documentChanges.setRetentionUntil(documentDateFormatter.format(normalizedAvailableUntil));
+                        }
                     }
 
                     return Mono.just(documentChanges);
@@ -139,11 +160,12 @@ public class FileMetadataUpdateService {
                 .flatMap(documentChanges ->  docClientCall.patchDocument(authPagopaSafestorageCxId, authApiKey, fileKey, documentChanges)
                         .retryWhen(gestoreRepositoryRetryStrategy)
                         .flatMap(documentResponsePatch -> {
-                            if (retentionUntil != null && !ignoredUpdateMetadataHandler.isToIgnore(fileKey)) {
+                            String appliedRetentionUntil = documentChanges.getRetentionUntil();
+                            if (appliedRetentionUntil != null && !ignoredUpdateMetadataHandler.isToIgnore(fileKey)) {
                                 return updateS3ObjectTags(fileKey, documentResponsePatch.getDocument().getDocumentState(), documentResponsePatch.getDocument().getDocumentType())
                                         .flatMap(putObjectTaggingResponse -> scadenzaDocumentiClientCall.insertOrUpdateScadenzaDocumenti(new ScadenzaDocumentiInput()
                                                 .documentKey(fileKey)
-                                                .retentionUntil(retentionUntil.toInstant().getEpochSecond())))
+                                                .retentionUntil(documentDateFormatter.parse(appliedRetentionUntil).getEpochSecond())))
                                         .thenReturn(documentResponsePatch);
                             }
                             return Mono.just(documentResponsePatch);

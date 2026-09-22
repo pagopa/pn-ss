@@ -134,8 +134,9 @@ public class FileMetadataUpdateService {
                     }
 
                     if (availableUntil != null && documentDateFormatter.toLocalDate(availableUntil).isBefore(documentDateFormatter.today())) {
-                        log.debug("{} : Availability date '{}' is already expired for document key {}", UPDATE_METADATA, availableUntil, fileKey);
-                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Availability date is already expired for document key : " + fileKey));
+                        String errorMsg = String.format("Availability date '%s' is already expired for document key : %s", availableUntil, fileKey);
+                        log.debug("{} : {}", UPDATE_METADATA, errorMsg);
+                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg));
                     }
 
                     documentChanges.setDocumentState(technicalStatus);

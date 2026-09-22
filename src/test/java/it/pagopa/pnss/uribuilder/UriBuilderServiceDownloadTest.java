@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +27,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
@@ -1033,4 +1035,45 @@ class UriBuilderServiceDownloadTest {
 
     }
 
+    @Test
+    void fixBookedDocumentDoesNotSetAvailableUntil() {
+        Document document = new Document().documentType(new DocumentType().checksum(DocumentType.ChecksumEnum.MD5));
+        HeadObjectResponse headObjectResponse = HeadObjectResponse.builder()
+                .objectLockRetainUntilDate(Instant.now())
+                .contentLength(10L)
+                .sseCustomerKeyMD5(CHECKSUM)
+                .build();
+
+        DocumentChanges documentChanges = ReflectionTestUtils.invokeMethod(uriBuilderService, "fixBookedDocument", document, headObjectResponse);
+
+        assertThat(documentChanges).isNotNull();
+        assertThat(documentChanges.getRetentionUntil()).isNotNull();
+        assertThat(documentChanges.getAvailableUntil()).isNull();
+    }
+
+    @Test
+    void retentionRealignmentFromS3DoesNotSetAvailableUntil() {
+        String docId = "3333-cccc";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentResponseDocument doc = new DocumentResponseDocument();
+        doc.setDocumentType(new DocumentType().tipoDocumento(DocTypesConstant.PN_AAR)
+                .checksum(DocumentType.ChecksumEnum.MD5)
+                .statuses(Map.of(SAVED, new CurrentStatus().technicalState(AVAILABLE))));
+        doc.setDocumentKey(docId);
+        doc.setDocumentState(AVAILABLE);
+        doReturn(Mono.just(new DocumentResponse().document(doc))).when(documentClientCall).getDocument(docId);
+
+        doReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).build()))
+                .when(s3Service).headObject(anyString(), anyString());
+
+        ArgumentCaptor<DocumentChanges> captor = ArgumentCaptor.forClass(DocumentChanges.class);
+        when(documentClientCall.patchDocument(eq(defaultInternalClientIdValue), eq(defaultInternalApiKeyValue), eq(docId), captor.capture()))
+                .thenReturn(Mono.just(new DocumentResponse().document(doc)));
+
+        fileDownloadTestCall(docId, false).expectStatus().isOk();
+
+        assertThat(captor.getValue().getRetentionUntil()).isNotNull();
+        assertThat(captor.getValue().getAvailableUntil()).isNull();
+    }
 }

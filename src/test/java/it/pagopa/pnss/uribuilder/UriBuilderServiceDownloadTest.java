@@ -970,6 +970,98 @@ class UriBuilderServiceDownloadTest {
         fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @Test
+    void testDeletedWithMalformedAvailableUntilReturnsServerError() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(DELETED);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil("non-una-data");
+        d.setLastStatusChangeTimestamp(OffsetDateTime.parse("2026-06-20T08:00:00Z"));
+        mockGetDocument(d, docId);
+
+        doReturn(Mono.just(ListObjectVersionsResponse.builder().deleteMarkers(Collections.emptyList()).build()))
+                .when(s3Service).listObjectVersions(eq(docId), anyString());
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    void testDeletedWithDeleteMarkerIgnoresMalformedAvailableUntil() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(DELETED);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil("non-una-data");
+        mockGetDocument(d, docId);
+
+        DeleteMarkerEntry deleteMarkerEntry = DeleteMarkerEntry.builder().key(docId)
+                .lastModified(Instant.parse("2026-06-24T10:15:30Z")).isLatest(true).build();
+        doReturn(Mono.just(ListObjectVersionsResponse.builder().deleteMarkers(deleteMarkerEntry).build()))
+                .when(s3Service).listObjectVersions(eq(docId), anyString());
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
+                .expectBody(String.class)
+                .value(body -> assertThat(body)
+                        .contains("Document has been deleted [deletionTimestamp=2026-06-24T10:15:30Z]"));
+    }
+
+    /**
+     * listObjectVersions in errore: la catena ripiega su availableUntil, che precede
+     * lastStatusChangeTimestamp anche dopo il fallimento della chiamata a S3.
+     */
+    @Test
+    void testDeletedS3ErrorFallsBackOnAvailableUntil() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentInput d = new DocumentInput();
+        d.setDocumentType(DocTypesConstant.PN_AAR);
+        d.setDocumentState(DELETED);
+        d.setCheckSum(CHECKSUM);
+        d.setAvailableUntil(AVAILABLE_UNTIL_PAST);
+        d.setLastStatusChangeTimestamp(OffsetDateTime.parse("2026-06-20T08:00:00Z"));
+        mockGetDocument(d, docId);
+
+        AwsErrorDetails awsErrorDetails = AwsErrorDetails.builder().errorCode("InternalError").build();
+        doReturn(Mono.error(AwsServiceException.builder().awsErrorDetails(awsErrorDetails).build()))
+                .when(s3Service).listObjectVersions(eq(docId), anyString());
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
+                .expectBody(String.class)
+                .value(body -> assertThat(body)
+                        .contains("Document has been deleted [deletionTimestamp=" + AVAILABLE_UNTIL_PAST + "]"));
+    }
+
+    @Test
+    void testDeletedBlankDocumentKeyPrefersAvailableUntil() {
+        String docId = "1111-aaaa";
+        mockUserConfiguration(List.of(DocTypesConstant.PN_AAR));
+
+        DocumentType type = new DocumentType();
+        type.setTipoDocumento(DocTypesConstant.PN_AAR);
+        type.setChecksum(DocumentType.ChecksumEnum.MD5);
+        DocumentResponseDocument doc = new DocumentResponseDocument();
+        doc.setDocumentType(type);
+        doc.setDocumentKey(null); // key mancante
+        doc.setDocumentState(DELETED);
+        doc.setAvailableUntil(AVAILABLE_UNTIL_PAST);
+        doc.setLastStatusChangeTimestamp(OffsetDateTime.parse("2026-06-20T08:00:00Z"));
+        doReturn(Mono.just(new DocumentResponse().document(doc))).when(documentClientCall).getDocument(docId);
+
+        fileDownloadTestCall(docId, true).expectStatus().isEqualTo(HttpStatus.GONE)
+                .expectBody(String.class)
+                .value(body -> assertThat(body)
+                        .contains("Document has been deleted [deletionTimestamp=" + AVAILABLE_UNTIL_PAST + "]"));
+
+        verify(s3Service, never()).listObjectVersions(anyString(), anyString());
+    }
 
     @Test
     void testStagedWithAvailableUntilExpiredReturnsGone() {

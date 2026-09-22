@@ -53,6 +53,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 		responseDocument.setDocumentLogicalState(document.getDocumentLogicalState());
 		responseDocument.setClientShortCode(document.getClientShortCode());
 		responseDocument.setRetentionUntil(document.getRetentionUntil());
+		responseDocument.setAvailableUntil(document.getAvailableUntil());
 		responseDocument.setCheckSum(document.getCheckSum());
 		responseDocument.setContentLenght(document.getContentLenght());
 		responseDocument.setDocumentType(document.getDocumentType());

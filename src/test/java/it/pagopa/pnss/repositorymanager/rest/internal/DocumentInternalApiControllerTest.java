@@ -10,8 +10,7 @@ import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
-import it.pagopa.pnss.configurationproperties.BucketName;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
@@ -78,7 +77,7 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
     @Autowired
     private WebTestClient webTestClient;
     @Autowired
-    private BucketName bucketName;
+    private PnSsConfig pnSsConfig;
 	@Autowired
 	private S3Client s3TestClient;
 	@MockitoSpyBean
@@ -87,8 +86,6 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 	private String documentNumberOfPagesTagKey;
 	@Autowired
 	private software.amazon.awssdk.services.dynamodb.DynamoDbClient dynamoDbClient;
-	@Autowired
-	private RepositoryManagerDynamoTableName repositoryManagerDynamoTableName;
 
     private static final String BASE_PATH = "/safestorage/internal/v1/documents";
     private static final String BASE_PATH_WITH_PARAM = String.format("%s/{documentKey}", BASE_PATH);
@@ -198,11 +195,11 @@ public class DocumentInternalApiControllerTest extends IgnoredUpdateMetadataConf
 
 	@BeforeAll
 	public static void insertDefaultDocument(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-			@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+			@Autowired PnSsConfig pnSsConfig) {
 		log.info("execute insertDefaultDocument()");
 		dynamoDbTable = dynamoDbEnhancedClient.table(
-//    			DynamoTableNameConstant.DOCUMENT_TABLE_NAME, 
-				gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+//    			DynamoTableNameConstant.DOCUMENT_TABLE_NAME,
+				pnSsConfig.getDynamo().getRepositoryManager().getDocumentiName(), TableSchema.fromBean(DocumentEntity.class));
 		insertDocumentEntity();
 		insertDocumentEntityWithTags(PARTITION_ID_ENTITY_TAGS);
 		insertDocumentEntityWithTags(PARTITION_ID_DEFAULT_TAGS_DELETE);
@@ -432,7 +429,7 @@ log.info("documentInputTags {}", documentInputTags);
 		item.put("documentLogicalState", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(AVAILABLE).build());
 		item.put("lastStatusChangeTimestamp", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s("").build());
 
-		dynamoDbClient.putItem(builder -> builder.tableName(repositoryManagerDynamoTableName.documentiName()).item(item));
+		dynamoDbClient.putItem(builder -> builder.tableName(pnSsConfig.getDynamo().getRepositoryManager().getDocumentiName()).item(item));
 
 		try {
 			DocumentResponse response = webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
@@ -507,7 +504,7 @@ log.info("documentInputTags {}", documentInputTags);
 
 
 		insertDocumentEntity(documentEntity);
-		addFileToBucket(documentKey, bucketName.ssHotName());
+		addFileToBucket(documentKey, pnSsConfig.getBucket().getHotName());
 
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(ATTACHED);
@@ -575,7 +572,7 @@ log.info("documentInputTags {}", documentInputTags);
 
 
 		insertDocumentEntity(documentEntity);
-		addFileToBucket(documentKey, bucketName.ssHotName());
+		addFileToBucket(documentKey, pnSsConfig.getBucket().getHotName());
 
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(ATTACHED);
@@ -709,7 +706,7 @@ log.info("documentInputTags {}", documentInputTags);
 		documentEntity.setDocumentLogicalState(AVAILABLE);
 
 		insertDocumentEntity(documentEntity);
-		addFileToBucket(documentKey, bucketName.ssHotName());
+		addFileToBucket(documentKey, pnSsConfig.getBucket().getHotName());
 
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(ATTACHED);
@@ -734,7 +731,7 @@ log.info("documentInputTags {}", documentInputTags);
 		verify(retentionService, times(1)).setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString());
 
 		//Clean-up
-		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(documentKey));
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(documentKey));
 		log.info("\n Test 6 (patchItem) passed \n");
 	}
 
@@ -757,7 +754,7 @@ log.info("documentInputTags {}", documentInputTags);
 		documentEntity.setTags(createTagsList());
 
 		insertDocumentEntity(documentEntity);
-		addFileToBucket(documentKey, bucketName.ssHotName());
+		addFileToBucket(documentKey, pnSsConfig.getBucket().getHotName());
 
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(ATTACHED);
@@ -782,7 +779,7 @@ log.info("documentInputTags {}", documentInputTags);
 		verify(retentionService, times(1)).setRetentionPeriodInBucketObjectMetadata(anyString(), anyString(), any(), any(), anyString());
 
 		//Clean-up
-		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(documentKey));
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(documentKey));
 		log.info("\n Test 6 (patchItem) passed \n");
 	}
 
@@ -805,7 +802,7 @@ log.info("documentInputTags {}", documentInputTags);
 		documentEntity.setDocumentLogicalState(AVAILABLE);
 
 		insertDocumentEntity(documentEntity);
-		addFileToBucket(documentKey, bucketName.ssHotName());
+		addFileToBucket(documentKey, pnSsConfig.getBucket().getHotName());
 
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(AVAILABLE);
@@ -852,7 +849,7 @@ log.info("documentInputTags {}", documentInputTags);
 		documentEntity.setDocumentLogicalState(PRELOADED);
 
 		insertDocumentEntity(documentEntity);
-		addFileToBucket(documentKey, bucketName.ssHotName());
+		addFileToBucket(documentKey, pnSsConfig.getBucket().getHotName());
 
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(AVAILABLE);
@@ -879,7 +876,7 @@ log.info("documentInputTags {}", documentInputTags);
 		assertNotNull(updatedEntity.getTags().get(documentNumberOfPagesTagKey));
 		assertEquals("1", updatedEntity.getTags().get(documentNumberOfPagesTagKey).getFirst());
 
-		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(documentKey));
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(documentKey));
 	}
 
 	@Test
@@ -902,7 +899,7 @@ log.info("documentInputTags {}", documentInputTags);
 		documentEntity.setTags(createTagsList());
 
 		insertDocumentEntity(documentEntity);
-		addFileToBucket(documentKey, bucketName.ssHotName());
+		addFileToBucket(documentKey, pnSsConfig.getBucket().getHotName());
 
 		DocumentChanges docChanges = new DocumentChanges();
 		docChanges.setDocumentState(AVAILABLE);
@@ -931,7 +928,7 @@ log.info("documentInputTags {}", documentInputTags);
 		assertNotNull(updatedEntity.getTags().get(documentNumberOfPagesTagKey));
 		assertEquals("1", updatedEntity.getTags().get(documentNumberOfPagesTagKey).getFirst());
 
-		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(documentKey));
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(documentKey));
 	}
 
 	@Test

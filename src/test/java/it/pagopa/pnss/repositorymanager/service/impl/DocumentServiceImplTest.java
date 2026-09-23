@@ -5,7 +5,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.*;
 import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.rest.call.machinestate.CallMacchinaStati;
 import it.pagopa.pnss.common.retention.RetentionService;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.CurrentStatusEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
@@ -53,6 +53,8 @@ class DocumentServiceImplTest {
     @Autowired
     private DocumentServiceImpl documentServiceImpl;
     @Autowired
+    private PnSsConfig pnSsConfig;
+    @Autowired
     private static DynamoDbTable<DocTypeEntity> docTypeDynamoDbTable;
     @MockitoBean
     private CallMacchinaStati callMacchinaStati;
@@ -76,10 +78,10 @@ class DocumentServiceImplTest {
 
     @BeforeAll
     static void insertDefaultDocuments(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
-        docTypeDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
+                                             @Autowired PnSsConfig pnSsConfig) {
+        docTypeDynamoDbTable = dynamoDbEnhancedClient.table(pnSsConfig.getDynamo().getRepositoryManager().getTipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
         insertDocTypeEntities(generateDocTypeEntity(T1), generateDocTypeEntity(T2));
-        documentDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+        documentDynamoDbTable = dynamoDbEnhancedClient.table(pnSsConfig.getDynamo().getRepositoryManager().getDocumentiName(), TableSchema.fromBean(DocumentEntity.class));
         insertDocumentEntities(
                 generateDocumentEntity(ALREADY_PRESENT),
                 generateDocumentEntity(KEY_PDF_ATTACHED, BOOKED, APPLICATION_PDF_VALUE),
@@ -89,10 +91,10 @@ class DocumentServiceImplTest {
 
     @AfterAll
     static void deleteDefaultDocuments(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-                                             @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
-        docTypeDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
+                                             @Autowired PnSsConfig pnSsConfig) {
+        docTypeDynamoDbTable = dynamoDbEnhancedClient.table(pnSsConfig.getDynamo().getRepositoryManager().getTipologieDocumentiName(), TableSchema.fromBean(DocTypeEntity.class));
         deleteDocTypeEntities(generateDocTypeEntity(T1), generateDocTypeEntity(T2));
-        documentDynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.documentiName(), TableSchema.fromBean(DocumentEntity.class));
+        documentDynamoDbTable = dynamoDbEnhancedClient.table(pnSsConfig.getDynamo().getRepositoryManager().getDocumentiName(), TableSchema.fromBean(DocumentEntity.class));
         deleteDocumentEntities(
                 generateDocumentEntity(KEY), generateDocumentEntity(KEY2), generateDocumentEntity(KEY3),
                 generateDocumentEntity(ALREADY_PRESENT),
@@ -269,7 +271,7 @@ class DocumentServiceImplTest {
     void updateNumberOfPagesTagNotConfiguredTest() throws IOException {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
         byte[] pdfBytes = createTestPdfBytes(3);
-        ReflectionTestUtils.setField(documentServiceImpl, "documentNumberOfPagesTagKey", "non_existing_tag_key");
+        pnSsConfig.getIndexing().setDocumentNumberOfPagesTagKey("non_existing_tag_key");
 
         when(s3Service.getObject(eq(KEY), any()))
                 .thenReturn(Mono.just(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), pdfBytes)));
@@ -278,7 +280,7 @@ class DocumentServiceImplTest {
             StepVerifier.create(result)
                     .verifyError(MissingTagException.class);
         } finally {
-            ReflectionTestUtils.setField(documentServiceImpl, "documentNumberOfPagesTagKey", documentNumberOfPagesTagKey);
+            pnSsConfig.getIndexing().setDocumentNumberOfPagesTagKey(documentNumberOfPagesTagKey);
         }
     }
 

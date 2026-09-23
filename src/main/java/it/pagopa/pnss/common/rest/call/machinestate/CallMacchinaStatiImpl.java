@@ -1,10 +1,10 @@
 package it.pagopa.pnss.common.rest.call.machinestate;
 
-import it.pagopa.pnss.common.configurationproperties.endpoint.internal.statemachine.StateMachineEndpointProperties;
 import it.pagopa.pnss.common.exception.InvalidNextStatusException;
 import it.pagopa.pnss.common.exception.StateMachineServiceException;
 import it.pagopa.pnss.common.model.dto.MacchinaStatiValidateStatoResponseDto;
 import it.pagopa.pnss.common.model.pojo.DocumentStatusChange;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatusCode;
@@ -18,13 +18,13 @@ import reactor.util.retry.RetryBackoffSpec;
 public class CallMacchinaStatiImpl implements CallMacchinaStati {
 
     private final WebClient stateMachineWebClient;
-    private final StateMachineEndpointProperties stateMachineEndpointProperties;
+    private final PnSsConfig pnSsConfig;
     private final RetryBackoffSpec smRetryStrategy;
     private static final String CLIENT_ID_QUERY_PARAM = "clientId";
 
-    public CallMacchinaStatiImpl(@Qualifier("stateMachineWebClient") WebClient stateMachineWebClient, StateMachineEndpointProperties stateMachineEndpointProperties, @Qualifier("smRetryStrategy") RetryBackoffSpec smRetryStrategy) {
+    public CallMacchinaStatiImpl(@Qualifier("stateMachineWebClient") WebClient stateMachineWebClient, PnSsConfig pnSsConfig, @Qualifier("smRetryStrategy") RetryBackoffSpec smRetryStrategy) {
         this.stateMachineWebClient = stateMachineWebClient;
-        this.stateMachineEndpointProperties = stateMachineEndpointProperties;
+        this.pnSsConfig = pnSsConfig;
         this.smRetryStrategy = smRetryStrategy;
     }
 
@@ -32,7 +32,7 @@ public class CallMacchinaStatiImpl implements CallMacchinaStati {
     public Mono<MacchinaStatiValidateStatoResponseDto> statusValidation(DocumentStatusChange documentStatusChange) throws InvalidNextStatusException {
         log.logInvokingExternalService("pn-statemachinemanager", "statusValidation()");
         return stateMachineWebClient.get()
-                .uri(uriBuilder -> uriBuilder.path(stateMachineEndpointProperties.validate())
+                .uri(uriBuilder -> uriBuilder.path(pnSsConfig.getEndpoint().getStateMachine().getValidate())
                         .queryParam(CLIENT_ID_QUERY_PARAM,
                                 documentStatusChange.getXPagopaExtchCxId())
                         .queryParam("nextStatus", documentStatusChange.getNextStatus())

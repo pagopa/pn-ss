@@ -12,8 +12,7 @@ import it.pagopa.pnss.common.DocTypesConstant;
 import it.pagopa.pnss.common.model.dto.DocumentStateDto;
 import it.pagopa.pnss.common.model.pojo.SqsMessageWrapper;
 import it.pagopa.pnss.common.service.SqsService;
-import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
-import it.pagopa.pnss.configurationproperties.StreamRecordProcessorQueueName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
@@ -66,7 +65,7 @@ class StreamsRecordProcessorTest {
     @Autowired
     DynamoDbClient dynamoDbClient;
     @Autowired
-    AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
+    PnSsConfig pnSsConfig;
     @Autowired
     Environment environment;
     @Autowired
@@ -75,8 +74,6 @@ class StreamsRecordProcessorTest {
     SqsAsyncClient sqsAsyncClient;
     @Autowired
     StreamsRecordProcessor srp;
-    @Autowired
-    private  StreamRecordProcessorQueueName streamRecordProcessorQueueName;
 
     private static final String AUTHORIZED_CLIENT = "pn-delivery";
     private static final String UNAUTHORIZED_CLIENT = "pn-delivery-unauthorized";
@@ -484,11 +481,11 @@ class StreamsRecordProcessorTest {
 
     @BeforeEach
     void setup() {
-        sqsAsyncClient.purgeQueue(builder -> builder.queueUrl(streamRecordProcessorQueueName.sqsName()));
+        sqsAsyncClient.purgeQueue(builder -> builder.queueUrl(pnSsConfig.getSqs().getAvailability().getSqsName()));
     }
 
     private Mono<SendMessageResponse> sendMessageToQueue() {
-        return sqsService.send(streamRecordProcessorQueueName.sqsName(), new DocumentStateDto(){{
+        return sqsService.send(pnSsConfig.getSqs().getAvailability().getSqsName(), new DocumentStateDto(){{
             setDocumentEntity(new DocumentEntity(){{
                 setDocumentKey("111");
                 setDocumentState("AVAILABLE");

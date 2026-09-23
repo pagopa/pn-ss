@@ -13,14 +13,13 @@ import it.pagopa.pnss.common.utils.EmfLogUtils;
 import it.pagopa.pnss.common.utils.EventBridgeUtil;
 import it.pagopa.pnss.configuration.TransformationConfig;
 import it.pagopa.pnss.configuration.sqs.SqsTimeoutProvider;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.configurationproperties.TransformationProperties;
 import it.pagopa.pnss.transformation.exception.InvalidTransformationStateException;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
 import it.pagopa.pnss.transformation.utils.TransformationUtils;
 import lombok.CustomLog;
 import org.bouncycastle.cms.CMSException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -48,19 +47,17 @@ public class TransformationService {
     private final S3Service s3Service;
     private final PnSignProviderService pnSignService;
     private final DocumentClientCall documentClientCall;
-    private final BucketName bucketNames;
+    private final PnSsConfig pnSsConfig;
     private final SqsService sqsService;
     private final EventBridgeService eventBridgeService;
     private final TransformationConfig transformationConfig;
     private final TransformationProperties props;
     private final SqsTimeoutProvider sqsTimeoutProvider;
-    @Value("${event.bridge.disponibilita-documenti-name}")
-    private String disponibilitaDocumentiEventBridge;
 
     public TransformationService(S3Service s3Service,
                                  PnSignProviderService pnSignService,
                                  DocumentClientCall documentClientCall,
-                                 BucketName bucketNames,
+                                 PnSsConfig pnSsConfig,
                                  SqsService sqsService,
                                  EventBridgeService eventBridgeService,
                                  TransformationConfig transformationConfig,
@@ -69,7 +66,7 @@ public class TransformationService {
         this.s3Service = s3Service;
         this.pnSignService = pnSignService;
         this.documentClientCall = documentClientCall;
-        this.bucketNames = bucketNames;
+        this.pnSsConfig = pnSsConfig;
         this.sqsService = sqsService;
         this.eventBridgeService = eventBridgeService;
         this.transformationConfig = transformationConfig;
@@ -80,7 +77,7 @@ public class TransformationService {
     public Mono<Void> handleS3Event(S3EventNotificationMessage message) {
         log.debug(INVOKING_METHOD, HANDLE_S3_EVENT, message);
         String fileKey = message.getEventNotificationDetail().getObject().getKey();
-        String sourceBucket = bucketNames.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String eventType = message.getDetailType();
 
         if (!(isValidEventType(eventType, message.getEventNotificationDetail().getReason()))) {
@@ -228,7 +225,7 @@ public class TransformationService {
         return s3Service.getObject(fileKey, sourceBucket)
                 .flatMap(responseByte -> {
                     byte[] fileBytes = responseByte.asByteArray();
-                    return s3Service.putObject(fileKey, fileBytes, contentType, bucketNames.ssHotName())
+                    return s3Service.putObject(fileKey, fileBytes, contentType, pnSsConfig.getBucket().getHotName())
                             .flatMap(putResponse -> removeObjectFromStagingBucket(fileKey, sourceBucket));
                 });
     }
@@ -236,7 +233,7 @@ public class TransformationService {
 
     // Verifica se il file è già presente nel bucket finale
     private Mono<Boolean> isAlreadyInBucket(String key) {
-        return s3Service.headObject(key, bucketNames.ssHotName())
+        return s3Service.headObject(key, pnSsConfig.getBucket().getHotName())
                 .thenReturn(true)
                 .onErrorResume(NoSuchKeyException.class, throwable -> Mono.just(false));
     }
@@ -255,7 +252,7 @@ public class TransformationService {
         return Mono.just(documentResponse)
                 .flatMap(TransformationUtils::mapToDocumentEntity)
                 .flatMap(documentEntity -> {
-                    PutEventsRequestEntry event = EventBridgeUtil.createUnavailabilityMessage(documentEntity, fileKey, disponibilitaDocumentiEventBridge);
+                    PutEventsRequestEntry event = EventBridgeUtil.createUnavailabilityMessage(documentEntity, fileKey, pnSsConfig.getEventBridge().getDisponibilitaDocumentiName());
                     return eventBridgeService.putSingleEvent(event);
                 })
                 .then();

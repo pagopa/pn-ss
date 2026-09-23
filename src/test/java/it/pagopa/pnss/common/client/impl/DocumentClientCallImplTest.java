@@ -6,9 +6,11 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponse
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentResponseDocument;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.client.exception.DocumentkeyPresentException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -40,6 +42,9 @@ class DocumentClientCallImplTest {
 
     @Mock
     private ResponseSpec responseSpec;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private PnSsConfig pnSsConfig;
 
     @InjectMocks
     private DocumentClientCallImpl documentClientCall;

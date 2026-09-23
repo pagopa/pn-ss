@@ -4,9 +4,9 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguratio
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationResponse;
 import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -20,13 +20,13 @@ import static it.pagopa.pnss.common.utils.LogUtils.*;
 @CustomLog
 public class UserConfigurationClientCallImpl implements UserConfigurationClientCall {
 
-    @Value("${gestore.repository.anagrafica.internal.userConfiguration}")
-    private String anagraficaUserConfigurationInternalClientEndpoint;
+    private final String anagraficaUserConfigurationInternalClientEndpoint;
 
     private final WebClient ssWebClient;
 
-    public UserConfigurationClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient) {
+    public UserConfigurationClientCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient, PnSsConfig pnSsConfig) {
         this.ssWebClient = ssWebClient;
+        this.anagraficaUserConfigurationInternalClientEndpoint = pnSsConfig.getClientInterni().getEndpoint().getUserConfiguration();
     }
 
     @Override

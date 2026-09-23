@@ -4,10 +4,10 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypesCon
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguration;
 import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.IdClientNotFoundException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -21,17 +21,15 @@ public class ConfigurationApiCallImpl implements ConfigurationApiCall {
 
     private final WebClient ssWebClient;
 
-    @Value("${header.x-api-key}")
-    private String xApiKey;
+    private final String xApiKey;
+    private final String xPagopaSafestorageCxId;
+    private final String configurationApiDocumentsConfigClientEndpoint;
 
-    @Value("${header.x-pagopa-safestorage-cx-id}")
-    private String xPagopaSafestorageCxId;
-
-    @Value("${gestore.repository.configuration.api.documents.config}")
-    private String configurationApiDocumentsConfigClientEndpoint;
-
-    public ConfigurationApiCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient) {
+    public ConfigurationApiCallImpl(@Qualifier("ssWebClient") WebClient ssWebClient, PnSsConfig pnSsConfig) {
         this.ssWebClient = ssWebClient;
+        this.xApiKey = pnSsConfig.getClientInterni().getHeader().getApiKey();
+        this.xPagopaSafestorageCxId = pnSsConfig.getClientInterni().getHeader().getPagopaSafestorageCxId();
+        this.configurationApiDocumentsConfigClientEndpoint = pnSsConfig.getClientInterni().getEndpoint().getConfigurationApiDocumentsConfig();
     }
 
     @Override

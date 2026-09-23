@@ -6,7 +6,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocument
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.ScadenzaDocumentiInput;
 import it.pagopa.pnss.common.exception.IdemPotentElementException;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.ScadenzaDocumentiEntity;
 import it.pagopa.pnss.repositorymanager.exception.InvalidRetentionException;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
@@ -28,10 +28,10 @@ public class ScadenzaDocumentiServiceImpl implements ScadenzaDocumentiService {
 
 
     public ScadenzaDocumentiServiceImpl(DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                                        RepositoryManagerDynamoTableName repositoryManagerDynamoTableName,
+                                        PnSsConfig pnSsConfig,
                                         ObjectMapper objectMapper) {
         this.scadenzaDocumentiDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient
-                .table(repositoryManagerDynamoTableName.scadenzaDocumentiName(),
+                .table(pnSsConfig.getDynamo().getRepositoryManager().getScadenzaDocumentiName(),
                         TableSchema.fromBean(ScadenzaDocumentiEntity.class)));
         this.objectMapper = objectMapper;
 

@@ -68,64 +68,37 @@ public class UserConfigurationInternalApiController implements UserConfiguration
 	@Override
 	public Mono<ResponseEntity<UserConfigurationResponse>> getUserConfiguration(String name,
 			final ServerWebExchange exchange) {
-		final String GET_USER_CONFIGURATION = "getUserConfiguration";
-		log.logStartingProcess(GET_USER_CONFIGURATION);
-
 		return userConfigurationService.getUserConfiguration(name)
 				.map(userConfiguration -> ResponseEntity.ok(getResponse(userConfiguration)))
-				.doOnSuccess(result -> log.logEndingProcess(GET_USER_CONFIGURATION))
-				.onErrorResume(throwable -> {
-					log.logEndingProcess(GET_USER_CONFIGURATION, false, throwable.getMessage());
-					return getResponse(name, throwable);
-				});
+				.onErrorResume(throwable -> getResponse(name, throwable));
 
 	}
 
 	@Override
 	public Mono<ResponseEntity<UserConfigurationResponse>> insertUserConfiguration(
 			Mono<UserConfiguration> userConfiguration, final ServerWebExchange exchange) {
-		final String INSERT_USER_CONFIGURATION = "insertUserConfiguration";
-		log.logStartingProcess(INSERT_USER_CONFIGURATION);
-
 		return userConfiguration
 				.flatMap(userConfigurationService::insertUserConfiguration)
 				.map(userConfigurationOutput -> ResponseEntity.ok(getResponse(userConfigurationOutput)))
-				.doOnSuccess(result -> log.logEndingProcess(INSERT_USER_CONFIGURATION))
-				.onErrorResume(throwable -> {
-					log.logEndingProcess(INSERT_USER_CONFIGURATION, false, throwable.getMessage());
-					return getResponse(null, throwable);
-				});
+				.onErrorResume(throwable -> getResponse(null, throwable));
 
 	}
 
 	@Override
 	public Mono<ResponseEntity<UserConfigurationResponse>> patchUserConfiguration(String name,
 																				  Mono<UserConfigurationChanges> userConfigurationChanges, final ServerWebExchange exchange) {
-		final String PATCH_USER_CONFIGURATION = "patchUserConfiguration";
-        log.logStartingProcess(PATCH_USER_CONFIGURATION);
 		return userConfigurationChanges
 				.flatMap(request -> userConfigurationService.patchUserConfiguration(name, request))
 				.map(userConfigurationOutput -> ResponseEntity.ok(getResponse(userConfigurationOutput)))
-				.doOnSuccess(result -> log.logEndingProcess(PATCH_USER_CONFIGURATION))
-				.onErrorResume(throwable -> {
-					log.logEndingProcess(PATCH_USER_CONFIGURATION, false, throwable.getMessage());
-					return getResponse(name, throwable);
-				});
+				.onErrorResume(throwable -> getResponse(name, throwable));
 	}
 
 	@Override
 	public Mono<ResponseEntity<Void>> deleteUserConfiguration(String name, final ServerWebExchange exchange) {
-		final String DELETE_USER_CONFIGURATION = "deleteUserConfiguration";
-		log.logStartingProcess(DELETE_USER_CONFIGURATION);
-
 		return userConfigurationService.deleteUserConfiguration(name)
 				.map(docType -> ResponseEntity.noContent().<Void>build())
-				.doOnSuccess(result -> log.logEndingProcess(DELETE_USER_CONFIGURATION))
-				.onErrorResume(IdClientNotFoundException.class, throwable -> {
-					log.logEndingProcess(DELETE_USER_CONFIGURATION, false, throwable.getMessage());
-					return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-							throwable.getMessage(), throwable.getCause()));
-				});
+				.onErrorResume(IdClientNotFoundException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+						throwable.getMessage(), throwable.getCause())));
 	}
 
 }

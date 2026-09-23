@@ -315,7 +315,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	@Test
 	void testAvailableUntilWithoutRetentionUntilSetsRetention() {
 		String fileKey = "fileKeyAvailableUntilWithoutRetention";
-		addFileToBucket(fileKey, bucketName.ssHotName());
+		addFileToBucket(fileKey, pnSsConfig.getBucket().getHotName());
 
 		mockDocument(null);
 		doReturn(Mono.just(new ScadenzaDocumentiResponse())).when(scadenzaDocumentiClientCall).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
@@ -328,7 +328,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 		Assertions.assertEquals(formatEndOfDay(availableUntil), documentChanges.getRetentionUntil());
 		verify(scadenzaDocumentiClientCall).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
 
-		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(fileKey));
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(fileKey));
 	}
 
 	@Test
@@ -349,7 +349,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	@Test
 	void testAvailableUntilAfterRetentionUntilExtendsRetention() {
 		String fileKey = "fileKeyAvailableUntilExtendsRetention";
-		addFileToBucket(fileKey, bucketName.ssHotName());
+		addFileToBucket(fileKey, pnSsConfig.getBucket().getHotName());
 
 		var storedRetentionUntil = Instant.now().plus(Duration.ofDays(10)).truncatedTo(ChronoUnit.SECONDS);
 		mockDocument(formatUtc(storedRetentionUntil));
@@ -367,13 +367,13 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 		Assertions.assertEquals(Instant.from(UTC_FORMATTER.parse(formatEndOfDay(availableUntil))).getEpochSecond(), captor.getValue().getRetentionUntil());
 		verify(s3Service).putObjectTagging(anyString(), anyString(), any());
 
-		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(fileKey));
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(fileKey));
 	}
 
 	@Test
 	void testAvailableUntilEvaluatedAgainstRetentionUntilOfSameRequest() {
 		String fileKey = "fileKeyAvailableUntilWithRetentionUntil";
-		addFileToBucket(fileKey, bucketName.ssHotName());
+		addFileToBucket(fileKey, pnSsConfig.getBucket().getHotName());
 
 		var storedRetentionUntil = Instant.now().plus(Duration.ofDays(30)).truncatedTo(ChronoUnit.SECONDS);
 		mockDocument(formatUtc(storedRetentionUntil));
@@ -388,6 +388,6 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 		Assertions.assertEquals(formatEndOfDay(availableUntil), documentChanges.getAvailableUntil());
 		Assertions.assertEquals(formatUtc(requestedRetentionUntil), documentChanges.getRetentionUntil());
 
-		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(fileKey));
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(fileKey));
 	}
 }

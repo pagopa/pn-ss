@@ -252,7 +252,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_InProgressTagNotFirstInAlphabeticalOrder_Skip() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of(DUMMY, RASTERIZATION, SIGN_AND_TIMEMARK);
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -273,7 +273,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_InProgressTagFirstInAlphabeticalOrder_Skip() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of(RASTERIZATION, DUMMY, SIGN_AND_TIMEMARK);
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -294,7 +294,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_LastTransformationInProgress_Skip() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of(RASTERIZATION, DUMMY, SIGN_AND_TIMEMARK);
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -310,13 +310,13 @@ class TransformationServiceTest {
         //THEN
         StepVerifier.create(testMono).verifyComplete();
         verify(sqsService, never()).send(anyString(), any());
-        verify(s3Service, never()).putObject(anyString(), any(), anyString(), eq(bucketName.ssHotName()));
+        verify(s3Service, never()).putObject(anyString(), any(), anyString(), eq(pnSsConfig.getBucket().getStageName()));
     }
 
     @Test
     void handleEvent_CompletedTagsOnly_PublishesNextTransformationInChainOrder() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of(DUMMY, RASTERIZATION, SIGN_AND_TIMEMARK);
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -338,7 +338,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_ErrorTagWithCompletedTags_SendsUnavailabilityEvent() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of(DUMMY, RASTERIZATION, SIGN_AND_TIMEMARK);
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);

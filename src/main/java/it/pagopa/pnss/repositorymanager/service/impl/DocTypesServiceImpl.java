@@ -5,7 +5,7 @@ import it.pagopa.pn.commons.utils.dynamodb.async.DynamoDbAsyncTableDecorator;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pnss.common.client.exception.DocumentTypeNotPresentException;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
@@ -32,15 +32,13 @@ public class DocTypesServiceImpl implements DocTypesService {
     private final ObjectMapper objectMapper;
     private final DynamoDbAsyncTableDecorator<DocTypeEntity> docTypeEntityDynamoDbAsyncTable;
     private final RetryBackoffSpec dynamoRetryStrategy;
-    final RepositoryManagerDynamoTableName managerDynamoTableName;
 
     public DocTypesServiceImpl(ObjectMapper objectMapper, DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient,
-                               RepositoryManagerDynamoTableName repositoryManagerDynamoTableName, @Qualifier("dynamoRetryStrategy") RetryBackoffSpec dynamoRetryStrategy, RepositoryManagerDynamoTableName managerDynamoTableName) {
+                               PnSsConfig pnSsConfig, @Qualifier("dynamoRetryStrategy") RetryBackoffSpec dynamoRetryStrategy) {
         this.objectMapper = objectMapper;
         this.dynamoRetryStrategy = dynamoRetryStrategy;
-        this.docTypeEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(repositoryManagerDynamoTableName.tipologieDocumentiName(),
+        this.docTypeEntityDynamoDbAsyncTable = new DynamoDbAsyncTableDecorator<>(dynamoDbEnhancedAsyncClient.table(pnSsConfig.getDynamo().getRepositoryManager().getTipologieDocumentiName(),
                                                                                  TableSchema.fromBean(DocTypeEntity.class)));
-        this.managerDynamoTableName = managerDynamoTableName;
     }
 
     private Mono<DocTypeEntity> getErrorIdDocTypeNotFoundException(String typeId) {

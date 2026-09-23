@@ -1,7 +1,7 @@
 package it.pagopa.pnss.repositorymanager.service.impl;
 
 import it.pagopa.pnss.common.client.dto.LifecycleRuleDTO;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.exception.BucketException;
 import it.pagopa.pnss.repositorymanager.service.StorageConfigurationsService;
 import it.pagopa.pnss.transformation.service.S3Service;
@@ -30,12 +30,12 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
 
     private final S3Service s3Service;
     private final RetryBackoffSpec s3RetryStrategy;
-    private final BucketName bucketName;
+    private final PnSsConfig pnSsConfig;
 
-    public StorageConfigurationsServiceImpl(S3Service s3Service, @Qualifier("s3RetryStrategy") RetryBackoffSpec s3RetryStrategy, BucketName bucketName) {
+    public StorageConfigurationsServiceImpl(S3Service s3Service, @Qualifier("s3RetryStrategy") RetryBackoffSpec s3RetryStrategy, PnSsConfig pnSsConfig) {
         this.s3Service = s3Service;
         this.s3RetryStrategy = s3RetryStrategy;
-        this.bucketName = bucketName;
+        this.pnSsConfig = pnSsConfig;
     }
 
     private String formatInYearsDays(Integer value) {
@@ -149,7 +149,7 @@ public class StorageConfigurationsServiceImpl implements StorageConfigurationsSe
     public Mono<List<LifecycleRuleDTO>> getLifecycleConfiguration() {
         final String GET_LIFECYCLE_CONFIGURATION="StorageConfigurationsService.getLifecycleConfiguration()";
         log.debug(INVOKING_METHOD, GET_LIFECYCLE_CONFIGURATION, "");
-        return s3Service.getBucketLifecycleConfiguration(bucketName.ssHotName())
+        return s3Service.getBucketLifecycleConfiguration(pnSsConfig.getBucket().getHotName())
                 .retryWhen(s3RetryStrategy)
                 .handle((response, sink) -> {
                     if (response == null || response.rules() == null) {

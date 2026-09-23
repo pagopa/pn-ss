@@ -11,8 +11,7 @@ import it.pagopa.pnss.common.exception.SqsClientException;
 import it.pagopa.pnss.common.service.EventBridgeService;
 import it.pagopa.pnss.common.service.SqsService;
 import it.pagopa.pnss.configuration.TransformationConfig;
-import it.pagopa.pnss.configurationproperties.AvailabelDocumentEventBridgeName;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationDetail;
 import it.pagopa.pnss.transformation.model.dto.S3EventNotificationMessage;
@@ -76,13 +75,11 @@ class TransformationServiceTest {
     @MockitoBean
     private DocumentClientCall documentClientCall;
     @Autowired
-    private BucketName bucketName;
+    private PnSsConfig pnSsConfig;
     @Autowired
     private S3Client s3TestClient;
     @Autowired
     private PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
-    @Autowired
-    AvailabelDocumentEventBridgeName availabelDocumentEventBridgeName;
     @MockitoSpyBean
     private SqsService sqsService;
     @MockitoSpyBean
@@ -108,19 +105,19 @@ class TransformationServiceTest {
 
     @BeforeEach
     void initialize() {
-        putObjectInBucket(FILE_KEY, bucketName.ssStageName(), new byte[10]);
+        putObjectInBucket(FILE_KEY, pnSsConfig.getBucket().getStageName(), new byte[10]);
     }
 
     @AfterEach
     void clean() {
-        deleteObjectInBucket(FILE_KEY, bucketName.ssHotName());
-        deleteObjectInBucket(FILE_KEY, bucketName.ssStageName());
+        deleteObjectInBucket(FILE_KEY, pnSsConfig.getBucket().getHotName());
+        deleteObjectInBucket(FILE_KEY, pnSsConfig.getBucket().getStageName());
     }
 
     @Test
     void handleEvent_FirstTransformation_Ok() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         String nextTransformation = SIGN_AND_TIMEMARK;
         S3EventNotificationMessage record = createS3Event(OBJECT_CREATED_PUT_EVENT);
@@ -139,7 +136,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_FirstTransformation_ObjectHasMoreVersions_Ok() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         String nextTransformation = SIGN_AND_TIMEMARK;
         S3EventNotificationMessage record = createS3Event(OBJECT_CREATED_PUT_EVENT);
@@ -158,7 +155,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_AllTransformationsApplied_Ok() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         String lastTransformation = DUMMY;
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -174,7 +171,7 @@ class TransformationServiceTest {
         //THEN
         StepVerifier.create(testMono).verifyComplete();
         verify(s3Service).getObject(FILE_KEY, sourceBucket);
-        verify(s3Service).putObject(eq(FILE_KEY), any(), eq(contentType), eq(bucketName.ssHotName()));
+        verify(s3Service).putObject(eq(FILE_KEY), any(), eq(contentType), eq(pnSsConfig.getBucket().getHotName()));
     }
 
     // Tutte le trasformazioni sono applicate, ma il file è già presente nel bucket finale.
@@ -182,7 +179,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_AllTransformationsApplied_Idempotence_Ok() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         String lastTransformation = DUMMY;
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -191,7 +188,7 @@ class TransformationServiceTest {
         Tag tag = Tag.builder().key("Transformation-" + lastTransformation).value("OK").build();
         s3TestClient.putObjectTagging(builder -> builder.key(FILE_KEY).bucket(sourceBucket).tagging(Tagging.builder().tagSet(tag).build()));
         // Simuliamo che il file è già presente nel bucket finale
-        putObjectInBucket(FILE_KEY, bucketName.ssHotName(),  new byte[10]);
+        putObjectInBucket(FILE_KEY, pnSsConfig.getBucket().getHotName(),  new byte[10]);
 
         //WHEN
         mockGetDocument(contentType, STAGED, List.of(SIGN_AND_TIMEMARK, lastTransformation));
@@ -235,7 +232,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_Sqs_Ko() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         String nextTransformation = SIGN_AND_TIMEMARK;
         S3EventNotificationMessage record = createS3Event(OBJECT_CREATED_PUT_EVENT);
@@ -255,7 +252,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_InProgressTagNotFirstInAlphabeticalOrder_Skip() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of(DUMMY, RASTERIZATION, SIGN_AND_TIMEMARK);
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -276,7 +273,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_InProgressTagFirstInAlphabeticalOrder_Skip() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of(RASTERIZATION, DUMMY, SIGN_AND_TIMEMARK);
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -297,7 +294,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_LastTransformationInProgress_Skip() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of(RASTERIZATION, DUMMY, SIGN_AND_TIMEMARK);
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -313,13 +310,13 @@ class TransformationServiceTest {
         //THEN
         StepVerifier.create(testMono).verifyComplete();
         verify(sqsService, never()).send(anyString(), any());
-        verify(s3Service, never()).putObject(anyString(), any(), anyString(), eq(bucketName.ssHotName()));
+        verify(s3Service, never()).putObject(anyString(), any(), anyString(), eq(pnSsConfig.getBucket().getStageName()));
     }
 
     @Test
     void handleEvent_CompletedTagsOnly_PublishesNextTransformationInChainOrder() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of(DUMMY, RASTERIZATION, SIGN_AND_TIMEMARK);
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -341,7 +338,7 @@ class TransformationServiceTest {
     @Test
     void handleEvent_ErrorTagWithCompletedTags_SendsUnavailabilityEvent() {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of(DUMMY, RASTERIZATION, SIGN_AND_TIMEMARK);
         S3EventNotificationMessage record = createS3Event(OBJECT_TAGGING_PUT_EVENT);
@@ -364,7 +361,7 @@ class TransformationServiceTest {
     @ValueSource(strings = {"application/pdf", "application/xml", "other"})
     void signAndTimemark_Ok(String contentType) {
         //GIVEN
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
         Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + SIGN_AND_TIMEMARK).value(OK).build();
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
@@ -383,7 +380,7 @@ class TransformationServiceTest {
     @ValueSource(strings = {"application/pdf", "application/xml", "other"})
     void sign_Ok(String contentType) {
         //GIVEN
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
         Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + SIGN).value(OK).build();
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
@@ -403,7 +400,7 @@ class TransformationServiceTest {
     void signAndTimemark_Idempotence_Ok(String transformationType, boolean marcatura) {
         //GIVEN
         String contentType = "application/pdf";
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
         Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + transformationType).value(OK).build();
         s3TestClient.putObjectTagging(builder -> builder.tagging(Tagging.builder().tagSet(tag).build()).key(FILE_KEY).bucket(bucket));
 
@@ -424,12 +421,12 @@ class TransformationServiceTest {
     void signAndTimemark_SignProvider_Ko(String transformationType, boolean marcatura) {
         //GIVEN
         String contentType = "application/pdf";
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
         Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + transformationType).value(ERROR).build();
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
         //WHEN
-        when(pnSignProviderService.signPdfDocument(any(), any())).thenReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception")));
+        doReturn(Mono.error(new PnSpapiPermanentErrorException("Permanent exception"))).when(pnSignProviderService).signPdfDocument(any(), any());
         var testMono = transformationService.signAndTimemarkTransformation(createTransformationMessage(transformationType, bucket, contentType), marcatura,QUEUE_NAME);
 
         //THEN
@@ -443,7 +440,7 @@ class TransformationServiceTest {
     @MethodSource("provideSignAndTimemarkArgs")
     void signAndTimemark_S3_Ko(String transformationType, boolean marcatura) {
         //GIVEN
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
 
         //WHEN
@@ -457,7 +454,7 @@ class TransformationServiceTest {
     @Test
     void dummy_Ok() {
         //GIVEN
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
         Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + DUMMY).value(OK).build();
         Tagging expectedTagging = Tagging.builder().tagSet(tag).build();
 
@@ -477,7 +474,7 @@ class TransformationServiceTest {
     @Test
     void dummy_Idempotence_Ok() {
         //GIVEN
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
         Tag tag = Tag.builder().key(TRANSFORMATION_TAG_PREFIX + DUMMY).value(OK).build();
         s3TestClient.putObjectTagging(builder -> builder.tagging(Tagging.builder().tagSet(tag).build()).key(FILE_KEY).bucket(bucket));
 
@@ -492,7 +489,7 @@ class TransformationServiceTest {
     @Test
     void dummy_S3_Ko() {
         //GIVEN
-        String bucket = bucketName.ssStageName();
+        String bucket = pnSsConfig.getBucket().getStageName();
 
         //WHEN
         var testMono = transformationService.dummyTransformation(createTransformationMessage(DUMMY, bucket, null, "FAKE"));
@@ -506,7 +503,7 @@ class TransformationServiceTest {
     @MethodSource("handleNextTransformationArgs")
     void handleNextTransformation_Chain_Ok(List<String> transformations, String currentTransformation) {
         //GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         int currentIndex = transformations.indexOf(currentTransformation);
         boolean isLastTransformation = currentIndex == transformations.size() - 1;
@@ -529,17 +526,17 @@ class TransformationServiceTest {
             assertEquals(transformations.get(currentIndex + 1), sentMessage.getTransformationType());
 
             // il file non deve essere caricato nel bucket finale (solo alla fine dell'ultima)
-            verify(s3Service, never()).putObject(any(), any(), any(), eq(bucketName.ssHotName()));
+            verify(s3Service, never()).putObject(any(), any(), any(), eq(pnSsConfig.getBucket().getHotName()));
         } else {
             // ultima trasformazione: il file deve essere caricato nel bucket finale
-            verify(s3Service, times(1)).putObject(eq(FILE_KEY), any(), eq(contentType), eq(bucketName.ssHotName()));
+            verify(s3Service, times(1)).putObject(eq(FILE_KEY), any(), eq(contentType), eq(pnSsConfig.getBucket().getHotName()));
         }
     }
 
     @Test
     void handleS3Event_TagSetAppliedCorrectly() {
         // GIVEN
-        String sourceBucket = bucketName.ssStageName();
+        String sourceBucket = pnSsConfig.getBucket().getStageName();
         String contentType = "application/pdf";
         List<String> transformations = List.of("DUMMY", "NORMALIZATION", "SIGN");
         String currentTransformation = "NORMALIZATION";

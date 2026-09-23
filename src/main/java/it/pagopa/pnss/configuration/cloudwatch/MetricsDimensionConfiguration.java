@@ -2,8 +2,8 @@ package it.pagopa.pnss.configuration.cloudwatch;
 
 import it.pagopa.pnss.common.exception.CloudWatchResourceNotFoundException;
 import it.pagopa.pnss.common.utils.MetricsDimensionParser;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import software.amazon.awssdk.services.ssm.SsmClient;
@@ -24,14 +24,14 @@ public class MetricsDimensionConfiguration {
     private final SsmClient ssmClient;
     private final MetricsDimensionParser metricsDimensionParser;
     private Map<String, Map<String, List<Long>>> dimensionsSchema = new HashMap<>();
-    @Value("${pn.sign.cloudwatch.metric.dimension.file-size-range}")
-    private String fileSizeRangeDimensionName;
-    @Value("${pn.sign.dimension.metrics.schema}")
-    private String signMetricsDimensionSchema;
+    private final String fileSizeRangeDimensionName;
+    private final String signMetricsDimensionSchema;
 
-    public MetricsDimensionConfiguration(SsmClient ssmClient) {
+    public MetricsDimensionConfiguration(SsmClient ssmClient, PnSsConfig pnSsConfig) {
         this.ssmClient = ssmClient;
         this.metricsDimensionParser = new MetricsDimensionParser();
+        this.fileSizeRangeDimensionName = pnSsConfig.getSign().getCloudwatch().getMetricDimensionFileSizeRange();
+        this.signMetricsDimensionSchema = pnSsConfig.getSign().getCloudwatch().getDimensionMetricsSchema();
     }
 
     /**

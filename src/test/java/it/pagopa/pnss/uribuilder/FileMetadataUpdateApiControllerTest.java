@@ -9,7 +9,7 @@ import it.pagopa.pnss.common.client.UserConfigurationClientCall;
 import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.constant.Constant;
 import it.pagopa.pnss.common.exception.PatchDocumentException;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.transformation.service.S3Service;
 import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
@@ -62,7 +62,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	private S3Client s3TestClient;
 
 	@Autowired
-	private BucketName bucketName;
+	private PnSsConfig pnSsConfig;
 
 	@MockitoBean
 	private UserConfigurationClientCall userConfigurationClientCall;
@@ -214,7 +214,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	void testIgnoreS3UpdateMetadataOk() {
 		//The fileKey is in ignored-update-metadata.csv file
 		String fileKey = "fileKeyToIgnoreUpdateMetadata1";
-		addFileToBucket(fileKey, bucketName.ssHotName());
+		addFileToBucket(fileKey, pnSsConfig.getBucket().getHotName());
 
 		Map<String, CurrentStatus> statuses = Map.ofEntries(Map.entry(SAVED, new CurrentStatus().technicalState(AVAILABLE).storage("storageType")));
 		var documentType1 = new DocumentType().statuses(statuses).tipoDocumento(DocTypesConstant.PN_AAR);
@@ -232,7 +232,7 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 		verify(s3Service, never()).putObjectTagging(anyString(), anyString(), any());
 
 		//Clean-up
-		s3TestClient.deleteObject(builder -> builder.bucket(bucketName.ssHotName()).key(fileKey));
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(fileKey));
 	}
 
 	private void addFileToBucket(String fileName, String bucketName) {

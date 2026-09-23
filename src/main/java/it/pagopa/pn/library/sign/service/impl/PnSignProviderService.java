@@ -10,9 +10,9 @@ import it.pagopa.pn.library.sign.pojo.PnSignDocumentResponse;
 import it.pagopa.pn.library.sign.service.PnSignService;
 import it.pagopa.pn.ss.dummy.sign.service.PnDummySignServiceImpl;
 import it.pagopa.pnss.common.service.impl.CloudWatchMetricsService;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -31,22 +31,16 @@ public class PnSignProviderService implements PnSignService {
     private final PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties;
     private final Retry pnSignRetryStrategy;
     private final CloudWatchMetricsService cloudWatchMetricsService;
-    @Value("${pn.sign.cloudwatch.namespace.aruba}")
-    private String arubaNamespace;
-    @Value("${pn.sign.cloudwatch.namespace.namirial}")
-    private String namirialNamespace;
-    @Value("${pn.sign.cloudwatch.metric.response-time.pades}")
-    private String signPadesReadResponseTimeMetric;
-    @Value("${pn.sign.cloudwatch.metric.response-time.xades}")
-    private String signXadesReadResponseTimeMetric;
-    @Value("${pn.sign.cloudwatch.metric.response-time.cades}")
-    private String signCadesReadResponseTimeMetric;
+    private final String arubaNamespace;
+    private final String namirialNamespace;
 
     @Autowired
-    public PnSignProviderService(PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties, PnSignRetryStrategyProperties pnSignRetryStrategyProperties, PnSignServiceManager pnSignServiceManager, CloudWatchMetricsService cloudWatchMetricsService) {
+    public PnSignProviderService(PnSignServiceConfigurationProperties pnSignServiceConfigurationProperties, PnSignRetryStrategyProperties pnSignRetryStrategyProperties, PnSignServiceManager pnSignServiceManager, CloudWatchMetricsService cloudWatchMetricsService, PnSsConfig pnSsConfig) {
         this.pnSignServiceConfigurationProperties = pnSignServiceConfigurationProperties;
         this.pnSignServiceManager = pnSignServiceManager;
         this.cloudWatchMetricsService = cloudWatchMetricsService;
+        this.arubaNamespace = pnSsConfig.getSign().getCloudwatch().getNamespaceAruba();
+        this.namirialNamespace = pnSsConfig.getSign().getCloudwatch().getNamespaceNamirial();
         this.pnSignRetryStrategy = Retry.backoff(pnSignRetryStrategyProperties.maxAttempts(), Duration.ofSeconds(pnSignRetryStrategyProperties.minBackoff()))
                 .filter(PnSpapiTemporaryErrorException.class::isInstance)
                 .doBeforeRetry(retrySignal -> log.warn(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage()))

@@ -14,7 +14,7 @@ import java.util.TreeMap;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
 
-@ConfigurationProperties(prefix = "pn.sign")
+@ConfigurationProperties(prefix = "pn.ss.sign")
 @Validated
 @CustomLog
 @Data

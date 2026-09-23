@@ -3,7 +3,7 @@ package it.pagopa.pnss.repositorymanager.rest.internal;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.CurrentStatus;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentType;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.DocumentTypeResponse;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.DocTypeEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
@@ -56,9 +56,9 @@ public class DocTypeInternalApiControllerTest {
 
 	@BeforeAll
 	public static void insertDefaultDocType(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-			@Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+			@Autowired PnSsConfig pnSsConfig) {
 		log.info("execute insertDefaultDocType()");
-		dynamoDbTable = dynamoDbEnhancedClient.table(gestoreRepositoryDynamoDbTableName.tipologieDocumentiName(),
+		dynamoDbTable = dynamoDbEnhancedClient.table(pnSsConfig.getDynamo().getRepositoryManager().getTipologieDocumentiName(),
 				TableSchema.fromBean(DocTypeEntity.class));
 		insertDocTypeEntity(PARTITION_ID_DEFAULT_NOTIFICATION_ATTACHMENTS);
 	}

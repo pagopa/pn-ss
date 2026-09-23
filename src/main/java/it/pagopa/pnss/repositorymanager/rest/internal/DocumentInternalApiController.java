@@ -13,9 +13,9 @@ import it.pagopa.pnss.repositorymanager.exception.IllegalDocumentStateException;
 import it.pagopa.pnss.repositorymanager.exception.ItemAlreadyPresent;
 import it.pagopa.pnss.repositorymanager.exception.RepositoryManagerException;
 import it.pagopa.pnss.repositorymanager.exception.ResourceDeletedException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.service.DocumentService;
 import lombok.CustomLog;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,17 +31,16 @@ import static it.pagopa.pnss.common.utils.DynamoDbUtils.DYNAMO_OPTIMISTIC_LOCKIN
 @RestController
 @CustomLog
 public class DocumentInternalApiController implements DocumentInternalApi {
-	
-    @Value("${header.x-api-key}")
-    private String xApiKey;
 
-    @Value("${header.x-pagopa-safestorage-cx-id}")
-    private String xPagopaSafestorageCxId;
+    private final String xApiKey;
+    private final String xPagopaSafestorageCxId;
 
 	private final DocumentService documentService;
 
-	public DocumentInternalApiController(DocumentService documentService) {
+	public DocumentInternalApiController(DocumentService documentService, PnSsConfig pnSsConfig) {
 		this.documentService = documentService;
+		this.xApiKey = pnSsConfig.getClientInterni().getHeader().getApiKey();
+		this.xPagopaSafestorageCxId = pnSsConfig.getClientInterni().getHeader().getPagopaSafestorageCxId();
 	}
 
 	private DocumentResponse getResponse(Document document) {
@@ -127,15 +126,10 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	@Override
 	public Mono<ResponseEntity<DocumentResponse>> getDocument(String documentKey, final ServerWebExchange exchange) {
 		final String GET_DOCUMENT = "getDocument";
-		log.logStartingProcess(GET_DOCUMENT);
-		log.debug("Request headers for '{}' : {}", GET_DOCUMENT, exchange.getRequest().getHeaders());
+		log.debug("Request header names for '{}' : {}", GET_DOCUMENT, exchange.getRequest().getHeaders().keySet());
 		return MDCUtils.addMDCToContextAndExecute(documentService.getDocument(documentKey)
 				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
-				.doOnSuccess(result -> log.logEndingProcess(GET_DOCUMENT))
-				.onErrorResume(throwable -> {
-					log.logEndingProcess(GET_DOCUMENT, false, throwable.getMessage());
-					return getResponse(documentKey, throwable);
-				}));
+				.onErrorResume(throwable -> getResponse(documentKey, throwable)));
 
 	}
 
@@ -143,17 +137,12 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	public Mono<ResponseEntity<DocumentResponse>> insertDocument(Mono<DocumentInput> document,
 			final ServerWebExchange exchange) {
 		final String INSERT_DOCUMENT = "insertDocument";
-		log.logStartingProcess(INSERT_DOCUMENT);
 		return document.flatMap(documentInput ->{
 					log.debug(LogUtils.INVOKING_METHOD, INSERT_DOCUMENT, documentInput);
 					return documentService.insertDocument(documentInput);
 				})
 				.map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
-				.doOnSuccess(result -> log.logEndingProcess(INSERT_DOCUMENT))
-				.onErrorResume(throwable -> {
-					log.logEndingProcess(INSERT_DOCUMENT, false, throwable.getMessage());
-					return getResponse(null, throwable);
-				});
+				.onErrorResume(throwable -> getResponse(null, throwable));
 
 	}
 
@@ -161,8 +150,7 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 	public Mono<ResponseEntity<DocumentResponse>> patchDoc(String documentKey, Mono<DocumentChanges> documentChanges,
 			final ServerWebExchange exchange) {
 		final String PATCH_DOCUMENT = "patchDoc";
-		log.logStartingProcess(PATCH_DOCUMENT);
-		log.debug("Request headers for '{}' : {}", PATCH_DOCUMENT, exchange.getRequest().getHeaders());
+		log.debug("Request header names for '{}' : {}", PATCH_DOCUMENT, exchange.getRequest().getHeaders().keySet());
 
     	String xPagopaSafestorageCxIdValue = exchange.getRequest().getHeaders().getFirst(xPagopaSafestorageCxId);
     	String xApiKeyValue = exchange.getRequest().getHeaders().getFirst(xApiKey);
@@ -172,26 +160,15 @@ public class DocumentInternalApiController implements DocumentInternalApi {
 					xPagopaSafestorageCxIdValue,
 					xApiKeyValue).retryWhen(DYNAMO_OPTIMISTIC_LOCKING_RETRY))
                        .map(documentOutput -> ResponseEntity.ok(getResponse(documentOutput)))
-				       .doOnSuccess(result->log.logEndingProcess(PATCH_DOCUMENT))
-                       .onErrorResume(throwable -> {
-						   log.logEndingProcess(PATCH_DOCUMENT, false, throwable.getMessage());
-						   return getResponse(documentKey, throwable);
-					   }));
+                       .onErrorResume(throwable -> getResponse(documentKey, throwable)));
 
 	}
 
 	@Override
 	public Mono<ResponseEntity<Void>> deleteDocument(String documentKey, final ServerWebExchange exchange) {
-		final String DELETE_DOCUMENT = "deleteDocument";
-
-		log.logStartingProcess(DELETE_DOCUMENT);
 		return documentService.deleteDocument(documentKey).map(docType -> ResponseEntity.noContent().<Void>build())
-				.doOnSuccess(result->log.logEndingProcess(DELETE_DOCUMENT))
-				.onErrorResume(DocumentKeyNotPresentException.class, throwable -> {
-					log.logEndingProcess(DELETE_DOCUMENT, false, throwable.getMessage());
-					return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
-							throwable.getMessage(), throwable.getCause()));
-				});
+				.onErrorResume(DocumentKeyNotPresentException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+						throwable.getMessage(), throwable.getCause())));
 
 	}
 }

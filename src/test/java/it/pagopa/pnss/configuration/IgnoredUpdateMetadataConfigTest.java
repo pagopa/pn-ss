@@ -1,7 +1,7 @@
 package it.pagopa.pnss.configuration;
 
 import it.pagopa.pnss.common.exception.FileNotModifiedException;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import lombok.CustomLog;
@@ -26,7 +26,7 @@ class IgnoredUpdateMetadataConfigTest extends IgnoredUpdateMetadataConfigTestSet
     @Autowired
     private S3Client s3TestClient;
     @Autowired
-    private BucketName bucketName;
+    private PnSsConfig pnSsConfig;
     private String defaultBucketName;
     private String defaultFileName;
     private static final String FILE_KEY = "ignored-update-metadata.csv";
@@ -79,7 +79,7 @@ class IgnoredUpdateMetadataConfigTest extends IgnoredUpdateMetadataConfigTestSet
     void testRefreshIgnoredUpdateMetadataList_EmptyFile() throws InterruptedException {
         Thread.sleep(1000);
         byte[] fileBytes = new byte[0];
-        PutObjectRequest request = PutObjectRequest.builder().bucket(bucketName.ssHotName()).key(FILE_KEY).contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(fileBytes)))).build();
+        PutObjectRequest request = PutObjectRequest.builder().bucket(pnSsConfig.getBucket().getHotName()).key(FILE_KEY).contentMD5(new String(Base64.encodeBase64(DigestUtils.md5(fileBytes)))).build();
         s3TestClient.putObject(request, RequestBody.fromBytes(fileBytes));
         Mono<Integer> fluxToTest = ignoredUpdateMetadataConfig.refreshIgnoredUpdateMetadataList();
         StepVerifier.create(fluxToTest).expectNextMatches(size -> size.equals(0)).verifyComplete();

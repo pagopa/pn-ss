@@ -7,12 +7,11 @@ import it.pagopa.pnss.common.client.ConfigurationApiCall;
 import it.pagopa.pnss.common.client.exception.RetentionException;
 import it.pagopa.pnss.common.client.exception.RetentionToIgnoreException;
 import it.pagopa.pnss.common.utils.LogUtils;
-import it.pagopa.pnss.configurationproperties.BucketName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.DocumentEntity;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.RetryBackoffSpec;
@@ -32,11 +31,6 @@ import static it.pagopa.pnss.common.utils.LogUtils.*;
 public class RetentionServiceImpl implements RetentionService {
 
     private final S3Service s3Service;
-    @Value("${default.internal.x-api-key.value:#{null}}")
-    private String defaultInteralApiKeyValue;
-
-    @Value("${default.internal.header.x-pagopa-safestorage-cx-id:#{null}}")
-    private String defaultInternalClientIdValue;
 
     /*
      * In compliance mode, a protected object version can't be overwritten or deleted by any user,
@@ -45,19 +39,15 @@ public class RetentionServiceImpl implements RetentionService {
      * and its retention period can't be shortened.
      * Compliance mode helps ensure that an object version can't be overwritten or deleted for the duration of the retention period.
      */
-    @Value("${object.lock.retention.mode}")
-    private String objectLockRetentionMode;
-    @Value("${retention.days.toIgnore}")
-    private Integer retentionDaysToIgnore;
     private final ConfigurationApiCall configurationApiCall;
-    private final BucketName bucketName;
+    private final PnSsConfig pnSsConfig;
     private static final String PATTERN_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
     private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(PATTERN_FORMAT).withZone(ZoneId.systemDefault());
     private final RetryBackoffSpec gestoreRepositoryRetryStrategy;
 
-    public RetentionServiceImpl(ConfigurationApiCall configurationApiCall, BucketName bucketName, @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy, S3Service s3Service) {
+    public RetentionServiceImpl(ConfigurationApiCall configurationApiCall, PnSsConfig pnSsConfig, @Qualifier("gestoreRepositoryRetryStrategy") RetryBackoffSpec gestoreRepositoryRetryStrategy, S3Service s3Service) {
         this.configurationApiCall = configurationApiCall;
-        this.bucketName = bucketName;
+        this.pnSsConfig = pnSsConfig;
         this.gestoreRepositoryRetryStrategy = gestoreRepositoryRetryStrategy;
         this.s3Service = s3Service;
     }
@@ -157,14 +147,14 @@ public class RetentionServiceImpl implements RetentionService {
         if (authPagopaSafestorageCxId == null || authPagopaSafestorageCxId.isBlank() || authApiKey == null || authApiKey.isBlank()) {
             log.debug("getRetentionUntil() : almeno uno tra authPagopaSafestorageCxId e authApiKey non e' valorizzato, utilizzo le " +
                      "credenziali interne");
-            authPagopaSafestorageCxId = defaultInternalClientIdValue;
-            authApiKey = defaultInteralApiKeyValue;
+            authPagopaSafestorageCxId = pnSsConfig.getRetention().getDefaultInternalClientIdValue();
+            authApiKey = pnSsConfig.getRetention().getDefaultInternalApiKeyValue();
         }
 
         return getRetentionPeriodInDays(documentKey, documentState, documentType, authPagopaSafestorageCxId, authApiKey)
                 .handle((retentionPeriodInDays, sink) ->
                 {
-                    if (Objects.equals(retentionPeriodInDays, retentionDaysToIgnore))
+                    if (Objects.equals(retentionPeriodInDays, pnSsConfig.getRetention().getDaysToIgnore()))
                         sink.error(new RetentionToIgnoreException());
                     else sink.next(retentionPeriodInDays);
                 })
@@ -178,15 +168,15 @@ public class RetentionServiceImpl implements RetentionService {
                                                                          DocumentChanges documentChanges, DocumentEntity documentEntity,
                                                                          String oldState) {
         log.debug(INVOKING_METHOD, SET_RETENTION_PERIOD_IN_BUCKET_OBJECT_METADATA, Stream.of(authPagopaSafestorageCxId, documentChanges, documentEntity, oldState).toList());
-                  return s3Service.headObject(documentEntity.getDocumentKey(), bucketName.ssHotName())
+                  return s3Service.headObject(documentEntity.getDocumentKey(), pnSsConfig.getBucket().getHotName())
                    .flatMap(headObjectResponse -> {
                        log.debug("setRetentionPeriodInBucketObjectMetadata() : " + "headOjectResponse.lastModified() = {} :" +
                                 "headOjectResponse.objectLockRetainUntilDate() = {} :" + "objectLockRetentionMode = {} ",
                                 headObjectResponse.lastModified(),
                                 headObjectResponse.objectLockRetainUntilDate(),
-                                objectLockRetentionMode);
+                                pnSsConfig.getRetention().getObjectLockRetentionMode());
 
-                       if (objectLockRetentionMode == null || objectLockRetentionMode.isBlank()) {
+                       if (pnSsConfig.getRetention().getObjectLockRetentionMode() == null || pnSsConfig.getRetention().getObjectLockRetentionMode().isBlank()) {
                            return Mono.error(new RetentionException("Valore non trovato per la variabile \"PnSsBucketLockRetentionMode\""));
                        }
 
@@ -203,12 +193,12 @@ public class RetentionServiceImpl implements RetentionService {
 
                            return Mono.just(ObjectLockRetention.builder()
                                            .retainUntilDate(parsedRetentionUntil)
-                                           .mode(objectLockRetentionMode)
+                                           .mode(pnSsConfig.getRetention().getObjectLockRetentionMode())
                                            .build())
-                                     .flatMap(objectLockRetention -> s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention)
+                                     .flatMap(objectLockRetention -> s3Service.putObjectRetention(documentEntity.getDocumentKey(), pnSsConfig.getBucket().getHotName(), objectLockRetention)
                                                 .doOnSuccess(result -> documentEntity.setRetentionUntil(documentChanges.getRetentionUntil()))
                                                 .onErrorResume(S3Exception.class, throwable -> {
-                                                    String errMsg = String.format("Error updating retention date '%s' from S3 bucket '%s' on document '%s'", objectLockRetention.retainUntilDate().toString(), bucketName.ssHotName(), documentEntity.getDocumentKey());
+                                                    String errMsg = String.format("Error updating retention date '%s' from S3 bucket '%s' on document '%s'", objectLockRetention.retainUntilDate().toString(), pnSsConfig.getBucket().getHotName(), documentEntity.getDocumentKey());
                                                     return Mono.error(new RetentionException(errMsg));
                                                 }))
                                      .thenReturn(documentEntity);
@@ -252,12 +242,12 @@ public class RetentionServiceImpl implements RetentionService {
                                                                                     // l'object nel bucket
                                                                                     return Mono.just(ObjectLockRetention.builder()
                                                                                                                         .retainUntilDate(instantRetentionUntil)
-                                                                                                                        .mode(objectLockRetentionMode)
+                                                                                                                        .mode(pnSsConfig.getRetention().getObjectLockRetentionMode())
                                                                                                                         .build());
                                                                                 })
-                                                                                .flatMap(objectLockRetention -> s3Service.putObjectRetention(documentEntity.getDocumentKey(), bucketName.ssHotName(), objectLockRetention)
+                                                                                .flatMap(objectLockRetention -> s3Service.putObjectRetention(documentEntity.getDocumentKey(), pnSsConfig.getBucket().getHotName(), objectLockRetention)
                                                                                         .onErrorResume(S3Exception.class, throwable -> {
-                                                                                            String errMsg = String.format("Error updating retention date '%s' from S3 bucket '%s' on document '%s'", objectLockRetention.retainUntilDate().toString(), bucketName.ssHotName(), documentEntity.getDocumentKey());
+                                                                                            String errMsg = String.format("Error updating retention date '%s' from S3 bucket '%s' on document '%s'", objectLockRetention.retainUntilDate().toString(), pnSsConfig.getBucket().getHotName(), documentEntity.getDocumentKey());
                                                                                             return Mono.error(new RetentionException(errMsg));
                                                                                         }))
                                                                                 .onErrorResume(RetentionToIgnoreException.class, e ->

@@ -9,10 +9,10 @@ import it.pagopa.pnss.common.client.exception.DocumentKeyNotPresentException;
 import it.pagopa.pnss.common.exception.IndexingLimitException;
 import it.pagopa.pnss.common.exception.PutTagsBadRequestException;
 import it.pagopa.pnss.common.exception.RequestValidationException;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.uribuilder.service.UriBuilderService;
 import lombok.CustomLog;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,22 +24,21 @@ import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
-import static it.pagopa.pnss.common.utils.LogUtils.CREATE_FILE;
 import static it.pagopa.pnss.common.utils.LogUtils.MDC_CORR_ID_KEY;
 
 @RestController
 @CustomLog
 public class FileUploadApiController implements FileUploadApi {
 
-    @Value("${queryParam.presignedUrl.traceId}")
-    private String xTraceId;
+    private final String xTraceId;
 
     private final UriBuilderService uriBuilderService;
     private final Environment env;
 
-    public FileUploadApiController(UriBuilderService uriBuilderService, Environment env) {
+    public FileUploadApiController(UriBuilderService uriBuilderService, Environment env, PnSsConfig pnSsConfig) {
         this.uriBuilderService = uriBuilderService;
         this.env = env;
+        this.xTraceId = pnSsConfig.getClientInterni().getQueryParam().getPresignedUrlTraceId();
     }
 
     @ExceptionHandler(PutTagsBadRequestException.class)
@@ -65,15 +64,12 @@ public class FileUploadApiController implements FileUploadApi {
         String traceIdHeaderValue = exchange.getRequest().getHeaders().getFirst(xTraceId);
         String xTraceIdValue = (traceIdHeaderValue == null) ? UUID.randomUUID().toString() : traceIdHeaderValue;
 		MDC.put(MDC_CORR_ID_KEY, xTraceIdValue);
-		log.logStartingProcess(CREATE_FILE);
         return MDCUtils.addMDCToContextAndExecute(fileCreationRequest.flatMap(request -> uriBuilderService.createUriForUploadFile(xPagopaSafestorageCxId,
                                                         request,
                                                         xChecksumValue,
                                                         xTraceIdValue))
         						  .onErrorResume(ChecksumException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage())))
         						  .onErrorResume(IndexingLimitException.class, throwable -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,throwable.getMessage())))
-								  .map(ResponseEntity::ok)
-				                  .doOnError(throwable -> log.logEndingProcess(CREATE_FILE, false, throwable.getMessage()))
-				                  .doOnSuccess(result->log.logEndingProcess(CREATE_FILE)));
+								  .map(ResponseEntity::ok));
     }
 }

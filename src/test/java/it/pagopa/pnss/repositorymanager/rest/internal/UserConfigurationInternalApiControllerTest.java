@@ -4,7 +4,7 @@ import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfiguratio
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationChanges;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationDestination;
 import it.pagopa.pn.safestorage.generated.openapi.server.v1.dto.UserConfigurationResponse;
-import it.pagopa.pnss.configurationproperties.RepositoryManagerDynamoTableName;
+import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.repositorymanager.entity.UserConfigurationEntity;
 import it.pagopa.pnss.testutils.annotation.SpringBootTestWebEnv;
 import lombok.CustomLog;
@@ -68,14 +68,14 @@ public class UserConfigurationInternalApiControllerTest {
 
 	@BeforeAll
 	public static void insertDefaultUserConfigurations(@Autowired DynamoDbEnhancedClient dynamoDbEnhancedClient,
-													  @Autowired RepositoryManagerDynamoTableName gestoreRepositoryDynamoDbTableName) {
+													  @Autowired PnSsConfig pnSsConfig) {
 		log.info("execute insertDefaultDocType()");
 		dynamoDbTable = dynamoDbEnhancedClient.table(
-				gestoreRepositoryDynamoDbTableName.anagraficaClientName(),
+				pnSsConfig.getDynamo().getRepositoryManager().getAnagraficaClientName(),
 				TableSchema.fromBean(UserConfigurationEntity.class));
 				insertUserConfigurationEntity(PARTITION_ID_ENTITY);
 		dynamoDbTable = dynamoDbEnhancedClient.table(
-				gestoreRepositoryDynamoDbTableName.anagraficaClientName(),
+				pnSsConfig.getDynamo().getRepositoryManager().getAnagraficaClientName(),
 				TableSchema.fromBean(UserConfigurationEntity.class));
 		insertUserConfigurationEntity(PARTITION_ID_ENTITY_W_TAGS);
 	}

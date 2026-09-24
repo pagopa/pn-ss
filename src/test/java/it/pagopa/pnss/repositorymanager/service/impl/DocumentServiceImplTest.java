@@ -36,6 +36,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.*;
 
 import static it.pagopa.pnss.common.constant.Constant.*;
@@ -74,6 +75,8 @@ class DocumentServiceImplTest {
     private static final String ALREADY_PRESENT = "alreadyPresent";
     private static final String KEY_PDF_ATTACHED = "documentKeyPdfAttached";
     private static final String KEY_NON_PDF_ATTACHED = "documentKeyNonPdfAttached";
+    private static final String AVAILABLE_UNTIL = "2026-10-15T21:59:59Z";
+    private static final String NEW_RETENTION_UNTIL = "2027-01-01T00:00:00Z";
 
 
     @BeforeAll
@@ -341,6 +344,47 @@ class DocumentServiceImplTest {
         documentChanges = generateDocumentChanges();
         documentChanges.setCheckSum("newCheckSum");
         Assertions.assertEquals(Boolean.FALSE, (Boolean) ReflectionTestUtils.invokeMethod(documentServiceImpl, "hasBeenPatched", documentEntity, documentChanges));
+        documentChanges = generateDocumentChanges();
+        documentChanges.setAvailableUntil(AVAILABLE_UNTIL);
+        Assertions.assertEquals(Boolean.FALSE, (Boolean) ReflectionTestUtils.invokeMethod(documentServiceImpl, "hasBeenPatched", documentEntity, documentChanges));
+    }
+
+    @Test
+    void updateOptionalPropertiesSetsAvailableUntilTest() {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        DocumentChanges documentChanges = new DocumentChanges().availableUntil(AVAILABLE_UNTIL);
+
+        ReflectionTestUtils.invokeMethod(documentServiceImpl, "updateOptionalProperties", documentEntity, documentChanges);
+
+        Assertions.assertEquals(AVAILABLE_UNTIL, documentEntity.getAvailableUntil());
+    }
+
+    @Test
+    void availableUntilUnchangedByS3RetentionRealignmentTest() {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY);
+        documentEntity.setAvailableUntil(AVAILABLE_UNTIL);
+        DocumentChanges documentChanges = new DocumentChanges().retentionUntil(NEW_RETENTION_UNTIL);
+
+        ReflectionTestUtils.invokeMethod(documentServiceImpl, "updateOptionalProperties", documentEntity, documentChanges);
+
+        Assertions.assertEquals(NEW_RETENTION_UNTIL, documentEntity.getRetentionUntil());
+        Assertions.assertEquals(AVAILABLE_UNTIL, documentEntity.getAvailableUntil());
+    }
+
+    @Test
+    void availableUntilUnchangedByFixBookedDocumentTest() {
+        DocumentEntity documentEntity = generateDocumentEntity(KEY, BOOKED, "contentType");
+        documentEntity.setAvailableUntil(AVAILABLE_UNTIL);
+        DocumentChanges documentChanges = new DocumentChanges().documentState(AVAILABLE)
+                .checkSum("newCheckSum")
+                .contentLenght(BigDecimal.TEN)
+                .retentionUntil(NEW_RETENTION_UNTIL)
+                .lastStatusChangeTimestamp(OffsetDateTime.now());
+
+        ReflectionTestUtils.invokeMethod(documentServiceImpl, "updateOptionalProperties", documentEntity, documentChanges);
+
+        Assertions.assertEquals(NEW_RETENTION_UNTIL, documentEntity.getRetentionUntil());
+        Assertions.assertEquals(AVAILABLE_UNTIL, documentEntity.getAvailableUntil());
     }
 
 

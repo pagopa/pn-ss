@@ -16,8 +16,10 @@ import it.pagopa.pnss.utils.IgnoredUpdateMetadataConfigTestSetup;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -35,6 +37,10 @@ import software.amazon.awssdk.services.s3.model.Tag;
 import java.sql.Date;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
@@ -89,6 +95,8 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 	private static final String EMPTIED_VALUE= "null";
 	private static final Tag FREEZE_TAG = Tag.builder().key("storage_freeze").value(PN_NOTIFIED_DOCUMENTS).build();
 	private static final Tag EXPIRY_TAG = Tag.builder().key("storage_expiry").value(PN_NOTIFIED_DOCUMENTS).build();
+	private static final ZoneId REFERENCE_TIME_ZONE = ZoneId.of("Europe/Rome");
+	private static final DateTimeFormatter UTC_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX").withZone(ZoneOffset.UTC);
 
 	private WebTestClient.ResponseSpec fileMetadataUpdateTestCall(UpdateFileMetadataRequest updateFileMetadataRequest, String documentKey) {
 
@@ -253,5 +261,133 @@ class FileMetadataUpdateApiControllerTest extends IgnoredUpdateMetadataConfigTes
 		when(docTypesClientCall.getdocTypes(anyString())).thenReturn(Mono.just(documentTypeResponse));
 
 		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().status(SAVED), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus().isEqualTo(410);
+	}
+
+	private String formatUtc(Instant instant) {
+		return UTC_FORMATTER.format(instant);
+	}
+
+	private String formatEndOfDay(Instant instant) {
+		return UTC_FORMATTER.format(instant.atZone(REFERENCE_TIME_ZONE).toLocalDate().atTime(23, 59, 59).atZone(REFERENCE_TIME_ZONE).toInstant());
+	}
+
+	private DocumentResponse mockDocument(String storedRetentionUntil) {
+		Map<String, CurrentStatus> statuses = Map.ofEntries(Map.entry(SAVED, new CurrentStatus().technicalState(AVAILABLE).storage("storageType")));
+		var documentType = new DocumentType().statuses(statuses).tipoDocumento(DocTypesConstant.PN_AAR);
+		var document = new DocumentResponseDocument().documentType(documentType).documentState(AVAILABLE).retentionUntil(storedRetentionUntil);
+		var documentResponse = new DocumentResponse().document(document);
+		when(documentClientCall.getDocument(anyString())).thenReturn(Mono.just(documentResponse));
+		when(documentClientCall.patchDocument(anyString(), anyString(), anyString(), any())).thenReturn(Mono.just(documentResponse));
+		return documentResponse;
+	}
+
+	private DocumentChanges capturePatchedChanges() {
+		ArgumentCaptor<DocumentChanges> captor = ArgumentCaptor.forClass(DocumentChanges.class);
+		verify(documentClientCall).patchDocument(anyString(), anyString(), anyString(), captor.capture());
+		return captor.getValue();
+	}
+
+	@Test
+	void testAvailableUntilAlreadyExpired() {
+		mockDocument(null);
+
+		var availableUntil = Date.from(Instant.now().minus(Duration.ofDays(1)));
+		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().availableUntil(availableUntil), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
+				.isBadRequest();
+
+		verify(documentClientCall, never()).patchDocument(anyString(), anyString(), anyString(), any());
+	}
+
+	@Test
+	void testAvailableUntilCurrentDayNormalizedToEndOfDay() {
+		mockDocument(formatUtc(Instant.now().plus(Duration.ofDays(30)).truncatedTo(ChronoUnit.SECONDS)));
+
+		var now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().availableUntil(Date.from(now)), X_PAGOPA_SAFESTORAGE_CX_ID).expectStatus()
+				.isOk();
+
+		var documentChanges = capturePatchedChanges();
+		Assertions.assertEquals(formatEndOfDay(now), documentChanges.getAvailableUntil());
+		Assertions.assertNull(documentChanges.getRetentionUntil());
+		verify(scadenzaDocumentiClientCall, never()).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
+	}
+
+	@Test
+	void testAvailableUntilWithoutRetentionUntilSetsRetention() {
+		String fileKey = "fileKeyAvailableUntilWithoutRetention";
+		addFileToBucket(fileKey, pnSsConfig.getBucket().getHotName());
+
+		mockDocument(null);
+		doReturn(Mono.just(new ScadenzaDocumentiResponse())).when(scadenzaDocumentiClientCall).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
+
+		var availableUntil = Instant.now().plus(Duration.ofDays(20)).truncatedTo(ChronoUnit.SECONDS);
+		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().availableUntil(Date.from(availableUntil)), fileKey).expectStatus().isOk();
+
+		var documentChanges = capturePatchedChanges();
+		Assertions.assertEquals(formatEndOfDay(availableUntil), documentChanges.getAvailableUntil());
+		Assertions.assertEquals(formatEndOfDay(availableUntil), documentChanges.getRetentionUntil());
+		verify(scadenzaDocumentiClientCall).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
+
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(fileKey));
+	}
+
+	@Test
+	void testAvailableUntilBeforeRetentionUntilLeavesRetentionUnchanged() {
+		var storedRetentionUntil = Instant.now().plus(Duration.ofDays(30)).truncatedTo(ChronoUnit.SECONDS);
+		mockDocument(formatUtc(storedRetentionUntil));
+
+		var availableUntil = Instant.now().plus(Duration.ofDays(10)).truncatedTo(ChronoUnit.SECONDS);
+		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().availableUntil(Date.from(availableUntil)), X_PAGOPA_SAFESTORAGE_CX_ID)
+				.expectStatus().isOk();
+
+		var documentChanges = capturePatchedChanges();
+		Assertions.assertEquals(formatEndOfDay(availableUntil), documentChanges.getAvailableUntil());
+		Assertions.assertNull(documentChanges.getRetentionUntil());
+		verify(scadenzaDocumentiClientCall, never()).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
+	}
+
+	@Test
+	void testAvailableUntilAfterRetentionUntilExtendsRetention() {
+		String fileKey = "fileKeyAvailableUntilExtendsRetention";
+		addFileToBucket(fileKey, pnSsConfig.getBucket().getHotName());
+
+		var storedRetentionUntil = Instant.now().plus(Duration.ofDays(10)).truncatedTo(ChronoUnit.SECONDS);
+		mockDocument(formatUtc(storedRetentionUntil));
+		doReturn(Mono.just(new ScadenzaDocumentiResponse())).when(scadenzaDocumentiClientCall).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
+
+		var availableUntil = Instant.now().plus(Duration.ofDays(20)).truncatedTo(ChronoUnit.SECONDS);
+		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().availableUntil(Date.from(availableUntil)), fileKey).expectStatus().isOk();
+
+		var documentChanges = capturePatchedChanges();
+		Assertions.assertEquals(formatEndOfDay(availableUntil), documentChanges.getAvailableUntil());
+		Assertions.assertEquals(formatEndOfDay(availableUntil), documentChanges.getRetentionUntil());
+
+		ArgumentCaptor<ScadenzaDocumentiInput> captor = ArgumentCaptor.forClass(ScadenzaDocumentiInput.class);
+		verify(scadenzaDocumentiClientCall).insertOrUpdateScadenzaDocumenti(captor.capture());
+		Assertions.assertEquals(Instant.from(UTC_FORMATTER.parse(formatEndOfDay(availableUntil))).getEpochSecond(), captor.getValue().getRetentionUntil());
+		verify(s3Service).putObjectTagging(anyString(), anyString(), any());
+
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(fileKey));
+	}
+
+	@Test
+	void testAvailableUntilEvaluatedAgainstRetentionUntilOfSameRequest() {
+		String fileKey = "fileKeyAvailableUntilWithRetentionUntil";
+		addFileToBucket(fileKey, pnSsConfig.getBucket().getHotName());
+
+		var storedRetentionUntil = Instant.now().plus(Duration.ofDays(30)).truncatedTo(ChronoUnit.SECONDS);
+		mockDocument(formatUtc(storedRetentionUntil));
+		doReturn(Mono.just(new ScadenzaDocumentiResponse())).when(scadenzaDocumentiClientCall).insertOrUpdateScadenzaDocumenti(any(ScadenzaDocumentiInput.class));
+
+		var requestedRetentionUntil = Instant.now().plus(Duration.ofDays(40)).truncatedTo(ChronoUnit.SECONDS);
+		var availableUntil = Instant.now().plus(Duration.ofDays(35)).truncatedTo(ChronoUnit.SECONDS);
+		fileMetadataUpdateTestCall(new UpdateFileMetadataRequest().retentionUntil(Date.from(requestedRetentionUntil))
+				.availableUntil(Date.from(availableUntil)), fileKey).expectStatus().isOk();
+
+		var documentChanges = capturePatchedChanges();
+		Assertions.assertEquals(formatEndOfDay(availableUntil), documentChanges.getAvailableUntil());
+		Assertions.assertEquals(formatUtc(requestedRetentionUntil), documentChanges.getRetentionUntil());
+
+		s3TestClient.deleteObject(builder -> builder.bucket(pnSsConfig.getBucket().getHotName()).key(fileKey));
 	}
 }

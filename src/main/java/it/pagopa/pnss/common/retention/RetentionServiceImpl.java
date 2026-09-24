@@ -253,6 +253,10 @@ public class RetentionServiceImpl implements RetentionService {
                                                                                 .onErrorResume(RetentionToIgnoreException.class, e ->
                                                                                 {
                                                                                     log.debug(e.getMessage());
+                                                                                    Instant retainUntilDate = headObjectResponse.objectLockRetainUntilDate();
+                                                                                    if (retainUntilDate != null) {
+                                                                                        documentEntity.setRetentionUntil(FORMATTER.format(retainUntilDate));
+                                                                                    }
                                                                                     return Mono.empty();
                                                                                 })
                                                                                 .thenReturn(documentEntity);

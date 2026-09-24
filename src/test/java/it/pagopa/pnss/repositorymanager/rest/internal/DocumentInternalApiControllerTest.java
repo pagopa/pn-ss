@@ -420,6 +420,38 @@ log.info("documentInputTags {}", documentInputTags);
 	}
 
 	@Test
+	void getItemPropagatesAvailableUntil() {
+
+		String documentKey = "documentKeyAvailableUntilRegression";
+		String availableUntil = "2026-12-31T23:59:59Z";
+
+		DocumentEntity documentEntity = new DocumentEntity();
+		documentEntity.setDocumentKey(documentKey);
+		documentEntity.setDocumentType(getDocTypeEntity());
+		documentEntity.setContentLenght(new BigDecimal(50));
+		documentEntity.setDocumentState(SAVED);
+		documentEntity.setDocumentLogicalState(AVAILABLE);
+		documentEntity.setAvailableUntil(availableUntil);
+		dynamoDbTable.putItem(builder -> builder.item(documentEntity));
+
+		try {
+			DocumentResponse response = webTestClient.get().uri(uriBuilder -> uriBuilder.path(BASE_PATH_WITH_PARAM).build(documentKey))
+					.accept(APPLICATION_JSON).exchange().expectStatus().isOk().expectBody(DocumentResponse.class)
+					.returnResult().getResponseBody();
+
+			Assertions.assertNotNull(response);
+			Assertions.assertNotNull(response.getDocument());
+			Assertions.assertEquals(availableUntil, response.getDocument().getAvailableUntil(),
+					"availableUntil deve essere propagato da pn-SsDocumenti alla response della getDocument");
+		} finally {
+			dynamoDbTable.deleteItem(Key.builder().partitionValue(documentKey).build());
+		}
+
+		log.info("\n Test (getItemPropagatesAvailableUntil) passed \n");
+
+	}
+
+	@Test
 	void getItemWithEmptyLastStatusChangeTimestampReturnsOkWithNullField() {
 
 		String documentKey = "documentKeyEmptyLastStatusChange";

@@ -795,6 +795,10 @@ components:
           description: >-
             data di scadenza del file
           type: string
+        availableUntil:
+          description: >-
+            data di fine disponibilità del file
+          type: string
         checkSum:
           description:
             valore ottenuto dal calcolo della chiave hashing dell’oggetto
@@ -869,6 +873,10 @@ components:
         retentionUntil:
           description: >-
             data di scadenza del file
+          type: string
+        availableUntil:
+          description: >-
+            data di fine disponibilità del file
           type: string
         checkSum:
           description:

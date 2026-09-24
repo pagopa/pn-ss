@@ -301,6 +301,9 @@ public class DocumentServiceImpl implements DocumentService {
         if (documentChanges.getRetentionUntil() != null && !documentChanges.getRetentionUntil().isBlank()) {
             documentEntityStored.setRetentionUntil(documentChanges.getRetentionUntil());
         }
+        if (documentChanges.getAvailableUntil() != null && !documentChanges.getAvailableUntil().isBlank()) {
+            documentEntityStored.setAvailableUntil(documentChanges.getAvailableUntil());
+        }
         if (documentChanges.getCheckSum() != null) {
             documentEntityStored.setCheckSum(documentChanges.getCheckSum());
         }
@@ -385,8 +388,11 @@ public class DocumentServiceImpl implements DocumentService {
         if (!Objects.isNull(documentChanges.getRetentionUntil())) {
             hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getRetentionUntil(), documentEntity.getRetentionUntil());
         }
+        if (!Objects.isNull(documentChanges.getAvailableUntil())) {
+            hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getAvailableUntil(), documentEntity.getAvailableUntil());
+        }
         if (!Objects.isNull(documentChanges.getContentLenght())) {
-            hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getContentLenght(), documentEntity.getContentLenght());
+            hasBeenPatched = hasBeenPatched && documentEntity.getContentLenght() != null && documentChanges.getContentLenght().compareTo(documentEntity.getContentLenght()) == 0;
         }
         if (!Objects.isNull(documentChanges.getCheckSum())) {
             hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getCheckSum(), documentEntity.getCheckSum());

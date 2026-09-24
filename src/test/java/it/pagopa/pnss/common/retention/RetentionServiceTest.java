@@ -26,6 +26,8 @@ import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
 import software.amazon.awssdk.services.s3.model.PutObjectRetentionResponse;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
@@ -226,6 +228,60 @@ class RetentionServiceTest {
         var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
 
         StepVerifier.create(testMono).expectNextCount(1).verifyComplete();
+    }
+
+    @Test
+    void setRetentionPeriodInBucketObjectMetadataRetentionToIgnoreOk(){
+        String authPagopaSafestorageCxId = "CLIENT_ID_123";
+        String authApiKey = "apiKey_value";
+        String oldState = "BOOKED";
+
+        DocumentTypesConfigurations docTypeConfigurations = new DocumentTypesConfigurations();
+
+        DocumentTypeConfiguration dtc = new DocumentTypeConfiguration();
+        dtc.setName("PN_NOTIFICATION_ATTACHMENTS");
+
+        DocumentTypeConfigurationStatusesValue documentTypeConfigurationStatuses = new DocumentTypeConfigurationStatusesValue();
+        documentTypeConfigurationStatuses.setStorage("PN_TEMPORARY_DOCUMENT");
+        dtc.setStatuses(Map.of("PRELOADED", documentTypeConfigurationStatuses));
+
+        StorageConfiguration sc = new StorageConfiguration();
+        sc.setName("PN_TEMPORARY_DOCUMENT");
+        sc.setRetentionPeriod("7d");
+
+        docTypeConfigurations.setDocumentsTypes(List.of(dtc));
+        docTypeConfigurations.setStorageConfigurations(List.of(sc));
+        when(configurationApiCall.getDocumentsConfigs(anyString(), anyString())).thenReturn(Mono.just(docTypeConfigurations));
+
+        DocumentChanges documentChanges = new DocumentChanges();
+        documentChanges.setDocumentState("AVAILABLE");
+
+        DocTypeEntity docTypeEntity = new DocTypeEntity();
+        docTypeEntity.setTipoDocumento("PN_NOTIFICATION_ATTACHMENTS");
+
+        DocumentEntity documentEntity = new DocumentEntity();
+        documentEntity.setDocumentType(docTypeEntity);
+        documentEntity.setDocumentLogicalState("PRELOADED");
+        documentEntity.setDocumentKey("documentKeyEnt");
+
+        Instant objectLockRetainUntilDate = Instant.parse("2026-09-30T07:41:56.538Z");
+
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder()
+                                                                                                   .objectLockRetainUntilDate(objectLockRetainUntilDate)
+                                                                                                   .lastModified(Instant.parse("2026-09-23T07:41:56.538Z"))
+                                                                                                   .build()));
+        Mockito.doReturn(Mono.just(PutObjectRetentionResponse.builder().build())).when(s3Service).putObjectRetention(anyString(), anyString(), any(ObjectLockRetention.class));
+
+        var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
+
+        StepVerifier.create(testMono).expectNext(documentEntity).verifyComplete();
+
+        Mockito.verify(s3Service, Mockito.never()).putObjectRetention(anyString(), anyString(), any(ObjectLockRetention.class));
+
+        String expectedRetentionUntil = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX")
+                                                         .withZone(ZoneId.systemDefault())
+                                                         .format(objectLockRetainUntilDate);
+        Assertions.assertEquals(expectedRetentionUntil, documentEntity.getRetentionUntil());
     }
 
     @Test

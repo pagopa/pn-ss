@@ -109,7 +109,7 @@ describe("gestoreBucketEventHandler tests", function () {
     const checksumTypes = ["SHA256", "MD5", "NONE"];
 
     checksumTypes.forEach(checksumType => {
-      it("test hot bucket ok", async () => {
+      it("test hot bucket ok - checksum " + checksumType, async () => {
 
         const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
         const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
@@ -122,12 +122,14 @@ describe("gestoreBucketEventHandler tests", function () {
         if (checksumType != "NONE") {
           expectedHash = crypto.createHash(checksumType).update(s3Object).digest("base64");
         }
+        const expectedSha1 = crypto.createHash("sha1").update(s3Object).digest("base64");
         const docKey = "fileKey";
         var event = createEvent(OBJECT_CREATED_PUT, docKey, s3Object.length, "pn-ss-bucket", NOW);
         var documentResponse = createDocument(docKey, checksumType);
 
         var expectedRequest = {
           checkSum: expectedHash,
+          checkSumSha1: expectedSha1,
           contentLenght: s3Object.length,
           documentKey: docKey,
           documentState: "available",
@@ -156,6 +158,55 @@ describe("gestoreBucketEventHandler tests", function () {
 
       });
     })
+
+    it("test hot bucket ok - sha1 calcolato su piu' chunk", async () => {
+
+      process.env.GestoreBucketGetObjectChunkSize = "3";
+      const PATHPATCH = process.env.PnSsGestoreRepositoryPathPatchDocument;
+      const PATHGET = process.env.PnSsGestoreRepositoryPathGetDocument;
+      const NOW = new Date(Date.now()).toISOString();
+
+      const lambda = proxyquire.callThru().load("../app/eventHandler.js", {});
+
+      const s3Object = Buffer.from("test");
+      const docKey = "fileKey";
+      var event = createEvent(OBJECT_CREATED_PUT, docKey, s3Object.length, "pn-ss-bucket", NOW);
+
+      var expectedRequest = {
+        checkSum: "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
+        checkSumSha1: "qUqP5cyxm6YcTAhz05Hph5gvu9M=",
+        contentLenght: s3Object.length,
+        documentKey: docKey,
+        documentState: "available",
+        lastStatusChangeTimestamp: NOW
+      };
+
+      mocker.get(PATHGET, createDocument(docKey, "SHA256"));
+
+      var originalRequest;
+      mocker.mock({
+        url: PATHPATCH,
+        response: function (requestInfo) {
+          originalRequest = requestInfo;
+          return {};
+        }
+      });
+
+      // Restituisce solo la porzione richiesta tramite Range (es. "bytes=0-2")
+      s3MockClient.on(GetObjectCommand).callsFake(input => {
+        const [start, end] = input.Range.replace("bytes=", "").split("-").map(Number);
+        return { Body: s3Object.subarray(start, end + 1) };
+      });
+
+      const res = await lambda.handleEvent(event);
+
+      expect(JSON.parse(originalRequest.body)).to.deep.equal(expectedRequest);
+      expect(s3MockClient.commandCalls(GetObjectCommand)).to.have.lengthOf(2);
+      expect(res).deep.equals({
+        batchItemFailures: [],
+      });
+
+    });
   });
 
   it("test event ObjectCreated:* ok", async () => {

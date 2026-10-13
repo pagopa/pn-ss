@@ -882,6 +882,11 @@ components:
           description:
             valore ottenuto dal calcolo della chiave hashing dell’oggetto
           type: string
+        checkSumSha1:
+          description: >-
+            SHA-1 del contenuto dell'oggetto. Calcolato a fine caricamento
+            per la correlazione con le ricevute brevi PEC.
+          type: string
         contentLenght:
           type: number
         lastStatusChangeTimestamp:

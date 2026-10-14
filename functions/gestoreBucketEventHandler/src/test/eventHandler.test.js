@@ -129,7 +129,7 @@ describe("gestoreBucketEventHandler tests", function () {
 
         var expectedRequest = {
           checkSum: expectedHash,
-          checkSumSha1: expectedSha1,
+          checksumSha1: expectedSha1,
           contentLenght: s3Object.length,
           documentKey: docKey,
           documentState: "available",
@@ -174,7 +174,7 @@ describe("gestoreBucketEventHandler tests", function () {
 
       var expectedRequest = {
         checkSum: "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-        checkSumSha1: "qUqP5cyxm6YcTAhz05Hph5gvu9M=",
+        checksumSha1: "qUqP5cyxm6YcTAhz05Hph5gvu9M=",
         contentLenght: s3Object.length,
         documentKey: docKey,
         documentState: "available",

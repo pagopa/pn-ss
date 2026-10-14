@@ -36,7 +36,7 @@ public class DocumentEntity extends DocumentVersion {
     private String retentionUntil; // modificabile in POST
     private String availableUntil;
     private String checkSum; // modificabile in POST
-    private String checkSumSha1;
+    private String checksumSha1;
     private String clientShortCode;
     private BigDecimal contentLenght; // modificabile in POST
     private String contentType;

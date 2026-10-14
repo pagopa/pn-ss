@@ -86,7 +86,7 @@ exports.handleEvent = async (event) => {
               if (hash) {
                 jsonDocument.checkSum = hash.digest('base64');
               }
-              jsonDocument.checkSumSha1 = hashSha1.digest('base64');
+              jsonDocument.checksumSha1 = hashSha1.digest('base64');
               console.log("File hashing done!")
 
             } catch (error) {

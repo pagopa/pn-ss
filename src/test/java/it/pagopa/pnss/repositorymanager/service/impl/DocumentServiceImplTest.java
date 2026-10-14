@@ -352,22 +352,22 @@ class DocumentServiceImplTest {
         documentChanges.setAvailableUntil(AVAILABLE_UNTIL);
         Assertions.assertEquals(Boolean.FALSE, (Boolean) ReflectionTestUtils.invokeMethod(documentServiceImpl, "hasBeenPatched", documentEntity, documentChanges));
         documentChanges = generateDocumentChanges();
-        documentChanges.setCheckSumSha1(CHECKSUM_SHA1);
+        documentChanges.setChecksumSha1(CHECKSUM_SHA1);
         Assertions.assertEquals(Boolean.FALSE, (Boolean) ReflectionTestUtils.invokeMethod(documentServiceImpl, "hasBeenPatched", documentEntity, documentChanges));
-        documentEntity.setCheckSumSha1(CHECKSUM_SHA1);
+        documentEntity.setChecksumSha1(CHECKSUM_SHA1);
         Assertions.assertEquals(Boolean.TRUE, (Boolean) ReflectionTestUtils.invokeMethod(documentServiceImpl, "hasBeenPatched", documentEntity, documentChanges));
     }
 
 
     @Test
-    void patchDocumentOutdatedSavesMissingCheckSumSha1Test() {
+    void patchDocumentOutdatedSavesMissingChecksumSha1Test() {
         OffsetDateTime getFileTimestamp = OffsetDateTime.now();
         DocumentEntity documentEntity = generateDocumentEntity(KEY_OUTDATED_PATCH);
         documentEntity.setLastStatusChangeTimestamp(getFileTimestamp);
         insertDocumentEntities(documentEntity);
 
         DocumentChanges lambdaChanges = generateDocumentChanges()
-                .checkSumSha1(CHECKSUM_SHA1)
+                .checksumSha1(CHECKSUM_SHA1)
                 .lastStatusChangeTimestamp(getFileTimestamp.minusSeconds(5));
 
         StepVerifier.create(documentServiceImpl.patchDocument(KEY_OUTDATED_PATCH, lambdaChanges, "cxId", "apiKey"))
@@ -375,23 +375,23 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         DocumentEntity stored = documentDynamoDbTable.getItem(documentEntity);
-        Assertions.assertEquals(CHECKSUM_SHA1, stored.getCheckSumSha1());
+        Assertions.assertEquals(CHECKSUM_SHA1, stored.getChecksumSha1());
         Assertions.assertEquals(AVAILABLE, stored.getDocumentState());
         Assertions.assertEquals(getFileTimestamp.toInstant(), stored.getLastStatusChangeTimestamp().toInstant());
         verify(callMacchinaStati, never()).statusValidation(any());
     }
 
     @Test
-    void patchDocumentOutdatedKeepsExistingCheckSumSha1Test() {
+    void patchDocumentOutdatedKeepsExistingChecksumSha1Test() {
         OffsetDateTime getFileTimestamp = OffsetDateTime.now();
         DocumentEntity documentEntity = generateDocumentEntity(KEY_OUTDATED_PATCH_SHA1_PRESENT);
         documentEntity.setLastStatusChangeTimestamp(getFileTimestamp);
-        documentEntity.setCheckSumSha1(CHECKSUM_SHA1);
+        documentEntity.setChecksumSha1(CHECKSUM_SHA1);
         insertDocumentEntities(documentEntity);
         Long storedVersion = documentDynamoDbTable.getItem(documentEntity).getVersion();
 
         DocumentChanges lambdaChanges = generateDocumentChanges()
-                .checkSumSha1("otherCheckSumSha1")
+                .checksumSha1("otherChecksumSha1")
                 .lastStatusChangeTimestamp(getFileTimestamp.minusSeconds(5));
 
         StepVerifier.create(documentServiceImpl.patchDocument(KEY_OUTDATED_PATCH_SHA1_PRESENT, lambdaChanges, "cxId", "apiKey"))
@@ -399,31 +399,31 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         DocumentEntity stored = documentDynamoDbTable.getItem(documentEntity);
-        Assertions.assertEquals(CHECKSUM_SHA1, stored.getCheckSumSha1());
+        Assertions.assertEquals(CHECKSUM_SHA1, stored.getChecksumSha1());
         Assertions.assertEquals(storedVersion, stored.getVersion());
         verify(callMacchinaStati, never()).statusValidation(any());
     }
 
     @Test
-    void updateOptionalPropertiesSetsCheckSumSha1Test() {
+    void updateOptionalPropertiesSetsChecksumSha1Test() {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
-        DocumentChanges documentChanges = new DocumentChanges().checkSumSha1(CHECKSUM_SHA1);
+        DocumentChanges documentChanges = new DocumentChanges().checksumSha1(CHECKSUM_SHA1);
 
         ReflectionTestUtils.invokeMethod(documentServiceImpl, "updateOptionalProperties", documentEntity, documentChanges);
 
-        Assertions.assertEquals(CHECKSUM_SHA1, documentEntity.getCheckSumSha1());
+        Assertions.assertEquals(CHECKSUM_SHA1, documentEntity.getChecksumSha1());
         Assertions.assertEquals("checkSum", documentEntity.getCheckSum());
     }
 
     @Test
-    void updateOptionalPropertiesKeepsCheckSumSha1WhenAbsentTest() {
+    void updateOptionalPropertiesKeepsChecksumSha1WhenAbsentTest() {
         DocumentEntity documentEntity = generateDocumentEntity(KEY);
-        documentEntity.setCheckSumSha1(CHECKSUM_SHA1);
+        documentEntity.setChecksumSha1(CHECKSUM_SHA1);
         DocumentChanges documentChanges = new DocumentChanges().retentionUntil(NEW_RETENTION_UNTIL);
 
         ReflectionTestUtils.invokeMethod(documentServiceImpl, "updateOptionalProperties", documentEntity, documentChanges);
 
-        Assertions.assertEquals(CHECKSUM_SHA1, documentEntity.getCheckSumSha1());
+        Assertions.assertEquals(CHECKSUM_SHA1, documentEntity.getChecksumSha1());
     }
 
     @Test

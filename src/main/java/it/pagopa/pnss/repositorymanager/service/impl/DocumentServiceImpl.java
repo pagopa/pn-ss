@@ -178,7 +178,7 @@ public class DocumentServiceImpl implements DocumentService {
                         var storedLastStatusChangeTimestamp = documentEntity.getLastStatusChangeTimestamp();
                         var lastStatusChangeTimestamp = documentChanges.getLastStatusChangeTimestamp();
                         if (storedLastStatusChangeTimestamp!=null && lastStatusChangeTimestamp.isBefore(storedLastStatusChangeTimestamp))
-                            return saveMissingCheckSumSha1(documentEntity, documentChanges, documentKey);
+                            return saveMissingChecksumSha1(documentEntity, documentChanges, documentKey);
                         documentEntity.setLastStatusChangeTimestamp(lastStatusChangeTimestamp);
                     } else if (documentChanges.getDocumentState() != null && !documentChanges.getDocumentState().equals(documentEntity.getDocumentState())) {
                         documentEntity.setLastStatusChangeTimestamp(OffsetDateTime.now());
@@ -189,12 +189,12 @@ public class DocumentServiceImpl implements DocumentService {
                 .doOnSuccess(documentEntity -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentEntity));
     }
 
-    private Mono<DocumentEntity> saveMissingCheckSumSha1(DocumentEntity documentEntity, DocumentChanges documentChanges, String documentKey) {
-        if (documentChanges.getCheckSumSha1() == null || documentEntity.getCheckSumSha1() != null) {
+    private Mono<DocumentEntity> saveMissingChecksumSha1(DocumentEntity documentEntity, DocumentChanges documentChanges, String documentKey) {
+        if (documentChanges.getChecksumSha1() == null || documentEntity.getChecksumSha1() != null) {
             return Mono.just(documentEntity);
         }
-        log.info("Outdated changes for document '{}': saving only the missing checkSumSha1", documentKey);
-        documentEntity.setCheckSumSha1(documentChanges.getCheckSumSha1());
+        log.info("Outdated changes for document '{}': saving only the missing checksumSha1", documentKey);
+        documentEntity.setChecksumSha1(documentChanges.getChecksumSha1());
         return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentEntity));
     }
 
@@ -316,8 +316,8 @@ public class DocumentServiceImpl implements DocumentService {
         if (documentChanges.getCheckSum() != null) {
             documentEntityStored.setCheckSum(documentChanges.getCheckSum());
         }
-        if (documentChanges.getCheckSumSha1() != null) {
-            documentEntityStored.setCheckSumSha1(documentChanges.getCheckSumSha1());
+        if (documentChanges.getChecksumSha1() != null) {
+            documentEntityStored.setChecksumSha1(documentChanges.getChecksumSha1());
         }
         if (documentChanges.getContentLenght() != null) {
             documentEntityStored.setContentLenght(documentChanges.getContentLenght());
@@ -409,8 +409,8 @@ public class DocumentServiceImpl implements DocumentService {
         if (!Objects.isNull(documentChanges.getCheckSum())) {
             hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getCheckSum(), documentEntity.getCheckSum());
         }
-        if (!Objects.isNull(documentChanges.getCheckSumSha1())) {
-            hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getCheckSumSha1(), documentEntity.getCheckSumSha1());
+        if (!Objects.isNull(documentChanges.getChecksumSha1())) {
+            hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getChecksumSha1(), documentEntity.getChecksumSha1());
         }
         return hasBeenPatched;
     }

@@ -59,13 +59,13 @@ class IndexingConfigurationTest {
             // Checking correct parsing of json string.
             ConcurrentMap<String, IndexingTag> tags = indexingConfiguration.getTags();
             Assertions.assertNotNull(tags);
-            Assertions.assertEquals(8, tags.size());
+            Assertions.assertEquals(10, tags.size());
             assertAllLimitsNotNull(indexingConfiguration.getIndexingLimits());
 
             // Checking correct count of global and local tags.
             long globalTagsCount = tags.values().stream().filter(IndexingTag::isGlobal).count();
             long localTagsCount = tags.values().stream().filter(tag -> !tag.isGlobal()).count();
-            Assertions.assertEquals(6, globalTagsCount);
+            Assertions.assertEquals(8, globalTagsCount);
             Assertions.assertEquals(2, localTagsCount);
 
             // Checking correct usage of isTagValid() method.
@@ -86,6 +86,17 @@ class IndexingConfigurationTest {
             Assertions.assertTrue(tagInfo.isIndexed());
             Assertions.assertTrue(tagInfo.isMultivalue());
             Assertions.assertTrue(tagInfo.isGlobal());
+
+            Assertions.assertTrue(indexingConfiguration.isTagValid("originalDocumentKey"));
+            Assertions.assertTrue(indexingConfiguration.isTagValid("transformedDocumentKey"));
+            Assertions.assertTrue(indexingConfiguration.isTagGlobal("originalDocumentKey"));
+            Assertions.assertTrue(indexingConfiguration.isTagGlobal("transformedDocumentKey"));
+            IndexingTag origTag = indexingConfiguration.getTagInfo("originalDocumentKey");
+            Assertions.assertFalse(origTag.isIndexed());
+            Assertions.assertFalse(origTag.isMultivalue());
+            IndexingTag transTag = indexingConfiguration.getTagInfo("transformedDocumentKey");
+            Assertions.assertFalse(transTag.isIndexed());
+            Assertions.assertFalse(transTag.isMultivalue());
         }
     }
 

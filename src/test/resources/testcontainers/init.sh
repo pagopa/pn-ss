@@ -504,6 +504,16 @@ INDEXING_CONFIG='{
                       "key": "document_number_of_pages",
                       "indexed": false,
                       "multivalue": false
+                    },
+                    {
+                      "key": "originalDocumentKey",
+                      "indexed": false,
+                      "multivalue": false
+                    },
+                    {
+                      "key": "transformedDocumentKey",
+                      "indexed": false,
+                      "multivalue": false
                     }
                   ],
                   "locals": [

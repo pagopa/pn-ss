@@ -1,0 +1,6 @@
+{
+  "Parameters": {
+    "CommunicationsAttachmentExpirationDays": "180",
+    "CommunicationsAttachmentExpiryExpirationDays": "180"
+  }
+}

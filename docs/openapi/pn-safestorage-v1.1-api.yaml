@@ -662,7 +662,7 @@ components:
       required: true
       schema:
         type: string
-        pattern: '^[A-Za-z0-9\-]{1,50}$'
+        pattern: '^[A-Za-z0-9\-_]{1,50}$'
       example: pn-delivery-push
     clientIdHeader: 
       name: x-pagopa-safestorage-cx-id
@@ -713,7 +713,7 @@ components:
       required: false
       schema:
         type: string
-        enum: [ 'MD5', 'SHA256']
+        enum: [ 'MD5', 'SHA256', 'SHA-256']
 
     tagParams:
       in: query
@@ -747,7 +747,7 @@ components:
           description: >-
             Il tipo di documento da caricare; definisce diritti di accesso e tempo 
             di permanenza del file all'interno di _SafeStorage_
-          pattern: '^[A-Z0-9_]{1,50}$'
+          pattern: '^[A-Za-z0-9_]{1,50}$'
           example: 'PN_NOTIFICATION_ATTACHMENTS'
         status:
           type: string

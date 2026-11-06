@@ -513,7 +513,7 @@ INDEXING_CONFIG='{
                     {
                       "key": "transformedDocumentKey",
                       "indexed": false,
-                      "multivalue": false
+                      "multivalue": true
                     }
                   ],
                   "locals": [

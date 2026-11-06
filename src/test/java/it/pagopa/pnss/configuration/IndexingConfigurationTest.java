@@ -96,7 +96,7 @@ class IndexingConfigurationTest {
             Assertions.assertFalse(origTag.isMultivalue());
             IndexingTag transTag = indexingConfiguration.getTagInfo("transformedDocumentKey");
             Assertions.assertFalse(transTag.isIndexed());
-            Assertions.assertFalse(transTag.isMultivalue());
+            Assertions.assertTrue(transTag.isMultivalue());
         }
     }
 

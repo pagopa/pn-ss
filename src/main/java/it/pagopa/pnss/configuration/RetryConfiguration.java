@@ -14,7 +14,6 @@ import org.springframework.context.annotation.Configuration;
 import reactor.util.retry.Retry;
 import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.time.Duration;
@@ -32,6 +31,8 @@ public class RetryConfiguration {
         this.pnSsConfig = pnSsConfig;
     }
     private static final Predicate<Throwable> isNotFound = throwable -> (throwable instanceof DocumentKeyNotPresentException) || (throwable instanceof IdClientNotFoundException)  || (throwable instanceof DocumentTypeNotPresentException);
+    private static final Predicate<Throwable> isRetryableS3Exception = throwable -> throwable instanceof S3Exception s3Exception
+            && (s3Exception.statusCode() >= 500 || s3Exception.statusCode() == 429 || s3Exception.isThrottlingException());
 
     @Bean
     RetryBackoffSpec dynamoRetryStrategy() {
@@ -53,8 +54,7 @@ public class RetryConfiguration {
     @Bean
     RetryBackoffSpec s3RetryStrategy() {
         return Retry.backoff(pnSsConfig.getS3().getRetryStrategy().getMaxAttempts(), Duration.ofSeconds(pnSsConfig.getS3().getRetryStrategy().getMinBackoff()))
-                .filter(S3Exception.class::isInstance)
-                .filter(Predicate.not(NoSuchKeyException.class::isInstance))
+                .filter(isRetryableS3Exception)
                 .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure().getMessage(), retrySignal.failure()))
                 .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
     }

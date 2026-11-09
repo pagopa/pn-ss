@@ -20,10 +20,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectLockRetention;
 import software.amazon.awssdk.services.s3.model.PutObjectRetentionResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -180,6 +182,31 @@ class RetentionServiceTest {
         var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
 
         StepVerifier.create(testMono).expectError(DateTimeParseException.class).verify();
+    }
+
+    @Test
+    void setRetentionPeriodInBucketObjectMetadataRetentionUntilInPastKo(){
+        String authPagopaSafestorageCxId = "CLIENT_ID_123";
+        String authApiKey = "apiKey_value";
+        String oldState = "BOOKED";
+
+        DocumentChanges documentChanges = new DocumentChanges();
+        documentChanges.setRetentionUntil("2020-01-01T00:00:00.000Z");
+
+        DocumentEntity documentEntity = new DocumentEntity();
+        documentEntity.setDocumentKey("documentKeyEnt");
+
+        S3Exception invalidArgument = (S3Exception) S3Exception.builder()
+                                                               .statusCode(400)
+                                                               .awsErrorDetails(AwsErrorDetails.builder().errorCode("InvalidArgument").errorMessage("The retain until date must be in the future!").build())
+                                                               .build();
+
+        when(s3Service.headObject(anyString(), anyString())).thenReturn(Mono.just(HeadObjectResponse.builder().objectLockRetainUntilDate(Instant.now()).build()));
+        Mockito.doReturn(Mono.error(invalidArgument)).when(s3Service).putObjectRetention(anyString(), anyString(), any(ObjectLockRetention.class));
+
+        var testMono = retentionService.setRetentionPeriodInBucketObjectMetadata(authPagopaSafestorageCxId, authApiKey, documentChanges, documentEntity, oldState);
+
+        StepVerifier.create(testMono).expectError(RetentionException.class).verify();
     }
 
     @Test

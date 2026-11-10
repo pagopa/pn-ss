@@ -277,7 +277,7 @@ Parameters:
     Default: 1
 
 Conditions:
-  IsDevEnv: !Equals [ !Ref EnvType, 'dev']
+  IsNotProdEnv: !Not [ !Equals [ !Ref EnvType, 'prod'] ]
 ##  DocumentsCompleteDeletion: !Equals [ !Ref PnSsDocumentDeletionMode, 'COMPLETE']
 
 
@@ -955,50 +955,48 @@ Resources:
           StringEqualsIfExists:
             events:creatorAccount: !Ref AWS::AccountId
 
-  PnSsQueueNotificheDEVStack:
+  PnSsQueueNotificheTestStack:
     Type: AWS::CloudFormation::Stack
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
-    Condition: IsDevEnv
+    Condition: IsNotProdEnv
     Properties:
       TemplateURL: !Sub '${TemplateBucketBaseUrl}/fragments/sqs-queue.yaml'
       Parameters:
-        QueueName: 'pn-ss-external-notification-DEV-queue'
+        QueueName: !Sub 'pn-ss-external-notification-${EnvType}-queue'
         SqsManagedSseEnabled: true
         HasDLQ: False
-        QueueHasAlarm: 'true'
-        AlarmSNSTopicName: !Ref AlarmSNSTopicName
 
-  PnSsQueuePolicyNotificheDEVStack:
+  PnSsQueuePolicyNotificheTest:
     Type: AWS::SQS::QueuePolicy
-    Condition: IsDevEnv
+    Condition: IsNotProdEnv
     Properties:
       Queues:
-        - !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueURL
+        - !GetAtt PnSsQueueNotificheTestStack.Outputs.QueueURL
       PolicyDocument:
         Statement:
           - Sid: 'AllowAccessSameAccount'
             Action:
               - 'sqs:*'
             Effect: 'Allow'
-            Resource: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN
+            Resource: !GetAtt PnSsQueueNotificheTestStack.Outputs.QueueARN
             Principal:
               AWS: !Ref AWS::AccountId
           - Sid: 'AllowPutEventsFromEventRule'
             Action:
               - 'sqs:SendMessage'
             Effect: 'Allow'
-            Resource: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN
+            Resource: !GetAtt PnSsQueueNotificheTestStack.Outputs.QueueARN
             Principal:
               Service:
               - 'events.amazonaws.com'
             Condition:
               ArnEquals:
-                aws:SourceArn: !GetAtt PnSsEventRuleNotificheDEV.Arn
+                aws:SourceArn: !GetAtt PnSsEventRuleNotificheTest.Arn
 
-  PnSsEventRuleNotificheDEV:
+  PnSsEventRuleNotificheTest:
     Type: AWS::Events::Rule
-    Condition: IsDevEnv
+    Condition: IsNotProdEnv
     Properties:
       Description: 'This Event rule is used to forward event on a dummy queue instead of PnCoreTargetEventBus'
       EventBusName: !Ref PnSsEventBusExternalNotification
@@ -1011,8 +1009,8 @@ Resources:
           - !Ref AWS::Region
       State: 'ENABLED'
       Targets:
-        - Arn: !GetAtt PnSsQueueNotificheDEVStack.Outputs.QueueARN
-          Id: 'PnSsDEVQueueTargetForExtNotification'
+        - Arn: !GetAtt PnSsQueueNotificheTestStack.Outputs.QueueARN
+          Id: 'PnSsTestQueueTargetForExtNotification'
 
   PnSsEventsDLQueuePnCoreTargetEventBusStack:
     Type: AWS::CloudFormation::Stack

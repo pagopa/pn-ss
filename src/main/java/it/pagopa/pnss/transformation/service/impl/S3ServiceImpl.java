@@ -1,13 +1,12 @@
 package it.pagopa.pnss.transformation.service.impl;
 
-import it.pagopa.pnss.configurationproperties.PnSsConfig;
 import it.pagopa.pnss.transformation.service.S3Service;
 import lombok.CustomLog;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import reactor.util.retry.Retry;
 import reactor.util.retry.RetryBackoffSpec;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.ResponseBytes;
@@ -35,13 +34,10 @@ public class S3ServiceImpl implements S3Service {
     private final Predicate<Throwable> isRestoreAlreadyInProgress = throwable -> (throwable instanceof AwsServiceException) && ((AwsServiceException) throwable).awsErrorDetails().errorCode().equalsIgnoreCase("RestoreAlreadyInProgress");
 
 
-    public S3ServiceImpl(S3AsyncClient s3AsyncClient, S3Presigner s3Presigner, PnSsConfig pnSsConfig) {
+    public S3ServiceImpl(S3AsyncClient s3AsyncClient, S3Presigner s3Presigner, @Qualifier("s3RetryStrategy") RetryBackoffSpec s3RetryStrategy) {
         this.s3AsyncClient = s3AsyncClient;
         this.s3Presigner = s3Presigner;
-        s3RetryStrategy = Retry.backoff(pnSsConfig.getS3().getRetryStrategy().getMaxAttempts(), Duration.ofSeconds(pnSsConfig.getS3().getRetryStrategy().getMinBackoff()))
-                .filter(S3Exception.class::isInstance)
-                .doBeforeRetry(retrySignal -> log.info(RETRY_ATTEMPT, retrySignal.totalRetries(), retrySignal.failure(), retrySignal.failure().getMessage()))
-                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure());
+        this.s3RetryStrategy = s3RetryStrategy;
     }
 
     @Override
@@ -87,7 +83,7 @@ public class S3ServiceImpl implements S3Service {
         log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, RESTORE_OBJECT, Stream.of(key, bucketName, restoreRequest).toList());
         return Mono.fromCompletionStage(s3AsyncClient.restoreObject(builder -> builder.key(key).bucket(bucketName).restoreRequest(restoreRequest)))
                 .doOnNext(restoreObjectResponse -> log.info(CLIENT_METHOD_RETURN, RESTORE_OBJECT, restoreObjectResponse))
-                .retryWhen(s3RetryStrategy.filter(isRestoreAlreadyInProgress.negate()))
+                .retryWhen(s3RetryStrategy)
                 .doOnError(isRestoreAlreadyInProgress.negate(), throwable -> log.error(CLIENT_METHOD_RETURN_WITH_ERROR, RESTORE_OBJECT, throwable, throwable.getMessage()));
     }
 
@@ -113,7 +109,7 @@ public class S3ServiceImpl implements S3Service {
         log.debug(CLIENT_METHOD_INVOCATION_WITH_ARGS, HEAD_OBJECT, Stream.of(key, bucketName).toList());
         return Mono.fromCompletionStage(s3AsyncClient.headObject(builder -> builder.key(key).bucket(bucketName).checksumMode(ChecksumMode.ENABLED)))
                 .doOnNext(headObjectResponse -> log.info(CLIENT_METHOD_RETURN, HEAD_OBJECT, headObjectResponse))
-                .retryWhen(s3RetryStrategy.filter(throwable -> !(throwable instanceof NoSuchKeyException)));
+                .retryWhen(s3RetryStrategy);
     }
 
     @Override

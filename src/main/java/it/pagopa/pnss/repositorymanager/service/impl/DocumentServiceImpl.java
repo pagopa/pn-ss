@@ -178,7 +178,7 @@ public class DocumentServiceImpl implements DocumentService {
                         var storedLastStatusChangeTimestamp = documentEntity.getLastStatusChangeTimestamp();
                         var lastStatusChangeTimestamp = documentChanges.getLastStatusChangeTimestamp();
                         if (storedLastStatusChangeTimestamp!=null && lastStatusChangeTimestamp.isBefore(storedLastStatusChangeTimestamp))
-                            return Mono.just(documentEntity);
+                            return saveMissingChecksumSha1(documentEntity, documentChanges, documentKey);
                         documentEntity.setLastStatusChangeTimestamp(lastStatusChangeTimestamp);
                     } else if (documentChanges.getDocumentState() != null && !documentChanges.getDocumentState().equals(documentEntity.getDocumentState())) {
                         documentEntity.setLastStatusChangeTimestamp(OffsetDateTime.now());
@@ -187,6 +187,15 @@ public class DocumentServiceImpl implements DocumentService {
                 })
                 .map(documentEntity -> objectMapper.convertValue(documentEntity, Document.class))
                 .doOnSuccess(documentEntity -> log.info(LogUtils.SUCCESSFUL_OPERATION_LABEL, PATCH_DOCUMENT, documentEntity));
+    }
+
+    private Mono<DocumentEntity> saveMissingChecksumSha1(DocumentEntity documentEntity, DocumentChanges documentChanges, String documentKey) {
+        if (documentChanges.getChecksumSha1() == null || documentEntity.getChecksumSha1() != null) {
+            return Mono.just(documentEntity);
+        }
+        log.info("Outdated changes for document '{}': saving only the missing checksumSha1", documentKey);
+        documentEntity.setChecksumSha1(documentChanges.getChecksumSha1());
+        return Mono.fromCompletionStage(documentEntityDynamoDbAsyncTable.updateItem(documentEntity));
     }
 
     private Mono<DocumentEntity> executePatch(DocumentEntity docEntity, DocumentChanges documentChanges, AtomicReference<String> oldState, String documentKey, String authPagopaSafestorageCxId, String authApiKey) {
@@ -307,6 +316,9 @@ public class DocumentServiceImpl implements DocumentService {
         if (documentChanges.getCheckSum() != null) {
             documentEntityStored.setCheckSum(documentChanges.getCheckSum());
         }
+        if (documentChanges.getChecksumSha1() != null) {
+            documentEntityStored.setChecksumSha1(documentChanges.getChecksumSha1());
+        }
         if (documentChanges.getContentLenght() != null) {
             documentEntityStored.setContentLenght(documentChanges.getContentLenght());
         }
@@ -396,6 +408,9 @@ public class DocumentServiceImpl implements DocumentService {
         }
         if (!Objects.isNull(documentChanges.getCheckSum())) {
             hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getCheckSum(), documentEntity.getCheckSum());
+        }
+        if (!Objects.isNull(documentChanges.getChecksumSha1())) {
+            hasBeenPatched = hasBeenPatched && Objects.equals(documentChanges.getChecksumSha1(), documentEntity.getChecksumSha1());
         }
         return hasBeenPatched;
     }

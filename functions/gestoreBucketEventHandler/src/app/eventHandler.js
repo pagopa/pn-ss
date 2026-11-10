@@ -55,34 +55,39 @@ exports.handleEvent = async (event) => {
               console.log(doc.document.documentType.checksum);
               console.log(JSON.stringify(doc.document.documentType.checksum));
 
-              if (doc.document.documentType.checksum != "NONE") {
-                console.log("Starting file hashing...")
+              console.log("Starting file hashing...")
 
-                let hash = crypto.createHash(doc.document.documentType.checksum);
-                let offset = 0;
+              let hash = doc.document.documentType.checksum != "NONE" ? crypto.createHash(doc.document.documentType.checksum) : null;
+              let hashSha1 = crypto.createHash('sha1');
+              let offset = 0;
 
-                while (offset < jsonDocument.contentLenght) {
-                  const end = Math.min(offset + chunkSize, jsonDocument.contentLenght);
-                  params.Range = `bytes=${offset}-${end - 1}`;
-                  const chunk = await s3.send(new GetObjectCommand(params));
+              while (offset < jsonDocument.contentLenght) {
+                const end = Math.min(offset + chunkSize, jsonDocument.contentLenght);
+                params.Range = `bytes=${offset}-${end - 1}`;
+                const chunk = await s3.send(new GetObjectCommand(params));
 
-                  let data = [];
+                let data = [];
 
-                  for await (let piece of chunk.Body) {
-                    if (typeof piece === 'number') {
-                      piece = String.fromCharCode(piece);
-                    }
-                    data.push(Buffer.from(piece));
+                for await (let piece of chunk.Body) {
+                  if (typeof piece === 'number') {
+                    piece = String.fromCharCode(piece);
                   }
-
-                  let buffer = Buffer.concat(data);
-
-                  hash.update(buffer);
-                  offset += chunkSize;
+                  data.push(Buffer.from(piece));
                 }
-                jsonDocument.checkSum = hash.digest('base64');
-                console.log("File hashing done!")
+
+                let buffer = Buffer.concat(data);
+
+                if (hash) {
+                  hash.update(buffer);
+                }
+                hashSha1.update(buffer);
+                offset += chunkSize;
               }
+              if (hash) {
+                jsonDocument.checkSum = hash.digest('base64');
+              }
+              jsonDocument.checksumSha1 = hashSha1.digest('base64');
+              console.log("File hashing done!")
 
             } catch (error) {
               console.log(error);
